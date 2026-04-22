@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -234,11 +234,22 @@
                         est_ajust: n(cells[11]?.querySelector("input")?.value)
                     });
                 });
-                const { error } = await supabaseClient.from('dados_m2').upsert(novosDados, { onConflict: 'id' });
-                if (error) console.error("Erro ao salvar:", error);
-                else await carregarDados(); // recarrega para manter IDs atualizados
-                timeoutSalvar = null;
-            }, 500);
+                const { error, data } = await supabaseClient.from('dados_m2').upsert(novosDados, { onConflict: 'id' });
+if (error) {
+    console.error("Erro ao salvar:", error);
+} else {
+    // Atualiza os IDs das novas linhas sem recarregar a tabela inteira
+    if (data && data.length) {
+        data.forEach((newRow, idx) => {
+            if (!dadosOriginais[idx]?.id && newRow.id) {
+                dadosOriginais[idx] = { ...dadosOriginais[idx], id: newRow.id };
+            }
+        });
+    }
+    console.log("Dados salvos com sucesso (sem recarga)");
+}
+timeoutSalvar = null;
+}, 1000);
         }
 
         // ==================== FUNÇÕES DE APOIO ====================
