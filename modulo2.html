@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikado - Módulo II</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Biblioteca SheetJS para processar Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0b0d11;
+            --card: #11151b;
+            --line: rgba(255, 255, 255, 0.08);
+            --yellow: #f2c200;
+            --soft: rgba(255, 255, 255, 0.6);
+            --accent: #1a1f26;
+            --text-main: #ffffff;
+            --success: #00ff88;
+            --error: #ff4d4d;
+            --formula-bg: #020617;
+            --formula-text: #38bdf8;
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); overflow-x: hidden; }
+        .topbar { height: 80px; display: flex; align-items: center; justify-content: space-between; padding: 0 50px; background: #0f1318; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 1000; }
+        .logo { font-family: 'Poppins', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: 1px; cursor: pointer; }
+        .logo span { color: var(--yellow); }
+        .container { padding: 20px 40px; max-width: 100%; margin: 0 auto; }
+        
+        .dashboard { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stat-card { background: var(--card); border: 1px solid var(--line); padding: 12px 15px; border-radius: 12px; flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 5px; }
+        .stat-label { font-size: 10px; color: var(--soft); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+        .stat-value { font-size: 18px; font-weight: 700; color: var(--yellow); }
+        .stat-input { background: var(--accent); border: 1px solid var(--line); color: var(--yellow); font-size: 18px; font-weight: 700; border-radius: 6px; padding: 4px 8px; width: 100%; text-align: left; outline: none; }
+        .stat-input:focus { border-color: var(--yellow); }
+        
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; }
+        .search-box { position: relative; flex: 1; max-width: 300px; }
+        .search-box input { width: 100%; padding: 12px 15px; background: var(--accent); border: 1px solid var(--line); border-radius: 8px; color: white; font-size: 13px; text-align: left; }
+        
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn { padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.3s; font-size: 11px; text-transform: uppercase; border: none; display: flex; align-items: center; gap: 6px; }
+        .btn-yellow { background: var(--yellow); color: #111; }
+        .btn-outline { background: transparent; border: 1px solid var(--line); color: white; }
+        .btn-filter { background: var(--accent); color: white; border: 1px solid var(--line); }
+        .btn-filter.active { background: var(--yellow); color: #111; border-color: var(--yellow); }
+        .btn-back { background: var(--accent); color: white; border: 1px solid var(--line); }
+        .btn-danger { background: rgba(255, 77, 77, 0.1); color: var(--error); border: 1px solid var(--error); }
+        .btn-danger:hover { background: var(--error); color: white; }
+
+        
+        .table-container { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+        .table-wrapper { overflow: auto; max-height: calc(100vh - 350px); }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
+        th { background: #000; color: var(--yellow); padding: 12px 8px; text-align: center; font-weight: 700; text-transform: uppercase; border-bottom: 2px solid var(--line); position: sticky; top: 0; z-index: 10; }
+        td { padding: 6px; border-bottom: 1px solid var(--line); text-align: center; }
+        tr.hidden { display: none; }
+        
+        .col-check { width: 40px; } .col-small { width: 70px; } .col-med { width: 110px; } .col-large { width: 180px; }
+        input { width: 100%; height: 32px; background: #1a1f26; border: 1px solid var(--line); color: white; border-radius: 6px; text-align: center; font-size: 11px; }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--yellow); }
+        .formula-cell { background: var(--formula-bg); color: var(--formula-text); font-weight: 700; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-weight: 800; font-size: 10px; text-transform: uppercase; }
+        .badge-sim { background: rgba(0, 255, 136, 0.1); color: var(--success); border: 1px solid var(--success); }
+        .badge-nao { background: rgba(255, 77, 77, 0.1); color: var(--error); border: 1px solid var(--error); }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(5px); align-items: center; justify-content: center; z-index: 9999; }
+        .modal-content { background: #11151b; padding: 30px; border-radius: 20px; width: 500px; max-height: 80vh; overflow-y: auto; border: 1px solid var(--line); }
+        .modal-content h3 { font-family: 'Poppins', sans-serif; margin-bottom: 20px; color: var(--yellow); }
+        
+        .hist-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--soft); cursor: pointer; border-radius: 4px; transition: 0.2s; gap: 10px; }
+        .hist-item:hover { background: var(--accent); color: white; }
+        .hist-info { flex: 1; display: flex; justify-content: space-between; align-items: center; }
+        .btn-del-item { background: transparent; border: none; color: var(--error); font-size: 14px; cursor: pointer; padding: 5px; border-radius: 4px; transition: 0.2s; display: flex; align-items: center; justify-content: center; opacity: 0.6; }
+        .btn-del-item:hover { background: rgba(255, 77, 77, 0.2); opacity: 1; }
+
+
+        .hist-month-group { margin-bottom: 20px; }
+        .hist-month-title { font-size: 16px; color: var(--yellow); border-bottom: 1px solid var(--yellow); padding-bottom: 5px; margin-bottom: 10px; font-weight: 700; text-transform: uppercase; }
+        .hist-day-group { margin-left: 10px; margin-bottom: 15px; }
+        .hist-day-title { font-size: 14px; color: var(--soft); margin-bottom: 8px; font-weight: 600; }
+        
+        .hist-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--soft); cursor: pointer; border-radius: 4px; transition: 0.2s; gap: 10px; }
+        .hist-item:hover { background: var(--accent); color: white; }
+        .hist-info { flex: 1; display: flex; justify-content: space-between; align-items: center; }
+        .btn-del-item { background: transparent; border: none; color: var(--error); font-size: 14px; cursor: pointer; padding: 5px; border-radius: 4px; transition: 0.2s; display: flex; align-items: center; justify-content: center; opacity: 0.6; }
+        .btn-del-item:hover { background: rgba(255, 77, 77, 0.2); opacity: 1; }
+
+        .hist-item:hover { background: var(--accent); color: white; }
+        
+        @media print {
+            .no-print { display: none !important; }
+        }
+
+
+        /* Estilo para o Indicador de Processamento */
+        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; color: var(--yellow); font-family: 'Poppins', sans-serif; }
+        .spinner { width: 50px; height: 50px; border: 5px solid var(--line); border-top: 5px solid var(--yellow); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #loadingTimer { font-family: monospace; font-size: 24px; margin-top: 10px; }
+
+        @media print {
+            @page { size: landscape; margin: 0.5cm; }
+            .topbar, .dashboard, .toolbar, .btn, .actions, .col-check, th:first-child, td:first-child { display: none !important; }
+            body { background: white; color: black; }
+            .container { padding: 0; margin: 0; width: 100%; max-width: 100%; }
+            .table-container { border: none; width: 100%; }
+            .table-wrapper { max-height: none; overflow: visible; width: 100%; }
+            table { font-size: 7.5pt; color: black; width: 100%; table-layout: auto; border-collapse: collapse; }
+            th { color: black; border-bottom: 1px solid black; background: #f0f0f0; padding: 4px 2px; }
+            td { border-bottom: 1px solid #eee; color: black; padding: 2px; }
+            .formula-cell { background: none; color: black; border: none; height: auto; }
+            input { border: none; background: none; color: black; height: auto; width: 100%; text-align: center; font-size: 7.5pt; }
+            .badge-sim { color: green; border: none; background: none; }
+            .badge-nao { color: red; border: none; background: none; }
+            .print-header { display: block !important; margin-bottom: 10px; text-align: center; }
+            .col-large { width: auto !important; min-width: 120px; }
+            .col-med, .col-small { width: auto !important; }
+        }
+        .print-header { display: none; }
+
+        .print-footer { display: none; position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 8pt; color: #666; padding: 10px 0; border-top: 1px solid #eee; }
+        .report-summary { display: none; margin-top: 15px; font-weight: 700; font-size: 10pt; text-align: right; border-top: 2px solid #000; padding-top: 5px; }
+        
+        @media print {
+            .print-footer { display: block !important; }
+            .report-summary { display: block !important; }
+            body { padding-bottom: 50px; }
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Indicador de Processamento -->
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <div style="font-size: 18px; font-weight: 700;">EM PROCESSAMENTO...</div>
+        <div id="loadingTimer">00:00</div>
+    </div>
+
+    <div class="print-header">
+        <h2 style="color: black; font-size: 14pt;">RELATÓRIO DE PLANEJAMENTO DE COMPRAS</h2>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <p id="printDate" style="color: black; font-size: 9pt; margin: 0;"></p>
+            <p id="printTotalItems" style="color: black; font-size: 10pt; font-weight: 700; margin: 0;"></p>
+        </div>
+    </div>
+
+    <div id="modalSenha" class="modal-overlay" style="display: flex;">
+        <div class="modal-content" style="width: 380px;">
+            <h3>Acesso Restrito</h3>
+            <p style="color: var(--soft); margin-bottom: 25px;">Módulo II - Planejamento de Compras</p>
+            <input id="senhaM2" type="password" style="width: 100%; padding: 15px; background: #1a1f26; color: white; text-align: center; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 20px; font-size: 18px; letter-spacing: 5px;" placeholder="***">
+            <div style="display: flex; gap: 10px;">
+                <button style="flex: 1; padding: 12px; background: transparent; border: 1px solid var(--line); color: white; border-radius: 8px; cursor: pointer;" onclick="voltarParaModulos()">VOLTAR</button>
+                <button style="flex: 2; padding: 12px; background: var(--yellow); border: none; border-radius: 8px; font-weight: 700; cursor: pointer; color: #111;" onclick="validarSenha()">ACESSAR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalHistorico" class="modal-overlay">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin-bottom: 0;">Histórico de Relatórios</h3>
+                <button class="btn btn-danger" style="padding: 5px 10px; font-size: 9px;" onclick="limparHistorico()">LIMPAR TUDO</button>
+            </div>
+            <div id="listaHistorico"></div>
+            <button class="btn btn-outline" style="width: 100%; margin-top: 20px;" onclick="fecharHistorico()">FECHAR</button>
+        </div>
+    </div>
+
+    <div id="conteudoM2" style="display: none;">
+        <div class="topbar">
+            <div class="logo" onclick="voltarParaModulos()">Apli<span>kado</span></div>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="font-size: 12px; color: var(--soft); font-weight: 600;">MÓDULO II - PLANEJAMENTO DE COMPRAS</div>
+            </div>
+        </div>
+        
+        <div class="container">
+            <div class="dashboard">
+                <div class="stat-card">
+                    <span class="stat-label">Total de Venda (Quant)</span>
+                    <span id="totalVenda" class="stat-value">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Dias de Venda</span>
+                    <input type="text" id="globalDiasVenda" class="stat-input" value="30" oninput="calcularTabela()">
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Fator de Venda Dia</span>
+                    <span id="globalFatorVenda" class="stat-value">0,00</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Projeção Dias</span>
+                    <input type="text" id="globalProjDias" class="stat-input" value="30" oninput="calcularTabela()">
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Total de Produtos</span>
+                    <span id="totalProdutos" class="stat-value">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Total de Divergência</span>
+                    <span id="totalDivergencia" class="stat-value">0</span>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <div class="search-box">
+                    <input type="text" id="inputBusca" placeholder="Buscar por Descrição ou Código..." oninput="filtrarTabela()">
+                </div>
+                <div class="actions">
+                    <button id="btnFiltrarCompra" class="btn btn-filter" onclick="toggleFiltroCompra()">O QUE COMPRAR</button>
+                    <button class="btn btn-yellow" onclick="adicionarLinha()">+ LINHA</button>
+                    <button class="btn btn-outline" onclick="document.getElementById('inputXLS').click()">IMPORTAR XLS</button>
+                    <input type="file" id="inputXLS" style="display: none;" accept=".xls,.xlsx,.csv" onchange="importarXLS(event)">
+                    <button class="btn btn-outline" onclick="limparEstAjust()">LIMPAR EST AJUST</button>
+                    <button class="btn btn-outline" onclick="gerarRelatorio()">RELATÓRIO</button>
+                    <button class="btn btn-outline" onclick="abrirHistorico()">HISTÓRICO</button>
+                    <button class="btn btn-outline" onclick="limparTabela()">LIMPAR TUDO</button>
+                    <button class="btn btn-back" onclick="voltarParaModulos()">VOLTAR</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-wrapper">
+                    <table id="tabelaModulo2">
+                        <thead>
+                            <tr>
+                                <th class="col-check"></th>
+                                <th class="col-small">QUANT</th>
+                                <th class="col-large">DESCRIÇÃO</th>
+                                <th class="col-small">CÓDIGO</th>
+                                <th class="col-small">MARCA</th>
+                                <th class="col-small">VENDA</th>
+                                <th class="col-med">% VENDA</th>
+                                <th class="col-med">% ACUM</th>
+                                <th class="col-small">CURVA</th>
+                                <th class="col-small">VMD</th>
+                                <th class="col-small">EST V0</th>
+                                <th class="col-small">EST AJUST</th>
+                                <th class="col-med">COBERT</th>
+                                <th class="col-med">NECESS</th>
+                                <th class="col-small">COMPRAR</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoTabela"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="print-footer">Pégaso Consultoria | Aplikado soluções</div>
+    <script>
+        let filtroCompraAtivo = false;
+        let loadingTimerInterval;
+        let loadingSeconds = 0;
+
+        function formatarTempo(s) {
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            const seg = s % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${seg.toString().padStart(2, '0')}`;
+        }
+
+        function validarSenha() {
+            const senha = document.getElementById("senhaM2").value;
+            if (senha === "321") {
+                document.getElementById("modalSenha").style.display = "none";
+                document.getElementById("conteudoM2").style.display = "block";
+                carregarDados();
+            } else {
+                alert("Senha incorreta!");
+                document.getElementById("senhaM2").value = "";
+            }
+        }
+
+        function voltarParaModulos() {
+            salvarDados();
+            window.location.href = 'nova-home.html';
+        }
+
+        const corpoTabela = document.getElementById("corpoTabela");
+        const configColunas = [
+            {type:'check'}, {type:'input'}, {type:'input'}, {type:'input'}, {type:'input'}, {type:'input'},
+            {type:'calc'}, {type:'calc'}, {type:'calc'}, {type:'calc'}, {type:'input'}, {type:'input'},
+            {type:'calc'}, {type:'calc'}, {type:'calc'}
+        ];
+        
+        function n(v){ return parseFloat(v.toString().replace(",",".")) || 0; }
+        function f(v){ return v.toFixed(2).replace(".",","); }
+        
+        function calcularCurvaABC() {
+            const rows = Array.from(corpoTabela.rows);
+            let demandaTotal = 0;
+            
+            rows.forEach(tr => {
+                const vendaInput = tr.cells[5].querySelector("input");
+                if (vendaInput) demandaTotal += n(vendaInput.value);
+            });
+            
+            const vendas = rows.map((tr, idx) => ({
+                idx: idx,
+                venda: n(tr.cells[5].querySelector("input").value)
+            }));
+            
+            vendas.sort((a, b) => b.venda - a.venda);
+            
+            let acumulado = 0;
+            const classificacao = {};
+            vendas.forEach(item => {
+                acumulado += item.venda;
+                const percAcum = demandaTotal > 0 ? (acumulado / demandaTotal) * 100 : 0;
+                
+                if (percAcum <= 50) {
+                    classificacao[item.idx] = { curva: 'A', acumulado: percAcum };
+                } else if (percAcum <= 80) {
+                    classificacao[item.idx] = { curva: 'B', acumulado: percAcum };
+                } else {
+                    classificacao[item.idx] = { curva: 'C', acumulado: percAcum };
+                }
+            });
+            
+            return { classificacao, demandaTotal };
+        }
+        
+        function ordenarPorVenda() {
+            const rows = Array.from(corpoTabela.rows);
+            const data = rows.map(tr => {
+                return Array.from(tr.cells).map((td, i) => {
+                    const inp = td.querySelector("input");
+                    if (!inp) return td.querySelector(".formula-cell") ? td.querySelector(".formula-cell").innerText : "";
+                    return inp.type === "checkbox" ? inp.checked : inp.value;
+                });
+            });
+
+            data.sort((a, b) => n(b[5]) - n(a[5]));
+
+            corpoTabela.innerHTML = "";
+            data.forEach(d => {
+                const tr = document.createElement("tr");
+                configColunas.forEach((col, i) => {
+                    const td = document.createElement("td");
+                    if (col.type === 'check') {
+                        td.innerHTML = `<input type="checkbox" ${d[i] === true ? 'checked' : ''} onchange="salvarDados()">`;
+                    } else if (col.type === 'input') { 
+                        td.innerHTML = `<input value="${d[i] || ''}" oninput="calcularTabela()" onpaste="lidarComColagem(event, this)">`; 
+                    } else { 
+                        td.innerHTML = `<div class="formula-cell">${d[i] || '0,00'}</div>`; 
+                    }
+                    tr.appendChild(td);
+                });
+                corpoTabela.appendChild(tr);
+            });
+        }
+
+        function calcularTabela() {
+            const rows = Array.from(corpoTabela.rows);
+            let totalVendaQuant = 0;
+            let totalProdutos = 0;
+            let totalDivergencia = 0;
+            
+            rows.forEach(tr => {
+                const vendaInput = tr.cells[5].querySelector("input");
+                if (vendaInput) totalVendaQuant += n(vendaInput.value);
+                
+                const descInput = tr.cells[2].querySelector("input");
+                if (descInput && descInput.value.trim() !== "") totalProdutos++;
+                
+                const estV0Input = tr.cells[10].querySelector("input");
+                const estAjustInput = tr.cells[11].querySelector("input");
+                if (estV0Input && estAjustInput) {
+                    const estV0 = n(estV0Input.value);
+                    const estAjust = n(estAjustInput.value);
+                    totalDivergencia += Math.abs(estV0 - estAjust);
+                }
+            });
+
+            document.getElementById('totalVenda').innerText = totalVendaQuant.toFixed(0);
+            document.getElementById('totalProdutos').innerText = totalProdutos;
+            document.getElementById('totalDivergencia').innerText = totalDivergencia.toFixed(0);
+
+            const globalDiasVenda = n(document.getElementById('globalDiasVenda').value);
+            const globalProjDias = n(document.getElementById('globalProjDias').value);
+            
+            const globalFatorVenda = globalDiasVenda > 0 ? totalVendaQuant / globalDiasVenda : 0;
+            document.getElementById('globalFatorVenda').innerText = f(globalFatorVenda);
+
+            const { classificacao, demandaTotal } = calcularCurvaABC();
+
+            rows.forEach((tr, rowIdx) => {
+                const c = tr.cells;
+                const venda = n(c[5].querySelector("input").value);
+                const estAjust = n(c[11].querySelector("input").value);
+                
+                const percentualVenda = demandaTotal > 0 ? ((venda / demandaTotal) * 100) : 0;
+                c[6].querySelector(".formula-cell").innerText = percentualVenda.toFixed(1) + "%";
+                
+                const classif = classificacao[rowIdx] || { curva: 'C', acumulado: 0 };
+                c[7].querySelector(".formula-cell").innerText = classif.acumulado.toFixed(1) + "%";
+                c[8].querySelector(".formula-cell").innerText = classif.curva;
+
+                const vmd = globalFatorVenda > 0 ? venda / globalFatorVenda : 0;
+                c[9].querySelector(".formula-cell").innerText = f(vmd);
+                
+                const cob = vmd > 0 ? estAjust / vmd : 0; 
+                c[12].querySelector(".formula-cell").innerText = f(cob);
+                
+                const nec = (globalProjDias * vmd) - estAjust; 
+                const cellNec = c[13].querySelector(".formula-cell"); 
+                cellNec.innerText = f(nec);
+                cellNec.style.color = nec > 0 ? "var(--success)" : "var(--error)";
+                
+                c[14].querySelector(".formula-cell").innerHTML = nec > 0 ? '<span class="badge badge-sim">Sim</span>' : '<span class="badge badge-nao">Não</span>';
+                c[14].dataset.comprar = nec > 0 ? "sim" : "nao";
+            });
+            
+            filtrarTabela();
+            salvarDados();
+        }
+
+        function adicionarLinha(dados=[], noInicio=false) {
+            const tr = document.createElement("tr");
+            configColunas.forEach((col, i) => {
+                const td = document.createElement("td");
+                if (col.type === 'check') {
+                    td.innerHTML = `<input type="checkbox" ${dados[i] === true ? 'checked' : ''} onchange="salvarDados()">`;
+                } else if (col.type === 'input') { 
+                    td.innerHTML = `<input value="${dados[i] || ''}" oninput="calcularTabela()" onpaste="lidarComColagem(event, this)">`; 
+                } else { 
+                    td.innerHTML = `<div class="formula-cell">${dados[i] || '0,00'}</div>`; 
+                }
+                tr.appendChild(td);
+            });
+            
+            if (noInicio) {
+                corpoTabela.prepend(tr);
+            } else {
+                corpoTabela.appendChild(tr); 
+            }
+            calcularTabela();
+        }
+
+        function mostrarLoading() {
+            loadingSeconds = 0;
+            document.getElementById('loadingTimer').innerText = "";
+            document.getElementById('loadingOverlay').style.display = "flex";
+            loadingTimerInterval = setInterval(() => {
+                loadingSeconds++;
+                document.getElementById('loadingTimer').innerText = formatarTempo(loadingSeconds);
+            }, 1000);
+        }
+
+        function esconderLoading() {
+            clearInterval(loadingTimerInterval);
+            document.getElementById('loadingOverlay').style.display = "none";
+        }
+
+        function importarXLS(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            mostrarLoading();
+
+            // Usar setTimeout para permitir que o navegador renderize o overlay antes de travar no processamento
+            setTimeout(() => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    jsonData.shift(); // Remove cabeçalho
+
+                    if (jsonData.length > 0) {
+                        // Inverte o array para que, ao usar prepend, a ordem original do arquivo seja mantida no topo
+                        jsonData.reverse().forEach(row => {
+                            const dadosParaLinha = [
+                                false, // TICAR
+                                row[0] || '', // QUANT
+                                row[1] || '', // DESCRIÇÃO
+                                row[2] || '', // CÓDIGO
+                                row[3] || '', // MARCA
+                                row[4] || ''  // VENDA
+                            ];
+                            adicionarLinha(dadosParaLinha, true); // true para inserir no início
+                        });
+                    }
+                    esconderLoading();
+                    alert("Importação concluída com sucesso!");
+                    event.target.value = ""; 
+                };
+                reader.readAsArrayBuffer(file);
+            }, 100);
+        }
+
+        function limparEstAjust() {
+            if (confirm("Limpar todos os valores da coluna EST AJUST?")) {
+                const rows = Array.from(corpoTabela.rows);
+                rows.forEach(tr => {
+                    const inp = tr.cells[11].querySelector("input");
+                    if (inp) inp.value = "";
+                });
+                calcularTabela();
+            }
+        }
+
+        function filtrarTabela() {
+            const termo = document.getElementById("inputBusca").value.toLowerCase();
+            const rows = Array.from(corpoTabela.rows);
+            rows.forEach(tr => {
+                const descInput = tr.cells[2].querySelector("input");
+                const codInput = tr.cells[3].querySelector("input");
+                const desc = descInput ? descInput.value.toLowerCase() : "";
+                const cod = codInput ? codInput.value.toLowerCase() : "";
+                const comprar = tr.cells[14].dataset.comprar === "sim";
+                const matchBusca = desc.includes(termo) || cod.includes(termo);
+                const matchFiltroCompra = !filtroCompraAtivo || comprar;
+                tr.classList.toggle("hidden", !(matchBusca && matchFiltroCompra));
+            });
+        }
+
+        function toggleFiltroCompra() {
+            filtroCompraAtivo = !filtroCompraAtivo;
+            document.getElementById("btnFiltrarCompra").classList.toggle("active", filtroCompraAtivo);
+            filtrarTabela();
+        }
+
+        function salvarDados() {
+            const rows = Array.from(corpoTabela.rows);
+            const dadosTabela = rows.map(tr => {
+                return Array.from(tr.cells).map((td, i) => {
+                    const inp = td.querySelector("input");
+                    if (!inp) return td.querySelector(".formula-cell") ? td.querySelector(".formula-cell").innerText : "";
+                    return inp.type === "checkbox" ? inp.checked : inp.value;
+                });
+            });
+            
+            const dadosGlobais = {
+                diasVenda: document.getElementById('globalDiasVenda').value,
+                projDias: document.getElementById('globalProjDias').value
+            };
+
+            localStorage.setItem("dadosM2_pareto", JSON.stringify(dadosTabela));
+            localStorage.setItem("dadosM2_globais", JSON.stringify(dadosGlobais));
+        }
+
+        function carregarDados() {
+            const salvoTabela = localStorage.getItem("dadosM2_pareto");
+            const salvoGlobais = localStorage.getItem("dadosM2_globais");
+
+            if (salvoGlobais) {
+                const globais = JSON.parse(salvoGlobais);
+                document.getElementById('globalDiasVenda').value = globais.diasVenda || "30";
+                document.getElementById('globalProjDias').value = globais.projDias || "30";
+            }
+
+            corpoTabela.innerHTML = "";
+            if (salvoTabela) {
+                try {
+                    const dados = JSON.parse(salvoTabela);
+                    if (dados.length > 0) {
+                        dados.forEach(d => {
+                            const tr = document.createElement("tr");
+                            configColunas.forEach((col, i) => {
+                                const td = document.createElement("td");
+                                if (col.type === 'check') {
+                                    td.innerHTML = `<input type="checkbox" ${d[i] === true ? 'checked' : ''} onchange="salvarDados()">`;
+                                } else if (col.type === 'input') { 
+                                    td.innerHTML = `<input value="${d[i] || ''}" oninput="calcularTabela()" onpaste="lidarComColagem(event, this)">`; 
+                                } else { 
+                                    td.innerHTML = `<div class="formula-cell">${d[i] || '0,00'}</div>`; 
+                                }
+                                tr.appendChild(td);
+                            });
+                            corpoTabela.appendChild(tr);
+                        });
+                    } else {
+                        for (let i = 0; i < 15; i++) adicionarLinha();
+                    }
+                } catch (e) {
+                    console.error("Erro ao carregar dados:", e);
+                    for (let i = 0; i < 15; i++) adicionarLinha();
+                }
+            } else {
+                for (let i = 0; i < 15; i++) adicionarLinha();
+            }
+            calcularTabela();
+        }
+
+                function gerarRelatorio() {
+            ordenarPorVenda();
+            calcularTabela(); 
+            
+            const agora = new Date();
+            const dataStr = agora.toLocaleDateString() + " " + agora.toLocaleTimeString();
+            
+            const rows = Array.from(corpoTabela.rows);
+            
+            // Filtrar itens: deve ter "comprar = sim" E o checkbox (coluna 0) marcado
+            rows.forEach(tr => {
+                const statusComprar = tr.cells[14].dataset.comprar;
+                const checkbox = tr.cells[0].querySelector('input[type="checkbox"]');
+                const estaMarcado = checkbox ? checkbox.checked : false;
+
+                if (statusComprar === "sim" && estaMarcado) {
+                    tr.classList.remove('no-print');
+                } else {
+                    tr.classList.add('no-print');
+                }
+            });
+
+            const totalComprar = rows.filter(tr => {
+                const statusComprar = tr.cells[14].dataset.comprar;
+                const checkbox = tr.cells[0].querySelector('input[type="checkbox"]');
+                return statusComprar === "sim" && (checkbox ? checkbox.checked : false);
+            }).length;
+
+            document.getElementById('printDate').innerText = "Gerado em: " + dataStr;
+            document.getElementById('printTotalItems').innerText = "Total de itens: " + totalComprar;
+            
+            // Salvar no histórico com os dados atuais
+            const hist = JSON.parse(localStorage.getItem("histM2_v2") || "[]");
+            const snapshot = {
+                id: Date.now(),
+                data: agora.toISOString(),
+                dataFormatada: dataStr,
+                itens: totalComprar,
+                tabela: rows
+                    .filter(tr => {
+                        const statusComprar = tr.cells[14].dataset.comprar;
+                        const checkbox = tr.cells[0].querySelector('input[type="checkbox"]');
+                        return statusComprar === "sim" && (checkbox ? checkbox.checked : false);
+                    })
+                    .map(tr => Array.from(tr.cells).map((td, i) => {
+                        const inp = td.querySelector('input');
+                        if (inp) return inp.type === 'checkbox' ? inp.checked : inp.value;
+                        return td.innerText;
+                    }))
+            };
+            
+            hist.unshift(snapshot);
+            localStorage.setItem("histM2_v2", JSON.stringify(hist.slice(0, 50)));
+            
+            window.print();
+            
+            // Restaurar visibilidade após impressão
+            rows.forEach(tr => tr.classList.remove('no-print'));
+        }
+
+        function abrirHistorico() {
+            const hist = JSON.parse(localStorage.getItem("histM2_v2") || "[]");
+            const lista = document.getElementById("listaHistorico");
+            
+            if (!hist.length) {
+                lista.innerHTML = "<p style='color:white; text-align:center;'>Nenhum relatório gerado ainda.</p>";
+            } else {
+                // Agrupar por mês e dia
+                const grupos = {};
+                hist.forEach(h => {
+                    const dt = new Date(h.data);
+                    const mesAno = dt.toLocaleString('pt-br', { month: 'long', year: 'numeric' });
+                    const dia = dt.toLocaleDateString('pt-br');
+                    
+                    if (!grupos[mesAno]) grupos[mesAno] = {};
+                    if (!grupos[mesAno][dia]) grupos[mesAno][dia] = [];
+                    grupos[mesAno][dia].push(h);
+                });
+
+                let htmlHist = "";
+                for (const mes in grupos) {
+                    htmlHist += `<div class="hist-month-group"><div class="hist-month-title">${mes}</div>`;
+                    for (const dia in grupos[mes]) {
+                        htmlHist += `<div class="hist-day-group"><div class="hist-day-title">${dia}</div>`;
+                        grupos[mes][dia].forEach(h => {
+                            const hora = new Date(h.data).toLocaleTimeString('pt-br', {hour: '2-digit', minute:'2-digit'});
+                            htmlHist += `
+                                <div class="hist-item">
+                                    <div class="hist-info" onclick="visualizarRelatorio(${h.id})">
+                                        <span>${hora}</span>
+                                        <span>${h.itens} itens</span>
+                                    </div>
+                                    <button class="btn-del-item" onclick="excluirItemHistorico(event, ${h.id})" title="Excluir este item">✕</button>
+                                </div>`;
+                        });
+                        htmlHist += `</div>`;
+                    }
+                    htmlHist += `</div>`;
+                }
+                lista.innerHTML = htmlHist;
+            }
+            document.getElementById("modalHistorico").style.display = "flex";
+        }
+
+        function visualizarRelatorio(id) {
+            const hist = JSON.parse(localStorage.getItem("histM2_v2") || "[]");
+            const rel = hist.find(h => h.id === id);
+            if (!rel) return;
+
+            // Preencher a tabela temporariamente com os dados do histórico para impressão
+            const backupOriginal = corpoTabela.innerHTML;
+            corpoTabela.innerHTML = "";
+            
+            rel.tabela.forEach(rowData => {
+                const tr = document.createElement("tr");
+                configColunas.forEach((col, i) => {
+                    const td = document.createElement("td");
+                    if (col.type === 'check') {
+                        td.innerHTML = `<input type="checkbox" ${rowData[i] === true ? 'checked' : ''} disabled>`;
+                    } else if (col.type === 'input') {
+                        td.innerHTML = `<input value="${rowData[i] || ''}" readonly>`;
+                    } else {
+                        td.innerHTML = `<div class="formula-cell">${rowData[i] || '0,00'}</div>`;
+                    }
+                    tr.appendChild(td);
+                });
+                corpoTabela.appendChild(tr);
+            });
+
+            document.getElementById('printDate').innerText = "Histórico de: " + rel.dataFormatada;
+            document.getElementById('printTotalItems').innerText = "Total de itens: " + rel.itens;
+            fecharHistorico();
+            window.print();
+            
+            // Restaurar dados originais
+            corpoTabela.innerHTML = backupOriginal;
+            calcularTabela();
+        }
+
+
+        function limparHistorico() {
+            if (confirm("Deseja realmente apagar todo o histórico de relatórios? Esta ação não pode ser desfeita.")) {
+                localStorage.removeItem("histM2_v2");
+                localStorage.removeItem("histM2"); // Limpar versão antiga também se existir
+                abrirHistorico();
+            }
+        }
+
+
+        function excluirItemHistorico(event, id) {
+            event.stopPropagation(); // Evita abrir o relatório ao clicar no X
+            if (confirm("Excluir este registro do histórico?")) {
+                let hist = JSON.parse(localStorage.getItem("histM2_v2") || "[]");
+                hist = hist.filter(h => h.id !== id);
+                localStorage.setItem("histM2_v2", JSON.stringify(hist));
+                abrirHistorico();
+            }
+        }
+
+        function fecharHistorico() { document.getElementById("modalHistorico").style.display = "none"; }
+
+        function lidarComColagem(e, input) {
+            e.preventDefault(); 
+            const txt = (e.clipboardData || window.clipboardData).getData("text"); 
+            const linhas = txt.split(/\r?\n/);
+            const tr = input.closest("tr"); 
+            const colIdx = input.closest("td").cellIndex; 
+            const tbody = tr.parentElement; 
+            let trs = Array.from(tbody.rows); 
+            const rIdx = trs.indexOf(tr);
+            
+            linhas.forEach((l, r) => {
+                if (!l.trim()) return; 
+                const cs = l.split("\t"); 
+                let trAlvo = trs[rIdx + r]; 
+                
+                while (!trAlvo) {
+                    adicionarLinha(); 
+                    trs = Array.from(tbody.rows);
+                    trAlvo = trs[rIdx + r];
+                }
+                
+                cs.forEach((v, c) => { 
+                    const td = trAlvo.cells[colIdx + c]; 
+                    if (td) { 
+                        const inp = td.querySelector("input"); 
+                        if (inp && inp.type !== "checkbox") inp.value = v.trim(); 
+                    } 
+                });
+            });
+            calcularTabela();
+        }
+
+        function limparTabela() { 
+            if (confirm("Limpar dados?")) { 
+                corpoTabela.innerHTML = ""; 
+                localStorage.removeItem("dadosM2_pareto");
+                localStorage.removeItem("dadosM2_globais");
+                for (let i = 0; i < 15; i++) adicionarLinha(); 
+            } 
+        }
+
+        document.getElementById("senhaM2").addEventListener("keyup", function(event) {
+            if (event.key === "Enter") validarSenha();
+        });
+    </script>
+</body>
+</html>
