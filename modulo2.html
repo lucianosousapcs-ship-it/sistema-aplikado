@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -8,7 +8,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ========== ESTILOS (idênticos ao original) ========== */
+        /* ========== ESTILOS (mantidos originais) ========== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --bg: #0b0d11;
@@ -101,7 +101,7 @@
 <body>
     <div id="loadingOverlay">
         <div class="spinner"></div>
-        <div style="font-size: 18px; font-weight: 700;">PROCESSANDO DADOS...</div>
+        <div style="font-size: 18px; font-weight: 700;">EM PROCESSAMENTO...</div>
         <div id="loadingTimer">00:00</div>
     </div>
     <div class="print-header">
@@ -152,18 +152,19 @@
 
     <script>
         // ==================== CONFIGURAÇÃO SUPABASE ====================
-        // >>> SUBSTITUA AQUI PELA SUA URL E CHAVE ANÔNIMA (publishable key) <<<
-        const SUPABASE_URL = "https://fxfurmxeizbwufupjppq.supabase.co";  // sua URL
-        const SUPABASE_ANON_KEY = "sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe";  // sua chave completa
+        // >>> SUBSTITUA PELOS SEUS DADOS REAIS <<<
+        const SUPABASE_URL = "https://fxfurmxeizbwufupjppq.supabase.co";      // Ex: "https://fxfurmxeizbwufupjppq.supabase.co"
+        const SUPABASE_ANON_KEY = "sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe";  // Ex: "eyJhbGciOiJIUzI1NiIs..."
         
+        // Inicializa o cliente Supabase (apenas UMA vez)
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // ==================== VARIÁVEIS GLOBAIS ====================
         let filtroCompraAtivo = false;
         let loadingTimerInterval;
         let loadingSeconds = 0;
-        let dadosOriginais = [];
-        let timeoutSalvar = null;
+        let dadosOriginais = [];     // armazena registros do banco para referência de IDs
+        let timeoutSalvar = null;    // para salvar após pausa na digitação
 
         const corpoTabela = document.getElementById("corpoTabela");
         const configColunas = [
@@ -214,43 +215,30 @@
             }
         }
 
-        async function executarSalvamento() {
-            const rows = Array.from(corpoTabela.rows);
-            const novosDados = [];
-            rows.forEach((tr, idx) => {
-                const cells = tr.cells;
-                novosDados.push({
-                    id: dadosOriginais[idx]?.id || undefined,
-                    quant: n(cells[1]?.querySelector("input")?.value),
-                    descricao: cells[2]?.querySelector("input")?.value || "",
-                    codigo: cells[3]?.querySelector("input")?.value || "",
-                    marca: cells[4]?.querySelector("input")?.value || "",
-                    venda: n(cells[5]?.querySelector("input")?.value),
-                    est_v0: n(cells[10]?.querySelector("input")?.value),
-                    est_ajust: n(cells[11]?.querySelector("input")?.value)
-                });
-            });
-            const { error, data } = await supabaseClient.from('dados_m2').upsert(novosDados, { onConflict: 'id' });
-            if (error) {
-                console.error("Erro ao salvar:", error);
-            } else {
-                if (data && data.length) {
-                    data.forEach((newRow, idx) => {
-                        if (!dadosOriginais[idx]?.id && newRow.id) {
-                            dadosOriginais[idx] = { ...dadosOriginais[idx], id: newRow.id };
-                        }
-                    });
-                }
-                console.log("Dados salvos com sucesso (debounced)");
-            }
-        }
-
-        function salvarDados() {
+        async function salvarDados() {
+            // Evita salvamentos múltiplos enquanto digita
             if (timeoutSalvar) clearTimeout(timeoutSalvar);
-            timeoutSalvar = setTimeout(() => {
-                executarSalvamento();
+            timeoutSalvar = setTimeout(async () => {
+                const rows = Array.from(corpoTabela.rows);
+                const novosDados = [];
+                rows.forEach((tr, idx) => {
+                    const cells = tr.cells;
+                    novosDados.push({
+                        id: dadosOriginais[idx]?.id || undefined,
+                        quant: n(cells[1]?.querySelector("input")?.value),
+                        descricao: cells[2]?.querySelector("input")?.value || "",
+                        codigo: cells[3]?.querySelector("input")?.value || "",
+                        marca: cells[4]?.querySelector("input")?.value || "",
+                        venda: n(cells[5]?.querySelector("input")?.value),
+                        est_v0: n(cells[10]?.querySelector("input")?.value),
+                        est_ajust: n(cells[11]?.querySelector("input")?.value)
+                    });
+                });
+                const { error } = await supabaseClient.from('dados_m2').upsert(novosDados, { onConflict: 'id' });
+                if (error) console.error("Erro ao salvar:", error);
+                else await carregarDados(); // recarrega para manter IDs atualizados
                 timeoutSalvar = null;
-            }, 1000);
+            }, 500);
         }
 
         // ==================== FUNÇÕES DE APOIO ====================
@@ -274,10 +262,10 @@
         }
 
         function voltarParaModulos() {
-            if (timeoutSalvar) clearTimeout(timeoutSalvar);
-            // Salva antes de sair (opcional, mas seguro)
-            executarSalvamento().finally(() => {
-                window.location.href = 'index.html';   // ALTERADO para index.html (você pode mudar para nova-home.html)
+            salvarDados().then(() => {
+                window.location.href = 'nova-home.html';
+            }).catch(() => {
+                window.location.href = 'nova-home.html';
             });
         }
 
