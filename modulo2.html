@@ -152,9 +152,9 @@
 
     <script>
         // ==================== CONFIGURAÇÃO SUPABASE ====================
-        // >>> SUBSTITUA PELOS SEUS DADOS REAIS <<<
-        const SUPABASE_URL = "SUA_URL_DO_SUPABASE";      // Ex: "https://fxfurmxeizbwufupjppq.supabase.co"
-        const SUPABASE_ANON_KEY = "SUA_CHAVE_ANONIMA";  // Ex: "eyJhbGciOiJIUzI1NiIs..."
+        // >>> SUBSTITUA AQUI PELA SUA URL E CHAVE ANÔNIMA (publishable key) <<<
+        const SUPABASE_URL = "https://fxfurmxeizbwufupjppq.supabase.co";  // sua URL
+        const SUPABASE_ANON_KEY = "sb_publishable_YvzY9AaAmJCLr1Vz1gp5A_V136y...";  // sua chave completa
         
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -162,8 +162,8 @@
         let filtroCompraAtivo = false;
         let loadingTimerInterval;
         let loadingSeconds = 0;
-        let dadosOriginais = [];     // armazena os registros atuais (para referência de ID)
-        let timeoutSalvar = null;    // para salvar após pausa na digitação
+        let dadosOriginais = [];
+        let timeoutSalvar = null;
 
         const corpoTabela = document.getElementById("corpoTabela");
         const configColunas = [
@@ -214,7 +214,6 @@
             }
         }
 
-        // Função de salvamento com debounce (só salva após 1 segundo parado)
         async function executarSalvamento() {
             const rows = Array.from(corpoTabela.rows);
             const novosDados = [];
@@ -235,7 +234,6 @@
             if (error) {
                 console.error("Erro ao salvar:", error);
             } else {
-                // Atualiza os IDs das novas linhas sem recarregar a tabela inteira
                 if (data && data.length) {
                     data.forEach((newRow, idx) => {
                         if (!dadosOriginais[idx]?.id && newRow.id) {
@@ -277,10 +275,9 @@
 
         function voltarParaModulos() {
             if (timeoutSalvar) clearTimeout(timeoutSalvar);
-            executarSalvamento().then(() => {
-                window.location.href = 'nova-home.html';
-            }).catch(() => {
-                window.location.href = 'nova-home.html';
+            // Salva antes de sair (opcional, mas seguro)
+            executarSalvamento().finally(() => {
+                window.location.href = 'index.html';   // ALTERADO para index.html (você pode mudar para nova-home.html)
             });
         }
 
@@ -298,7 +295,7 @@
             document.getElementById('loadingOverlay').style.display = "none";
         }
 
-        // ==================== LÓGICA DA TABELA (cálculos e edição) ====================
+        // ==================== LÓGICA DA TABELA ====================
         function calcularCurvaABC() {
             const rows = Array.from(corpoTabela.rows);
             let demandaTotal = 0;
@@ -385,7 +382,7 @@
                 }
             });
             filtrarTabela();
-            salvarDados();   // chama o salvamento com debounce (não recarrega a tabela)
+            salvarDados();
         }
 
         function adicionarLinha(dados=[], noInicio=false) {
@@ -481,7 +478,7 @@
             }
         }
 
-        // ==================== FUNÇÕES DE HISTÓRICO (localStorage - inalteradas) ====================
+        // ==================== FUNÇÕES DE HISTÓRICO (localStorage) ====================
         function gerarRelatorio() {
             ordenarPorVenda();
             calcularTabela();
