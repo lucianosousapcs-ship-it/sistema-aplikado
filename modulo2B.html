@@ -1,314 +1,457 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikado - Conexões</title>
+    <title>Aplikado - Módulo 2B | Gestão de Despesas</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #0b0d11;
-            font-family: 'Inter', sans-serif;
-            color: white;
-            padding: 20px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        body {
+            background: #f4f5f9;
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+            padding: 24px 32px;
+        }
+
+        /* Topbar */
         .topbar {
-            height: 80px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 50px;
-            background: #0f1318;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            margin-bottom: 30px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 16px;
         }
-        .logo { font-family: 'Poppins', sans-serif; font-size: 28px; font-weight: 900; }
-        .logo span { color: #f2c200; }
-        .btn-back {
-            background: #1a1f26;
-            border: 1px solid rgba(255,255,255,0.08);
+
+        .logo {
+            font-family: 'Poppins', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #0f2b3d 0%, #1b4a6e 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logo span {
+            background: linear-gradient(135deg, #eab308 0%, #facc15 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .badge-version {
+            background: white;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            color: #1e293b;
+        }
+
+        .badge-version i {
+            font-style: normal;
+            background: #10b981;
             color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: #11151b;
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 16px;
-            padding: 30px;
-        }
-        h2 { color: #f2c200; margin-bottom: 20px; font-weight: 600; }
-        h3 { color: #f2c200; margin: 20px 0 15px 0; font-size: 18px; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; font-size: 12px; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 8px; font-weight: 600; letter-spacing: 0.5px; }
-        input, select {
-            width: 100%;
-            padding: 12px;
-            background: #1a1f26;
-            border: 1px solid rgba(255,255,255,0.08);
-            color: white;
-            border-radius: 8px;
-        }
-        button {
-            background: #f2c200;
-            color: #111;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: 0.3s;
-        }
-        button:hover { background: #e0b000; }
-        .btn-secondary {
-            background: transparent;
-            border: 1px solid #f2c200;
-            color: #f2c200;
+            padding: 2px 12px;
+            border-radius: 30px;
             margin-left: 10px;
+            font-size: 0.7rem;
         }
+
+        /* Cards resumo */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 28px;
+            padding: 20px 22px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.03);
+            border: 1px solid #eef2f6;
+            transition: all 0.2s;
+        }
+
+        .card h4 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            color: #5b6e8c;
+            margin-bottom: 12px;
+        }
+
+        .card-value {
+            font-size: 2.1rem;
+            font-weight: 800;
+            color: #0f2b3d;
+            line-height: 1.2;
+        }
+
+        .card-sub {
+            font-size: 0.75rem;
+            color: #6c7f9e;
+            margin-top: 8px;
+        }
+
+        .card-warning .card-value { color: #e11d48; }
+        .card-success .card-value { color: #10b981; }
+        .card-info .card-value { color: #3b82f6; }
+
+        .next-due {
+            background: #fef9e3;
+            border-left: 5px solid #eab308;
+        }
+
+        /* Tabela estilo moderno */
+        .table-container {
+            background: white;
+            border-radius: 28px;
+            padding: 4px 0;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.03);
+            border: 1px solid #edf2f7;
+            overflow-x: auto;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            font-size: 0.85rem;
         }
-        th, td {
-            padding: 12px;
+
+        th {
             text-align: left;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 18px 16px;
+            background: #fafcff;
+            font-weight: 600;
+            color: #2c3e66;
+            border-bottom: 1px solid #e9edf2;
+            font-size: 0.8rem;
+            letter-spacing: 0.3px;
         }
-        th { color: #f2c200; font-size: 12px; text-transform: uppercase; }
-        .mapeamento-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f0f2f7;
+            color: #1f2b44;
+            font-weight: 500;
         }
-        .mapeamento-item {
-            background: #1a1f26;
-            padding: 10px;
-            border-radius: 8px;
+
+        tr:hover td {
+            background-color: #fafcff;
         }
-        .log-area {
-            margin-top: 30px;
-            padding: 15px;
-            background: #0b0d11;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 12px;
-            max-height: 200px;
-            overflow-y: auto;
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #eef2ff;
+            padding: 4px 10px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #1f3a7c;
         }
-        .success { color: #00ff88; }
-        .error { color: #ff4d4d; }
-        .btn-add { background: #f2c200; color: #111; padding: 8px 16px; font-size: 12px; margin-left: 10px; }
-        .btn-remove-tipo { background: transparent; border: 1px solid #ff4d4d; color: #ff4d4d; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+
+        .status-paid {
+            background: #e6f7ec;
+            color: #15803d;
+        }
+
+        .valor-destaque {
+            font-weight: 700;
+            color: #0f2b3d;
+        }
+
+        .footer-total {
+            background: #f8fafc;
+            padding: 16px 20px;
+            text-align: right;
+            font-weight: 700;
+            font-size: 1rem;
+            border-top: 1px solid #e9edf2;
+            border-radius: 0 0 28px 28px;
+            color: #1f3a7c;
+        }
+
+        .loading-skeleton {
+            text-align: center;
+            padding: 60px;
+            color: #6f8fbb;
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 16px;
+            }
+            th, td {
+                padding: 10px 12px;
+            }
+            .card-value {
+                font-size: 1.6rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="topbar">
-        <div class="logo">Apli<span>kado</span></div>
-        <a href="nova-home.html" class="btn-back">VOLTAR</a>
+
+<div class="topbar">
+    <div class="logo">APLIKADO <span>| M2B</span></div>
+    <div class="badge-version">📋 módulo 2B · gestão financeira <i>dados_m2</i></div>
+</div>
+
+<!-- cards resumo -->
+<div class="cards-grid" id="cardsResumo">
+    <div class="card">
+        <h4>📄 TOTAL GERAL</h4>
+        <div class="card-value" id="totalGeralValor">R$ 0,00</div>
+        <div class="card-sub" id="totalDocs">0 documentos</div>
     </div>
-    <div class="container">
-        <h2>CONEXÕES - Configuração de Importação</h2>
-        <p style="margin-bottom: 20px; color: rgba(255,255,255,0.6);">Defina como os relatórios serão importados para o sistema.</p>
-
-        <!-- ========== TIPOS DE RELATÓRIO ========== -->
-        <h3>Tipos de Relatório</h3>
-        <table id="tabelaTipos">
-            <thead>
-                <tr><th>Nome do Relatório</th><th style="width:80px">Ações</th></tr>
-            </thead>
-            <tbody>
-                <tr><td>Títulos por Operação</td><td style="text-align:center"><button class="btn-remove-tipo" onclick="removerTipo(this)">Remover</button></td></tr>
-                <tr><td>Extrato Financeiro</td><td style="text-align:center"><button class="btn-remove-tipo" onclick="removerTipo(this)">Remover</button></td></tr>
-            </tbody>
-        </table>
-        <div style="margin: 10px 0;">
-            <input type="text" id="novoTipo" placeholder="Novo tipo de relatório" style="width: auto; display: inline-block; width: 250px;">
-            <button class="btn-add" onclick="adicionarTipo()">+ Adicionar</button>
-        </div>
-
-        <!-- ========== CONFIGURAÇÃO GERAL ========== -->
-        <div class="form-group">
-            <label>Caminho da Pasta (no computador)</label>
-            <div style="display: flex; gap: 10px;">
-                <input type="text" id="pastaOrigem" placeholder="Ex: C:\Pegaso Consultoria\Relatórios" style="flex:1">
-                <button class="btn-secondary" onclick="alert('Em desenvolvimento: integração com sistema de arquivos local. Por enquanto, digite o caminho manualmente.')">SELECIONAR PASTA</button>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>Frequência de Importação</label>
-            <select id="frequencia">
-                <option value="manual">Manual (após gerar relatório)</option>
-                <option value="5min">A cada 5 minutos</option>
-                <option value="30min">A cada 30 minutos</option>
-                <option value="horario">Horário fixo (ex: 07:00)</option>
-            </select>
-        </div>
-
-        <!-- ========== MAPEAMENTO DE COLUNAS ========== -->
-        <h3>Mapeamento de Colunas</h3>
-        <p style="font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 15px;">Associe cada coluna do CSV ao campo correspondente no sistema.</p>
-        <div id="mapeamentoGrid" class="mapeamento-grid">
-            <!-- Os campos serão gerados via JavaScript -->
-        </div>
-        <button class="btn-secondary" onclick="adicionarColuna()" style="margin-top: 10px;">+ Adicionar coluna</button>
-
-        <button onclick="salvarConfiguracao()" style="margin-top: 30px; width: 100%;">SALVAR CONFIGURAÇÕES</button>
-
-        <div class="log-area" id="logArea">
-            <strong>Últimas importações:</strong><br>
-            (nenhuma importação realizada ainda)
-        </div>
+    <div class="card card-warning">
+        <h4>⚠️ VENCIDOS</h4>
+        <div class="card-value" id="vencidosValor">R$ 0,00</div>
+        <div class="card-sub" id="vencidosQtd">0 docs vencidos</div>
     </div>
+    <div class="card card-info">
+        <h4>📅 A VENCER (30 DIAS)</h4>
+        <div class="card-value" id="avencerValor">R$ 0,00</div>
+        <div class="card-sub" id="avencerQtd">0 docs</div>
+    </div>
+    <div class="card next-due">
+        <h4>🔔 PRÓXIMO VENCIMENTO</h4>
+        <div class="card-value" id="proximoVencimentoData">—</div>
+        <div class="card-sub" id="proximoFornecedor">nenhum documento pendente</div>
+    </div>
+</div>
 
-    <script>
-        // ==================== CONFIGURAÇÃO SUPABASE ====================
-        // >>> SUBSTITUA PELA SUA URL E CHAVE ANÔNIMA <<<
-        const SUPABASE_URL = "https://fxfurmxeizbwufupjppq.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_YvzY9AaAmJCLr1Vz1gp5A_V13Gy2Oe";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<!-- Tabela de despesas -->
+<div class="table-container">
+    <table id="tabelaDespesas">
+        <thead>
+            <tr>
+                <th>DOC</th><th>STATUS</th><th>VALOR</th><th>VENCIMENTO</th><th>CÓD</th><th>FORNECEDOR</th><th>PARC</th><th>OPERAÇÃO</th>
+            </tr>
+        </thead>
+        <tbody id="tbodyDespesas">
+            <tr class="loading-skeleton"><td colspan="8">🔄 Carregando dados do Supabase (tabela dados_m2)...</td></tr>
+        </tbody>
+    </table>
+    <div class="footer-total" id="footerTotalInfo">
+        Total consolidado: R$ 0,00
+    </div>
+</div>
 
-        // Campos disponíveis no sistema (para mapeamento)
-        const camposSistema = [
-            "quant", "descricao", "codigo", "marca", "venda", "est_v0", "est_ajust"
-        ];
+<script>
+    // ============================================================
+    // CONFIGURAÇÃO SUPABASE (COLOQUE AQUI SUAS CREDENCIAIS REAIS)
+    // ============================================================
+    const SUPABASE_URL = "https://SEU_PROJETO.supabase.co";      // SUBSTITUA PELA SUA URL
+    const SUPABASE_ANON_KEY = "SUA_ANON_KEY_AQUI";              // SUBSTITUA PELA SUA CHAVE ANON
 
-        // Gerenciar mapeamento de colunas
-        let mapeamentos = [
-            { coluna: "A", campo: "quant" },
-            { coluna: "B", campo: "descricao" },
-            { coluna: "C", campo: "codigo" },
-            { coluna: "D", campo: "marca" },
-            { coluna: "E", campo: "venda" }
-        ];
+    // Nome da tabela que será consultada (já existente no seu banco)
+    const TABELA = "dados_m2";
 
-        function atualizarLetrasColunas() {
-            // Recalcula as letras das colunas com base no índice (A, B, C, ...)
-            for (let i = 0; i < mapeamentos.length; i++) {
-                const letra = String.fromCharCode(65 + i); // 65 = 'A'
-                mapeamentos[i].coluna = letra;
+    // Inicializa cliente Supabase
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // --------------------------------------------
+    // Função para formatar moeda BRL
+    function formatMoney(value) {
+        if (value === null || value === undefined) return "R$ 0,00";
+        let num = typeof value === 'string' ? parseFloat(value.replace(/[^0-9,-]/g, '').replace(',', '.')) : value;
+        if (isNaN(num)) num = 0;
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+    }
+
+    // Formatar data (yyyy-mm-dd ou dd/mm/yyyy ou string livre)
+    function formatDate(dateStr) {
+        if (!dateStr) return "—";
+        // tenta converter se for string ISO
+        let raw = dateStr.toString();
+        if (raw.includes('-')) {
+            let parts = raw.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return raw;
+    }
+
+    // Calcular e atualizar cards + total
+    function atualizarCardsEDados(registros) {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        
+        let totalGeral = 0;
+        let totalVencidos = 0;
+        let qtdVencidos = 0;
+        let totalAvencer30 = 0;
+        let qtdAvencer30 = 0;
+        
+        let proximaData = null;
+        let proximoFornecedor = "";
+        let proximoValor = 0;
+        
+        // Data limite para 30 dias
+        let dataLimite30 = new Date();
+        dataLimite30.setDate(hoje.getDate() + 30);
+        
+        for (let item of registros) {
+            let valor = parseFloat(item.valor);
+            if (isNaN(valor)) valor = 0;
+            totalGeral += valor;
+            
+            let vencimentoStr = item.vencimento;
+            let dataVenc = null;
+            if (vencimentoStr) {
+                // tenta interpretar data ISO "yyyy-mm-dd" ou dd/mm/yyyy
+                let str = vencimentoStr.toString().trim();
+                if (str.includes('-')) {
+                    let [ano, mes, dia] = str.split('-');
+                    if (ano && mes && dia) dataVenc = new Date(parseInt(ano), parseInt(mes)-1, parseInt(dia));
+                } else if (str.includes('/')) {
+                    let [dia, mes, ano] = str.split('/');
+                    if (dia && mes && ano) dataVenc = new Date(parseInt(ano), parseInt(mes)-1, parseInt(dia));
+                }
             }
-        }
-
-        function renderizarMapeamento() {
-            const grid = document.getElementById("mapeamentoGrid");
-            if (!grid) return;
-            grid.innerHTML = "";
-            atualizarLetrasColunas();
-            mapeamentos.forEach((m, idx) => {
-                const div = document.createElement("div");
-                div.className = "mapeamento-item";
-                div.innerHTML = `
-                    <label>Coluna ${m.coluna}</label>
-                    <select data-idx="${idx}" onchange="atualizarMapeamento(${idx}, this.value)" style="width:100%">
-                        ${camposSistema.map(campo => `<option value="${campo}" ${m.campo === campo ? 'selected' : ''}>${campo}</option>`).join('')}
-                    </select>
-                    <button class="btn-secondary" style="margin-top:8px; padding:4px; width:100%;" onclick="removerColuna(${idx})">Remover coluna</button>
-                `;
-                grid.appendChild(div);
-            });
-        }
-
-        function atualizarMapeamento(idx, campo) {
-            if (mapeamentos[idx]) {
-                mapeamentos[idx].campo = campo;
-            }
-        }
-
-        function adicionarColuna() {
-            const novaLetra = String.fromCharCode(65 + mapeamentos.length);
-            mapeamentos.push({ coluna: novaLetra, campo: "descricao" });
-            renderizarMapeamento();
-        }
-
-        function removerColuna(idx) {
-            if (mapeamentos.length <= 1) {
-                alert("É necessário ter pelo menos uma coluna de mapeamento.");
-                return;
-            }
-            mapeamentos.splice(idx, 1);
-            renderizarMapeamento();
-        }
-
-        // Gerenciar tipos de relatório
-        function adicionarTipo() {
-            const novoTipo = document.getElementById("novoTipo").value.trim();
-            if (novoTipo) {
-                const tabela = document.querySelector("#tabelaTipos tbody");
-                const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${novoTipo}</td><td style="text-align:center"><button class="btn-remove-tipo" onclick="removerTipo(this)">Remover</button></td>`;
-                tabela.appendChild(tr);
-                document.getElementById("novoTipo").value = "";
+            
+            if (dataVenc && !isNaN(dataVenc.getTime())) {
+                // Vencido
+                if (dataVenc < hoje) {
+                    totalVencidos += valor;
+                    qtdVencidos++;
+                }
+                // A vencer nos próximos 30 dias (inclui hoje e futuro até 30 dias)
+                else if (dataVenc >= hoje && dataVenc <= dataLimite30) {
+                    totalAvencer30 += valor;
+                    qtdAvencer30++;
+                }
+                
+                // Próximo vencimento futuro (>= hoje)
+                if (dataVenc >= hoje) {
+                    if (proximaData === null || dataVenc < proximaData) {
+                        proximaData = dataVenc;
+                        proximoFornecedor = item.fornecedor || item.fornecedor || "—";
+                        proximoValor = valor;
+                    }
+                }
             } else {
-                alert("Digite um nome para o tipo de relatório.");
+                // Se não tiver data válida, não conta para vencimento mas entra no total geral
             }
         }
-
-        function removerTipo(botao) {
-            const linha = botao.closest("tr");
-            if (document.querySelectorAll("#tabelaTipos tbody tr").length <= 1) {
-                alert("É necessário ter pelo menos um tipo de relatório.");
-                return;
-            }
-            linha.remove();
+        
+        // Atualizar cards na tela
+        document.getElementById("totalGeralValor").innerHTML = formatMoney(totalGeral);
+        document.getElementById("totalDocs").innerHTML = `${registros.length} documentos`;
+        document.getElementById("vencidosValor").innerHTML = formatMoney(totalVencidos);
+        document.getElementById("vencidosQtd").innerHTML = `${qtdVencidos} docs vencidos`;
+        document.getElementById("avencerValor").innerHTML = formatMoney(totalAvencer30);
+        document.getElementById("avencerQtd").innerHTML = `${qtdAvencer30} documentos`;
+        
+        if (proximaData) {
+            const dia = proximaData.getDate().toString().padStart(2,'0');
+            const mes = (proximaData.getMonth()+1).toString().padStart(2,'0');
+            const ano = proximaData.getFullYear();
+            document.getElementById("proximoVencimentoData").innerHTML = `${dia}/${mes}/${ano}`;
+            let fornecedorExib = proximoFornecedor.substring(0, 35);
+            document.getElementById("proximoFornecedor").innerHTML = `${fornecedorExib} • ${formatMoney(proximoValor)}`;
+        } else {
+            document.getElementById("proximoVencimentoData").innerHTML = "✅ sem pendências";
+            document.getElementById("proximoFornecedor").innerHTML = "todos quitados ou sem data";
         }
-
-        // Salvar configuração
-        async function salvarConfiguracao() {
-            // Coletar tipos de relatório
-            const tipos = [];
-            document.querySelectorAll("#tabelaTipos tbody tr").forEach(tr => {
-                const nome = tr.cells[0].innerText;
-                if (nome && nome.trim()) tipos.push(nome.trim());
-            });
-
-            const pastaOrigem = document.getElementById("pastaOrigem").value;
-            const frequencia = document.getElementById("frequencia").value;
-            const mapeamentoStr = mapeamentos.map(m => `${m.coluna}->${m.campo}`).join("; ");
-
-            if (!pastaOrigem) {
-                alert("Por favor, preencha o caminho da pasta.");
+        
+        document.getElementById("footerTotalInfo").innerHTML = `📊 Total consolidado: ${formatMoney(totalGeral)} (${registros.length} docs)`;
+    }
+    
+    // Renderizar a tabela HTML com as colunas corretas (DOC, STATUS, VALOR, VENCIMENTO, CÓD, FORNECEDOR, PARC, OPERAÇÃO)
+    function renderizarTabela(registros) {
+        const tbody = document.getElementById("tbodyDespesas");
+        if (!registros || registros.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:48px;">📭 Nenhum registro encontrado na tabela dados_m2</td></tr>';
+            atualizarCardsEDados([]);
+            return;
+        }
+        
+        let html = "";
+        for (let item of registros) {
+            // Mapeamento direto das colunas do banco (com nomes originais do supabase)
+            const doc = item.doc || item.documento || item.codigo || "—";
+            let statusRaw = item.status || (item.pago ? "Pago" : "Pendente");
+            let statusText = (statusRaw === true || statusRaw === "Pago" || statusRaw === "pago" || statusRaw === "✔️" || statusRaw === "sim") ? "Pago" : "Pendente";
+            const statusClass = (statusText === "Pago") ? "status-paid" : "";
+            const valor = item.valor || item.quant || 0;
+            const vencimento = item.vencimento || item.data_venc || item.descricao || "—";
+            const codFornecedor = item.cod || item.cod_fornecedor || item.codigo || "—";
+            const fornecedor = item.fornecedor || item.marca || "—";
+            const parcela = item.parc || item.parcela || item.parcelas || "1";
+            const operacao = item.operacao || item.tipo || item.venda || item.categoria || "—";
+            
+            html += `<tr>
+                        <td style="font-weight:600;">${doc}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText === "Pago" ? "✅ PAGO" : "⏳ PENDENTE"}</span></td>
+                        <td class="valor-destaque">${formatMoney(valor)}</td>
+                        <td>${formatDate(vencimento)}</td>
+                        <td>${codFornecedor}</td>
+                        <td>${fornecedor.substring(0, 42)}</td>
+                        <td>${parcela}</td>
+                        <td>${operacao}</td>
+                    </tr>`;
+        }
+        tbody.innerHTML = html;
+        atualizarCardsEDados(registros);
+    }
+    
+    // Buscar dados do Supabase (tabela dados_m2)
+    async function carregarDados() {
+        const tbody = document.getElementById("tbodyDespesas");
+        tbody.innerHTML = '<tr class="loading-skeleton"><td colspan="8">🔄 Buscando dados da tabela dados_m2 no Supabase...</td></tr>';
+        
+        try {
+            // Validação simples para as credenciais
+            if (SUPABASE_URL.includes("SEU_PROJETO") || SUPABASE_ANON_KEY.includes("SUA_ANON_KEY")) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:48px; color:#b91c1c;">⚠️ Configure as variáveis SUPABASE_URL e SUPABASE_ANON_KEY no código do módulo 2B.</td></tr>';
+                console.error("Credenciais do Supabase não configuradas");
                 return;
             }
-
-            if (tipos.length === 0) {
-                alert("Adicione pelo menos um tipo de relatório.");
-                return;
-            }
-
+            
             const { data, error } = await supabase
-                .from('config_importacao')
-                .insert([{
-                    tipo_relatorio: tipos.join(", "),
-                    pasta_origem: pastaOrigem,
-                    mapeamento: mapeamentoStr,
-                    frequencia: frequencia
-                }]);
-
-            const logArea = document.getElementById("logArea");
+                .from(TABELA)
+                .select("*")
+                .order("vencimento", { ascending: true, nullsFirst: false });
+            
             if (error) {
-                console.error("Erro ao salvar:", error);
-                if (logArea) logArea.innerHTML += `<br><span class="error">❌ Erro ao salvar: ${error.message}</span>`;
-                alert("Erro ao salvar configuração. Veja o console (F12).");
-            } else {
-                if (logArea) logArea.innerHTML += `<br><span class="success">✅ Configuração salva com sucesso em ${new Date().toLocaleTimeString()}</span>`;
-                alert("Configuração salva com sucesso!");
+                console.error("Erro ao buscar dados:", error);
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:48px;">❌ Erro ao acessar Supabase: ${error.message}</td></tr>`;
+                return;
             }
+            
+            if (data && data.length > 0) {
+                renderizarTabela(data);
+            } else {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:48px;">📌 Nenhum registro encontrado. Insira dados na tabela "dados_m2" do Supabase.</td></tr>';
+                atualizarCardsEDados([]);
+            }
+        } catch (err) {
+            console.error(err);
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:48px;">⚠️ Falha na conexão com Supabase. Verifique sua URL/Key.</td></tr>';
         }
-
-        // Inicializar quando a página carregar
-        document.addEventListener("DOMContentLoaded", function() {
-            renderizarMapeamento();
-        });
-    </script>
+    }
+    
+    // Aguardar o carregamento da página e executar
+    document.addEventListener("DOMContentLoaded", () => {
+        carregarDados();
+    });
+</script>
 </body>
 </html>
