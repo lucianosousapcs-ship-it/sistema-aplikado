@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikado - Módulo 2C (Vendas)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2d3748;
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .logo span {
+            color: #48bb78;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .btn-refresh {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-clear {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .status.online {
+            background: #48bb78;
+            color: white;
+        }
+
+        .status.offline {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .stats {
+            background: #f7fafc;
+            padding: 15px 30px;
+            display: flex;
+            gap: 30px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .stat-card {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background: #edf2f7;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #2d3748;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #4a5568;
+        }
+
+        tr:hover {
+            background: #f7fafc;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #718096;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 50px;
+            color: #a0aec0;
+        }
+
+        .total-value {
+            color: #48bb78;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                APLIKADO <span>| VENDAS</span>
+            </div>
+            <div class="controls">
+                <button class="btn-refresh" onclick="carregarDados()">
+                    🔄 Atualizar
+                </button>
+                <button class="btn-clear" onclick="limparTabela()">
+                    🗑️ Limpar Tabela
+                </button>
+                <div class="status" id="status">
+                    🔌 Conectando...
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total de Registros</div>
+                <div class="stat-value" id="totalRegistros">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Valor Total das Notas</div>
+                <div class="stat-value total-value" id="valorTotal">R$ 0,00</div>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <div id="tableContainer">
+                <div class="loading">📊 Carregando dados do Supabase...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        // Configuração do Supabase
+        const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let dadosAtuais = [];
+
+        // Formatar moeda
+        function formatarMoeda(valor) {
+            if (valor === null || valor === undefined) valor = 0;
+            return 'R$ ' + valor.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Formatar data
+        function formatarData(dataStr) {
+            if (!dataStr) return '-';
+            try {
+                let data = new Date(dataStr);
+                return data.toLocaleDateString('pt-BR');
+            } catch(e) {
+                return dataStr;
+            }
+        }
+
+        // Atualizar estatísticas
+        function atualizarStats(dados) {
+            const total = dados.length;
+            const totalValor = dados.reduce((sum, item) => {
+                let valor = parseFloat(item['TOTAL NOTA']) || 0;
+                return sum + valor;
+            }, 0);
+            
+            document.getElementById('totalRegistros').innerHTML = total;
+            document.getElementById('valorTotal').innerHTML = formatarMoeda(totalValor);
+            document.getElementById('status').innerHTML = '✅ Conectado - ' + total + ' registros';
+            document.getElementById('status').className = 'status online';
+        }
+
+        // Renderizar tabela
+        function renderizarTabela(dados) {
+            const container = document.getElementById('tableContainer');
+            
+            if (!dados || dados.length === 0) {
+                container.innerHTML = '<div class="empty">📭 Nenhum registro encontrado na tabela VENDAS_ALF</div>';
+                atualizarStats([]);
+                return;
+            }
+            
+            let html = `<table><thead><tr>
+                <th>NÚMERO</th><th>DATA</th><th>NFISCAL</th><th>TIPO</th><th>PEDIDO</th>
+                <th>CLIENTE/FORNECEDOR</th><th>IPI</th><th>TOTAL NOTA</th>
+                <th>C.CUSTO</th><th>COND.PAG</th><th>ARQUIVO</th><th>DATA EXTRACAO</th>
+            </tr></thead><tbody>`;
+            
+            for (const item of dados) {
+                html += `<tr>
+                    <td>${item.numero || '-'}</td>
+                    <td>${formatarData(item.data)}</td>
+                    <td>${item.nfiscal || '-'}</td>
+                    <td>${item.tipo || '-'}</td>
+                    <td>${item.pedido || '-'}</td>
+                    <td title="${item['CLIENTE/FORNECEDOR'] || ''}">${(item['CLIENTE/FORNECEDOR'] || '-').substring(0, 30)}</td>
+                    <td>${item.ipi !== null ? formatarMoeda(item.ipi) : '-'}</td>
+                    <td class="total-value">${formatarMoeda(item['TOTAL NOTA'])}</td>
+                    <td>${item['C.CUSTO'] || '-'}</td>
+                    <td>${item['COND.PAG'] || '-'}</td>
+                    <td title="${item['ARQUIVO_ORIGEM'] || ''}">${(item['ARQUIVO_ORIGEM'] || '-').substring(0, 20)}</td>
+                    <td>${formatarData(item['DATA_EXTRACAO'])}</td>
+                </tr>`;
+            }
+            
+            html += `</tbody><table><div style="text-align: center; padding: 15px;">📋 Total de ${dados.length} registros</div>`;
+            container.innerHTML = html;
+            atualizarStats(dados);
+        }
+
+        // Carregar dados do Supabase
+        async function carregarDados() {
+            const container = document.getElementById('tableContainer');
+            container.innerHTML = '<div class="loading">⏳ Carregando dados do Supabase...</div>';
+            document.getElementById('status').innerHTML = '🔄 Carregando...';
+            document.getElementById('status').className = 'status offline';
+            
+            try {
+                const { data, error } = await supabase
+                    .from('vendas_alf')
+                    .select('*')
+                    .order('data', { ascending: false });
+                
+                if (error) throw error;
+                
+                dadosAtuais = data || [];
+                renderizarTabela(dadosAtuais);
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                container.innerHTML = `<div class="empty">❌ Erro: ${error.message}</div>`;
+                document.getElementById('status').innerHTML = '❌ Erro na conexão';
+                document.getElementById('status').className = 'status offline';
+            }
+        }
+
+        // Limpar tabela
+        async function limparTabela() {
+            if (!confirm('⚠️ ATENÇÃO! Isso irá DELETAR TODOS os registros da tabela VENDAS_ALF.\n\nTem certeza?')) {
+                return;
+            }
+            
+            if (!confirm('Última confirmação: Esta ação é IRREVERSÍVEL!')) {
+                return;
+            }
+            
+            const container = document.getElementById('tableContainer');
+            container.innerHTML = '<div class="loading">🗑️ Limpando tabela...</div>';
+            
+            try {
+                const { error } = await supabase
+                    .from('vendas_alf')
+                    .delete()
+                    .neq('id', 0);
+                
+                if (error) throw error;
+                
+                await carregarDados();
+                alert('✅ Tabela limpa com sucesso!');
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                container.innerHTML = `<div class="empty">❌ Erro: ${error.message}</div>`;
+                alert('❌ Erro: ' + error.message);
+            }
+        }
+
+        // Iniciar
+        carregarDados();
+        setInterval(carregarDados, 30000);
+    </script>
+</body>
+</html>
