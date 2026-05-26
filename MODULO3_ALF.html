@@ -5456,7 +5456,33 @@ async function incluirSelecionadosNoDRESupabase() {
     if (totalRejeitados > 0) mensagemFinal += ` ${totalRejeitados} registro(s) foram rejeitados por divergência de valor.`;
     alert(mensagemFinal);
 }
-
+// Função para forçar recarregar os comparativos do Supabase
+async function recarregarComparativos() {
+    const { data } = await supabaseClient
+        .from('comparativos_caixa')
+        .select('*');
+    console.log('Dados no Supabase:', data);
+    
+    // Atualizar a tela
+    dadosComparativos = {};
+    if (data) {
+        data.forEach(item => {
+            dadosComparativos[item.data] = {
+                DINHEIRO: item.dinheiro,
+                DEBITO: item.debito,
+                CREDITO: item.credito,
+                CREDITO_PARCELADO: item.credito_parcelado,
+                AG: item.ag,
+                PIX: item.pix,
+                VNF: item.vnf,
+                SAIDA: item.saida,
+                TOTAL_DIA: item.total_dia
+            };
+        });
+    }
+    renderizarTabelaComparativos();
+    renderizarCaixaPopup();
+}
 </script>
 </body>
 </html>
