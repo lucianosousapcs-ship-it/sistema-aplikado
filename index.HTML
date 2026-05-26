@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>ApliKado - Soluções em Integração e Automação</title>
+    
+    <!-- Google Fonts - Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #0b0b0b;
+            color: #fff;
+        }
+
+        /* HEADER */
+        header {
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            z-index: 1000;
+            transition: 0.3s;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+        }
+
+        header.shrink {
+            padding: 10px 40px;
+            background: rgba(0,0,0,0.95);
+        }
+
+        .logo {
+            font-size: 30px;
+            font-weight: 700;
+            font-family: 'Poppins', sans-serif;
+            letter-spacing: -0.9px;
+        }
+
+        .logo span {
+            color: #ffd000;
+            text-transform: lowercase;
+        }
+
+        nav {
+            display: flex;
+            gap: 2rem;
+        }
+
+        nav a {
+            margin: 0;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            transition: 0.3s;
+            font-size: 1rem;
+        }
+
+        nav a:hover {
+            color: #ffd000;
+        }
+
+        .btn-login {
+            border: 2px solid #ffd000;
+            padding: 8px 18px;
+            border-radius: 25px;
+            color: #ffd000;
+            font-weight: 700;
+            font-family: 'Poppins', sans-serif;
+            transition: 0.3s;
+            text-decoration: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .btn-login:hover {
+            background: #ffd000;
+            color: #000;
+            transform: scale(1.05);
+        }
+
+        /* HERO */
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            z-index: 2;
+            max-width: 800px;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            font-weight: 800;
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: #ccc;
+            margin-bottom: 30px;
+            font-weight: 400;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .hero-buttons a {
+            margin: 0;
+            padding: 12px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 700;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #ffd000;
+            color: #000;
+            border: 2px solid #ffd000;
+        }
+
+        .btn-primary:hover {
+            background: transparent;
+            color: #ffd000;
+            transform: scale(1.05);
+        }
+
+        .btn-secondary {
+            border: 2px solid #fff;
+            color: #fff;
+            background: transparent;
+        }
+
+        .btn-secondary:hover {
+            background: #fff;
+            color: #000;
+            transform: scale(1.05);
+        }
+
+        /* CARROSSEL */
+        .carousel {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .slide.active {
+            opacity: 0.5;
+        }
+
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 100%);
+        }
+
+        /* TICKER */
+        .ticker {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(0,0,0,0.8);
+            color: #ffd000;
+            overflow: hidden;
+            white-space: nowrap;
+            padding: 12px 0;
+            z-index: 2;
+            backdrop-filter: blur(5px);
+        }
+
+        .ticker-content {
+            display: inline-block;
+            animation: ticker 20s linear infinite;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+        }
+
+        .ticker-content span {
+            margin: 0 30px;
+        }
+
+        @keyframes ticker {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-50%); }
+        }
+
+        .ticker:hover .ticker-content {
+            animation-play-state: paused;
+        }
+
+        /* SEÇÃO EXPERIÊNCIA */
+        .clients-section {
+            padding: 80px 40px;
+            background: linear-gradient(135deg, #0f0f0f 0%, #0a0a0a 100%);
+            text-align: center;
+            scroll-margin-top: 80px;
+        }
+
+        .section-title {
+            color: #ffd000;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: #ffd000;
+            border-radius: 2px;
+        }
+
+        .section-subtitle {
+            color: #b0b0b0;
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .clients-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2.5rem;
+            justify-content: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .client-card {
+            background: linear-gradient(135deg, #1a1a1a 0%, #141414 100%);
+            border-radius: 20px;
+            padding: 2rem;
+            min-width: 260px;
+            flex: 1;
+            max-width: 320px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255, 208, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .client-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 208, 0, 0.1), transparent);
+            transition: left 0.6s;
+        }
+
+        .client-card:hover::before {
+            left: 100%;
+        }
+
+        .client-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(255, 208, 0, 0.4);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(255, 208, 0, 0.1);
+        }
+
+        .client-name {
+            color: #ffd000;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .client-description {
+            color: #b0b0b0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .client-stats {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            color: #ffd000;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+
+        /* RESPONSIVO */
+        @media(max-width: 768px) {
+            header {
+                padding: 15px 20px;
+            }
+            
+            header.shrink {
+                padding: 8px 20px;
+            }
+            
+            nav {
+                display: none;
+            }
+            
+            .mobile-menu {
+                display: block;
+                cursor: pointer;
+                font-size: 24px;
+                color: white;
+            }
+            
+            .nav-mobile {
+                display: none;
+                position: absolute;
+                top: 70px;
+                left: 0;
+                width: 100%;
+                background: rgba(0,0,0,0.95);
+                flex-direction: column;
+                padding: 20px;
+                gap: 15px;
+                text-align: center;
+                z-index: 999;
+            }
+            
+            .nav-mobile.active {
+                display: flex;
+            }
+            
+            .nav-mobile a {
+                padding: 10px;
+            }
+            
+            .hero h1 {
+                font-size: 28px;
+            }
+            
+            .hero p {
+                font-size: 14px;
+            }
+            
+            .hero-buttons a {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            
+            .ticker-content {
+                font-size: 12px;
+            }
+            
+            .section-title {
+                font-size: 1.8rem;
+            }
+            
+            .client-card {
+                min-width: 240px;
+                padding: 1.5rem;
+            }
+            
+            .client-name {
+                font-size: 1.2rem;
+            }
+        }
+
+        @media(min-width: 769px) {
+            .mobile-menu {
+                display: none;
+            }
+            
+            .nav-mobile {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header id="header">
+    <div class="logo">Apli<span>kado</span></div>
+
+    <!-- Menu Desktop -->
+    <nav>
+        <a href="#servicos">SERVIÇOS</a>
+        <a href="#diferenciais">DIFERENCIAIS</a>
+        <a href="#experiencia">EXPERIÊNCIA</a>
+        <a href="#contato">CONTATO</a>
+    </nav>
+
+    <a href="#" class="btn-login" id="openModalBtn">Login</a>
+    
+    <!-- Menu Mobile Toggle -->
+    <div class="mobile-menu" id="mobileMenuToggle">
+        <i class="fas fa-bars"></i>
+    </div>
+</header>
+
+<!-- Menu Mobile -->
+<div class="nav-mobile" id="navMobile">
+    <a href="#servicos">Serviços</a>
+    <a href="#diferenciais">Diferenciais</a>
+    <a href="#experiencia">Experiência</a>
+    <a href="#contato">Contato</a>
+    <a href="#" class="btn-login-mobile" id="openModalBtnMobile" style="border:2px solid #ffd000; padding:8px; border-radius:25px; color:#ffd000; text-decoration:none;">Login</a>
+</div>
+
+<section class="hero">
+   <!-- CARROSSEL -->
+<div class="carousel">
+    <div class="slide active" style="background-image:url('https://images.unsplash.com/photo-1777132411136-98be66988ff6?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');"></div>
+    <div class="slide" style="background-image:url('https://images.unsplash.com/photo-1777133474423-0c3a0568b7c0?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');"></div>
+    <div class="slide" style="background-image:url('https://images.unsplash.com/photo-1568027762272-e4da8b386fe9?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');"></div>
+    <div class="slide" style="background-image:url('https://images.unsplash.com/photo-1627309366653-2dedc084cdf1?w=1200');"></div>
+</div>
+
+    <!-- CONTEÚDO -->
+    <div class="hero-content">
+        <h1>Transformamos dados do seu ERP em decisões inteligentes</h1>
+        <p>Automatize, organize e visualize informações em tempo real</p>
+
+        <div class="hero-buttons">
+            <a href="#contato" class="btn-primary">Comece Agora</a>
+            <a href="#contato" class="btn-secondary">Falar com especialista</a>
+        </div>
+    </div>
+
+
+   <!-- TICKER / LETREIRO MODERNO -->
+<div class="ticker">
+    <div class="ticker-content">
+        <span>Automação de processos operacionais</span>
+        <span>Estruturação de dados empresariais</span>
+        <span>Soluções com governança e escalabilidade</span>
+        <span>Módulo de Demanda e DRE Gerencial</span>
+        <span>Integração com ERPs em até 48h</span>
+        <span>Redução de custos operacionais</span>
+        <span>Automação de processos operacionais</span>
+        <span>Estruturação de dados empresariais</span>
+        <span>Soluções com governança e escalabilidade</span>
+        <span>Módulo de Demanda e DRE Gerencial</span>
+        <span>Integração com ERPs em até 48h</span>
+        <span>Redução de custos operacionais</span>
+    </div>
+</div>
+    </div>
+</section>
+
+<!-- Seções adicionais para navegação -->
+<section id="servicos" style="padding: 80px 40px; background: #0f0f0f; text-align: center; scroll-margin-top: 80px;">
+    <div style="max-width: 1200px; margin: 0 auto;">
+        <h2 style="color: #ffd000; font-size: 2rem; margin-bottom: 2rem; font-weight: 700;">Nossos Serviços</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 2rem; justify-content: center;">
+            <div style="background: #1a1a1a; padding: 2rem; border-radius: 15px; flex: 1; min-width: 250px; border: 1px solid #333; transition: all 0.3s;">
+                <i class="fas fa-database" style="font-size: 2.5rem; color: #ffd000; margin-bottom: 1rem;"></i>
+                <h3 style="color: #ffd000; margin-bottom: 1rem;">Estruturação de Dados</h3>
+                <p style="color: #b0b0b0;">Organização e padronização de informações para análise confiável.</p>
+            </div>
+            <div style="background: #1a1a1a; padding: 2rem; border-radius: 15px; flex: 1; min-width: 250px; border: 1px solid #333; transition: all 0.3s;">
+                <i class="fas fa-robot" style="font-size: 2.5rem; color: #ffd000; margin-bottom: 1rem;"></i>
+                <h3 style="color: #ffd000; margin-bottom: 1rem;">Automação Operacional</h3>
+                <p style="color: #b0b0b0;">Elimine processos manuais com rotinas automatizadas e agendadas.</p>
+            </div>
+            <div style="background: #1a1a1a; padding: 2rem; border-radius: 15px; flex: 1; min-width: 250px; border: 1px solid #333; transition: all 0.3s;">
+                <i class="fas fa-chart-line" style="font-size: 2.5rem; color: #ffd000; margin-bottom: 1rem;"></i>
+                <h3 style="color: #ffd000; margin-bottom: 1rem;">Performance e Gestão</h3>
+                <p style="color: #b0b0b0;">Módulos de estoque, demanda e DRE gerencial sob medida.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="diferenciais" style="padding: 80px 40px; background: #0a0a0a; text-align: center; scroll-margin-top: 80px;">
+    <div style="max-width: 1200px; margin: 0 auto;">
+        <h2 style="color: #ffd000; font-size: 2rem; margin-bottom: 2rem; font-weight: 700;">Nossos Diferenciais</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 2rem; justify-content: center;">
+            <div style="background: #1a1a1a; padding: 2rem; border-radius: 15px; flex: 1; min-width: 250px; border: 1px solid #333; transition: all 0.3s;">
+                <i class="fas fa-rocket" style="font-size: 2.5rem; color: #ffd000; margin-bottom: 1rem;"></i>
+                <h3 style="color: #ffd000; margin-bottom: 1rem;">Resultados Ágeis</h3>
+                <p style="color: #b0b0b0;">Entregas de valor no curto e médio prazo.</p>
+            </div>
+            <div style="background: #1a1a1a; padding: 2rem; border-radius: 15px; flex: 1; min-width: 250px; border: 1px solid #333; transition: all 0.3s;">
+                <i class="fas fa-cubes" style="font-size: 2.5rem; color: #ffd000; margin-bottom: 1rem;"></i>
+                <h3 style="color: #ffd000; margin-bottom: 1rem;">Escalabilidade</h3>
+                <p style="color: #b0b0b0;">Arquitetura preparada para crescer com sua operação.</p>
+            </div>
+            <div style="background: #1a1a1a; padding: 2rem; border-radius: 15px; flex: 1; min-width: 250px; border: 1px solid #333; transition: all 0.3s;">
+                <i class="fas fa-shield-alt" style="font-size: 2.5rem; color: #ffd000; margin-bottom: 1rem;"></i>
+                <h3 style="color: #ffd000; margin-bottom: 1rem;">Governança de Dados</h3>
+                <p style="color: #b0b0b0;">Informação consistente para decisão segura.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SEÇÃO EXPERIÊNCIA COM CLIENTES - SEM LOGOS, APENAS NOMES CENTRALIZADOS -->
+<section id="experiencia" class="clients-section">
+    <div style="max-width: 1200px; margin: 0 auto;">
+        <h2 class="section-title">Experiência com Clientes</h2>
+        <p class="section-subtitle">Empresas que confiam na ApliKado para transformar seus dados em resultados</p>
+        
+        <div class="clients-grid">
+            <!-- Cliente 1 - Frozen Spa -->
+            <div class="client-card" data-aos="fade-up" data-aos-delay="100">
+                <h3 class="client-name">Frozen Spa</h3>
+                <p class="client-description">Especialista em Alimentação personalizada sob medida</p>
+                <div class="client-stats">
+                    <div class="stat">
+                        <div class="stat-number">+40%</div>
+                        <div class="stat-label">Eficiência</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">24/7</div>
+                        <div class="stat-label">Automação</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cliente 2 - ALF Ferramentas -->
+            <div class="client-card" data-aos="fade-up" data-aos-delay="200">
+                <h3 class="client-name">ALF Ferramentas</h3>
+                <p class="client-description">Distribuição de ferramentas industriais e equipamentos</p>
+                <div class="client-stats">
+                    <div class="stat">
+                        <div class="stat-number">-35%</div>
+                        <div class="stat-label">Custo</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">100%</div>
+                        <div class="stat-label">Integração</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cliente 3 - QNutri -->
+            <div class="client-card" data-aos="fade-up" data-aos-delay="300">
+                <h3 class="client-name">QNutri</h3>
+                <p class="client-description">Alimentação saudável e nutrição funcional</p>
+                <div class="client-stats">
+                    <div class="stat">
+                        <div class="stat-number">+50%</div>
+                        <div class="stat-label">Vendas</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">7d</div>
+                        <div class="stat-label">Implementação</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 3rem; text-align: center; font-size: 0.85rem; color: #666;">
+            <i class="fas fa-chart-line"></i> Resultados reais alcançados com nossa plataforma
+        </div>
+    </div>
+</section>
+
+<section id="contato" style="padding: 80px 40px; background: #0a0a0a; text-align: center; scroll-margin-top: 80px;">
+    <div style="max-width: 1200px; margin: 0 auto;">
+        <h2 style="color: #ffd000; font-size: 2rem; margin-bottom: 2rem; font-weight: 700;">Fale Conosco</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 2rem; justify-content: center;">
+            <div style="background: #1a1a1a; padding: 1.5rem; border-radius: 15px; min-width: 200px; border: 1px solid #333; transition: all 0.3s;">
+                <i class="fas fa-phone-alt" style="font-size: 2rem; color: #ffd000; margin-bottom: 0.5rem;"></i>
+                <h4 style="color: #ffd000;">Telefone</h4>
+                <p style="color: #b0b0b0;">(21) 99185-9228</p>
+            </div>
+            <div style="background: #1a1a1a; padding: 1.5rem; border-radius: 15px; min-width: 200px; border: 1px solid #333; transition: all 0.3s;">
+                <i class="fas fa-envelope" style="font-size: 2rem; color: #ffd000; margin-bottom: 0.5rem;"></i>
+                <h4 style="color: #ffd000;">E-mail</h4>
+                <p style="color: #b0b0b0;">contato@aplikado.com.br</p>
+            </div>
+            <div style="background: #1a1a1a; padding: 1.5rem; border-radius: 15px; min-width: 200px; border: 1px solid #333; transition: all 0.3s;">
+                <i class="fab fa-whatsapp" style="font-size: 2rem; color: #ffd000; margin-bottom: 0.5rem;"></i>
+                <h4 style="color: #ffd000;">WhatsApp</h4>
+                <p style="color: #b0b0b0;">(21) 99780-04545</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal Login -->
+<div id="loginModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center;">
+    <div style="background: #000; padding: 2rem; border-radius: 15px; width: 90%; max-width: 400px; border: 2px solid #ffd000; position: relative;">
+        <span id="closeModal" style="position: absolute; top: 15px; right: 20px; font-size: 1.8rem; cursor: pointer; color: #ffd000;">&times;</span>
+        <h3 style="color: #ffd000; margin-bottom: 1.5rem; text-align: center;">Acessar Plataforma</h3>
+        <form id="loginForm">
+            <input type="text" placeholder="Usuário" id="username" style="width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid #ffd000; border-radius: 8px; background: #1a1a1a; color: white; font-family: 'Poppins', sans-serif;">
+            <input type="password" placeholder="Senha" id="password" style="width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid #ffd000; border-radius: 8px; background: #1a1a1a; color: white; font-family: 'Poppins', sans-serif;">
+            <button type="submit" style="width: 100%; padding: 0.8rem; background: #ffd000; color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: 'Poppins', sans-serif;">Entrar</button>
+        </form>
+        <div style="margin-top: 1rem; text-align: center; font-size: 0.9rem; color: #ccc;">
+            <p>Ainda não é cliente? <a href="https://wa.me/5521997804545" target="_blank" style="color: #25D366; text-decoration: none; font-weight: bold;">Entre em contato</a></p>
+        </div>
+    </div>
+</div>
+
+<!-- Botão WhatsApp -->
+<a href="https://wa.me/5521997804545" class="whatsapp-float" target="_blank" style="position: fixed; bottom: 30px; right: 30px; background: #25D366; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.3s; z-index: 1500; text-decoration: none; animation: pulse 2s infinite;">
+    <i class="fab fa-whatsapp"></i>
+</a>
+
+<style>
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    
+    .whatsapp-float:hover {
+        transform: scale(1.1);
+        animation: none;
+    }
+    
+    html {
+        scroll-behavior: smooth;
+    }
+    
+    /* Hover effects para cards de serviços */
+    #servicos div div:hover, #diferenciais div div:hover {
+        transform: translateY(-10px);
+        border-color: #ffd000;
+    }
+</style>
+
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script>
+    // Initialize AOS
+    AOS.init({
+        duration: 800,
+        once: true,
+        offset: 100
+    });
+
+    // Header scroll
+    window.addEventListener("scroll", function() {
+        const header = document.getElementById("header");
+        if (window.scrollY > 50) {
+            header.classList.add("shrink");
+        } else {
+            header.classList.remove("shrink");
+        }
+    });
+
+    // Carrossel
+    let slides = document.querySelectorAll(".slide");
+    let index = 0;
+
+    setInterval(() => {
+        slides[index].classList.remove("active");
+        index = (index + 1) % slides.length;
+        slides[index].classList.add("active");
+    }, 5000);
+
+    // Menu Mobile
+    const mobileToggle = document.getElementById('mobileMenuToggle');
+    const navMobile = document.getElementById('navMobile');
+    
+    mobileToggle.addEventListener('click', () => {
+        navMobile.classList.toggle('active');
+    });
+
+    // Modal Login
+    const modal = document.getElementById('loginModal');
+    const openModalBtns = document.querySelectorAll('#openModalBtn, #openModalBtnMobile');
+    const closeModal = document.getElementById('closeModal');
+
+    openModalBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            modal.style.display = 'flex';
+            navMobile.classList.remove('active');
+        });
+    });
+
+    closeModal.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    // Login simulation - Incluindo o cliente V M
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const user = document.getElementById('username').value.toUpperCase();
+        const pass = document.getElementById('password').value;
+        
+        // Cliente V M com senha 123 -> redireciona para CLIENT_VM.html
+        if (user === 'VM' && pass === '123') {
+            window.location.href = 'CLIENT_VM.html';
+        }
+        // Usuário ALF com senha 123 -> redireciona para nova-home.html
+        else if (user === 'ALF' && pass === '123') {
+            window.location.href = 'CLIENT_ALF.html';
+        } 
+        // Usuário FROZEN com senha 123 -> redireciona para nova-home2.html
+        else if (user === 'FROZEN' && pass === '123') {
+            window.location.href = 'CLIENT_FROZEN.html';
+        } 
+        // Usuário QNUTRI com senha 123 -> redireciona para nova-home3.html
+        else if (user === 'QNUTRI' && pass === '123') {
+            window.location.href = 'CLIENT_QNUTRI.html';
+        } 
+        else {
+            alert('Credenciais inválidas. Verifique usuário e senha.');
+        }
+    });
+
+    // Fechar menu mobile ao clicar em link
+    document.querySelectorAll('.nav-mobile a').forEach(link => {
+        link.addEventListener('click', () => {
+            navMobile.classList.remove('active');
+        });
+    });
+</script>
+
+</body>
+</html>
