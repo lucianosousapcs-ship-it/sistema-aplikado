@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplicado - Módulo III</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+
+        /* BORDAS ADICIONADAS PARA CAMPOS, TITULOS E LINHAS */
+        :root { --border-v: rgba(255, 255, 255, 0.2); }
+        table { border-collapse: collapse !important; }
+        th { border-right: 1px solid var(--border-v) !important; border-bottom: 2px solid var(--line) !important; }
+        td { border-right: 1px solid var(--border-v) !important; border-bottom: 1px solid var(--line) !important; }
+        th:last-child, td:last-child { border-right: none !important; }
+        .input-dia, .input-desc, .input-valor, .input-dinamica, .btn-plano-selector { 
+            border: 1px solid var(--border-v) !important; 
+            border-radius: 4px !important;
+            padding: 4px !important;
+        }
+        /* FIM DAS BORDAS ADICIONADAS */
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0b0d11;
+            --card: #11151b;
+            --line: rgba(255, 255, 255, 0.08);
+            --yellow: #f2c200;
+            --soft: rgba(255, 255, 255, 0.7);
+            --accent: #1a1f26;
+            --text-main: #f0f0f0;
+            --success: #10b981;
+            --error: #ef4444;
+            --total-highlight: #f59e0b;
+            --dre-bg: #1e242c;
+            --highlight-bg: rgba(242, 194, 0, 0.25);
+            --highlight-border: var(--yellow);
+        }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--bg); 
+            color: var(--text-main); 
+            overflow-x: hidden; 
+            font-size: 13px;
+        }
+        
+        /* TELA DE BLOQUEIO */
+        #lockScreen { 
+            display: flex; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0, 0, 0, 0.95); 
+            z-index: 9999; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        #lockScreen.hidden { display: none; }
+        
+        .lock-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .lock-container {
+            background: rgba(17, 21, 27, 0.85);
+            padding: 25px 30px;
+            border-radius: 20px;
+            border: 1px solid var(--line);
+            width: 100%;
+            max-width: 350px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        .lock-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 18px;
+            font-weight: 900;
+            color: var(--yellow);
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        
+        .lock-subtitle {
+            font-size: 11px;
+            color: var(--soft);
+            margin-bottom: 20px;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+        
+        .lock-input-group {
+            margin-bottom: 25px;
+        }
+        
+        .lock-input {
+            width: 100%;
+            padding: 10px;
+            background: rgba(26, 31, 38, 0.6);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            color: var(--soft);
+            text-align: center;
+            font-size: 16px;
+            letter-spacing: 8px;
+            outline: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+        
+        .lock-input:focus {
+            border-color: var(--yellow);
+            background: rgba(37, 43, 51, 0.8);
+            box-shadow: 0 0 10px rgba(242, 194, 0, 0.2);
+        }
+
+        .lock-input::placeholder {
+            color: var(--soft);
+            opacity: 0.6;
+        }
+        
+        .lock-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        .lock-button {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+        }
+
+        .lock-button-voltar {
+            background: transparent;
+            color: white;
+        }
+
+        .lock-button-voltar:hover {
+            background: var(--accent);
+            border-color: var(--soft);
+        }
+        
+        .lock-button-acessar {
+            background: var(--yellow);
+            color: #000;
+            border-color: var(--yellow);
+        }
+        
+        .lock-button-acessar:hover {
+            background: #d4aa00;
+            border-color: #d4aa00;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(242, 194, 0, 0.3);
+        }
+        
+        .lock-error {
+            color: var(--error);
+            font-size: 13px;
+            margin-top: 20px;
+            display: none;
+            font-weight: 600;
+        }
+
+        /* TOPBAR */
+        .topbar {
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: #0f1318;
+            border-bottom: 1px solid var(--line);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .logo {
+            font-family: 'Poppins', sans-serif;
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+        }
+        
+        .logo span {
+            color: var(--yellow);
+        }
+        
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 11px;
+            text-transform: uppercase;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-yellow {
+            background: var(--yellow);
+            color: #111;
+        }
+        
+        .btn-yellow:hover {
+            background: #d4aa00;
+            transform: translateY(-2px);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--line);
+            color: white;
+        }
+        
+        .btn-outline:hover {
+            background: var(--accent);
+            border-color: var(--soft);
+        }
+        
+        .btn-accent {
+            background: var(--accent);
+            color: white;
+            border: 1px solid var(--line);
+        }
+        
+        .btn-accent:hover {
+            background: #252b33;
+        }
+
+        /* ABAS */
+        .tabs-container {
+            display: flex;
+            gap: 5px;
+            padding: 10px 20px 0;
+            background: #0f1318;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            color: var(--soft);
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: var(--yellow);
+            border-bottom-color: var(--yellow);
+            background: rgba(242, 194, 0, 0.05);
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: white;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* CONTAINER PRINCIPAL */
+        .container {
+            padding: 15px 20px;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* CABEÇALHO DE SALDOS (BANNER) */
+        .balance-header {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        
+        .balance-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            padding: 12px 15px;
+            border-radius: 8px;
+            min-width: 150px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .balance-label {
+            font-size: 10px;
+            color: var(--soft);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+        
+        .balance-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--yellow);
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .balance-value.positive {
+            color: var(--success);
+        }
+        
+        .balance-value.negative {
+            color: var(--error);
+        }
+
+        /* TOOLBAR */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .title-section h1 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .title-section p {
+            font-size: 12px;
+            color: var(--soft);
+        }
+
+        /* TABELAS */
+        .table-container {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 12px 10px;
+            text-align: left;
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--soft);
+            border-bottom: 1px solid var(--line);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--line);
+            vertical-align: middle;
+        }
+
+        /* COLUNAS ESPECÍFICAS */
+        .col-dia { width: 60px; text-align: center; }
+        .col-desc { min-width: 200px; }
+        .col-plano { width: 180px; }
+        .col-valor { width: 130px; text-align: right; }
+        .col-total { width: 140px; text-align: right; background: rgba(255, 255, 255, 0.02); }
+        .col-acao { width: 40px; text-align: center; }
+
+        /* INPUTS */
+        .input-dia {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            text-align: center;
+            font-weight: 600;
+            outline: none;
+        }
+
+        .input-desc {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            outline: none;
+            font-size: 12px;
+        }
+
+        .timestamp-label {
+            display: block;
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.3);
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        .th-dinamica-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            justify-content: center;
+        }
+        
+        .col-dinamica {
+            text-align: center !important;
+            min-width: 120px;
+        }
+        
+        .td-dinamica {
+            text-align: center !important;
+        }
+
+        .input-valor, .input-dinamica {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            text-align: right;
+            outline: none;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+        }
+
+        /* BOTÕES DE EDIÇÃO NA TABELA */
+        .btn-plano-selector {
+            width: 100%;
+            padding: 5px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--line);
+            color: var(--yellow);
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-plano-selector:hover {
+            background: linear-gradient(135deg, rgba(242, 194, 0, 0.3), rgba(242, 194, 0, 0.1));
+            box-shadow: 0 0 8px rgba(242, 194, 0, 0.3);
+        }
+
+        /* COLUNA TOTAL - CORES FINANCEIRAS */
+        .col-total {
+            min-width: 140px;
+        }
+
+        .total-input {
+            font-weight: 600 !important;
+            font-size: 13px !important;
+            text-align: right;
+            font-family: 'Poppins', sans-serif !important;
+            background: transparent;
+            border: none;
+            width: 100%;
+            outline: none;
+        }
+
+        .total-input.positivo {
+            color: var(--success) !important;
+        }
+
+        .total-input.negativo {
+            color: var(--error) !important;
+        }
+
+        /* DRE TABLE - LAYOUT EXECUTIVO MAIS CLARO */
+        .dre-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+            background: var(--dre-bg);
+        }
+
+        .dre-table thead tr {
+            background: #2a2e36;
+            border-bottom: 2px solid var(--yellow);
+        }
+
+        .dre-table th {
+            padding: 14px 8px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--yellow);
+            text-transform: uppercase;
+            font-size: 9px;
+            letter-spacing: 1px;
+            min-width: 85px;
+            background: #2a2e36;
+        }
+
+        .dre-table th:first-child {
+            text-align: left;
+            min-width: 180px;
+        }
+
+        .dre-table th:last-child {
+            background: rgba(245, 158, 11, 0.2);
+            border-left: 2px solid var(--total-highlight);
+            border-right: 2px solid var(--total-highlight);
+            font-weight: 700;
+            color: var(--total-highlight);
+        }
+
+        .dre-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            text-align: right;
+            font-size: 11px;
+            font-family: 'Poppins', sans-serif;
+            background: var(--dre-bg);
+            transition: background 0.2s ease;
+            cursor: pointer;
+        }
+
+        .dre-table td:first-child {
+            text-align: left;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            min-width: 180px;
+            font-family: 'Inter', sans-serif;
+            cursor: default;
+        }
+
+        .dre-table td:last-child {
+            background: rgba(245, 158, 11, 0.15);
+            border-left: 1px solid var(--total-highlight);
+            border-right: 1px solid var(--total-highlight);
+            font-weight: 600;
+            color: var(--total-highlight);
+        }
+
+        .dre-table td:not(:first-child):not(:last-child):hover {
+            background: rgba(242, 194, 0, 0.2);
+            box-shadow: inset 0 0 0 1px var(--yellow);
+        }
+
+        /* LINHAS DRE */
+        .dre-group-title {
+            background: #262e38 !important;
+            border-top: 2px solid rgba(242, 194, 0, 0.4);
+            border-bottom: 1px solid rgba(242, 194, 0, 0.2);
+            font-weight: 600;
+        }
+        .dre-group-title td {
+            color: var(--yellow);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            background: #262e38;
+        }
+
+        .dre-subgroup {
+            background: #1a212a !important;
+        }
+        .dre-subgroup td {
+            background: #1a212a;
+        }
+
+        .dre-total-row {
+            background: #1f2a1f !important;
+            border-top: 2px solid var(--total-highlight);
+            border-bottom: 2px solid var(--total-highlight);
+        }
+        .dre-total-row td {
+            color: var(--total-highlight);
+            font-weight: 700;
+            background: #1f2a1f;
+        }
+
+        .valor-positivo { color: var(--success); }
+        .valor-negativo { color: var(--error); }
+
+        /* ÍCONES COLORIDOS DE TENDÊNCIA */
+        .trend-icon-up {
+            display: inline-block;
+            margin-left: 5px;
+            font-size: 10px;
+            color: var(--success);
+            font-weight: bold;
+        }
+        .trend-icon-down {
+            display: inline-block;
+            margin-left: 5px;
+            font-size: 10px;
+            color: var(--error);
+            font-weight: bold;
+        }
+
+        /* ÍCONE DE EXCLUIR ELEGANTE */
+        .btn-remove-row, .btn-remove-col {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 0 auto;
+        }
+        .btn-remove-row:hover, .btn-remove-col:hover {
+            background: var(--error);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        /* INDICADOR DE ÚLTIMO LANÇAMENTO */
+        .dre-last-entry-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 8px;
+            padding: 2px 6px;
+            background: rgba(242, 194, 0, 0.2);
+            border: 1px solid var(--yellow);
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--yellow);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            animation: pulse-badge 2s infinite;
+        }
+
+        @keyframes pulse-badge {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(242, 194, 0, 0.4); }
+            50% { opacity: 0.8; box-shadow: 0 0 8px 2px rgba(242, 194, 0, 0.2); }
+        }
+
+        /* RODAPÉ */
+        .footer {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #0f1318;
+            border-top: 1px solid var(--line);
+            font-size: 10px;
+            color: var(--soft);
+        }
+        .footer-text {
+            letter-spacing: 0.5px;
+        }
+
+        /* MODAIS */
+        .modal-plano, .modal-edit-conta { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-plano.active, .modal-edit-conta.active { display: flex; }
+        .modal-plano-content, .modal-edit-content { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 25px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-plano-header { font-family: 'Poppins', sans-serif; font-size: 20px; font-weight: 700; color: var(--yellow); margin-bottom: 20px; position: relative; text-align: center; }
+        .modal-plano-close { position: absolute; top: 0; right: 0; background: rgba(239,68,68,0.2); border: 1px solid var(--error); color: var(--error); width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .modal-plano-items { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        /* ITEM DO PLANO NO MODAL REFINADO */
+        .modal-plano-item { 
+            padding: 12px; 
+            background: rgba(26,31,38,0.6); 
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 6px; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            transition: 0.2s;
+        }
+        .modal-plano-item:hover { background: rgba(255,255,255,0.05); }
+        .modal-plano-item.receita { border-left: 3px solid var(--success); }
+        .modal-plano-item.despesa { border-left: 3px solid var(--error); }
+        
+        .btn-edit-conta { color: var(--success); background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 4px 10px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; margin-right: 5px; }
+        .btn-delete-conta { color: var(--error); background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 4px 10px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; }
+        
+        .btn-add-conta { background: rgba(16,185,129,0.2); border: 1px solid var(--success); color: var(--success); padding: 4px 10px; border-radius: 4px; font-size: 10px; cursor: pointer; }
+        .form-group { margin-bottom: 15px; }
+        .form-label { font-size: 11px; color: var(--soft); display: block; margin-bottom: 5px; }
+        .form-input { width: 100%; padding: 8px; background: rgba(26,31,38,0.6); border: 1px solid var(--line); border-radius: 4px; color: white; }
+        .form-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .form-button { flex: 1; padding: 8px; border-radius: 4px; font-weight: 700; cursor: pointer; }
+        .form-button-cancel { background: transparent; border: 1px solid var(--line); color: white; }
+        .form-button-save { background: var(--yellow); color: #000; border: none; }
+
+        /* POPUP DE CONFIRMAÇÃO */
+        #confirmPopup {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+        .confirm-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .confirm-icon { font-size: 40px; margin-bottom: 15px; }
+        .confirm-title { font-size: 18px; font-weight: 700; color: white; margin-bottom: 10px; font-family: 'Poppins'; }
+        .confirm-text { color: var(--soft); font-size: 13px; margin-bottom: 25px; line-height: 1.5; }
+        .confirm-btns { display: flex; gap: 12px; }
+        .btn-confirm { flex: 1; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; border: none; font-size: 12px; text-transform: uppercase; }
+        .btn-confirm-ok { background: var(--yellow); color: #000; }
+        .btn-confirm-cancel { background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--line); }
+
+        /* GRÁFICOS */
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; margin-top: 20px; }
+        .chart-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 25px; }
+        .chart-title { font-size: 13px; font-weight: 700; color: var(--soft); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* MESES EM BOTÕES */
+        .meses-botoes { display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
+        .mes-botao { padding: 8px 15px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; color: var(--soft); font-weight: 700; font-size: 10px; text-transform: uppercase; cursor: pointer; transition: 0.3s; white-space: nowrap; }
+        .mes-botao.active { background: var(--yellow); color: #000; border-color: var(--yellow); }
+
+        /* DESTAQUE PARA LINHAS FILTRADAS NA TABELA DE LANÇAMENTOS */
+        .linha-destacada {
+            background-color: var(--highlight-bg) !important;
+            border-left: 3px solid var(--highlight-border);
+            transition: all 0.3s ease;
+        }
+        .info-filtro {
+            background: var(--accent);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .btn-limpar-filtro {
+            background: var(--yellow);
+            color: #000;
+            border: none;
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        /* IMPRESSÃO - RELATÓRIO EXECUTIVO PAISAGEM */
+        @media print {
+            body { background: white; color: black; }
+            .topbar, .tabs-container, .toolbar .btn, .footer button, .meses-botoes, .btn-remove-col, .btn-remove-row, .lock-wrapper, .balance-header, .btn-yellow, .topbar-actions .btn-outline, #confirmPopup { display: none !important; }
+            .container { padding: 0; margin: 0; }
+            .tab-content { display: block !important; }
+            #tab-dre { display: block !important; }
+            .dre-table { background: #f4f4f4 !important; width: 100%; }
+            .dre-table th, .dre-table td { background: #f9f9f9 !important; color: black !important; border: 1px solid #ccc; }
+            .dre-table th:last-child, .dre-table td:last-child { background: #fff0d0 !important; }
+            .dre-group-title td, .dre-subgroup td, .dre-total-row td { background: #efefef !important; }
+            .valor-positivo { color: #2e7d32 !important; }
+            .valor-negativo { color: #c62828 !important; }
+            .trend-icon-up, .trend-icon-down { display: inline; }
+            @page { size: landscape; margin: 1.5cm; }
+            body::before {
+                content: "PEGASO CONSULTORIA | APLIKADO SOLUÇÕES";
+                display: block;
+                text-align: center;
+                font-size: 10pt;
+                margin-bottom: 15px;
+                font-weight: bold;
+                letter-spacing: 1px;
+            }
+            body::after {
+                content: "PEGASO CONSULTORIA | APLIKADO SOLUÇÕES";
+                display: block;
+                text-align: center;
+                font-size: 9pt;
+                margin-top: 15px;
+                border-top: 1px solid #ccc;
+                padding-top: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TELA DE BLOQUEIO -->
+    <div id="lockScreen">
+        <div class="lock-wrapper">
+            <div class="lock-container">
+                <h2 class="lock-title">Acesso Restrito</h2>
+                <p class="lock-subtitle">Módulo III - Faturamento, Custos e Rentabilidade</p>
+                <div class="lock-input-group">
+                    <input type="password" id="passwordInput" class="lock-input" placeholder=" * * *" maxlength="3">
+                    <p id="lockError" class="lock-error">Senha incorreta. Tente novamente.</p>
+                </div>
+                <div class="lock-buttons">
+                    <button class="lock-button lock-button-voltar" onclick="voltarParaModulos()">Voltar</button>
+                    <button class="lock-button lock-button-acessar" onclick="validarSenha()">Acessar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP DE CONFIRMAÇÃO SALVAR (EXECUTIVO) -->
+    <div id="confirmPopup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 5000; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+        <div class="popup-card" style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 40px; max-width: 450px; width: 90%; text-align: center; box-shadow: 0 30px 70px rgba(0,0,0,0.6);">
+            <div id="popupTitle" class="popup-title" style="font-family: 'Poppins'; font-size: 20px; font-weight: 700; color: var(--yellow); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Salvar Alterações</div>
+            <div id="popupText" class="popup-text" style="color: var(--soft); font-size: 14px; margin-bottom: 30px; line-height: 1.6;">Confirma o armazenamento de todos os lançamentos e configurações do período selecionado?</div>
+            <div id="popupBtns" class="popup-btns" style="display: flex; gap: 15px; justify-content: center;">
+                <button class="btn-popup btn-popup-secondary" onclick="fecharConfirm()" style="padding: 12px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; border: 1px solid var(--line); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; background: transparent; color: white;">Desistir</button>
+                <button class="btn-popup btn-popup-primary" onclick="confirmarSalvar()" style="padding: 12px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; border: none; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; background: var(--yellow); color: #000;">Confirmar e Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SELETOR DE PLANO DE CONTAS -->
+    <div id="modalPlano" class="modal-plano">
+        <div class="modal-plano-content">
+            <div class="modal-plano-header">
+                Selecione o Plano de Contas
+                <button class="modal-plano-close" onclick="fecharModalPlano()">×</button>
+            </div>
+            <div class="modal-plano-group">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:0 5px;">
+                    <span style="font-weight:700; color:var(--success); font-size:11px; text-transform:uppercase;">📈 Receitas</span>
+                    <button class="btn-add-conta" onclick="abrirFormAdicionar('receitas')">+ Adicionar</button>
+                </div>
+                <div class="modal-plano-items" id="grupoReceitas"></div>
+            </div>
+            <div class="modal-plano-group" style="margin-top:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:0 5px;">
+                    <span style="font-weight:700; color:var(--error); font-size:11px; text-transform:uppercase;">📉 Custos Variáveis</span>
+                    <button class="btn-add-conta" onclick="abrirFormAdicionar('custosVariaveis')">+ Adicionar</button>
+                </div>
+                <div class="modal-plano-items" id="grupoCustosVariaveis"></div>
+            </div>
+            <div class="modal-plano-group" style="margin-top:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:0 5px;">
+                    <span style="font-weight:700; color:var(--soft); font-size:11px; text-transform:uppercase;">📉 Custos Fixos</span>
+                    <button class="btn-add-conta" onclick="abrirFormAdicionar('custosFixos')">+ Adicionar</button>
+                </div>
+                <div class="modal-plano-items" id="grupoCustosFixos"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE EDIÇÃO/ADIÇÃO -->
+    <div id="modalEditConta" class="modal-edit-conta">
+        <div class="modal-edit-content">
+            <div class="modal-plano-header" id="editHeader">Editar Conta</div>
+            <div class="form-group"><label class="form-label">Código</label><input type="text" id="editCod" class="form-input" placeholder="Ex: 100"></div>
+            <div class="form-group"><label class="form-label">Nome</label><input type="text" id="editNome" class="form-input" placeholder="Ex: Cliente Site"></div>
+            <div class="form-buttons"><button class="form-button form-button-cancel" onclick="fecharFormEdit()">Cancelar</button><button class="form-button form-button-save" onclick="salvarConta()">Salvar</button></div>
+        </div>
+    </div>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <div id="mainContent" style="display: none;">
+        <div class="topbar">
+            <a href="javascript:void(0);" class="logo" onclick="voltarParaModulos()">Apli<span>kado </span></a>
+            <div class="topbar-actions">
+                <button class="btn btn-outline" onclick="voltarParaModulos()">◀ Voltar</button>
+                <button class="btn btn-yellow" onclick="abrirConfirm()">Salvar</button>
+            </div>
+        </div>
+
+        <div class="tabs-container">
+            <button class="tab-btn active" onclick="switchTab('lancamentos', this)">Lançamentos</button>
+            <button class="tab-btn" onclick="switchTab('dre', this)">Resumo DRE</button>
+            <button class="tab-btn" onclick="switchTab('graficos', this)">Visão Gráfica</button>
+        </div>
+
+        <div class="container">
+            <!-- ABA LANÇAMENTOS -->
+            <div id="tab-lancamentos" class="tab-content active">
+                <div class="meses-botoes" id="mesesBotoes"></div>
+                <div id="filtroInfo" class="info-filtro" style="display: none;">
+                    <span>🔍 Visualizando lançamentos de: <strong id="filtroContaNome"></strong></span>
+                    <button class="btn-limpar-filtro" onclick="limparDestaqueLancamentos()">Limpar filtro</button>
+                </div>
+                <div class="balance-header" id="balanceBanner">
+                    <div class="balance-card"><span class="balance-label">Saldo Inicial</span><span class="balance-value" id="saldoInicial">R$ 0,00</span></div>
+                    <div class="balance-card"><span class="balance-label">Total Previsto</span><span class="balance-value" id="totalPrevisto">R$ 0,00</span></div>
+                    <div class="balance-card"><span class="balance-label">Resultado Período</span><span class="balance-value" id="resultadoPeriodo">R$ 0,00</span></div>
+                    <div class="balance-card"><span class="balance-label">Saldo Final</span><span class="balance-value" id="saldoFinal">R$ 0,00</span></div>
+                </div>
+                <div class="toolbar">
+                    <div class="title-section"><h1>Lançamentos</h1><p>Gerencie as entradas e saídas do período selecionado.</p></div>
+                    <div><button class="btn btn-outline" onclick="adicionarColuna()">➕ Nova Coluna</button><button class="btn btn-accent" onclick="adicionarLinha()">➕ Nova Linha</button></div>
+                </div>
+                <div class="table-container">
+                    <div class="table-wrapper">
+                        <table id="tabelaLancamentos">
+                            <thead><tr id="headerRow"><th class="col-dia">Dia</th><th class="col-desc">Descrição</th><th class="col-plano">Plano Contas</th><th class="col-valor">Previsto</th><th class="col-total">Total (R$)</th><th class="col-acao"></th></tr></thead>
+                            <tbody id="corpoTabela"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA DRE -->
+            <div id="tab-dre" class="tab-content">
+                <div class="toolbar">
+                    <div class="title-section"><h1>Demonstrativo de Resultados (DRE)</h1><p>Análise comparativa anual com indicadores de tendência.</p></div>
+                    <button class="btn btn-yellow" onclick="imprimirDRE()">🖨️ Imprimir DRE (Paisagem)</button>
+                </div>
+                <div class="table-container">
+                    <div class="table-wrapper">
+                        <table class="dre-table" id="dreTable">
+                            <thead><tr class="dre-header"><th>Cód. / Descrição</th><th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th><th>Jun</th><th>Jul</th><th>Ago</th><th>Set</th><th>Out</th><th>Nov</th><th>Dez</th><th>Total Anual</th></tr></thead>
+                            <tbody id="corpoDRE"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="footer"><div class="footer-text">📌 PEGADO CONSULTORIA | APLIKADO SOLUÇÕES</div></div>
+            </div>
+
+            <!-- ABA GRÁFICOS -->
+            <div id="tab-graficos" class="tab-content">
+                <div class="toolbar">
+                    <div class="title-section"><h1>Visão Gráfica</h1><p>Análise visual de desempenho e composição financeira.</p></div>
+                </div>
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">Desempenho Mensal (Receita vs Despesa)</div>
+                        <canvas id="chartDRE"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Composição Proporcional de Custos</div>
+                        <canvas id="chartPizza"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card" style="margin-top:20px;">
+                    <div class="chart-title">Evolução do Resultado Operacional Líquido</div>
+                    <canvas id="chartLinha" height="100"></canvas>
+                </div>
+            </div>
+
+            <div class="footer">
+                <button class="btn btn-yellow" onclick="abrirConfirm()">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elementos DOM
+        const corpoTabela = document.getElementById('corpoTabela');
+        const headerRow = document.getElementById('headerRow');
+        const balanceBanner = document.getElementById('balanceBanner');
+        const corpoDRE = document.getElementById('corpoDRE');
+        const modalPlano = document.getElementById('modalPlano');
+        const modalEditConta = document.getElementById('modalEditConta');
+        
+        // Variáveis globais
+        let inputPlanoAtual = null;
+        let contaEmEdicao = null;
+        let grupoEmEdicao = null;
+        let ehNovaContaEmEdicao = false;
+        let currentMonth = new Date().getMonth();  // 0 = Janeiro
+        let charts = {};
+        
+        // Estrutura do plano de contas (completa)
+        let estruturaDRE = {
+            receitas: [
+                { cod: '100', nome: 'Cliente Site' }, { cod: '101', nome: 'Zona Sul Frozen' }, { cod: '102', nome: 'Cozinha do Mercado' },
+                { cod: '103', nome: 'Pizzaria' }, { cod: '104', nome: 'Refeitório' }, { cod: '110', nome: 'Outras Receitas' }
+            ],
+            custosVariaveis: [
+                { cod: '200', nome: 'Carnes / Aves / Peixes' }, { cod: '201', nome: 'Massas' }, { cod: '202', nome: 'Estoque Seco' },
+                { cod: '203', nome: 'Hortifruti' }, { cod: '204', nome: 'Frios / Laticínios' }, { cod: '205', nome: 'Embalagens' },
+                { cod: '207', nome: 'Material de Limpeza' }, { cod: '301', nome: 'Comissões' }, { cod: '312', nome: 'Diversos Variáveis' }
+            ],
+            custosFixos: [
+                { cod: '400', nome: 'Func. Salário' }, { cod: '402', nome: 'Vale Transportes' }, { cod: '500', nome: 'INSS' },
+                { cod: '503', nome: 'FGTS' }, { cod: '600', nome: 'Pró-Labore' }, { cod: '601', nome: 'Serviços de Terceiros' },
+                { cod: '604', nome: 'Aluguéis' }, { cod: '605', nome: 'Luz' }, { cod: '606', nome: 'Água' },
+                { cod: '607', nome: 'Gás' }, { cod: '608', nome: 'Telefonia' }, { cod: '609', nome: 'Manutenção' },
+                { cod: '701', nome: 'ICMS ST' }, { cod: '705', nome: 'Simples Nacional' }
+            ]
+        };
+        
+        const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+        
+        // ======================== FUNÇÕES DE APOIO ========================
+        function ehReceita(nomeItem) {
+            return estruturaDRE.receitas.some(r => r.nome === nomeItem);
+        }
+        
+        function carregarEstruturaDRE() {
+            const salvo = localStorage.getItem('estruturaDREModuloIII_FROZEN');
+            if (salvo) estruturaDRE = JSON.parse(salvo);
+        }
+        
+        function salvarEstruturaDRE() {
+            localStorage.setItem('estruturaDREModuloIII_FROZEN', JSON.stringify(estruturaDRE));
+        }
+        
+        // ======================== MODAL PLANO DE CONTAS ========================
+        function renderizarGrupo(grupo, elementId) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            estruturaDRE[grupo].forEach((item, idx) => {
+                const classe = grupo === 'receitas' ? 'receita' : 'despesa';
+                const div = document.createElement('div');
+                div.className = `modal-plano-item ${classe}`;
+                div.innerHTML = `
+                    <div class="modal-plano-item-text" style="flex:1">
+                        <strong>${item.cod}</strong><br><span>${item.nome}</span>
+                    </div>
+                    <div class="modal-plano-item-actions">
+                        <button class="btn-edit-conta" onclick="abrirFormEditar('${grupo}', ${idx})">Editar</button>
+                        <button class="btn-delete-conta" onclick="deletarConta('${grupo}', ${idx})">Excluir</button>
+                    </div>
+                `;
+                div.querySelector('.modal-plano-item-text').onclick = () => selecionarPlano(item.nome);
+                container.appendChild(div);
+            });
+        }
+        
+        function inicializarModal() {
+            renderizarGrupo('receitas', 'grupoReceitas');
+            renderizarGrupo('custosVariaveis', 'grupoCustosVariaveis');
+            renderizarGrupo('custosFixos', 'grupoCustosFixos');
+        }
+        
+        function abrirModalPlano(inputElement) {
+            inputPlanoAtual = inputElement;
+            modalPlano.classList.add('active');
+        }
+        
+        function fecharModalPlano() {
+            modalPlano.classList.remove('active');
+            inputPlanoAtual = null;
+        }
+        
+        function selecionarPlano(nomePlano) {
+            if (inputPlanoAtual) {
+                const item = [...estruturaDRE.receitas, ...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos]
+                    .find(p => p.nome === nomePlano);
+                if (item) {
+                    const btn = inputPlanoAtual.parentElement.querySelector('.btn-plano-selector');
+                    btn.textContent = `${item.cod} - ${item.nome}`;
+                    inputPlanoAtual.value = nomePlano;
+                    fecharModalPlano();
+                    calcularTotais();
+                }
+            }
+        }
+        
+        function abrirFormAdicionar(grupo) {
+            ehNovaContaEmEdicao = true;
+            grupoEmEdicao = grupo;
+            contaEmEdicao = null;
+            document.getElementById('editHeader').textContent = 'Adicionar Nova Conta';
+            document.getElementById('editCod').value = '';
+            document.getElementById('editNome').value = '';
+            modalEditConta.classList.add('active');
+        }
+        
+        function abrirFormEditar(grupo, idx) {
+            ehNovaContaEmEdicao = false;
+            grupoEmEdicao = grupo;
+            contaEmEdicao = idx;
+            const conta = estruturaDRE[grupo][idx];
+            document.getElementById('editHeader').textContent = 'Editar Conta';
+            document.getElementById('editCod').value = conta.cod;
+            document.getElementById('editNome').value = conta.nome;
+            modalEditConta.classList.add('active');
+        }
+        
+        function fecharFormEdit() {
+            modalEditConta.classList.remove('active');
+            ehNovaContaEmEdicao = false;
+            grupoEmEdicao = null;
+            contaEmEdicao = null;
+        }
+        
+        function salvarConta() {
+            const cod = document.getElementById('editCod').value.trim();
+            const nome = document.getElementById('editNome').value.trim();
+            if (!cod || !nome) {
+                alert('Preencha código e nome!');
+                return;
+            }
+            if (ehNovaContaEmEdicao) {
+                estruturaDRE[grupoEmEdicao].push({ cod, nome });
+            } else {
+                estruturaDRE[grupoEmEdicao][contaEmEdicao] = { cod, nome };
+            }
+            salvarEstruturaDRE();
+            inicializarModal();
+            fecharFormEdit();
+        }
+        
+        function deletarConta(grupo, idx) {
+            if (confirm('Tem certeza que deseja excluir esta conta?')) {
+                estruturaDRE[grupo].splice(idx, 1);
+                salvarEstruturaDRE();
+                inicializarModal();
+            }
+        }
+        
+        // ======================== FUNÇÕES DA TABELA DE LANÇAMENTOS ========================
+        function mascaraMoeda(i) {
+            let v = i.value.replace(/\D/g, '');
+            v = (v / 100).toFixed(2) + '';
+            v = v.replace(".", ",").replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,").replace(/(\d)(\d{3}),/g, "$1.$2,");
+            i.value = v !== "0,00" ? v : "";
+            calcularTotais();
+        }
+        
+        function parseMoeda(v) {
+            if (v === undefined || v === null) return 0;
+            if (typeof v === 'number') return v;
+            if (typeof v !== 'string') return 0;
+            let limpo = v.replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.');
+            let numero = parseFloat(limpo);
+            return isNaN(numero) ? 0 : numero;
+        }
+        
+        function formatarMoeda(v) {
+            return v.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' });
+        }
+        
+        function adicionarColuna(nome = "Tesouraria") {
+            const thTotal = headerRow.querySelector('.col-total');
+            if (!thTotal) return;
+            const newTh = document.createElement('th');
+            newTh.className = 'col-dinamica';
+            newTh.innerHTML = `<div class="th-editable-container" style="display:flex; align-items:center; gap:5px;"><input type="text" class="th-editable" style="background:transparent; border:none; color:var(--soft); font-weight:700; font-size:10px; text-transform:uppercase; width:70px; outline:none;" value="${nome}" onchange="atualizarBannerEConfig()"><button class="btn-remove-col" onclick="removerColuna(this)">×</button></div>`;
+            headerRow.insertBefore(newTh, thTotal);
+            document.querySelectorAll('#corpoTabela tr').forEach(row => {
+                const tdTotal = row.querySelector('.col-total');
+                if (tdTotal) {
+                    const newTd = document.createElement('td');
+                    newTd.className = 'td-dinamica';
+                    newTd.innerHTML = '<input type="text" class="input-dinamica value-input" placeholder="0,00" oninput="mascaraMoeda(this)">';
+                    row.insertBefore(newTd, tdTotal);
+                }
+            });
+            atualizarBannerEConfig();
+        }
+        
+        function removerColuna(btn) {
+            if (!confirm('Remover coluna?')) return;
+            const th = btn.closest('th');
+            const index = Array.from(headerRow.children).indexOf(th);
+            th.remove();
+            document.querySelectorAll('#corpoTabela tr').forEach(row => {
+                if (row.children[index]) row.children[index].remove();
+            });
+            atualizarBannerEConfig();
+        }
+        
+        function atualizarBannerEConfig() {
+            document.querySelectorAll('.balance-card-dinamico').forEach(c => c.remove());
+            const nomes = [];
+            const ths = headerRow.querySelectorAll('.col-dinamica .th-editable');
+            const refCard = document.getElementById('resultadoPeriodo').parentElement;
+            ths.forEach((inp, i) => {
+                const nome = inp.value;
+                nomes.push(nome);
+                const newCard = document.createElement('div');
+                newCard.className = 'balance-card balance-card-dinamico';
+                newCard.innerHTML = `<span class="balance-label">Total ${nome}</span><span class="balance-value total-dinamico-banner" data-index="${i}">R$ 0,00</span>`;
+                balanceBanner.insertBefore(newCard, refCard);
+            });
+            localStorage.setItem('configColunasModuloIII_FROZEN', JSON.stringify(nomes));
+            calcularTotais();
+        }
+        
+        function carregarConfigColunas() {
+            headerRow.querySelectorAll('.col-dinamica').forEach(d => d.remove());
+            document.querySelectorAll('#corpoTabela tr').forEach(row => {
+                row.querySelectorAll('.td-dinamica').forEach(td => td.remove());
+            });
+            const salvo = localStorage.getItem('configColunasModuloIII_FROZEN');
+            if (salvo) {
+                JSON.parse(salvo).forEach(nome => adicionarColuna(nome));
+            } else {
+                adicionarColuna("Tesouraria");
+            }
+        }
+        
+        function adicionarLinha(dados = null) {
+            const tr = document.createElement('tr');
+            const diaVal = dados ? dados.dia : '';
+            const descVal = dados ? dados.desc : '';
+            const planoVal = dados ? dados.plano : '';
+            const valorVal = dados ? dados.valor : '';
+            const ts = dados ? dados.timestamp : '';
+            
+            let html = `<td><input type="number" class="input-dia" placeholder="01" value="${diaVal}" min="1" max="31"></td>
+                        <td><input type="text" class="input-desc" placeholder="Descrição detalhada..." value="${descVal}"><span class="timestamp-label">${ts ? 'Salvo em: ' + ts : ''}</span></td>
+                        <td><button class="btn-plano-selector" onclick="abrirModalPlano(this.parentElement.querySelector('.input-plano'))">${planoVal || 'Selecionar'}</button><input type="hidden" class="input-plano" value="${planoVal}"></td>
+                        <td><input type="text" class="input-valor" placeholder="0,00" oninput="mascaraMoeda(this)" value="${valorVal}"></td>`;
+            
+            const numColunas = headerRow.querySelectorAll('.col-dinamica').length;
+            for (let i = 0; i < numColunas; i++) {
+                const val = (dados && dados.dinamicas && dados.dinamicas[i]) ? dados.dinamicas[i] : '';
+                html += `<td class="td-dinamica"><input type="text" class="input-dinamica value-input" placeholder="0,00" oninput="mascaraMoeda(this)" value="${val}"></td>`;
+            }
+            html += `<td class="col-total"><input type="text" class="total-input" value="R$ 0,00" readonly></td>
+                     <td class="col-acao"><button class="btn-remove-row" onclick="removerLinha(this)">×</button></td>`;
+            tr.innerHTML = html;
+            corpoTabela.appendChild(tr);
+            tr.querySelectorAll('input').forEach(el => el.addEventListener('change', calcularTotais));
+            calcularTotais();
+        }
+        
+        function removerLinha(btn) {
+            if (confirm('Remover linha? As alterações só serão salvas após clicar em "Salvar".')) {
+                btn.closest('tr').remove();
+                calcularTotais();
+            }
+        }
+        
+        function calcularTotais() {
+            let totalPrev = 0;
+            const numCols = headerRow.querySelectorAll('.col-dinamica').length;
+            const totaisCols = new Array(numCols).fill(0);
+            
+            corpoTabela.querySelectorAll('tr').forEach(row => {
+                const planoInput = row.querySelector('.input-plano');
+                const planoNome = planoInput ? planoInput.value : '';
+                const isReceita = ehReceita(planoNome);
+                const valorPrevisto = parseMoeda(row.querySelector('.input-valor').value);
+                totalPrev += isReceita ? valorPrevisto : -valorPrevisto;
+                
+                let totalLinha = 0;
+                row.querySelectorAll('.input-dinamica').forEach((input, idx) => {
+                    const v = parseMoeda(input.value);
+                    const ajustado = isReceita ? v : -v;
+                    totalLinha += ajustado;
+                    if (idx < totaisCols.length) totaisCols[idx] += ajustado;
+                });
+                
+                const totalInput = row.querySelector('.total-input');
+                totalInput.value = formatarMoeda(totalLinha);
+                totalInput.classList.remove('positivo', 'negativo');
+                totalInput.classList.add(totalLinha >= 0 ? 'positivo' : 'negativo');
+            });
+            
+            document.getElementById('totalPrevisto').innerText = formatarMoeda(totalPrev);
+            document.querySelectorAll('.total-dinamico-banner').forEach((span, idx) => {
+                if (idx < totaisCols.length) {
+                    span.innerText = formatarMoeda(totaisCols[idx]);
+                    span.className = 'balance-value ' + (totaisCols[idx] >= 0 ? 'positive' : 'negative');
+                }
+            });
+            
+            const saldoIni = 5000.00;
+            document.getElementById('saldoInicial').innerText = formatarMoeda(saldoIni);
+            document.getElementById('resultadoPeriodo').innerText = formatarMoeda(totalPrev);
+            document.getElementById('resultadoPeriodo').className = 'balance-value ' + (totalPrev >= 0 ? 'positive' : 'negative');
+            document.getElementById('saldoFinal').innerText = formatarMoeda(saldoIni + totalPrev);
+            document.getElementById('saldoFinal').className = 'balance-value ' + ((saldoIni + totalPrev) >= 0 ? 'positive' : 'negative');
+        }
+        
+        // ======================== VALIDAÇÕES E POPUP SALVAR ========================
+        // Função de validação: NÃO considera o valor previsto.
+        // Apenas verifica:
+        // 1) Linha completamente vazia (sem dia E sem descrição)
+        // 2) Plano de contas não selecionado (se a linha não estiver completamente vazia)
+        function validarLinhasCompletas() {
+            const linhasVazias = [];
+            const linhasSemPlano = [];
+            let linhaIndex = 1;
+            
+            corpoTabela.querySelectorAll('tr').forEach(row => {
+                const dia = row.querySelector('.input-dia').value.trim();
+                const desc = row.querySelector('.input-desc').value.trim();
+                const plano = row.querySelector('.input-plano').value.trim();
+                
+                const isLinhaVazia = (dia === '' && desc === '');
+                
+                if (isLinhaVazia) {
+                    // Linha completamente vazia (sem dia e sem descrição) - impede salvar
+                    linhasVazias.push(linhaIndex);
+                } else {
+                    // Linha tem conteúdo, exige plano de contas
+                    if (plano === '') {
+                        linhasSemPlano.push(linhaIndex);
+                    }
+                }
+                linhaIndex++;
+            });
+            
+            return { vazias: linhasVazias, semPlano: linhasSemPlano };
+        }
+        
+        function abrirConfirm() {
+            document.getElementById('confirmPopup').style.display = 'flex';
+            // Restaura os botões e título padrão
+            const popupTitle = document.getElementById('popupTitle');
+            const popupText = document.getElementById('popupText');
+            const popupBtnsDiv = document.getElementById('popupBtns');
+            
+            popupTitle.textContent = "Salvar Alterações";
+            popupText.textContent = "Confirma o armazenamento de todos os lançamentos e configurações do período selecionado?";
+            popupBtnsDiv.innerHTML = `
+                <button class="btn-popup btn-popup-secondary" onclick="fecharConfirm()" style="padding: 12px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; border: 1px solid var(--line); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; background: transparent; color: white;">Desistir</button>
+                <button class="btn-popup btn-popup-primary" onclick="confirmarSalvar()" style="padding: 12px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; border: none; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; background: var(--yellow); color: #000;">Confirmar e Salvar</button>
+            `;
+        }
+        
+        function fecharConfirm() {
+            document.getElementById('confirmPopup').style.display = 'none';
+        }
+        
+        // Função que exibe popup de erro sem a opção de salvar
+        function mostrarPopupErro(titulo, mensagem) {
+            const popupTitle = document.getElementById('popupTitle');
+            const popupText = document.getElementById('popupText');
+            const popupBtnsDiv = document.getElementById('popupBtns');
+            
+            popupTitle.textContent = titulo;
+            popupText.textContent = mensagem;
+            popupBtnsDiv.innerHTML = `
+                <button class="btn-popup btn-popup-secondary" onclick="fecharConfirm()" style="padding: 12px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; border: 1px solid var(--line); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; background: transparent; color: white;">Fechar</button>
+            `;
+            document.getElementById('confirmPopup').style.display = 'flex';
+        }
+        
+        function confirmarSalvar() {
+            const validacao = validarLinhasCompletas();
+            
+            if (validacao.vazias.length > 0) {
+                let mensagem = `❌ Não será possível salvar porque existem linhas completamente vazias (sem dia e sem descrição).\n\n`;
+                mensagem += `Linhas: ${validacao.vazias.join(', ')}.\n\n`;
+                mensagem += `Por favor, preencha os dados ou remova as linhas antes de salvar.`;
+                mostrarPopupErro("Validação Obrigatória", mensagem);
+                return;
+            }
+            
+            if (validacao.semPlano.length > 0) {
+                let mensagem = `❌ Não será possível salvar porque existem linhas sem Plano de Contas selecionado.\n\n`;
+                mensagem += `Linhas: ${validacao.semPlano.join(', ')}.\n\n`;
+                mensagem += `Selecione uma opção de plano de contas para cada linha antes de salvar.`;
+                mostrarPopupErro("Validação Obrigatória", mensagem);
+                return;
+            }
+            
+            // Se passou na validação, salva os dados
+            salvarDados();
+            fecharConfirm();
+        }
+
+        function salvarDados() {
+            const mes = currentMonth;
+            const dados = [];
+            const agora = new Date().toLocaleString('pt-br');
+            
+            corpoTabela.querySelectorAll('tr').forEach(row => {
+                const dinamicas = [];
+                row.querySelectorAll('.input-dinamica').forEach(inp => dinamicas.push(inp.value));
+                dados.push({
+                    dia: row.querySelector('.input-dia').value,
+                    desc: row.querySelector('.input-desc').value,
+                    plano: row.querySelector('.input-plano').value,
+                    valor: row.querySelector('.input-valor').value,
+                    dinamicas: dinamicas,
+                    timestamp: agora
+                });
+                row.querySelector('.timestamp-label').textContent = 'Salvo em: ' + agora;
+            });
+            
+            localStorage.setItem(`dadosModuloIII_FROZEN_mes_${mes}`, JSON.stringify(dados));
+console.log(`Dados FROZEN salvos para ${mesesNomes[mes]}:`, dados);
+            
+            gerarDREMultimensal();
+            inicializarGraficos();
+            
+            // Exibe popup de sucesso
+            const popupTitle = document.getElementById('popupTitle');
+            const popupText = document.getElementById('popupText');
+            const popupBtnsDiv = document.getElementById('popupBtns');
+            popupTitle.textContent = "Sucesso";
+            popupText.textContent = `Lançamentos de ${mesesNomes[mes]} salvos com sucesso!`;
+            popupBtnsDiv.innerHTML = `
+                <button class="btn-popup btn-popup-primary" onclick="fecharConfirm()" style="padding: 12px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; border: none; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; background: var(--yellow); color: #000;">OK</button>
+            `;
+            document.getElementById('confirmPopup').style.display = 'flex';
+        }
+        
+        function carregarDados() {
+            const mes = currentMonth;
+            const salvo = localStorage.getItem(`dadosModuloIII_FROZEN_mes_${mes}`);
+            corpoTabela.innerHTML = '';
+            if (salvo) {
+                const dados = JSON.parse(salvo);
+                dados.forEach(d => adicionarLinha(d));
+                console.log(`Dados carregados de ${mesesNomes[mes]}:`, dados);
+            } else {
+                for (let i = 0; i < 5; i++) adicionarLinha();
+            }
+            calcularTotais();
+            limparDestaqueLancamentos(); // limpa qualquer filtro ao mudar de mês
+        }
+        
+        // ======================== FUNÇÕES DE NAVEGAÇÃO DRE -> LANÇAMENTOS ========================
+        let filtroAtivo = null;
+        
+        function limparDestaqueLancamentos() {
+            document.querySelectorAll('#corpoTabela tr').forEach(row => {
+                row.classList.remove('linha-destacada');
+            });
+            filtroAtivo = null;
+            const filtroInfo = document.getElementById('filtroInfo');
+            filtroInfo.style.display = 'none';
+        }
+        
+        function destacarLinhasPorPlano(planoNome) {
+            limparDestaqueLancamentos();
+            if (!planoNome) return;
+            filtroAtivo = planoNome;
+            let encontrou = false;
+            document.querySelectorAll('#corpoTabela tr').forEach(row => {
+                const planoCell = row.querySelector('.input-plano');
+                if (planoCell && planoCell.value === planoNome) {
+                    row.classList.add('linha-destacada');
+                    encontrou = true;
+                }
+            });
+            if (encontrou) {
+                const filtroInfo = document.getElementById('filtroInfo');
+                document.getElementById('filtroContaNome').innerText = planoNome;
+                filtroInfo.style.display = 'flex';
+                // rola até a primeira ocorrência
+                const primeira = document.querySelector('#corpoTabela tr.linha-destacada');
+                if (primeira) primeira.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                alert(`Nenhum lançamento encontrado para a conta: ${planoNome} no mês selecionado.`);
+            }
+        }
+        
+        function navegarParaLancamentos(mes, contaNome, ehGrupo = false) {
+            // Muda para a aba Lançamentos
+            const btnLancamentos = document.querySelector('.tab-btn');
+            if (btnLancamentos) switchTab('lancamentos', btnLancamentos);
+            
+            // Altera o mês
+            if (mes !== undefined && mes >= 0 && mes < 12) {
+                currentMonth = mes;
+                renderizarBotoesMeses();
+                carregarDados();
+            }
+            
+            // Se for um grupo (ex: "RECEITAS"), não podemos filtrar por uma conta específica, apenas exibe mensagem
+            if (ehGrupo) {
+                alert(`O grupo "${contaNome}" é um agrupamento. Para visualizar os lançamentos, clique em uma conta específica (ex: Cliente Site).`);
+                return;
+            }
+            
+            // Aguarda um pequeno delay para garantir que a tabela foi carregada
+            setTimeout(() => {
+                destacarLinhasPorPlano(contaNome);
+            }, 150);
+        }
+        
+        // ======================== DRE ========================
+        function gerarDREMultimensal() {
+            corpoDRE.innerHTML = '';
+            const dadosPorMes = [];
+            let ultimoLancamento = null;
+            for (let m = 0; m < 12; m++) {
+                const s = localStorage.getItem(`dadosModuloIII_FROZEN_mes_${m}`);
+                dadosPorMes[m] = s ? JSON.parse(s) : [];
+                if (dadosPorMes[m].length) {
+                    ultimoLancamento = dadosPorMes[m][dadosPorMes[m].length - 1].plano;
+                }
+            }
+            
+            function totalGrupo(grupo, mes) {
+                let total = 0;
+                estruturaDRE[grupo].forEach(item => {
+                    dadosPorMes[mes].forEach(l => {
+                        if (l.plano === item.nome) {
+                            let soma = 0;
+                            if (l.dinamicas && Array.isArray(l.dinamicas)) {
+                                for (let val of l.dinamicas) soma += parseMoeda(val);
+                            }
+                            if (soma === 0) soma = parseMoeda(l.valor);
+                            total += soma;
+                        }
+                    });
+                });
+                return total;
+            }
+            
+            const receitas = [], custosVar = [], custosFix = [];
+            for (let m = 0; m < 12; m++) {
+                receitas[m] = totalGrupo('receitas', m);
+                custosVar[m] = totalGrupo('custosVariaveis', m);
+                custosFix[m] = totalGrupo('custosFixos', m);
+            }
+            
+            function addLinha(cod, nome, valores, classe, isReceita = true, isGrupo = false) {
+                const tr = document.createElement('tr');
+                tr.className = classe;
+                const tdCod = document.createElement('td');
+                tdCod.innerHTML = `${cod ? cod + ' - ' : ''}${nome}${ultimoLancamento === nome ? ' <span class="dre-last-entry-badge">✨Novo</span>' : ''}`;
+                tr.appendChild(tdCod);
+                let totalAnual = 0;
+                for (let i = 0; i < 12; i++) {
+                    const v = isReceita ? valores[i] : -valores[i];
+                    totalAnual += v;
+                    const td = document.createElement('td');
+                    td.className = v >= 0 ? 'valor-positivo' : 'valor-negativo';
+                    const sinal = v >= 0 ? '' : '−';
+                    td.innerHTML = `${sinal}${formatarMoeda(Math.abs(v))}`;
+                    if (i > 0) {
+                        const diff = valores[i] - valores[i-1];
+                        if (diff > 0) td.innerHTML += `<span class="trend-icon-up">▲</span>`;
+                        else if (diff < 0) td.innerHTML += `<span class="trend-icon-down">▼</span>`;
+                    }
+                    // Adiciona evento de clique para navegar aos lançamentos
+                    td.style.cursor = 'pointer';
+                    td.setAttribute('data-mes', i);
+                    td.setAttribute('data-conta-nome', nome);
+                    td.setAttribute('data-is-grupo', isGrupo);
+                    td.addEventListener('click', (function(mesIndex, contaNome, grupoFlag) {
+                        return function() { navegarParaLancamentos(mesIndex, contaNome, grupoFlag); };
+                    })(i, nome, isGrupo));
+                    tr.appendChild(td);
+                }
+                const tdTotal = document.createElement('td');
+                tdTotal.className = totalAnual >= 0 ? 'valor-positivo' : 'valor-negativo';
+                tdTotal.innerText = `${totalAnual >= 0 ? '' : '−'}${formatarMoeda(Math.abs(totalAnual))}`;
+                tr.appendChild(tdTotal);
+                corpoDRE.appendChild(tr);
+            }
+            
+            addLinha('', 'RECEITAS', receitas, 'dre-group-title', true, true);
+            estruturaDRE.receitas.forEach(r => {
+                const vals = [];
+                for (let m = 0; m < 12; m++) {
+                    let total = 0;
+                    dadosPorMes[m].forEach(l => {
+                        if (l.plano === r.nome) {
+                            let soma = 0;
+                            if (l.dinamicas && Array.isArray(l.dinamicas)) {
+                                for (let val of l.dinamicas) soma += parseMoeda(val);
+                            }
+                            if (soma === 0) soma = parseMoeda(l.valor);
+                            total += soma;
+                        }
+                    });
+                    vals[m] = total;
+                }
+                addLinha(r.cod, r.nome, vals, 'dre-subgroup', true, false);
+            });
+            addLinha('', 'CUSTOS VARIÁVEIS', custosVar, 'dre-group-title', false, true);
+            estruturaDRE.custosVariaveis.forEach(c => {
+                const vals = [];
+                for (let m = 0; m < 12; m++) {
+                    let total = 0;
+                    dadosPorMes[m].forEach(l => {
+                        if (l.plano === c.nome) {
+                            let soma = 0;
+                            if (l.dinamicas && Array.isArray(l.dinamicas)) {
+                                for (let val of l.dinamicas) soma += parseMoeda(val);
+                            }
+                            if (soma === 0) soma = parseMoeda(l.valor);
+                            total += soma;
+                        }
+                    });
+                    vals[m] = total;
+                }
+                addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, false);
+            });
+            const lucroBruto = receitas.map((r,i) => r - custosVar[i]);
+            addLinha('', 'LUCRO BRUTO', lucroBruto, 'dre-total-row', true, true);
+            addLinha('', 'CUSTOS FIXOS', custosFix, 'dre-group-title', false, true);
+            estruturaDRE.custosFixos.forEach(c => {
+                const vals = [];
+                for (let m = 0; m < 12; m++) {
+                    let total = 0;
+                    dadosPorMes[m].forEach(l => {
+                        if (l.plano === c.nome) {
+                            let soma = 0;
+                            if (l.dinamicas && Array.isArray(l.dinamicas)) {
+                                for (let val of l.dinamicas) soma += parseMoeda(val);
+                            }
+                            if (soma === 0) soma = parseMoeda(l.valor);
+                            total += soma;
+                        }
+                    });
+                    vals[m] = total;
+                }
+                addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, false);
+            });
+            const resultadoOp = lucroBruto.map((lb,i) => lb - custosFix[i]);
+            addLinha('', 'RESULTADO OPERACIONAL', resultadoOp, 'dre-total-row', true, true);
+        }
+        
+        function imprimirDRE() {
+            window.print();
+        }
+
+        // ======================== VISÃO GRÁFICA ========================
+        function inicializarGraficos() {
+            const dadosPorMes = [];
+            for (let m = 0; m < 12; m++) {
+                const s = localStorage.getItem(`dadosModuloIII_FROZEN_mes_${m}`);
+                dadosPorMes[m] = s ? JSON.parse(s) : [];
+            }
+            
+            const receitasAnuais = [], despesasAnuais = [], resultadosAnuais = [];
+            let totalRec = 0, totalVar = 0, totalFix = 0;
+
+            for (let m = 0; m < 12; m++) {
+                let recMes = 0, varMes = 0, fixMes = 0;
+                dadosPorMes[m].forEach(l => {
+                    let valorItem = 0;
+                    if (l.dinamicas && Array.isArray(l.dinamicas)) {
+                        for (let v of l.dinamicas) valorItem += parseMoeda(v);
+                    }
+                    if (valorItem === 0) valorItem = parseMoeda(l.valor);
+                    
+                    if (estruturaDRE.receitas.some(r => r.nome === l.plano)) recMes += valorItem;
+                    else if (estruturaDRE.custosVariaveis.some(c => c.nome === l.plano)) varMes += valorItem;
+                    else if (estruturaDRE.custosFixos.some(c => c.nome === l.plano)) fixMes += valorItem;
+                });
+                receitasAnuais.push(recMes);
+                despesasAnuais.push(varMes + fixMes);
+                resultadosAnuais.push(recMes - (varMes + fixMes));
+                totalRec += recMes; totalVar += varMes; totalFix += fixMes;
+            }
+
+            if (charts.dre) charts.dre.destroy();
+            if (charts.pizza) charts.pizza.destroy();
+            if (charts.linha) charts.linha.destroy();
+
+            const ctxDRE = document.getElementById('chartDRE').getContext('2d');
+            charts.dre = new Chart(ctxDRE, {
+                type: 'bar',
+                data: {
+                    labels: mesesNomes,
+                    datasets: [
+                        { label: 'Receitas', data: receitasAnuais, backgroundColor: '#10b981' },
+                        { label: 'Despesas', data: despesasAnuais, backgroundColor: '#ef4444' }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    plugins: { 
+                        legend: { labels: { color: '#fff' } },
+                        datalabels: { display: true, color: '#fff', anchor: 'end', align: 'top' }
+                    }, 
+                    scales: { 
+                        y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#fff' } }, 
+                        x: { ticks: { color: '#fff' } } 
+                    } 
+                }
+            });
+
+            const ctxPizza = document.getElementById('chartPizza').getContext('2d');
+            charts.pizza = new Chart(ctxPizza, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Receitas', 'Custos Variáveis', 'Custos Fixos'],
+                    datasets: [{ data: [totalRec, totalVar, totalFix], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderWidth: 0 }]
+                },
+                options: { plugins: { legend: { position: 'right', labels: { color: '#fff' } } } }
+            });
+
+            const ctxLinha = document.getElementById('chartLinha').getContext('2d');
+            charts.linha = new Chart(ctxLinha, {
+                type: 'line',
+                data: {
+                    labels: mesesNomes,
+                    datasets: [{ label: 'Resultado Líquido', data: resultadosAnuais, borderColor: '#f2c200', tension: 0.4, fill: true, backgroundColor: 'rgba(242, 194, 0, 0.1)' }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#fff' } }, x: { ticks: { color: '#fff' } } } }
+            });
+        }
+        
+        // ======================== MESES EM BOTÕES ========================
+        function renderizarBotoesMeses() {
+            const container = document.getElementById('mesesBotoes');
+            if (!container) return;
+            container.innerHTML = '';
+            for (let i = 0; i < 12; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'mes-botao' + (currentMonth === i ? ' active' : '');
+                btn.innerText = mesesNomes[i];
+                btn.onclick = () => {
+                    currentMonth = i;
+                    renderizarBotoesMeses();
+                    carregarDados();
+                };
+                container.appendChild(btn);
+            }
+        }
+        
+        // ======================== TABS ========================
+        function switchTab(tab, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+            if (tab === 'dre') gerarDREMultimensal();
+            if (tab === 'graficos') inicializarGraficos();
+        }
+        
+        // ======================== AUTENTICAÇÃO E VOLTAR ========================
+        function validarSenha() {
+            const senha = document.getElementById('passwordInput').value;
+            if (senha === '456') {
+                document.getElementById('lockScreen').classList.add('hidden');
+                document.getElementById('mainContent').style.display = 'block';
+                carregarEstruturaDRE();
+                inicializarModal();
+                carregarConfigColunas();
+                renderizarBotoesMeses();
+                carregarDados();
+                gerarDREMultimensal();
+                inicializarGraficos();
+            } else {
+                document.getElementById('lockError').style.display = 'block';
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+            }
+        }
+        
+        function voltarParaModulos() {
+    window.location.href = 'CLIENT_FROZEN.html';
+}
+        
+        // ======================== EVENTOS GLOBAIS ========================
+        window.addEventListener('click', (e) => {
+            if (e.target === modalPlano) fecharModalPlano();
+            if (e.target === modalEditConta) fecharFormEdit();
+            if (e.target === document.getElementById('confirmPopup')) fecharConfirm();
+        });
+        
+        window.addEventListener('load', () => document.getElementById('passwordInput').focus());
+    
+        // ======================== VALIDAÇÃO AUTOMÁTICA DE SENHA ========================
+        // Executa a validação automaticamente ao carregar a página
+        setTimeout(function() {
+            const senhaInput = document.getElementById('passwordInput');
+            if (senhaInput) {
+                senhaInput.value = '456';
+                validarSenha();
+            } else {
+                // Se não houver campo de senha, inicializa diretamente
+                document.getElementById('lockScreen').classList.add('hidden');
+                document.getElementById('mainContent').style.display = 'block';
+                carregarEstruturaDRE();
+                inicializarModal();
+                carregarConfigColunas();
+                renderizarBotoesMeses();
+                carregarDados();
+                gerarDREMultimensal();
+                inicializarGraficos();
+            }
+        }, 100);
+
+
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conexões - Aplikado</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0c10;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #e8edf2;
+            padding: 16px 24px;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            font-size: 13px;
+            font-weight: 400;
+            line-height: 1.4;
+        }
+
+        /* Animações */
+        @keyframes icon-pulse {
+            0% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 0.6; transform: scale(1); }
+        }
+
+        @keyframes card-glow {
+            0% { box-shadow: 0 0 0 0 rgba(242, 194, 0, 0.05); }
+            50% { box-shadow: 0 0 0 2px rgba(242, 194, 0, 0.08); }
+            100% { box-shadow: 0 0 0 0 rgba(242, 194, 0, 0.05); }
+        }
+
+        /* Topbar */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-family: 'Poppins', -apple-system, sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .logo span {
+            color: #f2c200;
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #e8edf2;
+            padding: 6px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 12px;
+            transition: 0.2s;
+            font-weight: 500;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Layout principal - dois painéis lado a lado */
+        .dashboard-container {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+            min-height: 0;
+            margin-bottom: 16px;
+        }
+
+        .painel-ativas, .painel-disponiveis {
+            flex: 1;
+            background: #111418;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            backdrop-filter: blur(2px);
+        }
+
+        .painel-ativas .painel-header {
+            background: linear-gradient(135deg, #0e1115 0%, #0a0c10 100%);
+            border-bottom: 1px solid rgba(242, 194, 0, 0.15);
+        }
+
+        .painel-header {
+            padding: 12px 16px;
+            background: #0e1115;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .painel-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #f2c200;
+        }
+
+        .painel-count {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 500;
+        }
+
+        .conexoes-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* CARDS DESTACADOS - ATIVAS */
+        .conexao-card {
+            background: #0a0c10;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 12px 14px;
+            transition: all 0.2s ease;
+        }
+
+        .conexao-card.ativa {
+            background: linear-gradient(135deg, #0f1218 0%, #0a0c10 100%);
+            border-left: 3px solid #f2c200;
+            border-top: 1px solid rgba(242, 194, 0, 0.15);
+            border-right: 1px solid rgba(242, 194, 0, 0.08);
+            animation: card-glow 3s infinite;
+        }
+
+        .conexao-card.ativa:hover {
+            transform: translateX(2px);
+            border-left-width: 4px;
+        }
+
+        .conexao-card.disponivel {
+            opacity: 0.85;
+        }
+
+        .conexao-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .conexao-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .conexao-icone {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            background: rgba(242, 194, 0, 0.08);
+            border-radius: 8px;
+            color: #f2c200;
+        }
+
+        .conexao-icone.ativa {
+            animation: icon-pulse 2s ease-in-out infinite;
+        }
+
+        .conexao-nome {
+            font-size: 14px;
+            font-weight: 700;
+            color: #f2c200;
+            letter-spacing: -0.2px;
+        }
+
+        .conexao-id {
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.4);
+            font-family: 'SF Mono', monospace;
+            margin-top: 2px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active {
+            background: rgba(0, 255, 136, 0.12);
+            color: #00ff88;
+        }
+
+        .status-inactive {
+            background: rgba(255, 77, 77, 0.12);
+            color: #ff4d4d;
+        }
+
+        .info-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin: 8px 0;
+            font-size: 11px;
+        }
+
+        .info-label {
+            color: rgba(255, 255, 255, 0.45);
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #e8edf2;
+            font-weight: 500;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            justify-content: flex-end;
+        }
+
+        button {
+            background: #f2c200;
+            color: #0a0c10;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 11px;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        button:hover {
+            background: #e0b000;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid rgba(242, 194, 0, 0.4);
+            color: #f2c200;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(242, 194, 0, 0.08);
+        }
+
+        .btn-danger {
+            background: transparent;
+            border: 1px solid rgba(255, 77, 77, 0.4);
+            color: #ff4d4d;
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 77, 77, 0.08);
+        }
+
+        /* Formulário Nova Conexão */
+        .form-section {
+            background: #111418;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 14px 20px;
+            flex-shrink: 0;
+        }
+
+        .form-section-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #f2c200;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 9px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 700;
+            letter-spacing: 0.8px;
+        }
+
+        input, select {
+            background: #0a0c10;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #e8edf2;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            transition: 0.2s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #f2c200;
+        }
+
+        /* INTEGRADOR - CAMPOS REDUZIDOS */
+        .integrador-container {
+            margin: 10px 0 0 0;
+        }
+
+        .integrador-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #f2c200;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .integrador-sub {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 10px;
+        }
+
+        .integrador-grid {
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            overflow: hidden;
+            max-height: 130px;
+            overflow-y: auto;
+        }
+
+        .integrador-header {
+            display: grid;
+            grid-template-columns: 0.8fr 1fr 40px;
+            background: #0e1115;
+            padding: 8px 12px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #f2c200;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .integrador-linha {
+            display: grid;
+            grid-template-columns: 0.8fr 1fr 40px;
+            gap: 10px;
+            padding: 6px 12px;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        /* COR DIFERENTE DOS TÍTULOS PARA COLUNA NO PDF E CAMPO NO SISTEMA */
+        .coluna-fixa {
+            background: #0e1115;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #b0b8c5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-family: 'SF Mono', monospace;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .integrador-linha select {
+            margin: 0;
+            padding: 5px 8px;
+            font-size: 11px;
+            color: #b0b8c5;
+        }
+
+        .btn-icon {
+            background: transparent;
+            border: 1px solid rgba(255, 77, 77, 0.3);
+            color: #ff4d4d;
+            padding: 4px 8px;
+            font-size: 10px;
+            border-radius: 6px;
+        }
+
+        .form-actions-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-add {
+            background: transparent;
+            border: 1px solid rgba(242, 194, 0, 0.4);
+            color: #f2c200;
+            padding: 6px 16px;
+            font-size: 11px;
+            border-radius: 8px;
+        }
+
+        .btn-add:hover {
+            background: rgba(242, 194, 0, 0.08);
+        }
+
+        .actions-left {
+            display: flex;
+            gap: 12px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0c10;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #f2c200;
+            border-radius: 4px;
+        }
+
+        /* Ajuste de altura para eliminar rolagem vertical */
+        .conexoes-list {
+            max-height: calc(100vh - 380px);
+            overflow-y: auto;
+        }
+
+        @media (max-height: 800px) {
+            .conexoes-list {
+                max-height: calc(100vh - 420px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="logo">Apli<span>kado</span></div>
+        <a href="nova-home.html" class="btn-back">Voltar</a>
+    </div>
+
+    <!-- PAINÉIS LADO A LADO -->
+    <div class="dashboard-container">
+        <!-- CONEXÕES ATIVAS - DESTAQUE -->
+        <div class="painel-ativas">
+            <div class="painel-header">
+                <span class="painel-title">Conexões Ativas</span>
+                <span class="painel-count">2 conectadas</span>
+            </div>
+            <div class="conexoes-list">
+                <div class="conexao-card ativa">
+                    <div class="conexao-header">
+                        <div class="conexao-info">
+                            <div class="conexao-icone ativa">⚡</div>
+                            <div>
+                                <div class="conexao-nome">Títulos por Operação</div>
+                                <div class="conexao-id">titulos_operacao</div>
+                            </div>
+                        </div>
+                        <span class="status-badge status-active">ATIVO</span>
+                    </div>
+                    <div class="info-row">
+                        <span><span class="info-label">Tabela:</span> <span class="info-value">titulos</span></span>
+                        <span><span class="info-label">Tela:</span> <span class="info-value">Módulo III</span></span>
+                        <span><span class="info-label">Freq.:</span> <span class="info-value">manual</span></span>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn-secondary">Desativar</button>
+                        <button class="btn-danger">Excluir</button>
+                    </div>
+                </div>
+                <div class="conexao-card ativa">
+                    <div class="conexao-header">
+                        <div class="conexao-info">
+                            <div class="conexao-icone ativa">⚡</div>
+                            <div>
+                                <div class="conexao-nome">Extrato Bancário</div>
+                                <div class="conexao-id">extrato</div>
+                            </div>
+                        </div>
+                        <span class="status-badge status-active">ATIVO</span>
+                    </div>
+                    <div class="info-row">
+                        <span><span class="info-label">Tabela:</span> <span class="info-value">extratos</span></span>
+                        <span><span class="info-label">Tela:</span> <span class="info-value">Módulo IV</span></span>
+                        <span><span class="info-label">Freq.:</span> <span class="info-value">5min</span></span>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn-secondary">Desativar</button>
+                        <button class="btn-danger">Excluir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONEXÕES DISPONÍVEIS -->
+        <div class="painel-disponiveis">
+            <div class="painel-header">
+                <span class="painel-title">Conexões Disponíveis</span>
+                <span class="painel-count">1 inativa</span>
+            </div>
+            <div class="conexoes-list">
+                <div class="conexao-card disponivel">
+                    <div class="conexao-header">
+                        <div class="conexao-info">
+                            <div class="conexao-icone">⏸</div>
+                            <div>
+                                <div class="conexao-nome">Relatório de Estoque</div>
+                                <div class="conexao-id">relatorio_estoque</div>
+                            </div>
+                        </div>
+                        <span class="status-badge status-inactive">INATIVO</span>
+                    </div>
+                    <div class="info-row">
+                        <span><span class="info-label">Tabela:</span> <span class="info-value">dados_m2</span></span>
+                        <span><span class="info-label">Tela:</span> <span class="info-value">Módulo II</span></span>
+                        <span><span class="info-label">Freq.:</span> <span class="info-value">30min</span></span>
+                    </div>
+                    <div class="btn-group">
+                        <button>Ativar</button>
+                        <button class="btn-danger">Excluir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FORMULÁRIO NOVA CONEXÃO -->
+    <div class="form-section">
+        <div class="form-section-title">Nova Conexão</div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Identificador</label>
+                <select>
+                    <option>Selecione...</option>
+                    <option>titulos_operacao</option>
+                    <option>relatorio_estoque</option>
+                    <option>extrato_bancario</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Relatório</label>
+                <select>
+                    <option>Selecione...</option>
+                    <option>Títulos por Operação</option>
+                    <option>Relatório de Estoque</option>
+                    <option>Extrato Bancário</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Tabela Destino</label>
+                <select>
+                    <option>titulos</option>
+                    <option>dados_m2</option>
+                    <option>produtos</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Tela ERP</label>
+                <select>
+                    <option>Módulo II (Estoque)</option>
+                    <option>Módulo III (DRE)</option>
+                    <option>Módulo I (Consumo)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Pasta Origem</label>
+                <input type="text" placeholder="C:\Relatórios">
+            </div>
+            <div class="form-group">
+                <label>Frequência</label>
+                <select>
+                    <option>Manual</option>
+                    <option>A cada 5 min</option>
+                    <option>A cada 30 min</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label></label>
+                <div></div>
+            </div>
+            <div class="form-group">
+                <label></label>
+                <div></div>
+            </div>
+        </div>
+
+        <!-- INTEGRADOR -->
+        <div class="integrador-container">
+            <div class="integrador-title">INTEGRADOR</div>
+            <div class="integrador-sub">Associe as colunas fixas do PDF aos campos do sistema</div>
+
+            <div class="integrador-grid">
+                <div class="integrador-header">
+                    <span class="coluna-header">Coluna no PDF</span>
+                    <span class="campo-header">Campo no Sistema</span>
+                    <span></span>
+                </div>
+
+                <div class="integrador-linha">
+                    <div class="coluna-fixa">DOCUMENTO</div>
+                    <select>
+                        <option>documento</option>
+                        <option>valor</option>
+                        <option>vencimento</option>
+                        <option>cod_fornecedor</option>
+                        <option>fornecedor</option>
+                        <option>parcela</option>
+                        <option>quant</option>
+                        <option>descricao</option>
+                        <option>codigo</option>
+                        <option>marca</option>
+                        <option>venda</option>
+                        <option>est_v0</option>
+                        <option>est_ajust</option>
+                    </select>
+                    <button class="btn-icon">X</button>
+                </div>
+
+                <div class="integrador-linha">
+                    <div class="coluna-fixa">VALOR</div>
+                    <select>
+                        <option>documento</option>
+                        <option selected>valor</option>
+                        <option>vencimento</option>
+                        <option>cod_fornecedor</option>
+                        <option>fornecedor</option>
+                        <option>parcela</option>
+                        <option>quant</option>
+                        <option>descricao</option>
+                        <option>codigo</option>
+                        <option>marca</option>
+                        <option>venda</option>
+                        <option>est_v0</option>
+                        <option>est_ajust</option>
+                    </select>
+                    <button class="btn-icon">X</button>
+                </div>
+
+                <div class="integrador-linha">
+                    <div class="coluna-fixa">VENCIMENTO</div>
+                    <select>
+                        <option>documento</option>
+                        <option>valor</option>
+                        <option selected>vencimento</option>
+                        <option>cod_fornecedor</option>
+                        <option>fornecedor</option>
+                        <option>parcela</option>
+                        <option>quant</option>
+                        <option>descricao</option>
+                        <option>codigo</option>
+                        <option>marca</option>
+                        <option>venda</option>
+                        <option>est_v0</option>
+                        <option>est_ajust</option>
+                    </select>
+                    <button class="btn-icon">X</button>
+                </div>
+
+                <div class="integrador-linha">
+                    <div class="coluna-fixa">COD.</div>
+                    <select>
+                        <option>documento</option>
+                        <option>valor</option>
+                        <option>vencimento</option>
+                        <option selected>cod_fornecedor</option>
+                        <option>fornecedor</option>
+                        <option>parcela</option>
+                        <option>quant</option>
+                        <option>descricao</option>
+                        <option>codigo</option>
+                        <option>marca</option>
+                        <option>venda</option>
+                        <option>est_v0</option>
+                        <option>est_ajust</option>
+                    </select>
+                    <button class="btn-icon">X</button>
+                </div>
+
+                <div class="integrador-linha">
+                    <div class="coluna-fixa">FORNECEDOR</div>
+                    <select>
+                        <option>documento</option>
+                        <option>valor</option>
+                        <option>vencimento</option>
+                        <option>cod_fornecedor</option>
+                        <option selected>fornecedor</option>
+                        <option>parcela</option>
+                        <option>quant</option>
+                        <option>descricao</option>
+                        <option>codigo</option>
+                        <option>marca</option>
+                        <option>venda</option>
+                        <option>est_v0</option>
+                        <option>est_ajust</option>
+                    </select>
+                    <button class="btn-icon">X</button>
+                </div>
+
+                <div class="integrador-linha">
+                    <div class="coluna-fixa">PARCELA</div>
+                    <select>
+                        <option>documento</option>
+                        <option>valor</option>
+                        <option>vencimento</option>
+                        <option>cod_fornecedor</option>
+                        <option>fornecedor</option>
+                        <option selected>parcela</option>
+                        <option>quant</option>
+                        <option>descricao</option>
+                        <option>codigo</option>
+                        <option>marca</option>
+                        <option>venda</option>
+                        <option>est_v0</option>
+                        <option>est_ajust</option>
+                    </select>
+                    <button class="btn-icon">X</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LINHA DE AÇÕES -->
+        <div class="form-actions-row">
+            <div class="actions-left">
+                <button>Salvar Conexão</button>
+                <button class="btn-secondary">Cancelar</button>
+            </div>
+            <button class="btn-add">+ Adicionar Coluna</button>
+        </div>
+    </div>
+</body>
+</html>

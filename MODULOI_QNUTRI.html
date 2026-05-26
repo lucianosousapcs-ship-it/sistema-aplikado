@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Frozen Spa </title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.topo {
+  background: #000000;
+  padding: 15px 25px;
+  border-bottom: 3px solid #f2c200;
+}
+
+.logo-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.logo .a-maiusculo {
+  color: #ffffff;
+  font-size: 32px;
+}
+
+.logo .pli-branco {
+  color: #ffffff;
+}
+
+.logo .kado-amarelo {
+  color: #f2c200;
+}
+
+.data-info {
+  color: #888888;
+  font-size: 12px;
+}
+
+.periodo-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 5px;
+}
+
+.meses, .semanas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.meses span, .semanas span {
+  padding: 5px 14px;
+  border-radius: 4px;
+  background: #2a2a2a;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 11px;
+  color: #aaaaaa;
+  font-weight: 500;
+}
+
+.meses span.ativo, .semanas span.ativo {
+  background: #f2c200;
+  color: #000000;
+  font-weight: bold;
+}
+
+.meses span.tem-movimento {
+  border-left: 2px solid #f2c200;
+}
+
+.btn-group {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-voltar, .btn-salvar, .btn-imprimir {
+  border: none;
+  padding: 6px 20px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 12px;
+  transition: 0.2s;
+}
+
+.btn-voltar {
+  background: #555555;
+  color: #ffffff;
+}
+
+.btn-voltar:hover {
+  background: #333333;
+}
+
+.btn-salvar {
+  background: #f2c200;
+  color: #000000;
+}
+
+.btn-salvar:hover {
+  background: #d4a800;
+}
+
+.btn-imprimir {
+  background: #f2c200;
+  color: #000000;
+}
+
+.btn-imprimir:hover {
+  background: #d4a800;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 20px;
+  padding: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.card-lancamentos {
+  background: #0d0d0d;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  overflow: hidden;
+}
+
+.card-header {
+  background: #000000;
+  padding: 15px 20px;
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.card-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f2c200;
+}
+
+.btn-acoes-header {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-header {
+  background: #2a2a2a;
+  border: 1px solid #f2c200;
+  padding: 6px 15px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  color: #f2c200;
+  transition: 0.2s;
+}
+
+.btn-header:hover {
+  background: #f2c200;
+  color: #000000;
+}
+
+.busca {
+  width: calc(100% - 30px);
+  margin: 15px;
+  padding: 10px 15px;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-size: 13px;
+}
+
+.busca:focus {
+  outline: none;
+  border-color: #f2c200;
+}
+
+.produtos-container {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.produto-item {
+  border-bottom: 1px solid #2a2a2a;
+  padding: 12px 15px;
+  background: #0d0d0d;
+}
+
+.produto-item:hover {
+  background: #141414;
+}
+
+.produto-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.produto-nome {
+  font-weight: 600;
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.produto-meta {
+  font-size: 10px;
+  color: #888888;
+  margin-top: 3px;
+}
+
+.produto-categoria {
+  background: #1a1a1a;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 9px;
+  display: inline-block;
+  color: #aaaaaa;
+}
+
+.produto-estoque {
+  text-align: right;
+}
+
+.estoque-valor {
+  font-size: 18px;
+  font-weight: bold;
+  color: #f2c200;
+}
+
+.estoque-unidade {
+  font-size: 10px;
+  color: #888888;
+}
+
+.info-estoque {
+  background: #1a1a1a;
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.info-estoque label {
+  color: #888888;
+}
+
+.info-estoque .valor-info {
+  font-weight: bold;
+  color: #f2c200;
+}
+
+.info-estoque input {
+  width: 100px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #2a2a2a;
+  background: #0d0d0d;
+  color: #ffffff;
+  text-align: right;
+  font-size: 12px;
+}
+
+.botoes {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-acao {
+  flex: 1;
+  padding: 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 11px;
+  cursor: pointer;
+  border: none;
+  transition: 0.2s;
+}
+
+.btn-entrada {
+  background: #27ae60;
+  color: #ffffff;
+}
+
+.btn-entrada:hover {
+  background: #1e8449;
+}
+
+.btn-saida {
+  background: #e74c3c;
+  color: #ffffff;
+}
+
+.btn-saida:hover {
+  background: #c0392b;
+}
+
+.btn-retorno {
+  background: #f2c200;
+  color: #000000;
+}
+
+.btn-retorno:hover {
+  background: #d4a800;
+}
+
+.card-relatorio {
+  background: #ffffff;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 140px);
+  min-height: 550px;
+  border: 1px solid #d5dbdb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.relatorio-header {
+  background: #f8f9fa;
+  padding: 15px 20px;
+  border-bottom: 2px solid #f2c200;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.relatorio-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.relatorio-periodo {
+  font-size: 11px;
+  color: #7f8c8d;
+  margin-top: 5px;
+}
+
+.relatorio-tabela {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+  background: #ffffff;
+}
+
+@media print {
+  body {
+    background: white;
+    margin: 0;
+    padding: 0;
+  }
+  .topo, .card-lancamentos, .periodo-controls, .btn-salvar, .btn-imprimir, .btn-voltar, .busca, .botoes, .info-estoque, .btn-header {
+    display: none !important;
+  }
+  .container {
+    display: block;
+    padding: 0;
+    margin: 0;
+  }
+  .card-relatorio {
+    height: auto;
+    box-shadow: none;
+    border: none;
+  }
+  .relatorio-tabela {
+    overflow: visible;
+    padding: 10px;
+  }
+  .grupo-produto {
+    page-break-inside: avoid;
+  }
+}
+
+.grupo-produto {
+  margin-bottom: 20px;
+  border: 1px solid #e5e8e8;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.produto-cabecalho {
+  background: #2c3e50;
+  color: #ecf0f1;
+  padding: 10px 15px;
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.produto-cabecalho .codigo {
+  font-size: 11px;
+  font-weight: normal;
+  opacity: 0.8;
+}
+
+.tabela-movimentos {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.tabela-movimentos th {
+  background: #f8f9fa;
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e5e8e8;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.tabela-movimentos td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #2c3e50;
+}
+
+.tabela-movimentos tr:hover {
+  background: #f8f9fa;
+}
+
+.entrada-td {
+  color: #27ae60;
+  font-weight: 500;
+}
+
+.saida-td {
+  color: #e74c3c;
+  font-weight: 500;
+}
+
+.saida-receita-td {
+  color: #e67e22;
+  font-weight: 500;
+  background: #fef5e7;
+}
+
+.retorno-td {
+  color: #f2c200;
+  font-weight: 500;
+}
+
+.resumo-produto {
+  background: #f8f9fa;
+  padding: 8px 15px;
+  font-size: 11px;
+  border-top: 1px solid #e5e8e8;
+  display: flex;
+  gap: 20px;
+  color: #2c3e50;
+}
+
+.resumo-produto .total-entrada { color: #27ae60; font-weight: 500; }
+.resumo-produto .total-saida { color: #e74c3c; font-weight: 500; }
+.resumo-produto .saldo { color: #f2c200; font-weight: 600; }
+
+.sem-movimentos {
+  text-align: center;
+  padding: 40px;
+  color: #95a5a6;
+}
+
+.modal, .modal-receita, .modal-cadastro, .modal-porcoes {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.9);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content, .modal-receita-content, .modal-cadastro-content, .modal-porcoes-content {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 25px;
+  width: 90%;
+  max-width: 450px;
+  border-top: 4px solid #f2c200;
+}
+
+.modal-receita-content {
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: #f2c200;
+  text-align: center;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 12px;
+  font-size: 20px;
+  text-align: center;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  margin: 15px 0;
+  background: #0d0d0d;
+  color: #ffffff;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.modal-buttons button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-cancel {
+  background: #2a2a2a;
+  color: #aaaaaa;
+}
+
+.btn-cancel:hover {
+  background: #3a3a3a;
+}
+
+.btn-confirm {
+  background: #f2c200;
+  color: #000000;
+}
+
+.btn-confirm:hover {
+  background: #d4a800;
+}
+
+.insumo-linha {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.insumo-nome {
+  flex: 2;
+  font-size: 12px;
+  color: #e0e0e0;
+}
+
+.insumo-qtd {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  background: #0d0d0d;
+  color: #ffffff;
+}
+
+.receitas-lista {
+  margin-top: 20px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.receita-card {
+  background: #0d0d0d;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #2a2a2a;
+}
+
+.receita-nome {
+  font-weight: bold;
+  font-size: 13px;
+  color: #f2c200;
+}
+
+.receita-itens {
+  font-size: 10px;
+  color: #888888;
+  margin: 5px 0;
+}
+
+.receita-botoes {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.receita-lancar {
+  background: #27ae60;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.receita-excluir {
+  background: #e74c3c;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  color: #ffffff;
+}
+
+.campo-form {
+  margin-bottom: 15px;
+}
+
+.campo-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  color: #888888;
+}
+
+.campo-form input, .campo-form select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #2a2a2a;
+  background: #0d0d0d;
+  color: #ffffff;
+}
+
+.periodo-destaque {
+  background: #f2c200;
+  color: #000000;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .container { grid-template-columns: 1fr; }
+  .card-relatorio { height: auto; }
+}
+</style>
+</head>
+<body>
+
+<div class="topo">
+  <div class="logo-area">
+    <div class="logo">
+      <span class="a-maiusculo">A</span><span class="pli-branco">pli</span><span class="kado-amarelo">kado</span> <span style="font-size:16px; color:#f2c200;"></span>
+    </div>
+    <div class="data-info" id="dataInfo"></div>
+  </div>
+  <div class="periodo-controls">
+    <div class="meses" id="mesesContainer"></div>
+    <div class="semanas" id="semanasContainer"></div>
+    <div class="btn-group">
+      <button class="btn-voltar" onclick="voltarHome()">← VOLTAR</button>
+      <button class="btn-salvar" onclick="salvarDados()">SALVAR</button>
+      <button class="btn-imprimir" onclick="imprimirPDF()">PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="card-lancamentos">
+    <div class="card-header">
+      <h2>LANÇAMENTOS - IB</h2>
+      <div class="btn-acoes-header">
+        <button class="btn-header" onclick="abrirModalReceita()">RECEITAS</button>
+        <button class="btn-header" onclick="abrirModalCadastro()">CADASTRO</button>
+      </div>
+    </div>
+    <input type="text" id="busca" class="busca" placeholder="Buscar produto ou codigo..." oninput="filtrarProdutos()">
+    <div class="produtos-container" id="produtosContainer"></div>
+  </div>
+
+  <div class="card-relatorio">
+    <div class="relatorio-header">
+      <div>
+        <h2>RELATORIO EXECUTIVO - IB</h2>
+        <div class="relatorio-periodo">Periodo: <span class="periodo-destaque" id="periodoLabel">Janeiro - Semana 1</span></div>
+      </div>
+    </div>
+    <div class="relatorio-tabela" id="relatorioTabela">
+      <div id="listaMovimentos"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modalLancamento" class="modal">
+  <div class="modal-content">
+    <div class="modal-title" id="modalTitulo">Registrar</div>
+    <div id="modalProdutoNome" style="text-align:center; margin-bottom:5px; font-weight:bold; color:#ffffff;">Produto</div>
+    <div style="text-align:center; font-size:12px; margin-bottom:10px; color:#888888;">Estoque: <span id="modalEstoque">0</span> <span id="modalUnidade">KG</span></div>
+    <input type="number" id="modalQuantidade" class="modal-input" placeholder="0,00" step="any" autofocus>
+    <div class="modal-buttons">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarLancamento()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalReceita" class="modal-receita">
+  <div class="modal-receita-content">
+    <h3 class="modal-title">RECEITAS - IB</h3>
+    <input type="text" id="receitaNome" style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #2a2a2a; border-radius:6px; background:#0d0d0d; color:#ffffff;" placeholder="Nome da Receita">
+    <div id="insumosReceita"></div>
+    <div class="modal-buttons" style="margin-top:15px;">
+      <button class="btn-cancel" onclick="fecharModalReceita()">Cancelar</button>
+      <button class="btn-confirm" onclick="salvarReceita()">Salvar</button>
+    </div>
+    <div id="listaReceitas" style="margin-top:15px; max-height:200px; overflow-y:auto;"></div>
+  </div>
+</div>
+
+<div id="modalPorcoes" class="modal-porcoes">
+  <div class="modal-porcoes-content">
+    <div class="modal-title">LANCAR RECEITA - IB</div>
+    <div style="text-align:center; margin-bottom:15px;">
+      <strong id="porcoesReceitaNome" style="color:#f2c200;"></strong>
+    </div>
+    <div style="text-align:center; font-size:12px; margin-bottom:10px; color:#888888;">
+      Quantidade de porcoes
+    </div>
+    <input type="number" id="porcoesQuantidade" class="modal-input" placeholder="Numero de porcoes" step="1" min="1" autofocus>
+    <div class="modal-buttons">
+      <button class="btn-cancel" onclick="fecharModalPorcoes()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarLancamentoReceita()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalCadastro" class="modal-cadastro">
+  <div class="modal-cadastro-content">
+    <div class="modal-title">NOVO PRODUTO - IB</div>
+    <div class="campo-form">
+      <label>Codigo</label>
+      <input type="text" id="novoCodigo" placeholder="Ex: 999">
+    </div>
+    <div class="campo-form">
+      <label>Nome do Produto</label>
+      <input type="text" id="novoNome" placeholder="Ex: QUEIJO MINAS">
+    </div>
+    <div class="campo-form">
+      <label>Categoria</label>
+      <select id="novaCategoria">
+        <option value="Materia Prima">Materia Prima</option>
+        <option value="Embalagens">Embalagens</option>
+        <option value="material de limpeza">Material de Limpeza</option>
+      </select>
+    </div>
+    <div class="campo-form">
+      <label>Unidade de Medida</label>
+      <select id="novaUnidade">
+        <option value="KG">KG</option>
+        <option value="UN">UN</option>
+        <option value="Lt">Lt</option>
+        <option value="pct">pct</option>
+        <option value="bb">bb</option>
+      </select>
+    </div>
+    <div class="campo-form">
+      <label>Estoque Inicial (Jan Sem 1)</label>
+      <input type="number" step="any" id="novoEstoque" placeholder="0,00" value="0">
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-cancel" onclick="fecharModalCadastro()">Cancelar</button>
+      <button class="btn-confirm" onclick="salvarNovoProduto()">Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== BASE DE PRODUTOS - MÓDULO IB ====================
+// Chaves do localStorage para não conflitar com o módulo original
+const STORAGE_KEYS = {
+  PRODUTOS: 'frozen_ib_produtos',
+  MOVIMENTACOES: 'frozen_ib_movimentacoes',
+  RECEITAS: 'frozen_ib_receitas'
+};
+
+let produtos = [
+  { codigo: "4", nome: "FILE MIGNON", categoria: "Materia Prima", unidade: "KG", estoqueInicial: 16.35, entrada: 0, saida: 0, retorno: 0 },
+  { codigo: "6", nome: "CARNE MOIDA", categoria: "Materia Prima", unidade: "KG", estoqueInicial: 89.56, entrada: 0, saida: 0, retorno: 0 },
+  { codigo: "8", nome: "FILE DE PEITO", categoria: "Materia Prima", unidade: "KG", estoqueInicial: 120.49, entrada: 0, saida: 0, retorno: 0 },
+  { codigo: "17", nome: "CEBOLA", categoria: "Materia Prima", unidade: "KG", estoqueInicial: 9.28, entrada: 0, saida: 0, retorno: 0 },
+  { codigo: "25", nome: "BATATA", categoria: "Materia Prima", unidade: "KG", estoqueInicial: 6.43, entrada: 0, saida: 0, retorno: 0 },
+  { codigo: "32", nome: "OVO", categoria: "Materia Prima", unidade: "Un", estoqueInicial: 1069.05, entrada: 0, saida: 0, retorno: 0 },
+  { codigo: "66", nome: "FARINHA DE TRIGO", categoria: "Materia Prima", unidade: "KG", estoqueInicial: 141.33, entrada: 0, saida: 0, retorno: 0 },
+  { codigo: "96", nome: "BASE FROZEN PAKI", categoria: "Embalagens", unidade: "Un", estoqueInicial: 1189, entrada: 0, saida: 0, retorno: 0 },
+  { codigo: "114", nome: "CX DE PAPELAO", categoria: "Embalagens", unidade: "Un", estoqueInicial: 400, entrada: 0, saida: 0, retorno: 0 },
+  { codigo: "119", nome: "SAL", categoria: "Materia Prima", unidade: "KG", estoqueInicial: 8.68, entrada: 0, saida: 0, retorno: 0 },
+  { codigo: "188", nome: "SACO DE LIXO", categoria: "Embalagens", unidade: "Un", estoqueInicial: 385, entrada: 0, saida: 0, retorno: 0 }
+];
+
+let movimentacoes = [];
+let receitas = {};
+let tipoLancamentoAtual = null;
+let produtoLancamentoAtual = null;
+let receitaSelecionadaAtual = null;
+let mesAtual = 0, semanaAtual = 1;
+
+const meses = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+const mesesCompletos = ["Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const dias = ["Domingo", "Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado"];
+
+function voltarHome() {
+  window.location.href = "CLIENT_QNUTRI.html";
+}
+
+function getEstoqueReal(produto) {
+  return produto.estoqueInicial + produto.entrada + produto.retorno - produto.saida;
+}
+
+function getEstoqueInicialPeriodo(produto) {
+  if (mesAtual === 0 && semanaAtual === 1) {
+    return produto.estoqueInicial;
+  }
+  
+  let movAnteriores = movimentacoes.filter(m => {
+    if (m.mes === mesAtual && m.semana < semanaAtual) return true;
+    if (m.mes < mesAtual) return true;
+    return false;
+  });
+  
+  let totalEnt = 0, totalSai = 0;
+  movAnteriores.forEach(m => {
+    if (m.produto === produto.nome) {
+      if (m.tipoOriginal === 'entrada' || m.tipoOriginal === 'retorno') totalEnt += m.quantidade;
+      else totalSai += m.quantidade;
+    }
+  });
+  
+  return produto.estoqueInicial + totalEnt - totalSai;
+}
+
+function getEstoquePrevisto(produto) {
+  let estoqueInicialPeriodo = getEstoqueInicialPeriodo(produto);
+  let movPeriodo = movimentacoes.filter(m => m.mes === mesAtual && m.semana === semanaAtual && m.produto === produto.nome);
+  let totalEnt = 0, totalSai = 0;
+  movPeriodo.forEach(m => {
+    if (m.tipoOriginal === 'entrada' || m.tipoOriginal === 'retorno') totalEnt += m.quantidade;
+    else totalSai += m.quantidade;
+  });
+  return estoqueInicialPeriodo + totalEnt - totalSai;
+}
+
+function atualizarEstoqueInicial(produtoNome, novoValor) {
+  let produto = produtos.find(p => p.nome === produtoNome);
+  if (produto && mesAtual === 0 && semanaAtual === 1) {
+    produto.estoqueInicial = novoValor;
+    renderizarProdutos();
+    atualizarRelatorio();
+  }
+}
+
+function inicializar() {
+  carregarDadosSalvos();
+  carregarReceitas();
+  renderizarMeses();
+  atualizarDataInfo();
+  renderizarProdutos();
+  atualizarRelatorio();
+}
+
+function carregarDadosSalvos() {
+  let saved = localStorage.getItem(STORAGE_KEYS.PRODUTOS);
+  if (saved) {
+    try {
+      let savedProd = JSON.parse(saved);
+      if (savedProd && savedProd.length > 0) produtos = savedProd;
+    } catch(e) {}
+  }
+  let savedMov = localStorage.getItem(STORAGE_KEYS.MOVIMENTACOES);
+  if (savedMov) {
+    try {
+      movimentacoes = JSON.parse(savedMov);
+    } catch(e) {}
+  }
+}
+
+function atualizarDataInfo() {
+  let hoje = new Date();
+  document.getElementById('dataInfo').innerHTML = `${hoje.toLocaleDateString('pt-br')} • ${dias[hoje.getDay()]}`;
+}
+
+function carregarReceitas() {
+  let salvo = localStorage.getItem(STORAGE_KEYS.RECEITAS);
+  if (salvo) receitas = JSON.parse(salvo);
+  else receitas = {};
+  renderizarListaReceitas();
+}
+
+function salvarReceitas() {
+  localStorage.setItem(STORAGE_KEYS.RECEITAS, JSON.stringify(receitas));
+}
+
+function renderizarListaReceitas() {
+  let container = document.getElementById('listaReceitas');
+  if(Object.keys(receitas).length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:20px;">Nenhuma receita cadastrada</div>';
+    return;
+  }
+  let html = '';
+  for(let nome in receitas) {
+    let itens = Object.entries(receitas[nome]).map(i => `${i[0]}: ${i[1]}`).join(', ');
+    html += `<div class="receita-card">
+      <div class="receita-nome">${nome}</div>
+      <div class="receita-itens">${itens}</div>
+      <div class="receita-botoes">
+        <button class="receita-lancar" onclick="abrirModalPorcoes('${nome.replace(/'/g, "\\'")}')">Lancar</button>
+        <button class="receita-excluir" onclick="excluirReceita('${nome.replace(/'/g, "\\'")}')">Excluir</button>
+      </div>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+function abrirModalPorcoes(nome) {
+  receitaSelecionadaAtual = nome;
+  document.getElementById('porcoesReceitaNome').innerHTML = nome;
+  document.getElementById('porcoesQuantidade').value = '';
+  document.getElementById('modalPorcoes').style.display = 'flex';
+  setTimeout(() => document.getElementById('porcoesQuantidade').focus(), 100);
+}
+
+function fecharModalPorcoes() {
+  document.getElementById('modalPorcoes').style.display = 'none';
+  receitaSelecionadaAtual = null;
+}
+
+function confirmarLancamentoReceita() {
+  let porcoes = parseInt(document.getElementById('porcoesQuantidade').value);
+  if(!porcoes || porcoes <= 0) { alert("Digite uma quantidade valida de porcoes!"); return; }
+  
+  let receita = receitas[receitaSelecionadaAtual];
+  if(!receita) { alert("Receita nao encontrada!"); return; }
+  
+  for(let prod in receita) {
+    let produto = produtos.find(p => p.nome === prod);
+    if(produto) {
+      let quantidadeTotal = receita[prod] * porcoes;
+      let estoqueAtual = getEstoqueReal(produto);
+      
+      if(quantidadeTotal > estoqueAtual) {
+        alert(`ATENCAO! Estoque insuficiente para "${produto}".\nNecessario: ${quantidadeTotal.toFixed(2)} ${produto.unidade}\nDisponivel: ${estoqueAtual.toFixed(2)} ${produto.unidade}\n\nA receita sera lancada parcialmente ou cancele para ajustar.`);
+        if(confirm("Deseja continuar mesmo assim? (Sera lancado apenas o disponivel)")) {
+          quantidadeTotal = estoqueAtual;
+        } else {
+          fecharModalPorcoes();
+          return;
+        }
+      }
+      
+      if(quantidadeTotal > 0) {
+        produto.saida += quantidadeTotal;
+        adicionarMovimentoRelatorio(produto.nome, 'saida_receita', quantidadeTotal, produto.unidade, porcoes, receitaSelecionadaAtual);
+      }
+    }
+  }
+  
+  fecharModalPorcoes();
+  renderizarProdutos();
+  atualizarRelatorio();
+  alert(`Receita "${receitaSelecionadaAtual}" lancada com ${porcoes} porcao(oes)!`);
+}
+
+function excluirReceita(nome) {
+  if(confirm(`Excluir receita "${nome}"?`)) {
+    delete receitas[nome];
+    salvarReceitas();
+    renderizarListaReceitas();
+  }
+}
+
+function renderizarMeses() {
+  let container = document.getElementById('mesesContainer');
+  container.innerHTML = '';
+  for(let i=0; i<12; i++) {
+    let span = document.createElement('span');
+    let temMovimento = verificarMovimentosMes(i);
+    span.className = (mesAtual === i) ? 'ativo' : '';
+    if(temMovimento) span.classList.add('tem-movimento');
+    span.textContent = meses[i];
+    span.onclick = (function(idx) { return function() { 
+      mesAtual = idx; 
+      semanaAtual = 1; 
+      renderizarMeses();
+      renderizarSemanas();
+      atualizarPeriodo(); 
+      renderizarProdutos(); 
+      atualizarRelatorio(); 
+    }; })(i);
+    container.appendChild(span);
+  }
+  renderizarSemanas();
+}
+
+function renderizarSemanas() {
+  let semanas = document.getElementById('semanasContainer');
+  semanas.innerHTML = '';
+  for(let i=1; i<=5; i++) {
+    let span = document.createElement('span');
+    let temMovimento = verificarMovimentosSemana(mesAtual, i);
+    span.className = (semanaAtual === i) ? 'ativo' : '';
+    span.textContent = `Semana ${i}`;
+    if(temMovimento) span.style.borderLeft = '2px solid #f2c200';
+    span.onclick = (function(idx) { return function() { 
+      semanaAtual = idx; 
+      renderizarSemanas();
+      atualizarPeriodo(); 
+      renderizarProdutos(); 
+      atualizarRelatorio(); 
+    }; })(i);
+    semanas.appendChild(span);
+  }
+  atualizarPeriodo();
+}
+
+function verificarMovimentosMes(mes) {
+  return movimentacoes.some(m => m.mes === mes);
+}
+
+function verificarMovimentosSemana(mes, semana) {
+  return movimentacoes.some(m => m.mes === mes && m.semana === semana);
+}
+
+function atualizarPeriodo() {
+  document.getElementById('periodoLabel').innerHTML = `${mesesCompletos[mesAtual]} - Semana ${semanaAtual}`;
+}
+
+function salvarDados() {
+  localStorage.setItem(STORAGE_KEYS.PRODUTOS, JSON.stringify(produtos));
+  localStorage.setItem(STORAGE_KEYS.MOVIMENTACOES, JSON.stringify(movimentacoes));
+  alert("Dados do módulo IB salvos!");
+}
+
+function filtrarProdutos() {
+  let termo = document.getElementById('busca').value.toLowerCase();
+  renderizarProdutos(termo);
+}
+
+function renderizarProdutos(termo = '') {
+  let container = document.getElementById('produtosContainer');
+  let filtrados = produtos.filter(p => p.nome.toLowerCase().includes(termo) || p.codigo.includes(termo));
+  
+  if(filtrados.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:40px;">Nenhum produto encontrado</div>';
+    return;
+  }
+  
+  let html = '';
+  filtrados.forEach(p => {
+    let estoqueAtual = getEstoqueReal(p);
+    let estoqueInicialPeriodo = getEstoqueInicialPeriodo(p);
+    let estoquePrevisto = getEstoquePrevisto(p);
+    let isEditavel = (mesAtual === 0 && semanaAtual === 1);
+    
+    html += `<div class="produto-item" data-produto="${p.nome}">
+      <div class="produto-header">
+        <div>
+          <div class="produto-nome">${p.nome}</div>
+          <div class="produto-meta">
+            <span class="produto-categoria">${p.categoria}</span>
+            <span>Cod: ${p.codigo}</span>
+          </div>
+        </div>
+        <div class="produto-estoque">
+          <div class="estoque-valor">${estoqueAtual.toFixed(2)}</div>
+          <div class="estoque-unidade">${p.unidade}</div>
+        </div>
+      </div>`;
+    
+    if (isEditavel) {
+      html += `<div class="info-estoque">
+        <label>Estoque Inicial (${mesesCompletos[mesAtual]} - Sem ${semanaAtual}):</label>
+        <input type="number" step="any" value="${estoqueInicialPeriodo.toFixed(2)}" 
+               onchange="atualizarEstoqueInicial('${p.nome.replace(/'/g, "\\'")}', parseFloat(this.value))">
+      </div>`;
+    } else {
+      html += `<div class="info-estoque">
+        <label>Estoque Inicial do Periodo:</label>
+        <span class="valor-info">${estoqueInicialPeriodo.toFixed(2)} ${p.unidade}</span>
+      </div>
+      <div class="info-estoque">
+        <label>Estoque Previsto (apos lancamentos):</label>
+        <span class="valor-info">${estoquePrevisto.toFixed(2)} ${p.unidade}</span>
+      </div>`;
+    }
+    
+    html += `<div class="botoes">
+        <button class="btn-acao btn-entrada" onclick="abrirModalLancamento('entrada', '${p.nome.replace(/'/g, "\\'")}', ${estoqueAtual}, '${p.unidade}')">Entrada</button>
+        <button class="btn-acao btn-saida" onclick="abrirModalLancamento('saida', '${p.nome.replace(/'/g, "\\'")}', ${estoqueAtual}, '${p.unidade}')">Saida</button>
+        <button class="btn-acao btn-retorno" onclick="abrirModalLancamento('retorno', '${p.nome.replace(/'/g, "\\'")}', ${estoqueAtual}, '${p.unidade}')">Retorno</button>
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function abrirModalLancamento(tipo, nome, estoque, unidade) {
+  tipoLancamentoAtual = tipo;
+  produtoLancamentoAtual = produtos.find(p => p.nome === nome);
+  document.getElementById('modalTitulo').innerText = tipo === 'entrada' ? 'Adicionar Entrada' : (tipo === 'saida' ? 'Registrar Saida' : 'Registrar Retorno');
+  document.getElementById('modalProdutoNome').innerHTML = nome;
+  document.getElementById('modalEstoque').innerHTML = estoque.toFixed(2);
+  document.getElementById('modalUnidade').innerHTML = unidade;
+  document.getElementById('modalQuantidade').value = '';
+  document.getElementById('modalLancamento').style.display = 'flex';
+  setTimeout(() => document.getElementById('modalQuantidade').focus(), 100);
+}
+
+function fecharModal() {
+  document.getElementById('modalLancamento').style.display = 'none';
+}
+
+function confirmarLancamento() {
+  let qtd = parseFloat(document.getElementById('modalQuantidade').value);
+  if(!qtd || qtd <= 0) { alert("Digite uma quantidade valida!"); return; }
+  
+  let estoqueAtual = getEstoqueReal(produtoLancamentoAtual);
+  
+  if(tipoLancamentoAtual === 'saida') {
+    if(qtd > estoqueAtual) { alert(`Estoque insuficiente! Disponivel: ${estoqueAtual.toFixed(2)}`); return; }
+    produtoLancamentoAtual.saida += qtd;
+    adicionarMovimentoRelatorio(produtoLancamentoAtual.nome, 'saida', qtd, produtoLancamentoAtual.unidade);
+  } else if(tipoLancamentoAtual === 'entrada') {
+    produtoLancamentoAtual.entrada += qtd;
+    adicionarMovimentoRelatorio(produtoLancamentoAtual.nome, 'entrada', qtd, produtoLancamentoAtual.unidade);
+  } else {
+    produtoLancamentoAtual.retorno += qtd;
+    adicionarMovimentoRelatorio(produtoLancamentoAtual.nome, 'retorno', qtd, produtoLancamentoAtual.unidade);
+  }
+  
+  fecharModal();
+  renderizarProdutos();
+  atualizarRelatorio();
+}
+
+function adicionarMovimentoRelatorio(produto, tipo, qtd, unidade, porcoes = null, receitaNome = null) {
+  const agora = new Date();
+  const data = agora.toLocaleDateString('pt-br');
+  const dataShort = data.slice(0,5);
+  const hora = agora.toLocaleTimeString().slice(0,5);
+  
+  let tipoLabel = '';
+  let tipoOriginal = tipo;
+  
+  if(tipo === 'entrada') {
+    tipoLabel = 'Entrada';
+  } else if(tipo === 'retorno') {
+    tipoLabel = 'Retorno';
+  } else if(tipo === 'saida_receita') {
+    tipoLabel = `Saida (Receita: ${receitaNome} - ${porcoes} porcoes)`;
+    tipoOriginal = 'saida_receita';
+  } else {
+    tipoLabel = 'Saida';
+    tipoOriginal = 'saida';
+  }
+  
+  movimentacoes.push({ 
+    data: dataShort, 
+    dataCompleta: data, 
+    hora, 
+    produto, 
+    tipo: tipoLabel,
+    tipoOriginal: tipoOriginal,
+    quantidade: qtd, 
+    unidade, 
+    mes: mesAtual, 
+    semana: semanaAtual,
+    porcoes: porcoes,
+    receitaNome: receitaNome
+  });
+  
+  renderizarMeses();
+  atualizarRelatorio();
+}
+
+function atualizarRelatorio() {
+  let movFiltrados = movimentacoes.filter(m => m.mes === mesAtual && m.semana === semanaAtual);
+  
+  if(movFiltrados.length === 0) {
+    document.getElementById('listaMovimentos').innerHTML = '<div class="sem-movimentos">Nenhum movimento registrado neste periodo</div>';
+    return;
+  }
+  
+  let movPorProduto = {};
+  movFiltrados.forEach(m => {
+    if(!movPorProduto[m.produto]) {
+      movPorProduto[m.produto] = [];
+    }
+    movPorProduto[m.produto].push(m);
+  });
+  
+  let produtosOrdenados = Object.keys(movPorProduto).sort();
+  
+  let html = '';
+  produtosOrdenados.forEach(produtoNome => {
+    let movimentos = movPorProduto[produtoNome];
+    movimentos.sort((a, b) => {
+      if (a.dataCompleta !== b.dataCompleta) {
+        return a.dataCompleta.localeCompare(b.dataCompleta);
+      }
+      return a.hora.localeCompare(b.hora);
+    });
+    
+    let produtoInfo = produtos.find(p => p.nome === produtoNome);
+    let totalEntrada = 0, totalSaida = 0;
+    
+    html += `<div class="grupo-produto">
+      <div class="produto-cabecalho">
+        <span>${produtoNome}</span>
+        <span class="codigo">Cod: ${produtoInfo ? produtoInfo.codigo : '-'} | Un: ${produtoInfo ? produtoInfo.unidade : '-'}</span>
+      </div>
+      <table class="tabela-movimentos">
+        <thead>
+          <tr><th>Data</th><th>Hora</th><th>Tipo</th><th>Quantidade</th><th>Unidade</th></tr>
+        </thead>
+        <tbody>`;
+    
+    movimentos.forEach(m => {
+      let tipoClass = '';
+      if(m.tipoOriginal === 'entrada') tipoClass = 'entrada-td';
+      else if(m.tipoOriginal === 'retorno') tipoClass = 'retorno-td';
+      else if(m.tipoOriginal === 'saida_receita') tipoClass = 'saida-receita-td';
+      else tipoClass = 'saida-td';
+      
+      if(m.tipoOriginal === 'entrada' || m.tipoOriginal === 'retorno') {
+        totalEntrada += m.quantidade;
+      } else {
+        totalSaida += m.quantidade;
+      }
+      
+      html += `<tr>
+        <td>${m.data}</td>
+        <td>${m.hora}</td>
+        <td class="${tipoClass}">${m.tipo}</td>
+        <td class="${tipoClass}">${m.quantidade.toFixed(2)}</td>
+        <td>${m.unidade}</td>
+      </tr>`;
+    });
+    
+    let saldo = totalEntrada - totalSaida;
+    html += `</tbody>
+      </table>
+      <div class="resumo-produto">
+        <span>RESUMO DO PERIODO:</span>
+        <span class="total-entrada">Entradas: +${totalEntrada.toFixed(2)}</span>
+        <span class="total-saida">Saidas: -${totalSaida.toFixed(2)}</span>
+        <span class="saldo">Saldo do periodo: ${saldo.toFixed(2)} ${produtoInfo ? produtoInfo.unidade : ''}</span>
+      </div>
+    </div>`;
+  });
+  
+  document.getElementById('listaMovimentos').innerHTML = html;
+}
+
+function imprimirPDF() {
+  let elemento = document.querySelector('.card-relatorio');
+  let originalTitle = document.title;
+  document.title = `Relatorio_IB_${mesesCompletos[mesAtual]}_Semana${semanaAtual}`;
+  
+  let opt = {
+    margin: [0.5, 0.5, 0.5, 0.5],
+    filename: `relatorio_ib_${mesesCompletos[mesAtual].toLowerCase()}_semana${semanaAtual}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, letterRendering: true },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+  };
+  
+  html2pdf().set(opt).from(elemento).save().then(() => {
+    document.title = originalTitle;
+  });
+}
+
+function abrirModalReceita() {
+  document.getElementById('receitaNome').value = '';
+  let html = '';
+  produtos.forEach(p => {
+    html += `<div class="insumo-linha">
+      <span class="insumo-nome">${p.nome} (${p.unidade})</span>
+      <input type="number" step="any" id="insumo_${p.codigo.replace(/[^a-zA-Z0-9]/g, '_')}" class="insumo-qtd" placeholder="0">
+    </div>`;
+  });
+  document.getElementById('insumosReceita').innerHTML = html;
+  document.getElementById('modalReceita').style.display = 'flex';
+  renderizarListaReceitas();
+}
+
+function fecharModalReceita() {
+  document.getElementById('modalReceita').style.display = 'none';
+}
+
+function salvarReceita() {
+  let nome = document.getElementById('receitaNome').value.trim();
+  if(!nome) { alert("Digite um nome para a receita!"); return; }
+  let dados = {};
+  produtos.forEach(p => {
+    let safeId = `insumo_${p.codigo.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    let input = document.getElementById(safeId);
+    if(input && parseFloat(input.value) > 0) dados[p.nome] = parseFloat(input.value);
+  });
+  if(Object.keys(dados).length === 0) { alert("Adicione pelo menos um insumo!"); return; }
+  receitas[nome] = dados;
+  salvarReceitas();
+  renderizarListaReceitas();
+  fecharModalReceita();
+  alert(`Receita "${nome}" salva!`);
+}
+
+function abrirModalCadastro() {
+  document.getElementById('novoCodigo').value = '';
+  document.getElementById('novoNome').value = '';
+  document.getElementById('novaCategoria').value = 'Materia Prima';
+  document.getElementById('novaUnidade').value = 'KG';
+  document.getElementById('novoEstoque').value = '0';
+  document.getElementById('modalCadastro').style.display = 'flex';
+}
+
+function fecharModalCadastro() {
+  document.getElementById('modalCadastro').style.display = 'none';
+}
+
+function salvarNovoProduto() {
+  let codigo = document.getElementById('novoCodigo').value.trim();
+  let nome = document.getElementById('novoNome').value.trim().toUpperCase();
+  let categoria = document.getElementById('novaCategoria').value;
+  let unidade = document.getElementById('novaUnidade').value;
+  let estoque = parseFloat(document.getElementById('novoEstoque').value) || 0;
+  
+  if(!codigo) { alert("Digite um codigo para o produto!"); return; }
+  if(!nome) { alert("Digite um nome para o produto!"); return; }
+  
+  if(produtos.some(p => p.codigo === codigo)) {
+    alert("Ja existe um produto com este codigo!");
+    return;
+  }
+  if(produtos.some(p => p.nome === nome)) {
+    alert("Ja existe um produto com este nome!");
+    return;
+  }
+  
+  let novoProduto = {
+    codigo: codigo,
+    nome: nome,
+    categoria: categoria,
+    unidade: unidade,
+    estoqueInicial: estoque,
+    entrada: 0,
+    saida: 0,
+    retorno: 0
+  };
+  
+  produtos.push(novoProduto);
+  fecharModalCadastro();
+  renderizarProdutos();
+  alert(`Produto "${nome}" cadastrado com sucesso!`);
+}
+
+inicializar();
+</script>
+</body>
+</html>
