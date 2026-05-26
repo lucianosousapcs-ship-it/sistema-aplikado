@@ -4928,129 +4928,126 @@ async function salvarDRESupabase(mes, lancamentos) {
 
 // === FUNÇÃO GERAR DRE MODIFICADA ===
 async function gerarDREComSupabase() {
-    const dadosPorMes = await carregarDRESupabase();
-    if (!dadosPorMes) return;
+    console.log('Carregando DRE do Supabase...');
     
-    const corpo = document.getElementById('corpoDRE'); 
-    if(!corpo) return; 
-    corpo.innerHTML = ''; 
+    // Buscar dados do Supabase
+    const { data, error } = await supabaseClient
+        .from('dre_lancamentos')
+        .select('*');
     
-    function getTotalGrupo(grupo, mes) { 
-        let total = 0; 
-        if (estruturaDRE[grupo]) {
-            estruturaDRE[grupo].forEach(item => { 
-                dadosPorMes[mes].forEach(lanc => { 
-                    if(lanc.plano === item.nome) { 
-                        let soma = parseFloat(lanc.valor) || 0; 
-                        if(grupo === 'receitas') total += soma; 
-                        else total -= soma; 
-                    } 
-                }); 
-            });
-        }
-        return total; 
-    } 
+    if (error) {
+        console.error('Erro ao carregar:', error);
+        return;
+    }
     
-    const receitas = [], custosVar = [], custosFix = []; 
-    for(let m = 0; m < 12; m++) { 
-        receitas[m] = getTotalGrupo('receitas', m); 
-        custosVar[m] = getTotalGrupo('custosVariaveis', m); 
-        custosFix[m] = getTotalGrupo('custosFixos', m); 
-    } 
-    
-    function addLinha(cod, nome, valores, classe, exibirPositivoNegativo=true, linhaTipo='item') { 
-        const tr = document.createElement('tr'); 
-        tr.className = classe; 
-        let totalAnual = 0; 
-        let temMovimentacao = false;
-        for(let i=0;i<12;i++) { 
-            const v = valores[i]; 
-            totalAnual += v; 
-            if (v !== 0) temMovimentacao = true;
-        } 
-        if (temMovimentacao || totalAnual !== 0) {
-            tr.classList.add('linha-com-movimentacao');
-        } else {
-            tr.classList.add('linha-sem-movimentacao');
-        }
-        let html = `<td>${cod ? cod + ' - ' + nome : nome}</td>`; 
-        for(let i=0;i<12;i++) { 
-            const v = valores[i]; 
-            const className = exibirPositivoNegativo ? (v>=0?'valor-positivo':'valor-negativo') : ''; 
-            html += `<td class="${className}" data-mes="${i}" data-valor="${v}" data-nome-conta="${nome}" data-cod-conta="${cod || ''}" data-tipo-conta="${linhaTipo}">${formatarMoeda(v)}</td>`; 
-        } 
-        const classNameTotal = exibirPositivoNegativo ? (totalAnual>=0?'valor-positivo':'valor-negativo') : ''; 
-        html += `<td class="${classNameTotal}" data-total="${totalAnual}" data-nome-conta="${nome}" data-cod-conta="${cod || ''}" data-tipo-conta="${linhaTipo}">${formatarMoeda(totalAnual)}</td>`; 
-        tr.innerHTML = html; 
-        
-        const valorCells = tr.querySelectorAll('td:not(:first-child)');
-        valorCells.forEach(cell => {
-            cell.addEventListener('click', (event) => {
-                event.stopPropagation();
-                const valor = parseFloat(cell.getAttribute('data-valor') || cell.getAttribute('data-total') || '0');
-                const mes = cell.getAttribute('data-mes');
-                const nomeConta = cell.getAttribute('data-nome-conta');
-                const codConta = cell.getAttribute('data-cod-conta');
-                const tipoConta = cell.getAttribute('data-tipo-conta');
-                const isTotal = cell.hasAttribute('data-total');
-                
-                if (valor === 0) {
-                    alert('Não há registros para este valor.');
-                    return;
-                }
-                
-                let grupoTipo = null;
-                if (estruturaDRE.receitas.some(r => r.nome === nomeConta) || nomeConta === 'RECEITAS TOTAIS') {
-                    grupoTipo = 'receitas';
-                } else if (estruturaDRE.custosVariaveis.some(c => c.nome === nomeConta) || 
-                           estruturaDRE.custosFixos.some(c => c.nome === nomeConta) ||
-                           nomeConta === 'CUSTOS VARIAVEIS' || nomeConta === 'CUSTOS FIXOS') {
-                    grupoTipo = 'despesas';
-                }
-                
-                abrirDetalhamentoValor(valor, mes, nomeConta, codConta, grupoTipo, isTotal);
-            });
+    // Organizar por mês
+    const dadosPorMes = [[],[],[],[],[],[],[],[],[],[],[],[]];
+    if (data) {
+        data.forEach(item => {
+            if (item.mes >= 0 && item.mes <= 11) {
+                dadosPorMes[item.mes].push({
+                    data: item.data,
+                    desc: item.descricao,
+                    plano: item.plano,
+                    valor: item.valor
+                });
+            }
         });
-        
-        corpo.appendChild(tr); 
-    } 
+    }
     
-    addLinha('','RECEITAS TOTAIS',receitas,'dre-group-title',true, 'grupo'); 
-    estruturaDRE.receitas.slice(0,25).forEach(r => { 
-        const vals = []; 
-        for(let m=0;m<12;m++) { 
-            let total = 0; 
-            dadosPorMes[m].forEach(lanc => { if(lanc.plano === r.nome) total += parseFloat(lanc.valor) || 0; }); 
-            vals[m] = total; 
-        } 
-        addLinha(r.cod, r.nome, vals, 'dre-subgroup', true, 'item'); 
-    }); 
-    addLinha('','CUSTOS VARIAVEIS',custosVar,'dre-group-title',false, 'grupo'); 
-    estruturaDRE.custosVariaveis.slice(0,20).forEach(c => { 
-        const vals = []; 
-        for(let m=0;m<12;m++) { 
-            let total = 0; 
-            dadosPorMes[m].forEach(lanc => { if(lanc.plano === c.nome) total += parseFloat(lanc.valor) || 0; }); 
-            vals[m] = total; 
-        } 
-        addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item'); 
-    }); 
-    const lucroBruto = receitas.map((r,i) => r - custosVar[i]); 
-    addLinha('','LUCRO BRUTO',lucroBruto,'dre-total-row',true, 'total'); 
-    addLinha('','CUSTOS FIXOS',custosFix,'dre-group-title',false, 'grupo'); 
-    estruturaDRE.custosFixos.forEach(c => { 
-        const vals = []; 
-        for(let m=0;m<12;m++) { 
-            let total = 0; 
-            dadosPorMes[m].forEach(lanc => { if(lanc.plano === c.nome) total += parseFloat(lanc.valor) || 0; }); 
-            vals[m] = total; 
-        } 
-        addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item'); 
-    }); 
-    const resultadoOp = lucroBruto.map((lb,i) => lb - custosFix[i]); 
-    addLinha('','RESULTADO OPERACIONAL',resultadoOp,'dre-total-row',true, 'total'); 
+    const corpo = document.getElementById('corpoDRE');
+    if (!corpo) return;
+    corpo.innerHTML = '';
+    
+    // Calcular totais
+    function getTotalGrupo(grupo, mes) {
+        let total = 0;
+        if (estruturaDRE[grupo]) {
+            estruturaDRE[grupo].forEach(item => {
+                dadosPorMes[mes].forEach(lanc => {
+                    if (lanc.plano === item.nome) {
+                        total += lanc.valor;
+                    }
+                });
+            });
+        }
+        return total;
+    }
+    
+    const receitas = [], custosVar = [], custosFix = [];
+    for (let m = 0; m < 12; m++) {
+        receitas[m] = getTotalGrupo('receitas', m);
+        custosVar[m] = getTotalGrupo('custosVariaveis', m);
+        custosFix[m] = getTotalGrupo('custosFixos', m);
+    }
+    
+    function addLinha(cod, nome, valores, classe, exibirPositivo = true) {
+        const tr = document.createElement('tr');
+        tr.className = classe;
+        let totalAnual = 0;
+        for (let i = 0; i < 12; i++) {
+            totalAnual += valores[i];
+        }
+        
+        let html = `<td>${cod ? cod + ' - ' + nome : nome}</td>`;
+        for (let i = 0; i < 12; i++) {
+            const v = valores[i];
+            const className = exibirPositivo ? (v >= 0 ? 'valor-positivo' : 'valor-negativo') : '';
+            html += `<td class="${className}">${formatarMoeda(v)}</td>`;
+        }
+        const className = exibirPositivo ? (totalAnual >= 0 ? 'valor-positivo' : 'valor-negativo') : '';
+        html += `<td class="${className}">${formatarMoeda(totalAnual)}</td>`;
+        tr.innerHTML = html;
+        corpo.appendChild(tr);
+    }
+    
+    addLinha('', 'RECEITAS TOTAIS', receitas, 'dre-group-title', true);
+    estruturaDRE.receitas.slice(0, 25).forEach(r => {
+        const vals = [];
+        for (let m = 0; m < 12; m++) {
+            let total = 0;
+            dadosPorMes[m].forEach(lanc => {
+                if (lanc.plano === r.nome) total += lanc.valor;
+            });
+            vals[m] = total;
+        }
+        addLinha(r.cod, r.nome, vals, 'dre-subgroup', true);
+    });
+    
+    addLinha('', 'CUSTOS VARIAVEIS', custosVar, 'dre-group-title', false);
+    estruturaDRE.custosVariaveis.slice(0, 20).forEach(c => {
+        const vals = [];
+        for (let m = 0; m < 12; m++) {
+            let total = 0;
+            dadosPorMes[m].forEach(lanc => {
+                if (lanc.plano === c.nome) total += lanc.valor;
+            });
+            vals[m] = total;
+        }
+        addLinha(c.cod, c.nome, vals, 'dre-subgroup', false);
+    });
+    
+    const lucroBruto = receitas.map((r, i) => r + custosVar[i]);
+    addLinha('', 'LUCRO BRUTO', lucroBruto, 'dre-total-row', true);
+    
+    addLinha('', 'CUSTOS FIXOS', custosFix, 'dre-group-title', false);
+    estruturaDRE.custosFixos.forEach(c => {
+        const vals = [];
+        for (let m = 0; m < 12; m++) {
+            let total = 0;
+            dadosPorMes[m].forEach(lanc => {
+                if (lanc.plano === c.nome) total += lanc.valor;
+            });
+            vals[m] = total;
+        }
+        addLinha(c.cod, c.nome, vals, 'dre-subgroup', false);
+    });
+    
+    const resultadoOp = lucroBruto.map((lb, i) => lb + custosFix[i]);
+    addLinha('', 'RESULTADO OPERACIONAL', resultadoOp, 'dre-total-row', true);
+    
+    console.log('DRE atualizado com sucesso!');
 }
-
 // === FUNÇÃO LIMPAR DRE MODIFICADA ===
 async function limparDREComSupabase() {
     if(confirm('ATENÇÃO: Isso irá zerar TODOS os valores mensais inseridos na DRE. A estrutura do plano de contas será mantida. Confirmar limpeza?')) {
@@ -5061,370 +5058,9 @@ async function limparDREComSupabase() {
         alert('DRE limpa com sucesso! Todos os valores mensais foram zerados.');
     }
 }
-
-// === INCLUIR SELECIONADOS NO DRE MODIFICADO ===
-async function incluirSelecionadosNoDRESupabase() {
-    salvarPlanosReceitas();
-    salvarPlanosDespesas();
-    const lancamentosPorMes = [[],[],[],[],[],[],[],[],[],[],[],[]];
-    let totalValidados = 0, totalRejeitados = 0;
-    const rejeitadosDetalhes = [];
-    
-    // Carregar hashes existentes do Supabase
-    const hashLancamentosExistentes = new Set();
-    for(let mes = 0; mes < 12; mes++) {
-        const { data: dadosExistentes } = await supabaseClient
-            .from('dre_lancamentos')
-            .select('*')
-            .eq('mes', mes);
-        
-        if(dadosExistentes) {
-            dadosExistentes.forEach(lanc => {
-                const hash = `${mes}|${lanc.plano}|${parseFloat(lanc.valor)}|${lanc.data}`;
-                hashLancamentosExistentes.add(hash);
-            });
-        }
-    }
-    
-    // Processar RECEITAS selecionadas
-    receitasSelecionadas.forEach(id => { 
-        const receita = receitasDataReais.find(r => r.id === id); 
-        if(receita) { 
-            const mes = getMesFromData(receita.data); 
-            const valorOriginal = receita.valor; 
-            const valorConvertido = parseMoeda(valorOriginal); 
-            const saoCompativeis = Math.abs(valorOriginal - valorConvertido) < 0.01; 
-            if (!saoCompativeis) { 
-                totalRejeitados++; 
-                rejeitadosDetalhes.push({ tipo:'RECEITA', id:id, descricao:receita.cliente, valorOriginal:valorOriginal, valorConvertido:valorConvertido }); 
-                return; 
-            } 
-            
-            const hash = `${mes}|${receita.plano}|${valorConvertido}|${receita.data}`;
-            
-            if (!hashLancamentosExistentes.has(hash)) {
-                totalValidados++; 
-                lancamentosPorMes[mes].push({ 
-                    data:receita.data, 
-                    desc:`RECEITA: ${receita.cliente}`, 
-                    plano:receita.plano, 
-                    valor:valorConvertido.toString(), 
-                    timestamp:new Date().toLocaleString('pt-br')
-                }); 
-                hashLancamentosExistentes.add(hash);
-            }
-        } 
-    });
-    
-    // Processar DESPESAS selecionadas
-    despesasSelecionadas.forEach(id => { 
-        const despesa = despesasDataReais.find(d => d.id === id); 
-        if(despesa) { 
-            const mes = getMesFromData(despesa.data); 
-            const valorOriginal = despesa.valor; 
-            const valorConvertido = parseMoeda(valorOriginal); 
-            const saoCompativeis = Math.abs(valorOriginal - valorConvertido) < 0.01; 
-            if (!saoCompativeis) { 
-                totalRejeitados++; 
-                rejeitadosDetalhes.push({ tipo:'DESPESA', id:id, descricao:despesa.operacao, valorOriginal:valorOriginal, valorConvertido:valorConvertido }); 
-                return; 
-            } 
-            
-            const hash = `${mes}|${despesa.plano}|${valorConvertido}|${despesa.data}`;
-            
-            if (!hashLancamentosExistentes.has(hash)) {
-                totalValidados++; 
-                lancamentosPorMes[mes].push({ 
-                    data:despesa.data, 
-                    desc:`DESPESA: ${despesa.operacao}`, 
-                    plano:despesa.plano, 
-                    valor:valorConvertido.toString(), 
-                    timestamp:new Date().toLocaleString('pt-br')
-                }); 
-                hashLancamentosExistentes.add(hash);
-            }
-        } 
-    });
-    
-    if (totalRejeitados > 0) { 
-        let mensagem = `⚠️ VALIDAÇÃO DE VALORES ⚠️\n\n${totalRejeitados} registro(s) foram REJEITADOS por divergência de valor:\n\n`; 
-        rejeitadosDetalhes.slice(0,10).forEach(r => { 
-            mensagem += `• ${r.tipo}: ${r.descricao}\n  Original: ${r.valorOriginal} → Convertido: ${r.valorConvertido}\n`; 
-        }); 
-        if (rejeitadosDetalhes.length > 10) mensagem += `\n... e mais ${rejeitadosDetalhes.length - 10} registro(s) rejeitados.`; 
-        mensagem += `\n\n✅ ${totalValidados} registro(s) validados com sucesso.\n\nOs registros rejeitados NÃO foram incluídos no DRE.`; 
-        alert(mensagem); 
-    }
-    
-    if (totalValidados === 0 && totalRejeitados === 0) { 
-        alert('Nenhum registro novo para incluir no DRE. Os lançamentos selecionados já foram adicionados anteriormente.'); 
-        return; 
-    }
-    
-    if (totalValidados === 0 && totalRejeitados > 0) {
-        alert('Nenhum registro válido para incluir no DRE. Verifique os valores dos registros selecionados.');
-        return;
-    }
-    
-    let totalIncluidos = 0;
-    
-    for(let mes = 0; mes < 12; mes++) { 
-        if(lancamentosPorMes[mes].length > 0) { 
-            const { data: dadosExistentes } = await supabaseClient
-                .from('dre_lancamentos')
-                .select('*')
-                .eq('mes', mes);
-            
-            let dadosAtuais = dadosExistentes || [];
-            
-            const novosLancamentos = lancamentosPorMes[mes].filter(novoLanc => {
-                const existe = dadosAtuais.some(lancExistente => 
-                    lancExistente.data === novoLanc.data && 
-                    lancExistente.plano === novoLanc.plano && 
-                    Math.abs(parseFloat(lancExistente.valor) - parseFloat(novoLanc.valor)) < 0.01
-                );
-                return !existe;
-            });
-            
-            if(novosLancamentos.length > 0) { 
-                const toInsert = novosLancamentos.map(l => ({
-                    mes: mes,
-                    data: l.data,
-                    descricao: l.desc,
-                    plano: l.plano,
-                    valor: parseFloat(l.valor) || 0,
-                    timestamp: l.timestamp
-                }));
-                
-                const { error } = await supabaseClient
-                    .from('dre_lancamentos')
-                    .insert(toInsert);
-                
-                if (!error) {
-                    totalIncluidos += novosLancamentos.length;
-                }
-            }
-        } 
-    }
-    
-    receitasSelecionadas.clear(); 
-    despesasSelecionadas.clear(); 
-    renderizarTabelaReceitas(); 
-    renderizarTabelaDespesas(); 
-    await gerarDREComSupabase();
-    
-    let mensagemFinal = `${totalIncluidos} registro(s) incluído(s) no DRE com sucesso!`;
-    if (totalRejeitados > 0) mensagemFinal += ` ${totalRejeitados} registro(s) foram rejeitados por divergência de valor.`;
-    alert(mensagemFinal);
-}
-
-// === CARREGAR REGRAS DE CONVERSÃO DO SUPABASE ===
-async function carregarRegrasConversaoSupabase() {
-    const { data, error } = await supabaseClient
-        .from('regras_conversao')
-        .select('*');
-    
-    if (error) {
-        console.error('Erro ao carregar regras de conversão:', error);
-        return;
-    }
-    
-    if (data) {
-        // Limpar mapeamentos atuais
-        window.condToTituloMap = {};
-        window.condToPlanoMap = {};
-        window.operacaoToPlanoMap = {};
-        
-        data.forEach(regra => {
-            if (regra.tipo === 'RECEITA') {
-                if (regra.destino_caixa) {
-                    window.condToTituloMap[regra.origem] = regra.destino_caixa;
-                }
-                if (regra.destino_plano) {
-                    window.condToPlanoMap[regra.origem] = regra.destino_plano;
-                }
-            } else if (regra.tipo === 'DESPESA') {
-                if (regra.destino_plano) {
-                    window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
-                }
-            }
-        });
-        
-        // Salvar também no localStorage para compatibilidade com funções existentes
-        localStorage.setItem('condToTituloMap', JSON.stringify(window.condToTituloMap));
-        localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
-        localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
-    }
-}
-
-// === SALVAR REGRAS DE CONVERSÃO NO SUPABASE ===
-async function salvarRegrasConversaoSupabase() {
-    // Coletar regras de RECEITAS
-    const receitasRegras = [];
-    for (const [origem, destinoCaixa] of Object.entries(window.condToTituloMap || {})) {
-        const destinoPlano = window.condToPlanoMap?.[origem] || '';
-        receitasRegras.push({
-            tipo: 'RECEITA',
-            origem: origem,
-            destino_caixa: destinoCaixa,
-            destino_plano: destinoPlano
-        });
-    }
-    
-    // Coletar regras de DESPESAS
-    const despesasRegras = [];
-    for (const [origem, destinoPlano] of Object.entries(window.operacaoToPlanoMap || {})) {
-        despesasRegras.push({
-            tipo: 'DESPESA',
-            origem: origem,
-            destino_caixa: null,
-            destino_plano: destinoPlano
-        });
-    }
-    
-    const todasRegras = [...receitasRegras, ...despesasRegras];
-    
-    if (todasRegras.length === 0) return;
-    
-    // Deletar regras antigas
-    const { error: deleteError } = await supabaseClient
-        .from('regras_conversao')
-        .delete()
-        .neq('id', 0);
-    
-    if (deleteError) {
-        console.error('Erro ao deletar regras antigas:', deleteError);
-        return;
-    }
-    
-    // Inserir novas regras
-    const { error: insertError } = await supabaseClient
-        .from('regras_conversao')
-        .insert(todasRegras);
-    
-    if (insertError) {
-        console.error('Erro ao salvar regras de conversão:', insertError);
-        alert('Erro ao salvar regras no Supabase. Verifique sua conexão.');
-    } else {
-        alert(`Mapeamento salvo com sucesso!\n\nReceitas: ${receitasRegras.length} condições mapeadas.\nDespesas: ${despesasRegras.length} operações mapeadas.`);
-    }
-}
-
-// === FUNÇÃO SALVAR MAPEAMENTO CONVERSÃO MODIFICADA ===
-async function salvarMapeamentoConversaoCompletoSupabase() {
-    // Coletar dados dos selects da tela de conversão
-    window.condToTituloMap = {};
-    window.condToPlanoMap = {};
-    
-    document.querySelectorAll('#conversaoTabReceitas .conversao-select').forEach(select => {
-        const cond = select.getAttribute('data-cond');
-        if (cond && select.value) {
-            window.condToTituloMap[cond] = select.value;
-        }
-    });
-    
-    document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
-        const cond = select.getAttribute('data-plano-cond');
-        if (cond && select.value) {
-            window.condToPlanoMap[cond] = select.value;
-        }
-    });
-    
-    window.operacaoToPlanoMap = {};
-    document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
-        const operacao = select.getAttribute('data-operacao');
-        if (operacao && select.value) {
-            window.operacaoToPlanoMap[operacao] = select.value;
-        }
-    });
-    
-    // Salvar no Supabase
-    await salvarRegrasConversaoSupabase();
-    
-    // Salvar também no localStorage para compatibilidade
-    localStorage.setItem('condToTituloMap', JSON.stringify(window.condToTituloMap));
-    localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
-    localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
-    
-    // Atualizar interfaces
-    const modalCaixa = document.getElementById('modalFechamentoCaixa');
-    if(modalCaixa && modalCaixa.classList.contains('active')) {
-        atualizarTitulosColunasCaixa();
-        renderizarCaixaPopup();
-    }
-    
-    fecharModalConversao();
-}
-
-// === FUNÇÃO ABRIR MODAL CONVERSAO MODIFICADA ===
-async function abrirModalConversaoSupabase() {
-    // Carregar regras do Supabase primeiro
-    await carregarRegrasConversaoSupabase();
-    
-    // Carregar condições de pagamento únicas das vendas
-    const condUnicas = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
-    
-    // Carregar operações únicas das despesas
-    const operacoesUnicas = [...new Set(despesasDataReais.map(d => d.operacao).filter(op => op && op !== '-'))];
-    
-    // Montar tabela de RECEITAS
-    const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
-    if(tbodyReceitas) {
-        let html = '';
-        condUnicas.forEach(cond => {
-            const tituloAtual = window.condToTituloMap?.[cond] || 'VNF';
-            const planoAtual = window.condToPlanoMap?.[cond] || '';
-            html += `<tr>
-                <td>${cond}</td>
-                <td><select class="conversao-select" data-cond="${cond}">
-                    <option value="DINHEIRO" ${tituloAtual === 'DINHEIRO' ? 'selected' : ''}>DINHEIRO</option>
-                    <option value="DEBITO" ${tituloAtual === 'DEBITO' ? 'selected' : ''}>DEBITO</option>
-                    <option value="CREDITO" ${tituloAtual === 'CREDITO' ? 'selected' : ''}>CREDITO</option>
-                    <option value="CREDITO PARCELADO" ${tituloAtual === 'CREDITO PARCELADO' ? 'selected' : ''}>CREDITO PARCELADO</option>
-                    <option value="AG" ${tituloAtual === 'AG' ? 'selected' : ''}>AG</option>
-                    <option value="PIX" ${tituloAtual === 'PIX' ? 'selected' : ''}>PIX</option>
-                    <option value="VNF" ${tituloAtual === 'VNF' ? 'selected' : ''}>VNF</option>
-                </select></td>
-                <td><select class="conversao-select-plano-receita" data-plano-cond="${cond}">
-                    <option value="">Selecione...</option>
-                    ${estruturaDRE.receitas.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
-                </select></td>
-             </tr>`;
-        });
-        tbodyReceitas.innerHTML = html;
-    }
-    
-    // Montar tabela de DESPESAS
-    const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
-    if(tbodyDespesas) {
-        let html = '';
-        const todosPlanosDespesa = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
-        operacoesUnicas.forEach(operacao => {
-            const planoAtual = window.operacaoToPlanoMap?.[operacao] || '';
-            html += `<tr>
-                <td>${operacao}</td>
-                <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></td>
-                <td><select class="conversao-select-plano-despesa" data-operacao="${operacao}">
-                    <option value="">Selecione...</option>
-                    ${todosPlanosDespesa.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
-                </select></td>
-             </tr>`;
-        });
-        tbodyDespesas.innerHTML = html;
-    }
-    
-    document.getElementById('modalConversao').classList.add('active');
-}
-
-// === SUBSTITUIR AS FUNÇÕES ORIGINAIS ===
-// Para manter compatibilidade, substitua as chamadas antigas:
-// - gerarDRE() → gerarDREComSupabase()
-// - limparDRE() → limparDREComSupabase()
-// - incluirSelecionadosNoDRE() → incluirSelecionadosNoDRESupabase()
-// - abrirModalConversao() → abrirModalConversaoSupabase()
-// - salvarMapeamentoConversaoCompleto() → salvarMapeamentoConversaoCompletoSupabase()
-
-// Carregar DRE ao iniciar
+// ============================================================
+// INICIALIZAÇÃO CORRETA
+// ============================================================
 document.addEventListener('DOMContentLoaded', async function() {
     await carregarRegrasConversaoSupabase();
     await gerarDREComSupabase();
@@ -5432,439 +5068,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     carregarCompras();
     carregarDadosReaisLancamentos();
     
-    // CARREGAR DADOS DO CAIXA DO SUPABASE
     dadosComparativos = await carregarComparativosSupabase();
     flagsSalvas = await carregarFlagsSupabase();
     linhaCorSelecionada = await carregarCoresSupabase();
     todasSaidasPorData = await carregarSaidasSupabase();
     
     renderizarCaixaPopup();
-});// ============================================================
-// FUNÇÕES SUPABASE CORRIGIDAS - SUBSTITUA AS EXISTENTES
-// ============================================================
-
-// FUNÇÃO PRINCIPAL PARA INCLUIR NO DRE
-async function incluirSelecionadosNoDRESupabase() {
-    console.log('INICIANDO INCLUSÃO NO SUPABASE...');
     
-    salvarPlanosReceitas();
-    salvarPlanosDespesas();
-    
-    const lancamentosPorMes = [[],[],[],[],[],[],[],[],[],[],[],[]];
-    let totalValidados = 0, totalRejeitados = 0;
-    const rejeitadosDetalhes = [];
-    
-    // Para cada receita selecionada
-    for (const id of receitasSelecionadas) {
-        const receita = receitasDataReais.find(r => r.id === id);
-        if (!receita) continue;
-        
-        const mes = getMesFromData(receita.data);
-        const valor = receita.valor;
-        
-        if (isNaN(valor) || valor <= 0) {
-            totalRejeitados++;
-            rejeitadosDetalhes.push({ tipo:'RECEITA', descricao:receita.cliente, valor:valor });
-            continue;
-        }
-        
-        totalValidados++;
-        lancamentosPorMes[mes].push({
-            data: receita.data,
-            desc: `RECEITA: ${receita.cliente}`,
-            plano: receita.plano,
-            valor: valor.toString(),
-            timestamp: new Date().toLocaleString('pt-br')
-        });
-    }
-    
-    // Para cada despesa selecionada
-    for (const id of despesasSelecionadas) {
-        const despesa = despesasDataReais.find(d => d.id === id);
-        if (!despesa) continue;
-        
-        const mes = getMesFromData(despesa.data);
-        const valor = despesa.valor;
-        
-        if (isNaN(valor) || valor <= 0) {
-            totalRejeitados++;
-            rejeitadosDetalhes.push({ tipo:'DESPESA', descricao:despesa.operacao, valor:valor });
-            continue;
-        }
-        
-        totalValidados++;
-        lancamentosPorMes[mes].push({
-            data: despesa.data,
-            desc: `DESPESA: ${despesa.operacao}`,
-            plano: despesa.plano,
-            valor: valor.toString(),
-            timestamp: new Date().toLocaleString('pt-br')
-        });
-    }
-    
-    if (totalValidados === 0) {
-        alert('Nenhum registro selecionado para incluir.');
-        return;
-    }
-    
-    // SALVAR NO SUPABASE
-    let totalIncluidos = 0;
-    
-    for (let mes = 0; mes < 12; mes++) {
-        if (lancamentosPorMes[mes].length === 0) continue;
-        
-        // Prepara os dados para inserir
-        const toInsert = lancamentosPorMes[mes].map(l => ({
-            mes: mes,
-            data: l.data,
-            descricao: l.desc,
-            plano: l.plano,
-            valor: parseFloat(l.valor) || 0,
-            timestamp: l.timestamp
-        }));
-        
-        // Insere no Supabase
-        const { data, error } = await supabaseClient
-            .from('dre_lancamentos')
-            .insert(toInsert);
-        
-        if (error) {
-            console.error('Erro ao inserir no Supabase:', error);
-            alert('Erro ao salvar no Supabase: ' + error.message);
-            return;
-        }
-        
-        totalIncluidos += toInsert.length;
-        console.log(`Mês ${mes}: ${toInsert.length} registros inseridos`);
-    }
-    
-    // Limpar seleções e recarregar
-    receitasSelecionadas.clear();
-    despesasSelecionadas.clear();
-    renderizarTabelaReceitas();
-    renderizarTabelaDespesas();
-    
-    // Recarregar o DRE
-    await gerarDREComSupabase();
-    
-    alert(`${totalIncluidos} registro(s) incluído(s) no DRE com sucesso!`);
-}
-
-// ============================================================
-// FUNÇÃO PARA CONVERTER DATA PARA FORMATO DO SUPABASE
-// ============================================================
-function formatarDataParaSupabase(dataStr) {
-    if (!dataStr) return new Date().toISOString().split('T')[0];
-    if (dataStr.includes('/')) {
-        const partes = dataStr.split('/');
-        return `${partes[2]}-${partes[1].padStart(2,'0')}-${partes[0].padStart(2,'0')}`;
-    }
-    if (dataStr.includes('-')) return dataStr;
-    return new Date().toISOString().split('T')[0];
-}
-
-// ============================================================
-// FUNÇÃO INCLUIR NO DRE CORRIGIDA (SUBSTITUA A EXISTENTE)
-// ============================================================
-async function incluirSelecionadosNoDRESupabase() {
-    console.log('INICIANDO INCLUSÃO NO SUPABASE...');
-    
-    salvarPlanosReceitas();
-    salvarPlanosDespesas();
-    
-    const lancamentosPorMes = [[],[],[],[],[],[],[],[],[],[],[],[]];
-    let totalValidados = 0, totalRejeitados = 0;
-    const rejeitadosDetalhes = [];
-    
-    // Processar RECEITAS selecionadas
-    for (const id of receitasSelecionadas) {
-        const receita = receitasDataReais.find(r => r.id === id);
-        if (!receita) continue;
-        
-        const mes = getMesFromData(receita.data);
-        const valor = receita.valor;
-        
-        if (isNaN(valor) || valor <= 0) {
-            totalRejeitados++;
-            rejeitadosDetalhes.push({ tipo:'RECEITA', descricao:receita.cliente, valor:valor });
-            continue;
-        }
-        
-        totalValidados++;
-        lancamentosPorMes[mes].push({
-            data: formatarDataParaSupabase(receita.data),
-            desc: `RECEITA: ${receita.cliente}`,
-            plano: receita.plano,
-            valor: valor.toString(),
-            timestamp: new Date().toISOString()
-        });
-    }
-    
-    // Processar DESPESAS selecionadas
-    for (const id of despesasSelecionadas) {
-        const despesa = despesasDataReais.find(d => d.id === id);
-        if (!despesa) continue;
-        
-        const mes = getMesFromData(despesa.data);
-        const valor = despesa.valor;
-        
-        if (isNaN(valor) || valor <= 0) {
-            totalRejeitados++;
-            rejeitadosDetalhes.push({ tipo:'DESPESA', descricao:despesa.operacao, valor:valor });
-            continue;
-        }
-        
-        totalValidados++;
-        lancamentosPorMes[mes].push({
-            data: formatarDataParaSupabase(despesa.data),
-            desc: `DESPESA: ${despesa.operacao}`,
-            plano: despesa.plano,
-            valor: valor.toString(),
-            timestamp: new Date().toISOString()
-        });
-    }
-    
-    if (totalValidados === 0) {
-        alert('Nenhum registro selecionado para incluir.');
-        return;
-    }
-    
-    // SALVAR NO SUPABASE
-    let totalIncluidos = 0;
-    
-    for (let mes = 0; mes < 12; mes++) {
-        if (lancamentosPorMes[mes].length === 0) continue;
-        
-        const toInsert = lancamentosPorMes[mes].map(l => ({
-            mes: mes,
-            data: l.data,
-            descricao: l.desc,
-            plano: l.plano,
-            valor: parseFloat(l.valor) || 0,
-            timestamp: l.timestamp
-        }));
-        
-        console.log('Inserindo no mês', mes, ':', toInsert);
-        
-        const { error } = await supabaseClient
-            .from('dre_lancamentos')
-            .insert(toInsert);
-        
-        if (error) {
-            console.error('Erro ao inserir no Supabase:', error);
-            alert('Erro ao salvar no Supabase: ' + error.message);
-            return;
-        }
-        
-        totalIncluidos += toInsert.length;
-    }
-    
-    // Limpar seleções e recarregar
-    receitasSelecionadas.clear();
-    despesasSelecionadas.clear();
-    renderizarTabelaReceitas();
-    renderizarTabelaDespesas();
-    
-    await gerarDREComSupabase();
-    
-    let mensagemFinal = `${totalIncluidos} registro(s) incluído(s) no DRE com sucesso!`;
-    if (totalRejeitados > 0) mensagemFinal += ` ${totalRejeitados} registro(s) foram rejeitados por divergência de valor.`;
-    alert(mensagemFinal);
-}
-// ============================================================
-// FUNÇÕES PARA COMPARATIVOS DE CAIXA - SUPABASE
-// ============================================================
-
-// CARREGAR COMPARATIVOS DO SUPABASE
-async function carregarComparativosSupabase() {
-    const { data, error } = await supabaseClient
-        .from('comparativos_caixa')
-        .select('*');
-    
-    if (error) {
-        console.error('Erro ao carregar comparativos:', error);
-        return {};
-    }
-    
-    const comparativos = {};
-    if (data) {
-        data.forEach(item => {
-            comparativos[item.data] = {
-                DINHEIRO: item.dinheiro,
-                DEBITO: item.debito,
-                CREDITO: item.credito,
-                CREDITO_PARCELADO: item.credito_parcelado,
-                AG: item.ag,
-                PIX: item.pix,
-                VNF: item.vnf,
-                SAIDA: item.saida,
-                TOTAL_DIA: item.total_dia
-            };
-        });
-    }
-    return comparativos;
-}
-
-// SALVAR COMPARATIVOS NO SUPABASE
-async function salvarComparativoSupabase(data, campo, valor) {
-    // Primeiro, buscar registro existente
-    const { data: existente } = await supabaseClient
-        .from('comparativos_caixa')
-        .select('*')
-        .eq('data', data)
-        .single();
-    
-    const novoValor = parseFloat(valor) || 0;
-    
-    let atualizacao = {};
-    if (campo === 'DINHEIRO') atualizacao = { dinheiro: novoValor };
-    else if (campo === 'DEBITO') atualizacao = { debito: novoValor };
-    else if (campo === 'CREDITO') atualizacao = { credito: novoValor };
-    else if (campo === 'CREDITO_PARCELADO') atualizacao = { credito_parcelado: novoValor };
-    else if (campo === 'AG') atualizacao = { ag: novoValor };
-    else if (campo === 'PIX') atualizacao = { pix: novoValor };
-    else if (campo === 'VNF') atualizacao = { vnf: novoValor };
-    else if (campo === 'SAIDA') atualizacao = { saida: novoValor };
-    
-    // Calcular total do dia
-    const { data: dadosAtuais } = await supabaseClient
-        .from('comparativos_caixa')
-        .select('*')
-        .eq('data', data)
-        .single();
-    
-    let dinheiro = atualizacao.dinheiro !== undefined ? atualizacao.dinheiro : (dadosAtuais?.dinheiro || 0);
-    let debito = atualizacao.debito !== undefined ? atualizacao.debito : (dadosAtuais?.debito || 0);
-    let credito = atualizacao.credito !== undefined ? atualizacao.credito : (dadosAtuais?.credito || 0);
-    let creditoParcelado = atualizacao.credito_parcelado !== undefined ? atualizacao.credito_parcelado : (dadosAtuais?.credito_parcelado || 0);
-    let ag = atualizacao.ag !== undefined ? atualizacao.ag : (dadosAtuais?.ag || 0);
-    let pix = atualizacao.pix !== undefined ? atualizacao.pix : (dadosAtuais?.pix || 0);
-    let vnf = atualizacao.vnf !== undefined ? atualizacao.vnf : (dadosAtuais?.vnf || 0);
-    let saida = atualizacao.saida !== undefined ? atualizacao.saida : (dadosAtuais?.saida || 0);
-    
-    const totalEntradas = dinheiro + debito + credito + creditoParcelado + ag + pix + vnf;
-    const totalDia = totalEntradas - saida;
-    atualizacao.total_dia = totalDia;
-    
-    if (existente) {
-        const { error } = await supabaseClient
-            .from('comparativos_caixa')
-            .update(atualizacao)
-            .eq('data', data);
-        
-        if (error) console.error('Erro ao atualizar comparativo:', error);
-    } else {
-        atualizacao.data = data;
-        const { error } = await supabaseClient
-            .from('comparativos_caixa')
-            .insert([atualizacao]);
-        
-        if (error) console.error('Erro ao inserir comparativo:', error);
-    }
-    
-    // Recarregar dados e atualizar tela
-    dadosComparativos = await carregarComparativosSupabase();
-    renderizarTabelaComparativos();
-    renderizarCaixaPopup();
-}
-
-// CARREGAR FLAGS DO SUPABASE
-async function carregarFlagsSupabase() {
-    const { data, error } = await supabaseClient
-        .from('flags_caixa')
-        .select('*');
-    
-    if (error) {
-        console.error('Erro ao carregar flags:', error);
-        return {};
-    }
-    
-    const flags = {};
-    if (data) {
-        data.forEach(item => {
-            flags[item.data] = item.flag;
-        });
-    }
-    return flags;
-}
-
-// SALVAR FLAG NO SUPABASE
-async function salvarFlagSupabase(data, flag) {
-    const { error } = await supabaseClient
-        .from('flags_caixa')
-        .upsert({ data: data, flag: flag }, { onConflict: 'data' });
-    
-    if (error) console.error('Erro ao salvar flag:', error);
-}
-
-// CARREGAR CORES DO SUPABASE
-async function carregarCoresSupabase() {
-    const { data, error } = await supabaseClient
-        .from('cores_linhas_caixa')
-        .select('*');
-    
-    if (error) {
-        console.error('Erro ao carregar cores:', error);
-        return {};
-    }
-    
-    const cores = {};
-    if (data) {
-        data.forEach(item => {
-            cores[item.data] = item.cor;
-        });
-    }
-    return cores;
-}
-
-// SALVAR COR NO SUPABASE
-async function salvarCorSupabase(data, cor) {
-    const { error } = await supabaseClient
-        .from('cores_linhas_caixa')
-        .upsert({ data: data, cor: cor }, { onConflict: 'data' });
-    
-    if (error) console.error('Erro ao salvar cor:', error);
-}
-
-// CARREGAR SAIDAS DO SUPABASE
-async function carregarSaidasSupabase() {
-    const { data, error } = await supabaseClient
-        .from('saidas_caixa')
-        .select('*');
-    
-    if (error) {
-        console.error('Erro ao carregar saidas:', error);
-        return {};
-    }
-    
-    const saidas = {};
-    if (data) {
-        data.forEach(item => {
-            saidas[item.data] = item.valor;
-        });
-    }
-    return saidas;
-}
-
-// SALVAR SAIDA NO SUPABASE
-async function salvarSaidaSupabase(data, valor) {
-    const novoValor = parseFloat(valor) || 0;
-    const { error } = await supabaseClient
-        .from('saidas_caixa')
-        .upsert({ data: data, valor: novoValor }, { onConflict: 'data' });
-    
-    if (error) {
-        console.error('Erro ao salvar saida:', error);
-    } else {
-        todasSaidasPorData[data] = novoValor;
-        renderizarCaixaPopup();
-    }
-}
-
-// FUNÇÃO MODIFICADA PARA SALVAR SAIDA CAIXA
-async function salvarSaidaCaixa(data, valor) {
-    await salvarSaidaSupabase(data, valor);
-}
+    console.log('✅ Sistema inicializado com Supabase!');
+});
 </script>
 </body>
 </html>
