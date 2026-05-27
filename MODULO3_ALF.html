@@ -3930,12 +3930,36 @@ function limparFiltrosCaixa() { if(document.getElementById('filtroMesCaixa')) do
 function atualizarTitulosColunasCaixa() { const thDinheiro = document.getElementById('thDinheiro'), thDebito = document.getElementById('thDebito'), thCredito = document.getElementById('thCredito'), thCreditoParcelado = document.getElementById('thCreditoParcelado'), thAG = document.getElementById('thAG'), thPIX = document.getElementById('thPIX'), thVNF = document.getElementById('thVNF'); if (thDinheiro) thDinheiro.innerHTML = getTituloConfigurado('DINHEIRO') || 'DINHEIRO'; if (thDebito) thDebito.innerHTML = getTituloConfigurado('DEBITO') || 'DEBITO'; if (thCredito) thCredito.innerHTML = getTituloConfigurado('CREDITO') || 'CREDITO'; if (thCreditoParcelado) thCreditoParcelado.innerHTML = getTituloConfigurado('CREDITO PARCELADO') || 'CREDITO PARCELADO'; if (thAG) thAG.innerHTML = getTituloConfigurado('AG') || 'AG'; if (thPIX) thPIX.innerHTML = getTituloConfigurado('PIX') || 'PIX'; if (thVNF) thVNF.innerHTML = getTituloConfigurado('VNF') || 'VNF'; }
 
 function alterarCorPeloTicket(data, cor) {
-    if (cor === 'verde') { if (linhaCorSelecionada[data] === 'verde') delete linhaCorSelecionada[data]; else linhaCorSelecionada[data] = 'verde'; }
-    else if (cor === 'amarelo') { if (linhaCorSelecionada[data] === 'amarelo') delete linhaCorSelecionada[data]; else linhaCorSelecionada[data] = 'amarelo'; }
-    else if (cor === 'vermelho') { if (linhaCorSelecionada[data] === 'vermelho') delete linhaCorSelecionada[data]; else linhaCorSelecionada[data] = 'vermelho'; }
-    salvarCores(); renderizarCaixaPopup(); renderizarTabelaComparativos(); atualizarTotaisPorClassificacao();
+    console.log('🎨 Alterando cor:', data, 'para', cor);
+    
+    if (cor === 'verde') {
+        if (linhaCorSelecionada[data] === 'verde') {
+            delete linhaCorSelecionada[data];
+        } else {
+            linhaCorSelecionada[data] = 'verde';
+        }
+    } else if (cor === 'amarelo') {
+        if (linhaCorSelecionada[data] === 'amarelo') {
+            delete linhaCorSelecionada[data];
+        } else {
+            linhaCorSelecionada[data] = 'amarelo';
+        }
+    } else if (cor === 'vermelho') {
+        if (linhaCorSelecionada[data] === 'vermelho') {
+            delete linhaCorSelecionada[data];
+        } else {
+            linhaCorSelecionada[data] = 'vermelho';
+        }
+    }
+    
+    // Salvar no Supabase
+    salvarCoresNoSupabase();
+    
+    // Atualizar as telas
+    if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
+    if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
+    if (typeof atualizarTotaisPorClassificacao === 'function') atualizarTotaisPorClassificacao();
 }
-
 function atualizarTotaisPorClassificacao() {
     let vendasFiltradas = [...vendasData];
     if(caixaFiltroMes !== "TODOS") vendasFiltradas = vendasFiltradas.filter(v => getMesAno(v.data_nota) === caixaFiltroMes);
@@ -5376,6 +5400,7 @@ async function abrirModalConversaoSupabase() {
 document.addEventListener('DOMContentLoaded', async function() {
     await carregarRegrasConversaoSupabase();
     await gerarDREComSupabase();
+    await carregarCoresDoSupabase();
     carregarVendas();
     carregarCompras();
     carregarDadosReaisLancamentos();
@@ -5696,6 +5721,8 @@ window.atualizarValorComparativo = async function(data, campo, valor) {
 };
 function abrirModalComparativos() {
     console.log('🔘 Botão COMPARATIVOS clicado!');
+    document.getElementById('modalComparativos').classList.add('active');
+    
     
     // Verificar se o modal existe
     const modal = document.getElementById('modalComparativos');
@@ -5726,6 +5753,80 @@ function fecharModalComparativos() {
         console.error('❌ Modal não encontrado');
     }
 }
-</script>
+// ============================================================
+// FUNÇÕES PARA SALVAR CORES NO SUPABASE
+// ============================================================
+
+async function salvarCoresNoSupabase() {
+    console.log('🎨 Salvando cores no Supabase...');
+    
+    const registros = [];
+    for (const [data, cor] of Object.entries(linhaCorSelecionada)) {
+        registros.push({ data: data, cor: cor });
+    }
+    
+    if (registros.length === 0) return;
+    
+    for (const registro of registros) {
+        const { error } = await supabaseClient
+            .from('cores_linhas_caixa')  // ← NOME CORRETO
+            .upsert(registro, { onConflict: 'data' });
+        
+        if (error) {
+            console.error('❌ Erro ao salvar cor:', error);
+        } else {
+            console.log('✅ Cor salva:', registro.data, '=', registro.cor);
+        }
+    }
+}
+
+async function salvarCoresNoSupabase() {
+    console.log('🎨 Salvando cores no Supabase...');
+    
+    const registros = [];
+    for (const [data, cor] of Object.entries(linhaCorSelecionada)) {
+        registros.push({ data: data, cor: cor });
+    }
+    
+    if (registros.length === 0) return;
+    
+    for (const registro of registros) {
+        const { error } = await supabaseClient
+            .from('cores_linhas_caixa')
+            .upsert(registro, { onConflict: 'data' });
+        
+        if (error) {
+            console.error('❌ Erro ao salvar cor:', error);
+        } else {
+            console.log('✅ Cor salva:', registro.data, '=', registro.cor);
+        }
+    }
+}
+
+async function carregarCoresDoSupabase() {
+    console.log('🎨 Carregando cores do Supabase...');
+    
+    const { data, error } = await supabaseClient
+        .from('cores_linhas_caixa')
+        .select('*');
+    
+    if (error) {
+        console.error('❌ Erro ao carregar cores:', error);
+        return;
+    }
+    
+    linhaCorSelecionada = {};
+    
+    if (data && data.length > 0) {
+        data.forEach(item => {
+            linhaCorSelecionada[item.data] = item.cor;
+        });
+        console.log('✅ Cores carregadas:', linhaCorSelecionada);
+    }
+    
+    // Recarregar as telas com as cores
+    if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
+    if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
+}</script>
 </body>
 </html>
