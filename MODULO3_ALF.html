@@ -4581,8 +4581,16 @@ async function salvarDadosComparativos() {
     }
 }function obterDadosOficiaisPorData(data) { const gruposOficiais = gerarDadosCaixa(); const row = gruposOficiais.get(data); const saidaValor = todasSaidasPorData[data] || 0; if (row) { const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0); return { DINHEIRO: row.DINHEIRO || 0, DEBITO: row.DEBITO || 0, CREDITO: row.CREDITO || 0, CREDITO_PARCELADO: row.CREDITO_PARCELADO || 0, AG: row.AG || 0, PIX: row.PIX || 0, VNF: row.VNF || 0, SAIDA: saidaValor, TOTAL_DIA: totalEntradas - saidaValor }; } return null; }
 function atualizarTitulosColunasComparativos() { const thDinheiro = document.getElementById('thDinheiroComp'), thDebito = document.getElementById('thDebitoComp'), thCredito = document.getElementById('thCreditoComp'), thCreditoParcelado = document.getElementById('thCreditoParceladoComp'), thAG = document.getElementById('thAGComp'), thPIX = document.getElementById('thPIXComp'), thVNF = document.getElementById('thVNFComp'); if (thDinheiro) thDinheiro.innerHTML = getTituloConfigurado('DINHEIRO') || 'DINHEIRO'; if (thDebito) thDebito.innerHTML = getTituloConfigurado('DEBITO') || 'DEBITO'; if (thCredito) thCredito.innerHTML = getTituloConfigurado('CREDITO') || 'CREDITO'; if (thCreditoParcelado) thCreditoParcelado.innerHTML = getTituloConfigurado('CREDITO PARCELADO') || 'CREDITO PARCELADO'; if (thAG) thAG.innerHTML = getTituloConfigurado('AG') || 'AG'; if (thPIX) thPIX.innerHTML = getTituloConfigurado('PIX') || 'PIX'; if (thVNF) thVNF.innerHTML = getTituloConfigurado('VNF') || 'VNF'; }
+
 function alterarCorLinhaFechamento(data, cor) {
-    console.log('🎨 alterarCorLinhaFechamento chamada:', data, cor);
+    // Validar cores permitidas
+    const coresPermitidas = ['verde', 'amarelo', 'vermelho'];
+    if (!coresPermitidas.includes(cor)) {
+        console.error('❌ Cor inválida:', cor);
+        return;
+    }
+    
+    console.log('🎨 alterarCorLinhaFechamento:', data, cor);
     
     if (cor === 'amarelo') {
         if (linhaCorSelecionada[data] === 'amarelo') {
@@ -4602,8 +4610,13 @@ function alterarCorLinhaFechamento(data, cor) {
         } else {
             linhaCorSelecionada[data] = 'vermelho';
         }
-    }
     
+    
+    salvarCoresNoSupabase();
+    renderizarCaixaPopup();
+    renderizarTabelaComparativos();
+    atualizarTotaisPorClassificacao();
+}    
     console.log('linhaCorSelecionada após alteração:', linhaCorSelecionada);
     
     // Salvar no Supabase
