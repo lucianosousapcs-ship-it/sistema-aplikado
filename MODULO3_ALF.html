@@ -4587,8 +4587,23 @@ async function salvarDadosComparativos() {
     }
 }function obterDadosOficiaisPorData(data) { const gruposOficiais = gerarDadosCaixa(); const row = gruposOficiais.get(data); const saidaValor = todasSaidasPorData[data] || 0; if (row) { const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0); return { DINHEIRO: row.DINHEIRO || 0, DEBITO: row.DEBITO || 0, CREDITO: row.CREDITO || 0, CREDITO_PARCELADO: row.CREDITO_PARCELADO || 0, AG: row.AG || 0, PIX: row.PIX || 0, VNF: row.VNF || 0, SAIDA: saidaValor, TOTAL_DIA: totalEntradas - saidaValor }; } return null; }
 function atualizarTitulosColunasComparativos() { const thDinheiro = document.getElementById('thDinheiroComp'), thDebito = document.getElementById('thDebitoComp'), thCredito = document.getElementById('thCreditoComp'), thCreditoParcelado = document.getElementById('thCreditoParceladoComp'), thAG = document.getElementById('thAGComp'), thPIX = document.getElementById('thPIXComp'), thVNF = document.getElementById('thVNFComp'); if (thDinheiro) thDinheiro.innerHTML = getTituloConfigurado('DINHEIRO') || 'DINHEIRO'; if (thDebito) thDebito.innerHTML = getTituloConfigurado('DEBITO') || 'DEBITO'; if (thCredito) thCredito.innerHTML = getTituloConfigurado('CREDITO') || 'CREDITO'; if (thCreditoParcelado) thCreditoParcelado.innerHTML = getTituloConfigurado('CREDITO PARCELADO') || 'CREDITO PARCELADO'; if (thAG) thAG.innerHTML = getTituloConfigurado('AG') || 'AG'; if (thPIX) thPIX.innerHTML = getTituloConfigurado('PIX') || 'PIX'; if (thVNF) thVNF.innerHTML = getTituloConfigurado('VNF') || 'VNF'; }
-function alterarCorLinhaFechamento(data, cor) { if (cor === 'amarelo') { if (linhaCorSelecionada[data] === 'amarelo') delete linhaCorSelecionada[data]; else linhaCorSelecionada[data] = 'amarelo'; } else if (cor === 'verde') { if (linhaCorSelecionada[data] === 'verde') delete linhaCorSelecionada[data]; else linhaCorSelecionada[data] = 'verde'; } else if (cor === 'vermelho') { if (linhaCorSelecionada[data] === 'vermelho') delete linhaCorSelecionada[data]; else linhaCorSelecionada[data] = 'vermelho'; } salvarCores(); renderizarCaixaPopup(); renderizarTabelaComparativos(); atualizarTotaisPorClassificacao(); }
-
+function alterarCorLinhaFechamento(data, cor) {
+    if (cor === 'amarelo') {
+        if (linhaCorSelecionada[data] === 'amarelo') delete linhaCorSelecionada[data];
+        else linhaCorSelecionada[data] = 'amarelo';
+    } else if (cor === 'verde') {
+        if (linhaCorSelecionada[data] === 'verde') delete linhaCorSelecionada[data];
+        else linhaCorSelecionada[data] = 'verde';
+    } else if (cor === 'vermelho') {
+        if (linhaCorSelecionada[data] === 'vermelho') delete linhaCorSelecionada[data];
+        else linhaCorSelecionada[data] = 'vermelho';
+    }
+    
+    salvarCoresNoSupabase();  // ← LINHA ALTERADA
+    renderizarCaixaPopup();
+    renderizarTabelaComparativos();
+    atualizarTotaisPorClassificacao();
+}
 function renderizarTabelaComparativos() {
     const gruposOficiais = gerarDadosCaixa();
     let gruposArray = Array.from(gruposOficiais.entries()).map(([data, row]) => ({ data, row }));
@@ -5401,6 +5416,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await carregarRegrasConversaoSupabase();
     await gerarDREComSupabase();
     await carregarCoresDoSupabase();
+    await carregarCoresDoSupabase();
     carregarVendas();
     carregarCompras();
     carregarDadosReaisLancamentos();
@@ -5722,7 +5738,7 @@ window.atualizarValorComparativo = async function(data, campo, valor) {
 function abrirModalComparativos() {
     console.log('🔘 Botão COMPARATIVOS clicado!');
     document.getElementById('modalComparativos').classList.add('active');
-    
+    carregarCoresDoSupabase();
     
     // Verificar se o modal existe
     const modal = document.getElementById('modalComparativos');
@@ -5827,6 +5843,58 @@ async function carregarCoresDoSupabase() {
     // Recarregar as telas com as cores
     if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
     if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
-}</script>
+}
+
+async function salvarCoresNoSupabase() {
+    console.log('🎨 Salvando cores no Supabase...');
+    
+    const registros = [];
+    for (const [data, cor] of Object.entries(linhaCorSelecionada)) {
+        registros.push({ data: data, cor: cor });
+    }
+    
+    if (registros.length === 0) return;
+    
+    for (const registro of registros) {
+        const { error } = await supabaseClient
+            .from('cores_linhas_caixa')
+            .upsert(registro, { onConflict: 'data' });
+        
+        if (error) {
+            console.error('❌ Erro ao salvar cor:', error);
+        } else {
+            console.log('✅ Cor salva:', registro.data, '=', registro.cor);
+        }
+    }
+}
+
+async function carregarCoresDoSupabase() {
+    console.log('🎨 Carregando cores do Supabase...');
+    
+    const { data, error } = await supabaseClient
+        .from('cores_linhas_caixa')
+        .select('*');
+    
+    if (error) {
+        console.error('❌ Erro ao carregar cores:', error);
+        return;
+    }
+    
+    linhaCorSelecionada = {};
+    
+    if (data && data.length > 0) {
+        data.forEach(item => {
+            linhaCorSelecionada[item.data] = item.cor;
+        });
+        console.log('✅ Cores carregadas:', linhaCorSelecionada);
+    }
+    
+    if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
+    if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
+}
+
+
+
+</script>
 </body>
 </html>
