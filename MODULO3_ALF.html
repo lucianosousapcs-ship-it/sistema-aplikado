@@ -2603,7 +2603,7 @@ function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo,
     const footerTotal = document.getElementById('drilldownValorFooter');
     
     if (registros.length === 0) {
-        tableHead.innerHTML = `<tr><th>Data</th><th>Cliente / Fornecedor</th><th>Detalhe</th><th>Valor (R$)</th></tr>`;
+        tableHead.innerHTML = `</table><th>Data</th><th>Cliente / Fornecedor</th><th>Detalhe</th><th>Valor (R$)</th></table>`;
         tableBody.innerHTML = `<tr><td colspan="4" class="mensagem-informativa">Nenhum registro encontrado para este valor.</td></tr>`;
         footerTotal.innerHTML = `Total Geral: R$ 0,00`;
         document.getElementById('modalDrilldownValor').classList.add('active');
@@ -2642,7 +2642,7 @@ function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo,
                 <td>${cliente}</td>
                 <td>${classificacao}</td>
                 <td style="text-align:right; font-weight:600;">${formatarMoeda(valorReg)}</td>
-            </tr>`;
+             </tr>`;
         }
     } else {
         // Cabeçalho para DESPESAS
@@ -2673,7 +2673,7 @@ function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo,
                 <td>${fornecedor}</td>
                 <td>${operacao}</td>
                 <td style="text-align:right; font-weight:600;">${formatarMoeda(valorReg)}</td>
-            </tr>`;
+             </tr>`;
         }
     }
     
@@ -3269,7 +3269,7 @@ function renderizarTabelaReceitas() {
         const isChecked = receitasSelecionadas.has(r.id);
         const classificacaoDisplay = r.classificacao === 'Balcao' ? 'LOJA FISICA' : 'CORPORATIVO';
         
-        html += '<tr>';
+        html += '</table>';
         html += '<td style="text-align:center;"><input type="checkbox" class="receita-checkbox" data-id="' + r.id + '" ' + (isChecked ? 'checked' : '') + ' onchange="toggleReceitaSelecionada(' + r.id + ', this)"></td>';
         html += '<td>' + formatarDataExibicao(r.data) + '</td>';
         html += '<td style="color:#2ECC71; font-weight:600;"><div class="valor-cell">R$ ' + formatMoneySimple(r.valor) + '<span class="info-consulta" title="Consultar regras de classificação financeira" onclick="mostrarConsultaConversao(\'' + (r.cond_pag || '') + '\', \'' + r.plano + '\', true)">ⓘ</span></div></td>';
@@ -3632,7 +3632,7 @@ function atualizarTabelaCompras() {
     const filtradas = getComprasFiltradas(); 
     const tbody = document.getElementById('tabelaComprasBody'); 
     if(!tbody) return; 
-    if(filtradas.length === 0) { tbody.innerHTML='<td><td colspan="8" style="text-align:center; padding:40px;">Nenhum registro encontrado</div>'; atualizarResumoCompras(); return; } 
+    if(filtradas.length === 0) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center; padding:40px;">Nenhum registro encontrado</div>'; atualizarResumoCompras(); return; } 
     let html = ''; 
     filtradas.forEach(c => { const diasExibido = c.diasCalculado > 0 ? `${c.diasCalculado} dias` : 'EM DIA'; html += `<tr><td>${c.documento}</div><td>${c.fornecedor}</div><td>${c.parcela}</div><td>${c.operacao}</div><td>${formatarDataExibicao(c.vencimento)}</div><td style="text-align:center;">${diasExibido}</div><td>${c.statusCalculado}</div><td style="color:#f59e0b; font-weight:700;">R$ ${formatMoneySimple(c.valor)}</div></tr>`; }); 
     tbody.innerHTML = html; 
@@ -4311,7 +4311,7 @@ function abrirModalConversao() {
                     <option value="">Selecione...</option>
                     ${estruturaDRE.receitas.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
                 </select></div>
-             </tr>`;
+             </table>`;
         });
         tbodyReceitas.innerHTML = html;
     }
@@ -4445,7 +4445,72 @@ function mostrarConsultaConversaoDespesa(operacao, planoContasAtual) {
 function carregarDadosComparativos() { const saved = localStorage.getItem(STORAGE_KEY_COMPARATIVOS); if (saved) { try { dadosComparativos = JSON.parse(saved); } catch(e) { dadosComparativos = {}; } } else { inicializarDadosComparativos(); } }
 function inicializarDadosComparativos() { const gruposOficiais = gerarDadosCaixa(); const gruposArray = Array.from(gruposOficiais.entries()).map(([data, row]) => ({ data, row })); dadosComparativos = {}; gruposArray.forEach(({ data, row }) => { const saidaValor = todasSaidasPorData[data] || 0; const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0); const totalDia = totalEntradas - saidaValor; dadosComparativos[data] = { DINHEIRO: row.DINHEIRO || 0, DEBITO: row.DEBITO || 0, CREDITO: row.CREDITO || 0, CREDITO_PARCELADO: row.CREDITO_PARCELADO || 0, AG: row.AG || 0, PIX: row.PIX || 0, VNF: row.VNF || 0, SAIDA: saidaValor, TOTAL_DIA: totalDia }; }); salvarDadosComparativos(); }
 function salvarDadosComparativos() { localStorage.setItem(STORAGE_KEY_COMPARATIVOS, JSON.stringify(dadosComparativos)); }
-function atualizarValorComparativo(data, campo, valor) { if (!dadosComparativos[data]) dadosComparativos[data] = { DINHEIRO:0, DEBITO:0, CREDITO:0, CREDITO_PARCELADO:0, AG:0, PIX:0, VNF:0, SAIDA:0, TOTAL_DIA:0 }; let novoValor = 0; if (typeof valor === 'string') novoValor = parseFloat(valor.replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]/g, '')); else novoValor = valor; if (isNaN(novoValor)) novoValor = 0; dadosComparativos[data][campo] = novoValor; const totalEntradas = (dadosComparativos[data].DINHEIRO || 0) + (dadosComparativos[data].DEBITO || 0) + (dadosComparativos[data].CREDITO || 0) + (dadosComparativos[data].CREDITO_PARCELADO || 0) + (dadosComparativos[data].AG || 0) + (dadosComparativos[data].PIX || 0) + (dadosComparativos[data].VNF || 0); dadosComparativos[data].TOTAL_DIA = totalEntradas - (dadosComparativos[data].SAIDA || 0); salvarDadosComparativos(); renderizarTabelaComparativos(); renderizarCaixaPopup(); }
+// ============================================================
+// FUNÇÃO ATUALIZAR VALOR COMPARATIVO - VERSÃO SUPABASE
+// ============================================================
+async function atualizarValorComparativo(data, campo, valor) {
+    console.log('📝 Salvando no Supabase:', { data, campo, valor });
+    
+    if (!dadosComparativos[data]) {
+        dadosComparativos[data] = { 
+            DINHEIRO: 0, DEBITO: 0, CREDITO: 0, CREDITO_PARCELADO: 0, 
+            AG: 0, PIX: 0, VNF: 0, SAIDA: 0, TOTAL_DIA: 0 
+        };
+    }
+    
+    let novoValor = 0;
+    if (typeof valor === 'string') {
+        novoValor = parseFloat(valor.replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]/g, ''));
+    } else {
+        novoValor = valor;
+    }
+    if (isNaN(novoValor)) novoValor = 0;
+    
+    dadosComparativos[data][campo] = novoValor;
+    
+    const totalEntradas = (dadosComparativos[data].DINHEIRO || 0) + (dadosComparativos[data].DEBITO || 0) + 
+                          (dadosComparativos[data].CREDITO || 0) + (dadosComparativos[data].CREDITO_PARCELADO || 0) + 
+                          (dadosComparativos[data].AG || 0) + (dadosComparativos[data].PIX || 0) + 
+                          (dadosComparativos[data].VNF || 0);
+    dadosComparativos[data].TOTAL_DIA = totalEntradas - (dadosComparativos[data].SAIDA || 0);
+    
+    // CHAMAR A FUNÇÃO QUE SALVA NO SUPABASE
+    await salvarDadosComparativos();
+    
+    renderizarTabelaComparativos();
+    renderizarCaixaPopup();
+}
+// FUNÇÃO SALVAR DADOS COMPARATIVOS CORRETA
+async function salvarDadosComparativos() {
+    console.log('📝 Salvando comparativos no Supabase...');
+    
+    const registros = Object.entries(dadosComparativos).map(([data, valores]) => ({
+        data: data,
+        dinheiro: valores.DINHEIRO || 0,
+        debito: valores.DEBITO || 0,
+        credito: valores.CREDITO || 0,
+        credito_parcelado: valores.CREDITO_PARCELADO || 0,
+        ag: valores.AG || 0,
+        pix: valores.PIX || 0,
+        vnf: valores.VNF || 0,
+        saida: valores.SAIDA || 0,
+        total_dia: valores.TOTAL_DIA || 0
+    }));
+    
+    if (registros.length === 0) return;
+    
+    // Deletar registros antigos
+    await supabaseClient.from('comparativos_caixa').delete().neq('id', 0);
+    
+    // Inserir novos
+    const { error } = await supabaseClient.from('comparativos_caixa').insert(registros);
+    
+    if (error) {
+        console.error('❌ Erro ao salvar comparativos:', error);
+    } else {
+        console.log('✅ Comparativos salvos com sucesso!');
+    }
+}
 function obterDadosOficiaisPorData(data) { const gruposOficiais = gerarDadosCaixa(); const row = gruposOficiais.get(data); const saidaValor = todasSaidasPorData[data] || 0; if (row) { const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0); return { DINHEIRO: row.DINHEIRO || 0, DEBITO: row.DEBITO || 0, CREDITO: row.CREDITO || 0, CREDITO_PARCELADO: row.CREDITO_PARCELADO || 0, AG: row.AG || 0, PIX: row.PIX || 0, VNF: row.VNF || 0, SAIDA: saidaValor, TOTAL_DIA: totalEntradas - saidaValor }; } return null; }
 function atualizarTitulosColunasComparativos() { const thDinheiro = document.getElementById('thDinheiroComp'), thDebito = document.getElementById('thDebitoComp'), thCredito = document.getElementById('thCreditoComp'), thCreditoParcelado = document.getElementById('thCreditoParceladoComp'), thAG = document.getElementById('thAGComp'), thPIX = document.getElementById('thPIXComp'), thVNF = document.getElementById('thVNFComp'); if (thDinheiro) thDinheiro.innerHTML = getTituloConfigurado('DINHEIRO') || 'DINHEIRO'; if (thDebito) thDebito.innerHTML = getTituloConfigurado('DEBITO') || 'DEBITO'; if (thCredito) thCredito.innerHTML = getTituloConfigurado('CREDITO') || 'CREDITO'; if (thCreditoParcelado) thCreditoParcelado.innerHTML = getTituloConfigurado('CREDITO PARCELADO') || 'CREDITO PARCELADO'; if (thAG) thAG.innerHTML = getTituloConfigurado('AG') || 'AG'; if (thPIX) thPIX.innerHTML = getTituloConfigurado('PIX') || 'PIX'; if (thVNF) thVNF.innerHTML = getTituloConfigurado('VNF') || 'VNF'; }
 function alterarCorLinhaFechamento(data, cor) { if (cor === 'amarelo') { if (linhaCorSelecionada[data] === 'amarelo') delete linhaCorSelecionada[data]; else linhaCorSelecionada[data] = 'amarelo'; } else if (cor === 'verde') { if (linhaCorSelecionada[data] === 'verde') delete linhaCorSelecionada[data]; else linhaCorSelecionada[data] = 'verde'; } else if (cor === 'vermelho') { if (linhaCorSelecionada[data] === 'vermelho') delete linhaCorSelecionada[data]; else linhaCorSelecionada[data] = 'vermelho'; } salvarCores(); renderizarCaixaPopup(); renderizarTabelaComparativos(); atualizarTotaisPorClassificacao(); }
@@ -4526,7 +4591,7 @@ function abrirDrilldownReceitas() {
     chartDrilldownReceitas = new Chart(ctx, { type: 'bar', data: { labels: ['Loja Física', 'Corporativo'], datasets: [{ label: 'Receitas', data: [lojaTotal, corpTotal], backgroundColor: ['#10b981', '#8b5cf6'], borderRadius: 8, borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top', labels: { color: '#e8edf2' } }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: R$ ${ctx.raw.toLocaleString('pt-BR')}` } } }, scales: { y: { ticks: { color: '#e8edf2', callback: (v) => `R$ ${v.toLocaleString()}` }, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { ticks: { color: '#e8edf2' }, grid: { display: false } } } } });
     const diasOrdenados = Array.from(porDia.keys()).sort((a,b) => parseDataStats(a) - parseDataStats(b));
     let tableHtml = '';
-    diasOrdenados.forEach(data => { const valores = porDia.get(data); tableHtml += `<tr><td style="text-align:left;">${data}</div><td style="text-align:right;">R$ ${formatMoneySimple(valores.loja)}</div><td style="text-align:right;">R$ ${formatMoneySimple(valores.corp)}</div><td style="text-align:right; font-weight:700; color:var(--yellow);">R$ ${formatMoneySimple(valores.total)}</div></tr>`; });
+    diasOrdenados.forEach(data => { const valores = porDia.get(data); tableHtml += `<tr><td style="text-align:left;">${data}</div><td style="text-align:right;">R$ ${formatMoneySimple(valores.loja)}</div><td style="text-align:right;">R$ ${formatMoneySimple(valores.corp)}</div><td style="text-align:right; font-weight:700; color:var(--yellow);">R$ ${formatMoneySimple(valores.total)}</div><tr>`; });
     document.getElementById('drilldownReceitasTableBody').innerHTML = tableHtml;
     document.getElementById('modalDrilldownReceitas').classList.add('active');
 }
@@ -5223,6 +5288,32 @@ async function abrirModalConversaoSupabase() {
 document.addEventListener('DOMContentLoaded', async function() {
     await carregarRegrasConversaoSupabase();
     await gerarDREComSupabase();
+    carregarVendas();
+    carregarCompras();
+    carregarDadosReaisLancamentos();
+    carregarDadosComparativos();
+    
+    // CARREGAR COMPARATIVOS DO SUPABASE
+    const { data } = await supabaseClient.from('comparativos_caixa').select('*');
+    if (data) {
+        dadosComparativos = {};
+        data.forEach(item => {
+            dadosComparativos[item.data] = {
+                DINHEIRO: item.dinheiro || 0,
+                DEBITO: item.debito || 0,
+                CREDITO: item.credito || 0,
+                CREDITO_PARCELADO: item.credito_parcelado || 0,
+                AG: item.ag || 0,
+                PIX: item.pix || 0,
+                VNF: item.vnf || 0,
+                SAIDA: item.saida || 0,
+                TOTAL_DIA: item.total_dia || 0
+            };
+        });
+    }
+    
+    renderizarCaixaPopup();
+    renderizarTabelaComparativos();
 });
 // ============================================================
 // FUNÇÕES SUPABASE CORRIGIDAS - SUBSTITUA AS EXISTENTES
