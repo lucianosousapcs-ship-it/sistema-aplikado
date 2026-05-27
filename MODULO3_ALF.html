@@ -1804,7 +1804,7 @@
     </div>
 </div>
 
-<!-- NOVO POP-UP DE DETALHAMENTO DRE -->
+<!-- NOVO POP-UP DE DETALHAMENTO DRE - CORRIGIDO -->
 <div id="modalDrilldownValor" class="modal-drilldown-valor">
     <div class="modal-drilldown-valor-content">
         <button class="drilldown-valor-close" onclick="fecharModalDrilldownValor()">×</button>
@@ -1844,6 +1844,169 @@
 <div id="modalEditConta" class="modal-edit-conta"><div class="modal-edit-content" style="background:#12161F; border-radius:28px; padding:24px; width:90%; max-width:500px;"><div class="modal-plano-header">Editar Conta<button class="modal-plano-close" onclick="fecharFormEdit()">×</button></div><div class="form-group"><label class="form-label">Codigo</label><input type="text" id="editCod" class="form-input"></div><div class="form-group"><label class="form-label">Nome</label><input type="text" id="editNome" class="form-input"></div><div style="display:flex; gap:10px; justify-content:flex-end;"><button class="btn-outline" onclick="fecharFormEdit()">Cancelar</button><button class="btn-yellow" onclick="salvarConta()">Salvar</button></div></div></div>
 
 <script>
+// ============================================================
+// FUNÇÃO CORRIGIDA: DETALHAMENTO DO VALOR CLICADO NA DRE (BUSCA NO SUPABASE)
+// ============================================================
+async function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo, isTotal) {
+    if (!valor || valor === 0) {
+        alert('Não há registros para detalhar este valor.');
+        return;
+    }
+    
+    const mesNome = mesesNomes[mesIndex] || 'Total';
+    const periodo = mesIndex !== undefined ? `Mês de ${mesNome}` : 'Total do Ano';
+    
+    // Atualizar cabeçalho do pop-up
+    document.getElementById('drilldownValorTitulo').innerHTML = `Detalhamento - ${codConta ? codConta + ' - ' : ''}${nomeConta}`;
+    document.getElementById('infoConta').innerHTML = `${codConta ? codConta + ' - ' : ''}${nomeConta}`;
+    document.getElementById('infoPeriodo').innerHTML = periodo;
+    document.getElementById('infoValorTotal').innerHTML = formatarMoeda(valor);
+    
+    // Buscar os registros que compõem este valor DIRETAMENTE DO SUPABASE
+    let registros = [];
+    
+    try {
+        if (mesIndex !== undefined) {
+            // Buscar para um mês específico
+            const { data, error } = await supabaseClient
+                .from('dre_lancamentos')
+                .select('*')
+                .eq('mes', mesIndex)
+                .eq('plano', nomeConta);
+            
+            if (error) throw error;
+            registros = data || [];
+        } else {
+            // Buscar para o total do ano (todos os meses)
+            const { data, error } = await supabaseClient
+                .from('dre_lancamentos')
+                .select('*')
+                .eq('plano', nomeConta);
+            
+            if (error) throw error;
+            registros = data || [];
+        }
+    } catch (error) {
+        console.error('Erro ao buscar detalhamento do Supabase:', error);
+        alert('Erro ao carregar os detalhes. Tente novamente.');
+        return;
+    }
+    
+    // Determinar se é Receita ou Despesa para definir a estrutura da tabela
+    const isReceita = (grupoTipo === 'receitas' || (estruturaDRE.receitas.some(r => r.nome === nomeConta)));
+    
+    // Construir a tabela de detalhamento
+    const tableHead = document.getElementById('drilldownValorTableHead');
+    const tableBody = document.getElementById('drilldownValorTableBody');
+    const footerTotal = document.getElementById('drilldownValorFooter');
+    
+    if (!registros || registros.length === 0) {
+        tableHead.innerHTML = `<tr><th>Data</th><th>Cliente / Fornecedor</th><th>Detalhe</th><th>Valor (R$)</th></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="4" class="mensagem-informativa">Nenhum registro encontrado para este valor.</td></tr>`;
+        footerTotal.innerHTML = `Total Geral: R$ 0,00`;
+        document.getElementById('modalDrilldownValor').classList.add('active');
+        return;
+    }
+    
+    let somaTotal = 0;
+    let linhasHtml = '';
+    
+    if (isReceita) {
+        // Cabeçalho para RECEITAS
+        tableHead.innerHTML = `<tr><th>Data</th><th>Cliente</th><th>Classificação</th><th>Valor (R$)</th></tr>`;
+        
+        for (const reg of registros) {
+            const valorReg = parseFloat(reg.valor);
+            somaTotal += valorReg;
+            
+            // Tentar extrair informações adicionais da descrição
+            let cliente = 'Não identificado';
+            let classificacao = '-';
+            if (reg.descricao && reg.descricao.startsWith('RECEITA: ')) {
+                cliente = reg.descricao.replace('RECEITA: ', '');
+                // Buscar classificação nos dados reais de venda
+                const vendaRelacionada = receitasDataReais.find(r => 
+                    r.cliente === cliente && 
+                    Math.abs(r.valor - valorReg) < 0.01 &&
+                    r.data === reg.data
+                );
+                if (vendaRelacionada) {
+                    classificacao = vendaRelacionada.classificacao === 'Balcao' ? 'LOJA FÍSICA' : 'CORPORATIVO';
+                }
+            }
+            
+            linhasHtml += `<tr>
+                <td>${formatarDataExibicao(reg.data)}</div>
+                <td>${cliente}</div>
+                <td>${classificacao}</div>
+                <td style="text-align:right; font-weight:600;">${formatarMoeda(valorReg)}</div>
+             </tr>`;
+        }
+    } else {
+        // Cabeçalho para DESPESAS
+        tableHead.innerHTML = `<table><th>Data</th><th>Fornecedor</th><th>Operação</th><th>Valor (R$)</th></tr>`;
+        
+        for (const reg of registros) {
+            const valorReg = parseFloat(reg.valor);
+            somaTotal += valorReg;
+            
+            // Tentar extrair informações adicionais da descrição
+            let fornecedor = 'Não identificado';
+            let operacao = '-';
+            if (reg.descricao && reg.descricao.startsWith('DESPESA: ')) {
+                operacao = reg.descricao.replace('DESPESA: ', '');
+                // Buscar fornecedor nos dados reais de despesa
+                const despesaRelacionada = despesasDataReais.find(d => 
+                    d.operacao === operacao && 
+                    Math.abs(d.valor - valorReg) < 0.01 &&
+                    d.data === reg.data
+                );
+                if (despesaRelacionada) {
+                    fornecedor = despesaRelacionada.fornecedor;
+                }
+            }
+            
+            linhasHtml += `<tr>
+                <td>${formatarDataExibicao(reg.data)}</div>
+                <td>${fornecedor}</div>
+                <td>${operacao}</div>
+                <td style="text-align:right; font-weight:600;">${formatarMoeda(valorReg)}</div>
+              </tr>`;
+        }
+    }
+    
+    tableBody.innerHTML = linhasHtml;
+    footerTotal.innerHTML = `Total Geral: ${formatarMoeda(somaTotal)}`;
+    
+    // Verificar se o total no pop-up corresponde ao valor clicado
+    if (Math.abs(somaTotal - valor) > 0.01) {
+        console.warn(`Divergência no detalhamento: Total ${somaTotal} vs Valor Clicado ${valor}`);
+        // Adicionar um aviso sutil, mas sem quebrar a regra de negócio
+        let aviso = document.querySelector('.aviso-divergencia');
+        if (!aviso) {
+            aviso = document.createElement('div');
+            aviso.className = 'aviso-divergencia';
+            aviso.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+            aviso.style.padding = '8px';
+            aviso.style.borderRadius = '8px';
+            aviso.style.marginTop = '10px';
+            aviso.style.fontSize = '11px';
+            aviso.style.textAlign = 'center';
+            aviso.innerHTML = '⚠️ Atenção: O somatório dos registros apresenta uma pequena divergência aritmética. Verifique os lançamentos.';
+            document.querySelector('.drilldown-valor-footer').after(aviso);
+        }
+    } else {
+        // Remover aviso se existir e a divergência foi corrigida
+        const aviso = document.querySelector('.aviso-divergencia');
+        if (aviso) aviso.remove();
+    }
+    
+    document.getElementById('modalDrilldownValor').classList.add('active');
+}
+
+// Manter as demais funções existentes abaixo...
+// (aqui continua o resto do seu código JavaScript original)
+</script>
 // ============================================================
 // VARIÁVEIS GLOBAIS
 // ============================================================
