@@ -4443,9 +4443,43 @@ function mostrarConsultaConversaoDespesa(operacao, planoContasAtual) {
 // FUNÇÕES DE COMPARATIVOS
 // ============================================================
 function carregarDadosComparativos() { const saved = localStorage.getItem(STORAGE_KEY_COMPARATIVOS); if (saved) { try { dadosComparativos = JSON.parse(saved); } catch(e) { dadosComparativos = {}; } } else { inicializarDadosComparativos(); } }
-function inicializarDadosComparativos() { const gruposOficiais = gerarDadosCaixa(); const gruposArray = Array.from(gruposOficiais.entries()).map(([data, row]) => ({ data, row })); dadosComparativos = {}; gruposArray.forEach(({ data, row }) => { const saidaValor = todasSaidasPorData[data] || 0; const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0); const totalDia = totalEntradas - saidaValor; dadosComparativos[data] = { DINHEIRO: row.DINHEIRO || 0, DEBITO: row.DEBITO || 0, CREDITO: row.CREDITO || 0, CREDITO_PARCELADO: row.CREDITO_PARCELADO || 0, AG: row.AG || 0, PIX: row.PIX || 0, VNF: row.VNF || 0, SAIDA: saidaValor, TOTAL_DIA: totalDia }; }); salvarDadosComparativos(); }
-function salvarDadosComparativos() { localStorage.setItem(STORAGE_KEY_COMPARATIVOS, JSON.stringify(dadosComparativos)); }
-// ============================================================
+function inicializarDadosComparativos() {
+    console.log('🔄 Inicializando dados comparativos...');
+    
+    const gruposOficiais = gerarDadosCaixa();
+    const gruposArray = Array.from(gruposOficiais.entries()).map(([data, row]) => ({ data, row }));
+    
+    dadosComparativos = {};
+    
+    gruposArray.forEach(({ data, row }) => {
+        const saidaValor = todasSaidasPorData[data] || 0;
+        const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + 
+                              (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0);
+        const totalDia = totalEntradas - saidaValor;
+        
+        // SOMENTE cria se a data existe no fechamento de caixa
+        if (data && row) {
+            dadosComparativos[data] = { 
+                DINHEIRO: 0,
+                DEBITO: 0,
+                CREDITO: 0,
+                CREDITO_PARCELADO: 0,
+                AG: 0,
+                PIX: 0,
+                VNF: 0,
+                SAIDA: 0,
+                TOTAL_DIA: 0
+            };
+        }
+    });
+    
+    console.log('✅ Dados comparativos inicializados com ZERO para', Object.keys(dadosComparativos).length, 'dias');
+    
+    // Salvar no Supabase (só as datas que existem)
+    if (Object.keys(dadosComparativos).length > 0) {
+        salvarDadosComparativos();
+    }
+}// ============================================================
 // FUNÇÃO ATUALIZAR VALOR COMPARATIVO - VERSÃO SUPABASE
 // ============================================================
 async function atualizarValorComparativo(data, campo, valor) {
@@ -4482,36 +4516,52 @@ async function atualizarValorComparativo(data, campo, valor) {
 }
 // FUNÇÃO SALVAR DADOS COMPARATIVOS CORRETA
 async function salvarDadosComparativos() {
-    console.log('📝 Salvando comparativos no Supabase...');
+    console.log('🚀 INICIANDO SALVAMENTO NO SUPABASE...');
+    console.log('dadosComparativos atual:', JSON.stringify(dadosComparativos, null, 2));
     
-    const registros = Object.entries(dadosComparativos).map(([data, valores]) => ({
-        data: data,
-        dinheiro: valores.DINHEIRO || 0,
-        debito: valores.DEBITO || 0,
-        credito: valores.CREDITO || 0,
-        credito_parcelado: valores.CREDITO_PARCELADO || 0,
-        ag: valores.AG || 0,
-        pix: valores.PIX || 0,
-        vnf: valores.VNF || 0,
-        saida: valores.SAIDA || 0,
-        total_dia: valores.TOTAL_DIA || 0
-    }));
-    
-    if (registros.length === 0) return;
-    
-    // Deletar registros antigos
-    await supabaseClient.from('comparativos_caixa').delete().neq('id', 0);
-    
-    // Inserir novos
-    const { error } = await supabaseClient.from('comparativos_caixa').insert(registros);
-    
-    if (error) {
-        console.error('❌ Erro ao salvar comparativos:', error);
-    } else {
-        console.log('✅ Comparativos salvos com sucesso!');
+    // Verificar se há dados
+    if (!dadosComparativos || Object.keys(dadosComparativos).length === 0) {
+        console.log('⚠️ Nenhum dado para salvar');
+        return;
     }
-}
-function obterDadosOficiaisPorData(data) { const gruposOficiais = gerarDadosCaixa(); const row = gruposOficiais.get(data); const saidaValor = todasSaidasPorData[data] || 0; if (row) { const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0); return { DINHEIRO: row.DINHEIRO || 0, DEBITO: row.DEBITO || 0, CREDITO: row.CREDITO || 0, CREDITO_PARCELADO: row.CREDITO_PARCELADO || 0, AG: row.AG || 0, PIX: row.PIX || 0, VNF: row.VNF || 0, SAIDA: saidaValor, TOTAL_DIA: totalEntradas - saidaValor }; } return null; }
+    
+    // Converter para array
+    const registros = [];
+    for (const [data, valores] of Object.entries(dadosComparativos)) {
+        registros.push({
+            data: data,
+            dinheiro: Number(valores.DINHEIRO) || 0,
+            debito: Number(valores.DEBITO) || 0,
+            credito: Number(valores.CREDITO) || 0,
+            credito_parcelado: Number(valores.CREDITO_PARCELADO) || 0,
+            ag: Number(valores.AG) || 0,
+            pix: Number(valores.PIX) || 0,
+            vnf: Number(valores.VNF) || 0,
+            saida: Number(valores.SAIDA) || 0,
+            total_dia: Number(valores.TOTAL_DIA) || 0
+        });
+    }
+    
+    console.log('📦 Registros a enviar:', registros);
+    
+    // Tentar salvar no Supabase
+    try {
+        const { data, error } = await supabaseClient
+            .from('comparativos_caixa')
+            .upsert(registros, { onConflict: 'data' });
+        
+        if (error) {
+            console.error('❌ ERRO DO SUPABASE:', error);
+            alert('Erro ao salvar: ' + error.message);
+        } else {
+            console.log('✅ SUCESSO! Dados salvos:', data);
+            alert('Valor salvo com sucesso no Supabase!');
+        }
+    } catch (err) {
+        console.error('❌ EXCEÇÃO:', err);
+        alert('Erro: ' + err.message);
+    }
+}function obterDadosOficiaisPorData(data) { const gruposOficiais = gerarDadosCaixa(); const row = gruposOficiais.get(data); const saidaValor = todasSaidasPorData[data] || 0; if (row) { const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0); return { DINHEIRO: row.DINHEIRO || 0, DEBITO: row.DEBITO || 0, CREDITO: row.CREDITO || 0, CREDITO_PARCELADO: row.CREDITO_PARCELADO || 0, AG: row.AG || 0, PIX: row.PIX || 0, VNF: row.VNF || 0, SAIDA: saidaValor, TOTAL_DIA: totalEntradas - saidaValor }; } return null; }
 function atualizarTitulosColunasComparativos() { const thDinheiro = document.getElementById('thDinheiroComp'), thDebito = document.getElementById('thDebitoComp'), thCredito = document.getElementById('thCreditoComp'), thCreditoParcelado = document.getElementById('thCreditoParceladoComp'), thAG = document.getElementById('thAGComp'), thPIX = document.getElementById('thPIXComp'), thVNF = document.getElementById('thVNFComp'); if (thDinheiro) thDinheiro.innerHTML = getTituloConfigurado('DINHEIRO') || 'DINHEIRO'; if (thDebito) thDebito.innerHTML = getTituloConfigurado('DEBITO') || 'DEBITO'; if (thCredito) thCredito.innerHTML = getTituloConfigurado('CREDITO') || 'CREDITO'; if (thCreditoParcelado) thCreditoParcelado.innerHTML = getTituloConfigurado('CREDITO PARCELADO') || 'CREDITO PARCELADO'; if (thAG) thAG.innerHTML = getTituloConfigurado('AG') || 'AG'; if (thPIX) thPIX.innerHTML = getTituloConfigurado('PIX') || 'PIX'; if (thVNF) thVNF.innerHTML = getTituloConfigurado('VNF') || 'VNF'; }
 function alterarCorLinhaFechamento(data, cor) { if (cor === 'amarelo') { if (linhaCorSelecionada[data] === 'amarelo') delete linhaCorSelecionada[data]; else linhaCorSelecionada[data] = 'amarelo'; } else if (cor === 'verde') { if (linhaCorSelecionada[data] === 'verde') delete linhaCorSelecionada[data]; else linhaCorSelecionada[data] = 'verde'; } else if (cor === 'vermelho') { if (linhaCorSelecionada[data] === 'vermelho') delete linhaCorSelecionada[data]; else linhaCorSelecionada[data] = 'vermelho'; } salvarCores(); renderizarCaixaPopup(); renderizarTabelaComparativos(); atualizarTotaisPorClassificacao(); }
 
@@ -4537,10 +4587,48 @@ function renderizarTabelaComparativos() {
 function aplicarFiltrosComparativos() { comparativoFiltroMes = document.getElementById('filtroMesComparativos')?.value || "TODOS"; comparativoFiltroTexto = document.getElementById('buscaComparativosInput')?.value || ""; renderizarTabelaComparativos(); }
 function limparFiltrosComparativos() { if(document.getElementById('filtroMesComparativos')) document.getElementById('filtroMesComparativos').value = "TODOS"; if(document.getElementById('buscaComparativosInput')) document.getElementById('buscaComparativosInput').value = ""; comparativoFiltroTexto = ""; comparativoFiltroMes = "TODOS"; renderizarTabelaComparativos(); }
 function popularMesesComparativos() { const gruposOficiais = gerarDadosCaixa(); const mesesUnicos = new Set(); gruposOficiais.forEach((_, data) => { const mesAno = getMesAno(data); if(mesAno) mesesUnicos.add(mesAno); }); const selectMes = document.getElementById('filtroMesComparativos'); if(selectMes) { const valorAtual = selectMes.value; selectMes.innerHTML = '<option value="TODOS">TODOS OS MESES</option>'; Array.from(mesesUnicos).sort().forEach(m => { selectMes.innerHTML += `<option value="${m}" ${valorAtual === m ? 'selected' : ''}>${m}</option>`; }); } }
-function abrirModalComparativos() { carregarDadosComparativos(); popularMesesComparativos(); renderizarTabelaComparativos(); const modal = document.getElementById('modalComparativos'); if(modal) modal.classList.add('active'); else alert("Erro ao abrir modal de comparativos."); }
-function fecharModalComparativos() { const modal = document.getElementById('modalComparativos'); if(modal) modal.classList.remove('active'); }
-function atualizarTelaComparativos() { if (typeof carregarVendas === 'function') { carregarVendas().then(() => { carregarSaidasCaixa(); const gruposOficiais = gerarDadosCaixa(); let dadosModificados = false; gruposOficiais.forEach((row, data) => { const saidaValor = todasSaidasPorData[data] || 0; const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0); const totalDia = totalEntradas - saidaValor; if (!dadosComparativos[data]) { dadosComparativos[data] = { DINHEIRO: row.DINHEIRO || 0, DEBITO: row.DEBITO || 0, CREDITO: row.CREDITO || 0, CREDITO_PARCELADO: row.CREDITO_PARCELADO || 0, AG: row.AG || 0, PIX: row.PIX || 0, VNF: row.VNF || 0, SAIDA: saidaValor, TOTAL_DIA: totalDia }; dadosModificados = true; } else { dadosComparativos[data].TOTAL_DIA = totalDia; dadosModificados = true; } }); if (dadosModificados) salvarDadosComparativos(); popularMesesComparativos(); renderizarTabelaComparativos(); renderizarCaixaPopup(); }); } else { carregarSaidasCaixa(); popularMesesComparativos(); renderizarTabelaComparativos(); renderizarCaixaPopup(); } }
-
+async function carregarComparativosSupabase() {
+    console.log('🔄 Carregando comparativos do Supabase...');
+    
+    const { data, error } = await supabaseClient
+        .from('comparativos_caixa')
+        .select('*');
+    
+    if (error) {
+        console.error('❌ Erro ao carregar:', error);
+        return;
+    }
+    
+    console.log('📦 Dados carregados do Supabase:', data);
+    
+    // Atualizar o objeto dadosComparativos
+    if (data && data.length > 0) {
+        dadosComparativos = {};
+        data.forEach(item => {
+            dadosComparativos[item.data] = {
+                DINHEIRO: item.dinheiro || 0,
+                DEBITO: item.debito || 0,
+                CREDITO: item.credito || 0,
+                CREDITO_PARCELADO: item.credito_parcelado || 0,
+                AG: item.ag || 0,
+                PIX: item.pix || 0,
+                VNF: item.vnf || 0,
+                SAIDA: item.saida || 0,
+                TOTAL_DIA: item.total_dia || 0
+            };
+        });
+    }
+    
+    console.log('🎯 dadosComparativos após carregamento:', dadosComparativos);
+    
+    // Recarregar a tabela
+    renderizarTabelaComparativos();
+    
+    // Atualizar também o fechamento de caixa
+    if (typeof renderizarCaixaPopup === 'function') {
+        renderizarCaixaPopup();
+    }
+}
 // ============================================================
 // FUNÇÕES DE ESTATÍSTICAS
 // ============================================================
@@ -5547,7 +5635,97 @@ async function incluirSelecionadosNoDRESupabase() {
     if (totalRejeitados > 0) mensagemFinal += ` ${totalRejeitados} registro(s) foram rejeitados por divergência de valor.`;
     alert(mensagemFinal);
 }
-
+// ============================================================
+// FUNÇÃO CORRIGIDA PARA ATUALIZAR COMPARATIVOS
+// ============================================================
+window.atualizarValorComparativo = async function(data, campo, valor) {
+    console.log('🔧 FUNÇÃO CHAMADA!');
+    console.log('Data:', data);
+    console.log('Campo:', campo);
+    console.log('Valor:', valor);
+    
+    // Garantir que dadosComparativos existe
+    if (typeof dadosComparativos === 'undefined') {
+        console.log('dadosComparativos não existe, criando...');
+        window.dadosComparativos = {};
+    }
+    
+    // Converter valor para número
+    let novoValor = 0;
+    if (typeof valor === 'string') {
+        novoValor = parseFloat(valor.replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]/g, '')) || 0;
+    } else {
+        novoValor = valor || 0;
+    }
+    
+    // Criar registro se não existir
+    if (!dadosComparativos[data]) {
+        dadosComparativos[data] = {
+            DINHEIRO: 0,
+            DEBITO: 0,
+            CREDITO: 0,
+            CREDITO_PARCELADO: 0,
+            AG: 0,
+            PIX: 0,
+            VNF: 0,
+            SAIDA: 0,
+            TOTAL_DIA: 0
+        };
+    }
+    
+    // Atualizar o campo
+    dadosComparativos[data][campo] = novoValor;
+    
+    // Recalcular TOTAL_DIA
+    const totalEntradas = (dadosComparativos[data].DINHEIRO || 0) + (dadosComparativos[data].DEBITO || 0) +
+                          (dadosComparativos[data].CREDITO || 0) + (dadosComparativos[data].CREDITO_PARCELADO || 0) +
+                          (dadosComparativos[data].AG || 0) + (dadosComparativos[data].PIX || 0) +
+                          (dadosComparativos[data].VNF || 0);
+    dadosComparativos[data].TOTAL_DIA = totalEntradas - (dadosComparativos[data].SAIDA || 0);
+    
+    console.log('dadosComparativos após atualização:', dadosComparativos[data]);
+    
+    // Salvar no Supabase
+    await salvarDadosComparativos();
+    
+    // Recarregar as telas
+    if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
+    if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
+    
+    alert(`Valor ${campo} = ${formatMoneySimple(novoValor)} salvo para ${data}`);
+};
+function abrirModalComparativos() {
+    console.log('🔘 Botão COMPARATIVOS clicado!');
+    
+    // Verificar se o modal existe
+    const modal = document.getElementById('modalComparativos');
+    if (!modal) {
+        console.error('❌ Modal não encontrado!');
+        alert('Erro: Modal não encontrado');
+        return;
+    }
+    
+    // Abrir o modal
+    modal.classList.add('active');
+    console.log('✅ Modal aberto');
+    
+    // Recarregar os dados do Supabase
+    if (typeof carregarComparativosSupabase === 'function') {
+        carregarComparativosSupabase();
+    } else {
+        console.error('❌ Função carregarComparativosSupabase não encontrada');
+    }
+}
+function fecharModalComparativos() {
+    console.log('🔘 Fechando modal COMPARATIVOS');
+    const modal = document.getElementById('modalComparativos');
+    if (modal) {
+        modal.classList.remove('active');
+        console.log('✅ Modal fechado');
+    } else {
+        console.error('❌ Modal não encontrado');
+    }
+}
 </script>
 </body>
 </html>
