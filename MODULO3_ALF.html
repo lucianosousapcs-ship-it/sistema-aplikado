@@ -3979,7 +3979,16 @@ function atualizarTotaisPorClassificacao() {
 function renderizarCaixaPopup() { 
     const grupos = gerarDadosCaixa(); 
     let gruposArray = Array.from(grupos.entries()).map(([data, row]) => ({ data, row }));
-    gruposArray.sort((a,b) => { const da = parseDataBr(a.data), db = parseDataBr(b.data); if(!da && !db) return 0; if(!da) return 1; if(!db) return -1; return da - db; });
+    
+    // CORREÇÃO: Ordenar corretamente
+    gruposArray.sort((a, b) => {
+        const [diaA, mesA, anoA] = a.data.split('/');
+        const [diaB, mesB, anoB] = b.data.split('/');
+        const dataA = new Date(anoA, mesA - 1, diaA);
+        const dataB = new Date(anoB, mesB - 1, diaB);
+        return dataB - dataA;
+    });
+    
     if(caixaFiltroMes !== "TODOS") gruposArray = gruposArray.filter(item => getMesAno(item.data) === caixaFiltroMes);
     if(caixaFiltroTexto) { const busca = caixaFiltroTexto.toLowerCase(); gruposArray = gruposArray.filter(item => item.data.toLowerCase().includes(busca)); }
     caixaGruposOriginais = gruposArray;
@@ -4005,7 +4014,6 @@ function renderizarCaixaPopup() {
     document.getElementById('totalRegistrosCaixa').innerText = gruposArray.length;
     atualizarTitulosColunasCaixa(); atualizarTotaisPorClassificacao();
 }
-
 function atualizarTelaCaixa() { carregarSaidasCaixa(); renderizarCaixaPopup(); }
 function abrirModalCaixaPopup() { const savedComp = localStorage.getItem(STORAGE_KEY_COMPARATIVOS); if (savedComp) { try { dadosComparativos = JSON.parse(savedComp); } catch(e) {} } carregarFlags(); document.getElementById('modalFechamentoCaixa').classList.add('active'); if(vendasData.length === 0) { carregarVendas().then(() => { atualizarTelaCaixa(); }); } else { atualizarTelaCaixa(); } }
 function fecharModalCaixa() { document.getElementById('modalFechamentoCaixa').classList.remove('active'); }
@@ -4593,23 +4601,110 @@ function alterarCorLinhaFechamento(data, cor) {
 function renderizarTabelaComparativos() {
     const gruposOficiais = gerarDadosCaixa();
     let gruposArray = Array.from(gruposOficiais.entries()).map(([data, row]) => ({ data, row }));
-    gruposArray.sort((a,b) => { const da = parseDataBr(a.data), db = parseDataBr(b.data); if(!da && !db) return 0; if(!da) return 1; if(!db) return -1; return da - db; });
+    
+    // Ordenar por data (do mais novo para o mais antigo)
+    gruposArray.sort((a, b) => {
+        const [diaA, mesA, anoA] = a.data.split('/');
+        const [diaB, mesB, anoB] = b.data.split('/');
+        const dataA = new Date(anoA, mesA - 1, diaA);
+        const dataB = new Date(anoB, mesB - 1, diaB);
+        return dataB - dataA;
+    });
+    
     if(comparativoFiltroMes !== "TODOS") gruposArray = gruposArray.filter(item => getMesAno(item.data) === comparativoFiltroMes);
-    if(comparativoFiltroTexto) { const busca = comparativoFiltroTexto.toLowerCase(); gruposArray = gruposArray.filter(item => item.data.toLowerCase().includes(busca)); }
+    if(comparativoFiltroTexto) { 
+        const busca = comparativoFiltroTexto.toLowerCase(); 
+        gruposArray = gruposArray.filter(item => item.data.toLowerCase().includes(busca)); 
+    }
+    
     document.getElementById('totalRegistrosComparativos').innerText = gruposArray.length;
     document.getElementById('qtdDiasComparativos').innerHTML = gruposArray.length;
-    let totalDinheiroComp = 0, totalDebitoComp = 0, totalCreditoComp = 0, totalCreditoParceladoComp = 0, totalAgComp = 0, totalPixComp = 0, totalVnfComp = 0, totalSaidaComp = 0, totalEntradasComp = 0;
+    
+    let totalDinheiroComp = 0, totalDebitoComp = 0, totalCreditoComp = 0, totalCreditoParceladoComp = 0;
+    let totalAgComp = 0, totalPixComp = 0, totalVnfComp = 0, totalSaidaComp = 0, totalEntradasComp = 0;
     let tbodyHtml = '';
-    gruposArray.forEach(({ data, row }) => { const dadosOficiais = obterDadosOficiaisPorData(data); const dadosComp = dadosComparativos[data] || { DINHEIRO: dadosOficiais.DINHEIRO, DEBITO: dadosOficiais.DEBITO, CREDITO: dadosOficiais.CREDITO, CREDITO_PARCELADO: dadosOficiais.CREDITO_PARCELADO, AG: dadosOficiais.AG, PIX: dadosOficiais.PIX, VNF: dadosOficiais.VNF, SAIDA: dadosOficiais.SAIDA, TOTAL_DIA: dadosOficiais.TOTAL_DIA }; totalDinheiroComp += dadosComp.DINHEIRO; totalDebitoComp += dadosComp.DEBITO; totalCreditoComp += dadosComp.CREDITO; totalCreditoParceladoComp += dadosComp.CREDITO_PARCELADO; totalAgComp += dadosComp.AG; totalPixComp += dadosComp.PIX; totalVnfComp += dadosComp.VNF; totalSaidaComp += dadosComp.SAIDA; const totalEntradas = dadosComp.DINHEIRO + dadosComp.DEBITO + dadosComp.CREDITO + dadosComp.CREDITO_PARCELADO + dadosComp.AG + dadosComp.PIX + dadosComp.VNF; const totalDia = totalEntradas - dadosComp.SAIDA; totalEntradasComp += totalEntradas; const gerarCelula = (campo, valorComp, valorOficial) => { const match = verificarMatchComparativo(valorComp, valorOficial); const indicator = match ? `<span class="match-indicator" title="Valor confere com o fechamento oficial">✓ Confere</span>` : `<span class="divergence-indicator" title="⚠️ ATENÇÃO: Valor divergente do fechamento oficial - Requer verificação">⚠️ Divergente</span>`; return `<div class="comparativo-cell"><input type="text" class="comparativo-input" value="${formatMoneySimple(valorComp)}" onchange="atualizarValorComparativo('${data}', '${campo}', this.value)">${indicator}</div>`; }; const matchTotalDia = verificarMatchComparativo(dadosComp.TOTAL_DIA, dadosOficiais.TOTAL_DIA); const indicatorTotalDia = matchTotalDia ? `<span class="match-indicator" title="Valor confere com o fechamento oficial">✓ Confere</span>` : `<span class="divergence-indicator" title="⚠️ ATENÇÃO: Valor divergente do fechamento oficial - Requer verificação">⚠️ Divergente</span>`; const isAmareloActive = linhaCorSelecionada[data] === 'amarelo'; const isVerdeActive = linhaCorSelecionada[data] === 'verde'; const isVermelhoActive = linhaCorSelecionada[data] === 'vermelho'; tbodyHtml += `<tr class="${isAmareloActive ? 'linha-destaque-amarelo' : (isVerdeActive ? 'linha-destaque-verde' : (isVermelhoActive ? 'linha-destaque-vermelho' : ''))}"><td style="text-align:center;">${data}<div class="comparativo-cor-botoes"><div class="btn-cor-verde ${isVerdeActive ? 'active' : ''}" onclick="alterarCorLinhaFechamento('${data}', 'verde')" title="Destacar linha em verde - Dados conformes"></div><div class="btn-cor-amarelo ${isAmareloActive ? 'active' : ''}" onclick="alterarCorLinhaFechamento('${data}', 'amarelo')" title="Destacar linha em amarelo - Dados não informados"></div><div class="btn-cor-vermelho ${isVermelhoActive ? 'active' : ''}" onclick="alterarCorLinhaFechamento('${data}', 'vermelho')" title="Destacar linha em vermelho - Dados sem conformidade / Requer atenção"></div></div></div><td>${gerarCelula('DINHEIRO', dadosComp.DINHEIRO, dadosOficiais.DINHEIRO)}</div><td>${gerarCelula('DEBITO', dadosComp.DEBITO, dadosOficiais.DEBITO)}</div><td>${gerarCelula('CREDITO', dadosComp.CREDITO, dadosOficiais.CREDITO)}</div><td>${gerarCelula('CREDITO_PARCELADO', dadosComp.CREDITO_PARCELADO, dadosOficiais.CREDITO_PARCELADO)}</div><td>${gerarCelula('AG', dadosComp.AG, dadosOficiais.AG)}</div><td>${gerarCelula('PIX', dadosComp.PIX, dadosOficiais.PIX)}</div><td>${gerarCelula('VNF', dadosComp.VNF, dadosOficiais.VNF)}</div><td>${gerarCelula('SAIDA', dadosComp.SAIDA, dadosOficiais.SAIDA)}</div><td><strong style="color:var(--yellow);">R$ ${formatMoneySimple(totalDia)}</strong> ${indicatorTotalDia}</div></tr>`; });
-    tbodyHtml += `<tr style="background:rgba(230,160,23,0.1); border-top:2px solid var(--yellow);"><td><strong style="color:var(--yellow);">TOTAL</strong></div><td><strong>R$ ${formatMoneySimple(totalDinheiroComp)}</strong></div><td><strong>R$ ${formatMoneySimple(totalDebitoComp)}</strong></div><td><strong>R$ ${formatMoneySimple(totalCreditoComp)}</strong></div><td><strong>R$ ${formatMoneySimple(totalCreditoParceladoComp)}</strong></div><td><strong>R$ ${formatMoneySimple(totalAgComp)}</strong></div><td><strong>R$ ${formatMoneySimple(totalPixComp)}</strong></div><td><strong>R$ ${formatMoneySimple(totalVnfComp)}</strong></div><td><strong>R$ ${formatMoneySimple(totalSaidaComp)}</strong></div><td><strong>R$ ${formatMoneySimple(totalEntradasComp - totalSaidaComp)}</strong></div></tr>`;
+    
+    gruposArray.forEach(({ data, row }) => { 
+        const dadosOficiais = obterDadosOficiaisPorData(data); 
+        const dadosComp = dadosComparativos[data] || { 
+            DINHEIRO: dadosOficiais.DINHEIRO, 
+            DEBITO: dadosOficiais.DEBITO, 
+            CREDITO: dadosOficiais.CREDITO, 
+            CREDITO_PARCELADO: dadosOficiais.CREDITO_PARCELADO, 
+            AG: dadosOficiais.AG, 
+            PIX: dadosOficiais.PIX, 
+            VNF: dadosOficiais.VNF, 
+            SAIDA: dadosOficiais.SAIDA, 
+            TOTAL_DIA: dadosOficiais.TOTAL_DIA 
+        }; 
+        
+        totalDinheiroComp += dadosComp.DINHEIRO; 
+        totalDebitoComp += dadosComp.DEBITO; 
+        totalCreditoComp += dadosComp.CREDITO; 
+        totalCreditoParceladoComp += dadosComp.CREDITO_PARCELADO; 
+        totalAgComp += dadosComp.AG; 
+        totalPixComp += dadosComp.PIX; 
+        totalVnfComp += dadosComp.VNF; 
+        totalSaidaComp += dadosComp.SAIDA; 
+        
+        const totalEntradas = dadosComp.DINHEIRO + dadosComp.DEBITO + dadosComp.CREDITO + 
+                              dadosComp.CREDITO_PARCELADO + dadosComp.AG + dadosComp.PIX + dadosComp.VNF; 
+        const totalDia = totalEntradas - dadosComp.SAIDA; 
+        totalEntradasComp += totalEntradas; 
+        
+        const gerarCelula = (campo, valorComp, valorOficial) => { 
+            const match = verificarMatchComparativo(valorComp, valorOficial); 
+            const indicator = match ? `<span class="match-indicator" title="Valor confere com o fechamento oficial">✓ Confere</span>` : `<span class="divergence-indicator" title="⚠️ ATENÇÃO: Valor divergente do fechamento oficial - Requer verificação">⚠️ Divergente</span>`; 
+            return `<div class="comparativo-cell"><input type="text" class="comparativo-input" value="${formatMoneySimple(valorComp)}" onchange="atualizarValorComparativo('${data}', '${campo}', this.value)">${indicator}</div>`; 
+        }; 
+        
+        const matchTotalDia = verificarMatchComparativo(dadosComp.TOTAL_DIA, dadosOficiais.TOTAL_DIA); 
+        const indicatorTotalDia = matchTotalDia ? `<span class="match-indicator" title="Valor confere com o fechamento oficial">✓ Confere</span>` : `<span class="divergence-indicator" title="⚠️ ATENÇÃO: Valor divergente do fechamento oficial - Requer verificação">⚠️ Divergente</span>`; 
+        
+        const isAmareloActive = linhaCorSelecionada[data] === 'amarelo'; 
+        const isVerdeActive = linhaCorSelecionada[data] === 'verde'; 
+        const isVermelhoActive = linhaCorSelecionada[data] === 'vermelho'; 
+        
+        tbodyHtml += `<tr class="${isAmareloActive ? 'linha-destaque-amarelo' : (isVerdeActive ? 'linha-destaque-verde' : (isVermelhoActive ? 'linha-destaque-vermelho' : ''))}">
+            <td style="text-align:center;">
+                ${data}
+                <div class="comparativo-cor-botoes">
+                    <div class="btn-cor-verde ${isVerdeActive ? 'active' : ''}" onclick="alterarCorLinhaFechamento('${data}', 'verde')" title="Destacar linha em verde - Dados conformes"></div>
+                    <div class="btn-cor-amarelo ${isAmareloActive ? 'active' : ''}" onclick="alterarCorLinhaFechamento('${data}', 'amarelo')" title="Destacar linha em amarelo - Dados não informados"></div>
+                    <div class="btn-cor-vermelho ${isVermelhoActive ? 'active' : ''}" onclick="alterarCorLinhaFechamento('${data}', 'vermelho')" title="Destacar linha em vermelho - Dados sem conformidade / Requer atenção"></div>
+                </div>
+            </td>
+            <td>${gerarCelula('DINHEIRO', dadosComp.DINHEIRO, dadosOficiais.DINHEIRO)}</td>
+            <td>${gerarCelula('DEBITO', dadosComp.DEBITO, dadosOficiais.DEBITO)}</td>
+            <td>${gerarCelula('CREDITO', dadosComp.CREDITO, dadosOficiais.CREDITO)}</td>
+            <td>${gerarCelula('CREDITO_PARCELADO', dadosComp.CREDITO_PARCELADO, dadosOficiais.CREDITO_PARCELADO)}</td>
+            <td>${gerarCelula('AG', dadosComp.AG, dadosOficiais.AG)}</td>
+            <td>${gerarCelula('PIX', dadosComp.PIX, dadosOficiais.PIX)}</td>
+            <td>${gerarCelula('VNF', dadosComp.VNF, dadosOficiais.VNF)}</td>
+            <td>${gerarCelula('SAIDA', dadosComp.SAIDA, dadosOficiais.SAIDA)}</td>
+            <td><strong style="color:var(--yellow);">R$ ${formatMoneySimple(totalDia)}</strong> ${indicatorTotalDia}</td>
+        </tr>`; 
+    });
+    
+    tbodyHtml += `<tr style="background:rgba(230,160,23,0.1); border-top:2px solid var(--yellow);">
+        <td><strong style="color:var(--yellow);">TOTAL</strong></td>
+        <td><strong>R$ ${formatMoneySimple(totalDinheiroComp)}</strong></td>
+        <td><strong>R$ ${formatMoneySimple(totalDebitoComp)}</strong></td>
+        <td><strong>R$ ${formatMoneySimple(totalCreditoComp)}</strong></td>
+        <td><strong>R$ ${formatMoneySimple(totalCreditoParceladoComp)}</strong></td>
+        <td><strong>R$ ${formatMoneySimple(totalAgComp)}</strong></td>
+        <td><strong>R$ ${formatMoneySimple(totalPixComp)}</strong></td>
+        <td><strong>R$ ${formatMoneySimple(totalVnfComp)}</strong></td>
+        <td><strong>R$ ${formatMoneySimple(totalSaidaComp)}</strong></td>
+        <td><strong>R$ ${formatMoneySimple(totalEntradasComp - totalSaidaComp)}</strong></td>
+    </tr>`;
+    
     document.getElementById('comparativosTableBody').innerHTML = tbodyHtml;
     document.getElementById('totalSaidasComparativos').innerHTML = `R$ ${formatMoneySimple(totalSaidaComp)}`;
     document.getElementById('saldoLiquidoComparativos').innerHTML = `R$ ${formatMoneySimple(totalEntradasComp - totalSaidaComp)}`;
     document.getElementById('totalGeralComparativos').innerHTML = `R$ ${formatMoneySimple(totalEntradasComp)}`;
     atualizarTitulosColunasComparativos();
-}
-
-function aplicarFiltrosComparativos() { comparativoFiltroMes = document.getElementById('filtroMesComparativos')?.value || "TODOS"; comparativoFiltroTexto = document.getElementById('buscaComparativosInput')?.value || ""; renderizarTabelaComparativos(); }
+}function aplicarFiltrosComparativos() { comparativoFiltroMes = document.getElementById('filtroMesComparativos')?.value || "TODOS"; comparativoFiltroTexto = document.getElementById('buscaComparativosInput')?.value || ""; renderizarTabelaComparativos(); }
 function limparFiltrosComparativos() { if(document.getElementById('filtroMesComparativos')) document.getElementById('filtroMesComparativos').value = "TODOS"; if(document.getElementById('buscaComparativosInput')) document.getElementById('buscaComparativosInput').value = ""; comparativoFiltroTexto = ""; comparativoFiltroMes = "TODOS"; renderizarTabelaComparativos(); }
 function popularMesesComparativos() { const gruposOficiais = gerarDadosCaixa(); const mesesUnicos = new Set(); gruposOficiais.forEach((_, data) => { const mesAno = getMesAno(data); if(mesAno) mesesUnicos.add(mesAno); }); const selectMes = document.getElementById('filtroMesComparativos'); if(selectMes) { const valorAtual = selectMes.value; selectMes.innerHTML = '<option value="TODOS">TODOS OS MESES</option>'; Array.from(mesesUnicos).sort().forEach(m => { selectMes.innerHTML += `<option value="${m}" ${valorAtual === m ? 'selected' : ''}>${m}</option>`; }); } }
 
