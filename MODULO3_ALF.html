@@ -1804,7 +1804,7 @@
     </div>
 </div>
 
-<!-- NOVO POP-UP DE DETALHAMENTO DRE - CORRIGIDO -->
+<!-- NOVO POP-UP DE DETALHAMENTO DRE -->
 <div id="modalDrilldownValor" class="modal-drilldown-valor">
     <div class="modal-drilldown-valor-content">
         <button class="drilldown-valor-close" onclick="fecharModalDrilldownValor()">×</button>
@@ -1844,86 +1844,6 @@
 <div id="modalEditConta" class="modal-edit-conta"><div class="modal-edit-content" style="background:#12161F; border-radius:28px; padding:24px; width:90%; max-width:500px;"><div class="modal-plano-header">Editar Conta<button class="modal-plano-close" onclick="fecharFormEdit()">×</button></div><div class="form-group"><label class="form-label">Codigo</label><input type="text" id="editCod" class="form-input"></div><div class="form-group"><label class="form-label">Nome</label><input type="text" id="editNome" class="form-input"></div><div style="display:flex; gap:10px; justify-content:flex-end;"><button class="btn-outline" onclick="fecharFormEdit()">Cancelar</button><button class="btn-yellow" onclick="salvarConta()">Salvar</button></div></div></div>
 
 <script>
-// ============================================================
-// FUNÇÃO CORRIGIDA: DETALHAMENTO DO VALOR CLICADO NA DRE (BUSCA NO SUPABASE)
-// ============================================================
-function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo, isTotal) {
-    if (!valor || valor === 0) {
-        alert('Não há registros para detalhar este valor.');
-        return;
-    }
-    
-    const mesNome = mesesNomes[mesIndex] || 'Total';
-    const periodo = mesIndex !== undefined ? `Mês de ${mesNome}` : 'Total do Ano';
-    
-    document.getElementById('drilldownValorTitulo').innerHTML = `Detalhamento - ${codConta ? codConta + ' - ' : ''}${nomeConta}`;
-    document.getElementById('infoConta').innerHTML = `${codConta ? codConta + ' - ' : ''}${nomeConta}`;
-    document.getElementById('infoPeriodo').innerHTML = periodo;
-    document.getElementById('infoValorTotal').innerHTML = formatarMoeda(valor);
-    
-    let registros = [];
-    
-    if (mesIndex !== undefined) {
-        const dadosMes = JSON.parse(localStorage.getItem(`dadosModuloIII_mes_${mesIndex}`) || '[]');
-        registros = dadosMes.filter(lanc => lanc.plano === nomeConta);
-    } else {
-        for (let m = 0; m < 12; m++) {
-            const dadosMes = JSON.parse(localStorage.getItem(`dadosModuloIII_mes_${m}`) || '[]');
-            const registrosMes = dadosMes.filter(lanc => lanc.plano === nomeConta);
-            registros.push(...registrosMes);
-        }
-    }
-    
-    const isReceita = (grupoTipo === 'receitas' || (estruturaDRE.receitas.some(r => r.nome === nomeConta)));
-    const tableHead = document.getElementById('drilldownValorTableHead');
-    const tableBody = document.getElementById('drilldownValorTableBody');
-    const footerTotal = document.getElementById('drilldownValorFooter');
-    
-    if (registros.length === 0) {
-        tableHead.innerHTML = `<tr><th>Data</th><th>Cliente / Fornecedor</th><th>Detalhe</th><th>Valor (R$)</th></tr>`;
-        tableBody.innerHTML = `<tr><td colspan="4" class="mensagem-informativa">Nenhum registro encontrado para este valor.</td></tr>`;
-        footerTotal.innerHTML = `Total Geral: R$ 0,00`;
-        document.getElementById('modalDrilldownValor').classList.add('active');
-        return;
-    }
-    
-    let somaTotal = 0;
-    let linhasHtml = '';
-    
-    if (isReceita) {
-        tableHead.innerHTML = `<tr><th>Data</th><th>Cliente</th><th>Classificação</th><th>Valor (R$)</th></tr>`;
-        for (const reg of registros) {
-            const valorReg = parseFloat(reg.valor);
-            somaTotal += valorReg;
-            let cliente = 'Não identificado';
-            let classificacao = '-';
-            if (reg.desc && reg.desc.startsWith('RECEITA: ')) {
-                cliente = reg.desc.replace('RECEITA: ', '');
-                const vendaRelacionada = receitasDataReais.find(r => r.cliente === cliente && Math.abs(r.valor - valorReg) < 0.01 && r.data === reg.data);
-                if (vendaRelacionada) classificacao = vendaRelacionada.classificacao === 'Balcao' ? 'LOJA FÍSICA' : 'CORPORATIVO';
-            }
-            linhasHtml += `<tr><td>${formatarDataExibicao(reg.data)}</div><td>${cliente}</div><td>${classificacao}</div><td style="text-align:right; font-weight:600;">${formatarMoeda(valorReg)}</div></tr>`;
-        }
-    } else {
-        tableHead.innerHTML = `</table><th>Data</th><th>Fornecedor</th><th>Operação</th><th>Valor (R$)</th></table>`;
-        for (const reg of registros) {
-            const valorReg = parseFloat(reg.valor);
-            somaTotal += valorReg;
-            let fornecedor = 'Não identificado';
-            let operacao = '-';
-            if (reg.desc && reg.desc.startsWith('DESPESA: ')) {
-                operacao = reg.desc.replace('DESPESA: ', '');
-                const despesaRelacionada = despesasDataReais.find(d => d.operacao === operacao && Math.abs(d.valor - valorReg) < 0.01 && d.data === reg.data);
-                if (despesaRelacionada) fornecedor = despesaRelacionada.fornecedor;
-            }
-            linhasHtml += `<tr><td>${formatarDataExibicao(reg.data)}</div><td>${fornecedor}</div><td>${operacao}</div><td style="text-align:right; font-weight:600;">${formatarMoeda(valorReg)}</div></tr>`;
-        }
-    }
-    
-    tableBody.innerHTML = linhasHtml;
-    footerTotal.innerHTML = `Total Geral: ${formatarMoeda(somaTotal)}`;
-    document.getElementById('modalDrilldownValor').classList.add('active');
-}
 // ============================================================
 // VARIÁVEIS GLOBAIS
 // ============================================================
