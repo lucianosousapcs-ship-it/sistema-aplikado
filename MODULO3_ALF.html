@@ -1898,7 +1898,7 @@ const STORAGE_KEY_PLANOS_DESPESAS = 'planos_despesas_personalizados';
 const STORAGE_KEY_COMPARATIVOS = 'dados_comparativos_fechamento';
 const STORAGE_KEY_FLAGS = 'caixa_flags_pdf_sinais';
 const STORAGE_KEY_CORES_LINHAS = 'linhas_fechamento_cores';
-const STORAGE_VERSION = "v2.1";
+
 // ============================================================
 // FUNÇÕES AUXILIARES
 // ============================================================
@@ -3966,18 +3966,7 @@ function renderizarCaixaPopup() {
         const saidaValor = todasSaidasPorData[data] || 0; 
         const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0); 
         const totalDia = totalEntradas - saidaValor; 
-        let comp = dadosComparativos[data] || {};
-comp = {
-    DINHEIRO: comp.DINHEIRO ?? 0,
-    DEBITO: comp.DEBITO ?? 0,
-    CREDITO: comp.CREDITO ?? 0,
-    CREDITO_PARCELADO: comp.CREDITO_PARCELADO ?? 0,
-    AG: comp.AG ?? 0,
-    PIX: comp.PIX ?? 0,
-    VNF: comp.VNF ?? 0,
-    SAIDA: comp.SAIDA ?? 0,
-    TOTAL_DIA: comp.TOTAL_DIA ?? 0
-};
+        const dadosComp = dadosComparativos[data] || {};
         totalDinheiro += row.DINHEIRO || 0; totalDebito += row.DEBITO || 0; totalCredito += row.CREDITO || 0; totalCreditoParcelado += row.CREDITO_PARCELADO || 0; totalAg += row.AG || 0; totalPix += row.PIX || 0; totalVnf += row.VNF || 0; totalSaida += saidaValor; totalEntradasGeral += totalEntradas; 
         let linhaClass = ''; if (linhaCorSelecionada[data] === 'amarelo') linhaClass = 'linha-destaque-amarelo'; else if (linhaCorSelecionada[data] === 'verde') linhaClass = 'linha-destaque-verde'; else if (linhaCorSelecionada[data] === 'vermelho') linhaClass = 'linha-destaque-vermelho';
         const isFlagged = !!flagsSalvas[data];
@@ -4616,51 +4605,12 @@ function fecharModalEstatisticas() { document.getElementById('modalEstatisticas'
 // FUNÇÕES DE FLAGS E CORES
 // ============================================================
 function carregarFlags() { const saved = localStorage.getItem(STORAGE_KEY_FLAGS); if (saved) { try { flagsSalvas = JSON.parse(saved); } catch(e) { console.error("Erro ao carregar flags", e); flagsSalvas = {}; } } else { flagsSalvas = {}; } }
-function salvarCoresEFlags() {
-    localStorage.setItem(STORAGE_KEY_CORES_LINHAS, JSON.stringify({
-        _version: STORAGE_VERSION,
-        data: linhaCorSelecionada,
-        updatedAt: new Date().toISOString()
-    }));
-    localStorage.setItem(STORAGE_KEY_FLAGS, JSON.stringify({
-        _version: STORAGE_VERSION,
-        data: flagsSalvas,
-        updatedAt: new Date().toISOString()
-    }));
-}
+function salvarFlags() { localStorage.setItem(STORAGE_KEY_FLAGS, JSON.stringify(flagsSalvas)); }
 function toggleFlag(data) { if (flagsSalvas[data]) delete flagsSalvas[data]; else flagsSalvas[data] = true; salvarFlags(); renderizarCaixaPopup(); }
 function carregarCoresSalvas() { const saved = localStorage.getItem(STORAGE_KEY_CORES_LINHAS); if (saved) { try { linhaCorSelecionada = JSON.parse(saved); } catch(e) { console.error("Erro ao carregar cores salvas", e); linhaCorSelecionada = {}; } } else { linhaCorSelecionada = {}; } }
-function carregarCoresEFlags() {
-    const savedCoresRaw = localStorage.getItem(STORAGE_KEY_CORES_LINHAS);
-    if (savedCoresRaw) {
-        try {
-            const savedCores = JSON.parse(savedCoresRaw);
-            if (savedCores._version === STORAGE_VERSION) {
-                linhaCorSelecionada = savedCores.data || {};
-            } else {
-                linhaCorSelecionada = {};
-                salvarCoresEFlags();
-            }
-        } catch(e) { linhaCorSelecionada = {}; }
-    } else {
-        linhaCorSelecionada = {};
-    }
-    
-    const savedFlagsRaw = localStorage.getItem(STORAGE_KEY_FLAGS);
-    if (savedFlagsRaw) {
-        try {
-            const savedFlags = JSON.parse(savedFlagsRaw);
-            if (savedFlags._version === STORAGE_VERSION) {
-                flagsSalvas = savedFlags.data || {};
-            } else {
-                flagsSalvas = {};
-                salvarCoresEFlags();
-            }
-        } catch(e) { flagsSalvas = {}; }
-    } else {
-        flagsSalvas = {};
-    }
-}// ============================================================
+function salvarCores() { localStorage.setItem(STORAGE_KEY_CORES_LINHAS, JSON.stringify(linhaCorSelecionada)); }
+
+// ============================================================
 // FUNÇÃO DE CONSULTA CONVERSÃO
 // ============================================================
 function mostrarConsultaConversao(condicaoPagamento, planoContasAtual, isReceita = true) {
