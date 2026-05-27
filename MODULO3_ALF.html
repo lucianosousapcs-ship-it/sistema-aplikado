@@ -4475,35 +4475,21 @@ function inicializarDadosComparativos() {
     
     dadosComparativos = {};
     
-    gruposArray.forEach(({ data, row }) => {
-        const saidaValor = todasSaidasPorData[data] || 0;
-        const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + 
-                              (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0);
-        const totalDia = totalEntradas - saidaValor;
-        
-        // SOMENTE cria se a data existe no fechamento de caixa
-        if (data && row) {
-            dadosComparativos[data] = { 
-                DINHEIRO: 0,
-                DEBITO: 0,
-                CREDITO: 0,
-                CREDITO_PARCELADO: 0,
-                AG: 0,
-                PIX: 0,
-                VNF: 0,
-                SAIDA: 0,
-                TOTAL_DIA: 0
-            };
-        }
-    });
+    // NÃO criar registros automaticamente!
+    // Apenas logar quantos dias existem no período vigente
     
+    console.log('✅ Período vigente possui', gruposArray.length, 'dias');
+    
+    // NÃO chamar salvarDadosComparativos() aqui!
+    // Os registros só serão criados quando o usuário digitar um valor
+}    
     console.log('✅ Dados comparativos inicializados com ZERO para', Object.keys(dadosComparativos).length, 'dias');
     
     // Salvar no Supabase (só as datas que existem)
     if (Object.keys(dadosComparativos).length > 0) {
         salvarDadosComparativos();
     }
-}// ============================================================
+// ============================================================
 // FUNÇÃO ATUALIZAR VALOR COMPARATIVO - VERSÃO SUPABASE
 // ============================================================
 async function atualizarValorComparativo(data, campo, valor) {
@@ -4626,6 +4612,7 @@ function renderizarTabelaComparativos() {
 function aplicarFiltrosComparativos() { comparativoFiltroMes = document.getElementById('filtroMesComparativos')?.value || "TODOS"; comparativoFiltroTexto = document.getElementById('buscaComparativosInput')?.value || ""; renderizarTabelaComparativos(); }
 function limparFiltrosComparativos() { if(document.getElementById('filtroMesComparativos')) document.getElementById('filtroMesComparativos').value = "TODOS"; if(document.getElementById('buscaComparativosInput')) document.getElementById('buscaComparativosInput').value = ""; comparativoFiltroTexto = ""; comparativoFiltroMes = "TODOS"; renderizarTabelaComparativos(); }
 function popularMesesComparativos() { const gruposOficiais = gerarDadosCaixa(); const mesesUnicos = new Set(); gruposOficiais.forEach((_, data) => { const mesAno = getMesAno(data); if(mesAno) mesesUnicos.add(mesAno); }); const selectMes = document.getElementById('filtroMesComparativos'); if(selectMes) { const valorAtual = selectMes.value; selectMes.innerHTML = '<option value="TODOS">TODOS OS MESES</option>'; Array.from(mesesUnicos).sort().forEach(m => { selectMes.innerHTML += `<option value="${m}" ${valorAtual === m ? 'selected' : ''}>${m}</option>`; }); } }
+
 async function carregarComparativosSupabase() {
     console.log('🔄 Carregando comparativos do Supabase...');
     
@@ -4638,36 +4625,52 @@ async function carregarComparativosSupabase() {
         return;
     }
     
-    console.log('📦 Dados carregados do Supabase:', data);
+    // Obter apenas as datas que existem NO HTML (período vigente)
+    const gruposOficiais = gerarDadosCaixa();
+    const datasVigentes = new Set(Array.from(gruposOficiais.keys()));
     
-    // Atualizar o objeto dadosComparativos
+    console.log('📅 Datas vigentes no HTML:', Array.from(datasVigentes));
+    
+    // CARREGAR apenas dados de datas vigentes
+    dadosComparativos = {};
+    
     if (data && data.length > 0) {
-        dadosComparativos = {};
         data.forEach(item => {
-            dadosComparativos[item.data] = {
-                DINHEIRO: item.dinheiro || 0,
-                DEBITO: item.debito || 0,
-                CREDITO: item.credito || 0,
-                CREDITO_PARCELADO: item.credito_parcelado || 0,
-                AG: item.ag || 0,
-                PIX: item.pix || 0,
-                VNF: item.vnf || 0,
-                SAIDA: item.saida || 0,
-                TOTAL_DIA: item.total_dia || 0
-            };
+            // SÓ carregar se a data existe no HTML atual
+            if (datasVigentes.has(item.data)) {
+                dadosComparativos[item.data] = {
+                    DINHEIRO: item.dinheiro || 0,
+                    DEBITO: item.debito || 0,
+                    CREDITO: item.credito || 0,
+                    CREDITO_PARCELADO: item.credito_parcelado || 0,
+                    AG: item.ag || 0,
+                    PIX: item.pix || 0,
+                    VNF: item.vnf || 0,
+                    SAIDA: item.saida || 0,
+                    TOTAL_DIA: item.total_dia || 0
+                };
+            } else {
+                console.log(`🗑️ Ignorando data antiga (não vigente): ${item.data}`);
+            }
         });
     }
     
-    console.log('🎯 dadosComparativos após carregamento:', dadosComparativos);
+    // Para datas vigentes que NÃO têm registro, NÃO criar! Deixar como undefined
+    // (A função renderizarTabelaComparativos já trata como 0)
     
-    // Recarregar a tabela
+    console.log('🎯 dadosComparativos após carregamento:', Object.keys(dadosComparativos));
+    
+    renderizarTabelaComparativos();
+    if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
+}   
+ // Recarregar a tabela
     renderizarTabelaComparativos();
     
     // Atualizar também o fechamento de caixa
     if (typeof renderizarCaixaPopup === 'function') {
         renderizarCaixaPopup();
     }
-}
+
 // ============================================================
 // FUNÇÕES DE ESTATÍSTICAS
 // ============================================================
