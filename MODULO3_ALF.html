@@ -5042,7 +5042,7 @@ async function limparDREComSupabase() {
 }
 
 async function incluirSelecionadosNoDRESupabase() {
-    console.log('INICIANDO INCLUSÃO NO SUPABASE...');
+    console.log('INICIANDO INCLUSÃO COM VALIDAÇÃO DE BANDEIRA...');
     
     // Carregar regras de conversão
     const savedPlano = localStorage.getItem('condToPlanoMap');
@@ -5051,6 +5051,7 @@ async function incluirSelecionadosNoDRESupabase() {
     const lancamentosPorMes = [[],[],[],[],[],[],[],[],[],[],[],[]];
     let totalValidados = 0;
     let registrosPorPlano = {};
+    let ignorados = [];
     
     for (const id of receitasSelecionadas) {
         const receita = receitasDataReais.find(r => r.id === id);
@@ -5062,24 +5063,69 @@ async function incluirSelecionadosNoDRESupabase() {
         if (isNaN(valor) || valor <= 0) continue;
         
         const condPag = receita.cond_pag || '';
+        const condUpper = condPag.toUpperCase();
         
-        // ========== USA AS REGRAS DE CONVERSÃO ==========
-        let planoCorreto = condToPlanoMap[condPag];
+        // ========== DETERMINAR O PLANO CORRETO PELA BANDEIRA ==========
+        let planoCorreto = null;
         
-        // Se não tem regra, usa o plano atual ou padrão
-        if (!planoCorreto) {
-            planoCorreto = receita.plano || 'RECEITA DE SERVICOS';
-        }
+        // Identificar a bandeira
+        const isMaster = condUpper.includes('MASTER') || condUpper.includes('CREDICARD');
+        const isVisa = condUpper.includes('VISA');
+        const isElo = condUpper.includes('ELO');
+        const isAmex = condUpper.includes('AMEX') || condUpper.includes('AMERICAN');
         
-        // VALIDAÇÃO DA BANDEIRA - só aceita MASTER CREDITO se a condição for MASTER/CREDICARD
-        if (planoCorreto === 'REC. MASTER CREDITO') {
-            const condUpper = condPag.toUpperCase();
-            if (!condUpper.includes('MASTER') && !condUpper.includes('CREDICARD')) {
-                console.log(`⚠️ Ignorado: ${condPag} não é MASTER, não vai para REC. MASTER CREDITO`);
-                continue;
+        // Para CREDITO PARCELADO
+        if (condUpper.includes('PARCELADO') || (condUpper.includes('CREDITO') && (condUpper.includes('PARC') || condUpper.includes('X')))) {
+            if (isVisa) {
+                planoCorreto = 'REC. VISA PARC';
+            } else if (isMaster) {
+                planoCorreto = 'REC. MASTER PARC';
+            } else if (isElo) {
+                planoCorreto = 'REC. CIELO ELO CRED PARC';
+            } else if (isAmex) {
+                planoCorreto = 'REC. AMEX CRED PARC';
+            } else {
+                planoCorreto = 'REC. MASTER PARC';
             }
         }
+        // Para DEBITO
+        else if (condUpper.includes('DEBITO')) {
+            if (isVisa) {
+                planoCorreto = 'REC. VISA DEBITO';
+            } else if (isMaster) {
+                planoCorreto = 'REC. MASTER DEBITO';
+            } else if (isElo) {
+                planoCorreto = 'REC. CIELO ELO DEBITO';
+            } else {
+                planoCorreto = 'REC. MASTER DEBITO';
+            }
+        }
+        // Para CREDITO (à vista)
+        else if (condUpper.includes('CREDITO')) {
+            if (isVisa) {
+                planoCorreto = 'REC. VISA CRED';
+            } else if (isMaster) {
+                planoCorreto = 'REC. MASTER CREDITO';
+            } else if (isAmex) {
+                planoCorreto = 'REC. AMEX CREDITO';
+            } else if (isElo) {
+                planoCorreto = 'REC. CIELO ELO CREDITO';
+            } else {
+                planoCorreto = 'REC. MASTER CREDITO';
+            }
+        }
+        // Para DINHEIRO
+        else if (condUpper.includes('DINHEIRO')) {
+            planoCorreto = 'REC. DINHEIRO';
+        }
+        // Padrão
+        else {
+            planoCorreto = condToPlanoMap[condPag] || receita.plano;
+        }
         
+        if (!planoCorreto) continue;
+        
+        // Log para debug
         if (!registrosPorPlano[planoCorreto]) registrosPorPlano[planoCorreto] = 0;
         registrosPorPlano[planoCorreto] += valor;
         
@@ -5094,28 +5140,10 @@ async function incluirSelecionadosNoDRESupabase() {
         totalValidados++;
     }
     
-    // Despesas (mantém igual)
-    for (const id of despesasSelecionadas) {
-        const despesa = despesasDataReais.find(d => d.id === id);
-        if (!despesa) continue;
-        
-        const mes = getMesFromData(despesa.data);
-        const valor = despesa.valor;
-        
-        if (isNaN(valor) || valor <= 0) continue;
-        
-        lancamentosPorMes[mes].push({
-            data: formatarDataParaSupabase(despesa.data),
-            desc: `DESPESA: ${despesa.operacao}`,
-            plano: despesa.plano,
-            valor: valor.toString(),
-            timestamp: new Date().toISOString()
-        });
-        
-        totalValidados++;
-    }
-    
-    console.log('📊 TOTAIS POR PLANO:', registrosPorPlano);
+    console.log('📊 DISTRIBUIÇÃO POR PLANO:');
+    Object.entries(registrosPorPlano).forEach(([plano, total]) => {
+        console.log(`   ${plano}: R$ ${total.toFixed(2)}`);
+    });
     
     if (totalValidados === 0) {
         alert('Nenhum registro selecionado para incluir.');
