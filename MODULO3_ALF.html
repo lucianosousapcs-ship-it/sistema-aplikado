@@ -5106,6 +5106,26 @@ async function incluirSelecionadosNoDRESupabase() {
     for (let mes = 0; mes < 12; mes++) {
         if (lancamentosPorMes[mes].length === 0) continue;
         
+        // ========== CORREÇÃO: DELETAR REGISTROS ANTIGOS ANTES DE INSERIR ==========
+        // Pega todos os planos únicos que serão inseridos neste mês
+        const planosDoMes = [...new Set(lancamentosPorMes[mes].map(l => l.plano))];
+        
+        // Deleta os registros antigos para cada plano neste mês
+        for (const plano of planosDoMes) {
+            const { error: deleteError } = await supabaseClient
+                .from('dre_lancamentos')
+                .delete()
+                .eq('mes', mes)
+                .eq('plano', plano);
+            
+            if (deleteError) {
+                console.error(`Erro ao deletar registros antigos do mês ${mes}, plano ${plano}:`, deleteError);
+            } else {
+                console.log(`✅ Registros antigos deletados: mês ${mes}, plano ${plano}`);
+            }
+        }
+        
+        // Agora insere os novos registros
         const toInsert = lancamentosPorMes[mes].map(l => ({
             mes: mes,
             data: l.data,
@@ -5115,7 +5135,7 @@ async function incluirSelecionadosNoDRESupabase() {
             timestamp: l.timestamp
         }));
         
-        console.log('Inserindo no mês', mes, ':', toInsert);
+        console.log('Inserindo no mês', mes, ':', toInsert.length, 'registros');
         
         const { error } = await supabaseClient
             .from('dre_lancamentos')
@@ -5130,11 +5150,13 @@ async function incluirSelecionadosNoDRESupabase() {
         totalIncluidos += toInsert.length;
     }
     
+    // Limpa as seleções
     receitasSelecionadas.clear();
     despesasSelecionadas.clear();
     renderizarTabelaReceitas();
     renderizarTabelaDespesas();
     
+    // Recarrega a DRE para mostrar os dados atualizados
     await gerarDREComSupabase();
     
     let mensagemFinal = `${totalIncluidos} registro(s) incluído(s) no DRE com sucesso!`;
