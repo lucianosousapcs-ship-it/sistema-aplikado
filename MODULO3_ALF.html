@@ -3131,31 +3131,71 @@ function carregarPlanosSalvosLocalmente() {
 
 async function carregarDadosReaisLancamentos() {
     try {
-        const { data: vendas } = await supabaseClient.from('vendas_alf').select('*');
-        if(vendas) {
-            receitasDataReais = vendas.map(v => ({
-                id: v.id,
-                data: v.data || '01/01/2000',
-                valor: Number(v['TOTAL NOTA'] || v.total || 0),
-                cliente: v['CLIENTE/FORNECEDOR'] || v.cliente || 'NAO INFORMADO',
-                classificacao: obterClassificacaoDoTipo(v),
-                plano: "RECEITA DE SERVICOS",
-                cond_pag: v['COND.PAG'] || v.cond_pag || ''
-            }));
+        // ========== PAGINAÇÃO PARA VENDAS (RECEITAS) ==========
+        let todasVendas = [];
+        let page = 0;
+        
+        while (true) {
+            const { data, error } = await supabaseClient
+                .from('vendas_alf')
+                .select('*')
+                .range(page * 1000, (page + 1) * 1000 - 1);
+            
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+            
+            todasVendas.push(...data);
+            page++;
         }
-        const { data: compras } = await supabaseClient.from('dados_m2').select('*');
-        if(compras) {
-            despesasDataReais = compras.map(c => ({
-                id: c.id, data: c.vencimento || '01/01/2000', valor: Number(c.valor || 0),
-                fornecedor: c.fornecedor || 'NAO INFORMADO', operacao: c.operacao || c.documento || 'DESPESA',
-                plano: "DESPESAS ADMINISTRATIVAS"
-            })).filter(c => c.valor > 0);
+        
+        console.log(`✅ Vendas carregadas: ${todasVendas.length} registros`);
+        
+        receitasDataReais = todasVendas.map(v => ({
+            id: v.id,
+            data: v.data || '01/01/2000',
+            valor: Number(v['TOTAL NOTA'] || v.total || 0),
+            cliente: v['CLIENTE/FORNECEDOR'] || v.cliente || 'NAO INFORMADO',
+            classificacao: obterClassificacaoDoTipo(v),
+            plano: "RECEITA DE SERVICOS",
+            cond_pag: v['COND.PAG'] || v.cond_pag || ''
+        }));  // ← SEM O FILTRO .filter(r => r.valor > 0)
+        
+        // ========== PAGINAÇÃO PARA COMPRAS (DESPESAS) ==========
+        let todasCompras = [];
+        page = 0;
+        
+        while (true) {
+            const { data, error } = await supabaseClient
+                .from('dados_m2')
+                .select('*')
+                .range(page * 1000, (page + 1) * 1000 - 1);
+            
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+            
+            todasCompras.push(...data);
+            page++;
         }
+        
+        console.log(`✅ Compras carregadas: ${todasCompras.length} registros`);
+        
+        despesasDataReais = todasCompras.map(c => ({
+            id: c.id,
+            data: c.vencimento || '01/01/2000',
+            valor: Number(c.valor || 0),
+            fornecedor: c.fornecedor || 'NAO INFORMADO',
+            operacao: c.operacao || c.documento || 'DESPESA',
+            plano: "DESPESAS ADMINISTRATIVAS"
+        }));  // ← SEM O FILTRO .filter(c => c.valor > 0)
+        
         carregarPlanosSalvosLocalmente();
         renderizarTabelaReceitas();
         renderizarTabelaDespesas();
         buscarUltimaAtualizacao();
-    } catch(e) { console.error('Erro ao carregar dados reais:', e); }
+        
+    } catch(e) { 
+        console.error('❌ Erro ao carregar dados reais:', e); 
+    }
 }
 
 function salvarPlanosReceitas() {
