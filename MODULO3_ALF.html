@@ -1218,6 +1218,7 @@
             <div class="header-actions">
                 <button class="btn-incluir-dre" onclick="incluirSelecionadosNoDRESupabase()">INCLUIR NO DRE</button>
                 <button class="btn-aplicar-todos" onclick="aplicarPlanoContasTodosLancamentos()"> APLICAR TODOS</button>
+                <button class="btn-aplicar-todos" onclick="limparEConverterTodosLancamentos()" style="background: linear-gradient(135deg, #ef4444, #dc2626); margin-left: 5px;"> LIMPAR E APLICAR</button>
                 <button class="close-modal-btn" onclick="fecharModalLancamentos()">X</button>
             </div>
         </div>
@@ -5043,12 +5044,13 @@ async function limparDREComSupabase() {
 async function incluirSelecionadosNoDRESupabase() {
     console.log('INICIANDO INCLUSÃO NO SUPABASE...');
     
-    salvarPlanosReceitas();
-    salvarPlanosDespesas();
+    // Carregar regras de conversão
+    const savedPlano = localStorage.getItem('condToPlanoMap');
+    const condToPlanoMap = savedPlano ? JSON.parse(savedPlano) : {};
     
     const lancamentosPorMes = [[],[],[],[],[],[],[],[],[],[],[],[]];
-    let totalValidados = 0, totalRejeitados = 0;
-    const rejeitadosDetalhes = [];
+    let totalValidados = 0;
+    let registrosPorPlano = {};
     
     for (const id of receitasSelecionadas) {
         const receita = receitasDataReais.find(r => r.id === id);
@@ -5057,22 +5059,42 @@ async function incluirSelecionadosNoDRESupabase() {
         const mes = getMesFromData(receita.data);
         const valor = receita.valor;
         
-        if (isNaN(valor) || valor <= 0) {
-            totalRejeitados++;
-            rejeitadosDetalhes.push({ tipo:'RECEITA', descricao:receita.cliente, valor:valor });
-            continue;
+        if (isNaN(valor) || valor <= 0) continue;
+        
+        const condPag = receita.cond_pag || '';
+        
+        // ========== USA AS REGRAS DE CONVERSÃO ==========
+        let planoCorreto = condToPlanoMap[condPag];
+        
+        // Se não tem regra, usa o plano atual ou padrão
+        if (!planoCorreto) {
+            planoCorreto = receita.plano || 'RECEITA DE SERVICOS';
         }
         
-        totalValidados++;
+        // VALIDAÇÃO DA BANDEIRA - só aceita MASTER CREDITO se a condição for MASTER/CREDICARD
+        if (planoCorreto === 'REC. MASTER CREDITO') {
+            const condUpper = condPag.toUpperCase();
+            if (!condUpper.includes('MASTER') && !condUpper.includes('CREDICARD')) {
+                console.log(`⚠️ Ignorado: ${condPag} não é MASTER, não vai para REC. MASTER CREDITO`);
+                continue;
+            }
+        }
+        
+        if (!registrosPorPlano[planoCorreto]) registrosPorPlano[planoCorreto] = 0;
+        registrosPorPlano[planoCorreto] += valor;
+        
         lancamentosPorMes[mes].push({
             data: formatarDataParaSupabase(receita.data),
-            desc: `RECEITA: ${receita.cliente}`,
-            plano: receita.plano,
+            desc: `RECEITA: ${receita.cliente} (${condPag})`,
+            plano: planoCorreto,
             valor: valor.toString(),
             timestamp: new Date().toISOString()
         });
+        
+        totalValidados++;
     }
     
+    // Despesas (mantém igual)
     for (const id of despesasSelecionadas) {
         const despesa = despesasDataReais.find(d => d.id === id);
         if (!despesa) continue;
@@ -5080,13 +5102,8 @@ async function incluirSelecionadosNoDRESupabase() {
         const mes = getMesFromData(despesa.data);
         const valor = despesa.valor;
         
-        if (isNaN(valor) || valor <= 0) {
-            totalRejeitados++;
-            rejeitadosDetalhes.push({ tipo:'DESPESA', descricao:despesa.operacao, valor:valor });
-            continue;
-        }
+        if (isNaN(valor) || valor <= 0) continue;
         
-        totalValidados++;
         lancamentosPorMes[mes].push({
             data: formatarDataParaSupabase(despesa.data),
             desc: `DESPESA: ${despesa.operacao}`,
@@ -5094,7 +5111,11 @@ async function incluirSelecionadosNoDRESupabase() {
             valor: valor.toString(),
             timestamp: new Date().toISOString()
         });
+        
+        totalValidados++;
     }
+    
+    console.log('📊 TOTAIS POR PLANO:', registrosPorPlano);
     
     if (totalValidados === 0) {
         alert('Nenhum registro selecionado para incluir.');
@@ -5106,64 +5127,45 @@ async function incluirSelecionadosNoDRESupabase() {
     for (let mes = 0; mes < 12; mes++) {
         if (lancamentosPorMes[mes].length === 0) continue;
         
-        // ========== CORREÇÃO: DELETAR REGISTROS ANTIGOS ANTES DE INSERIR ==========
-        // Pega todos os planos únicos que serão inseridos neste mês
+        // Deletar registros antigos
         const planosDoMes = [...new Set(lancamentosPorMes[mes].map(l => l.plano))];
-        
-        // Deleta os registros antigos para cada plano neste mês
         for (const plano of planosDoMes) {
-            const { error: deleteError } = await supabaseClient
+            await supabaseClient
                 .from('dre_lancamentos')
                 .delete()
                 .eq('mes', mes)
                 .eq('plano', plano);
-            
-            if (deleteError) {
-                console.error(`Erro ao deletar registros antigos do mês ${mes}, plano ${plano}:`, deleteError);
-            } else {
-                console.log(`✅ Registros antigos deletados: mês ${mes}, plano ${plano}`);
-            }
         }
         
-        // Agora insere os novos registros
-        const toInsert = lancamentosPorMes[mes].map(l => ({
-            mes: mes,
-            data: l.data,
-            descricao: l.desc,
-            plano: l.plano,
-            valor: parseFloat(l.valor) || 0,
-            timestamp: l.timestamp
-        }));
-        
-        console.log('Inserindo no mês', mes, ':', toInsert.length, 'registros');
-        
+        // Inserir novos
         const { error } = await supabaseClient
             .from('dre_lancamentos')
-            .insert(toInsert);
+            .insert(lancamentosPorMes[mes].map(l => ({
+                mes: mes,
+                data: l.data,
+                descricao: l.desc,
+                plano: l.plano,
+                valor: parseFloat(l.valor) || 0,
+                timestamp: l.timestamp
+            })));
         
         if (error) {
-            console.error('Erro ao inserir no Supabase:', error);
-            alert('Erro ao salvar no Supabase: ' + error.message);
+            console.error('Erro ao inserir:', error);
+            alert('Erro ao salvar: ' + error.message);
             return;
         }
         
-        totalIncluidos += toInsert.length;
+        totalIncluidos += lancamentosPorMes[mes].length;
     }
     
-    // Limpa as seleções
     receitasSelecionadas.clear();
     despesasSelecionadas.clear();
     renderizarTabelaReceitas();
     renderizarTabelaDespesas();
-    
-    // Recarrega a DRE para mostrar os dados atualizados
     await gerarDREComSupabase();
     
-    let mensagemFinal = `${totalIncluidos} registro(s) incluído(s) no DRE com sucesso!`;
-    if (totalRejeitados > 0) mensagemFinal += ` ${totalRejeitados} registro(s) foram rejeitados por divergência de valor.`;
-    alert(mensagemFinal);
+    alert(`${totalIncluidos} registro(s) incluído(s) no DRE!`);
 }
-
 function formatarDataParaSupabase(dataStr) {
     if (!dataStr) return new Date().toISOString().split('T')[0];
     if (dataStr.includes('/')) {
@@ -5509,7 +5511,108 @@ function marcarSeIncluido(data, valor, desc) {
     }
     return "";
 }
-
+// ============================================================
+// FUNÇÃO LIMPAR E CONVERTER TODOS OS LANÇAMENTOS
+// ============================================================
+async function limparEConverterTodosLancamentos() {
+    const abaAtivaReceitas = document.getElementById('popup-tab-receitas').classList.contains('active');
+    const abaAtivaDespesas = document.getElementById('popup-tab-despesas').classList.contains('active');
+    
+    if (!abaAtivaReceitas && !abaAtivaDespesas) {
+        alert('Selecione uma aba (RECEITAS ou DESPESAS)');
+        return;
+    }
+    
+    const confirmar = confirm('ATENÇÃO: Isso irá LIMPAR TODOS os planos de contas e REAPLICAR as regras de conversão para todos os registros visíveis.\n\nDeseja continuar?');
+    if (!confirmar) return;
+    
+    const savedPlanoReceitas = localStorage.getItem('condToPlanoMap');
+    const planoMapReceitas = savedPlanoReceitas ? JSON.parse(savedPlanoReceitas) : {};
+    
+    const savedOperacaoPlano = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
+    const operacaoPlanoMap = savedOperacaoPlano ? JSON.parse(savedOperacaoPlano) : {};
+    
+    let registrosAtualizados = 0;
+    let ignoradosSemRegra = 0;
+    
+    if (abaAtivaReceitas) {
+        // Limpar todos os planos de receitas primeiro
+        for (const receita of receitasDataReais) {
+            delete receita.plano;
+            receita.plano = "RECEITA DE SERVICOS";
+        }
+        
+        // Aplicar regras
+        for (const receita of receitasDataReais) {
+            const condPag = receita.cond_pag || '';
+            
+            if (!condPag || !planoMapReceitas[condPag]) {
+                ignoradosSemRegra++;
+                continue;
+            }
+            
+            const planoConfigurado = planoMapReceitas[condPag];
+            if (!planoConfigurado || planoConfigurado === '') {
+                ignoradosSemRegra++;
+                continue;
+            }
+            
+            receita.plano = planoConfigurado;
+            registrosAtualizados++;
+        }
+        
+        // Salvar no localStorage
+        const planosSalvos = {};
+        for (const receita of receitasDataReais) {
+            planosSalvos[receita.id] = receita.plano;
+        }
+        localStorage.setItem(STORAGE_KEY_PLANOS_RECEITAS, JSON.stringify(planosSalvos));
+        
+        renderizarTabelaReceitas();
+        
+    } else if (abaAtivaDespesas) {
+        // Limpar todos os planos de despesas primeiro
+        for (const despesa of despesasDataReais) {
+            delete despesa.plano;
+            despesa.plano = "DESPESAS ADMINISTRATIVAS";
+        }
+        
+        // Aplicar regras
+        for (const despesa of despesasDataReais) {
+            const operacao = despesa.operacao || '';
+            
+            if (!operacao || !operacaoPlanoMap[operacao]) {
+                ignoradosSemRegra++;
+                continue;
+            }
+            
+            const planoConfigurado = operacaoPlanoMap[operacao];
+            if (!planoConfigurado || planoConfigurado === '') {
+                ignoradosSemRegra++;
+                continue;
+            }
+            
+            despesa.plano = planoConfigurado;
+            registrosAtualizados++;
+        }
+        
+        // Salvar no localStorage
+        const planosSalvos = {};
+        for (const despesa of despesasDataReais) {
+            planosSalvos[despesa.id] = despesa.plano;
+        }
+        localStorage.setItem(STORAGE_KEY_PLANOS_DESPESAS, JSON.stringify(planosSalvos));
+        
+        renderizarTabelaDespesas();
+    }
+    
+    let mensagem = ` LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n`;
+    mensagem += ` Registros atualizados: ${registrosAtualizados}\n`;
+    mensagem += ` Ignorados (sem regra de conversão): ${ignoradosSemRegra}\n\n`;
+    mensagem += `Todos os planos de contas foram limpos e reaplicados conforme as regras de conversão.`;
+    
+    alert(mensagem);
+}
 // ============================================================
 // EVENTOS E INICIALIZAÇÃO
 // ============================================================
