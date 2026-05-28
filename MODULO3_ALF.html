@@ -50,11 +50,6 @@
     font-size: 10px;
 }
 
-/* ESTILO PARA DESTAQUE DE LINHAS COM MOVIMENTAÇÃO NO DRE */
-/* Substitua as classes atuais por estas versões suavizadas */
-
-/* Remove a linha vertical amarela e suaviza a cor de fundo */
-/* Versão com sombra interna suave para dar profundidade */
 .dre-table tr.linha-com-movimentacao td:not(:first-child) {
     background: linear-gradient(135deg, rgba(230, 160, 23, 0.1), rgba(230, 160, 23, 0.05)) !important;
     border-left: none !important;
@@ -1140,7 +1135,6 @@
         }
         .close-consulta:hover { color: var(--yellow); }
 
-        /* Botão APLICAR TODOS */
         .btn-aplicar-todos {
             background: linear-gradient(135deg, #E6A017, #C17F0B);
             border: none;
@@ -1167,7 +1161,6 @@
             transform: translateY(0px);
         }
         
-        /* ESTILO PARA CURSOR POINTER NOS VALORES DO DRE */
         .dre-table td:not(:first-child) {
             cursor: pointer;
             transition: background 0.15s ease;
@@ -1264,7 +1257,7 @@
             
             <div style="overflow-x: auto; max-height: 450px; overflow-y: auto;">
                 <table class="lancamentos-table">
-                    <thead><tr><th style="width:30px;"><input type="checkbox" id="selectAllReceitas" onchange="toggleSelectAllReceitas(this)"></th><th>DATA</th><th>VALOR (R$)</th><th>CLIENTE</th><th>CLASSIFICAÇÃO</th><th>PLANO DE CONTAS</th></thead>
+                    <thead><tr><th style="width:30px;"><input type="checkbox" id="selectAllReceitas" onchange="toggleSelectAllReceitas(this)"></th><th>DATA</th><th>VALOR (R$)</th><th>CLIENTE</th><th>CLASSIFICAÇÃO</th><th>PLANO DE CONTAS</th></tr></thead>
                     <tbody id="tabelaReceitasBody"></tbody>
                 </table>
             </div>
@@ -1306,7 +1299,8 @@
             <div style="overflow-x:auto; max-height:450px; overflow-y:auto;">
                 <table class="lancamentos-table">
                     <thead>
-                        <tr><th style="width:30px;"><input type="checkbox" id="selectAllDespesas" onchange="toggleSelectAllDespesas(this)"></th><th>DATA</th><th>VALOR (R$)</th><th>FORNECEDOR</th><th>OPERAÇÃO</th><th>PLANO DE CONTAS</th></thead>
+                        <tr><th style="width:30px;"><input type="checkbox" id="selectAllDespesas" onchange="toggleSelectAllDespesas(this)"></th><th>DATA</th><th>VALOR (R$)</th><th>FORNECEDOR</th><th>OPERAÇÃO</th><th>PLANO DE CONTAS</th></tr>
+                    </thead>
                     <tbody id="tabelaDespesasBody"></tbody>
                 </table>
             </div>
@@ -1676,7 +1670,7 @@
         <!-- Aba DESPESAS -->
         <div id="conversaoTabDespesas" class="popup-tab-content">
             <table class="conversao-table">
-                <thead><tr><th>Operação / Despesa</th><th>Titulo no Fechamento de Caixa</th><th>Plano de Contas (DRE) - DESPESAS</th></tr></thead>
+                <thead><td><th>Operação / Despesa</th><th>Titulo no Fechamento de Caixa</th><th>Plano de Contas (DRE) - DESPESAS</th></tr></thead>
                 <tbody id="conversaoTableBodyDespesas"></tbody>
             </table>
         </div>
@@ -1804,7 +1798,7 @@
     </div>
 </div>
 
-<!-- NOVO POP-UP DE DETALHAMENTO DRE -->
+<!-- POP-UP DE DETALHAMENTO DRE -->
 <div id="modalDrilldownValor" class="modal-drilldown-valor">
     <div class="modal-drilldown-valor-content">
         <button class="drilldown-valor-close" onclick="fecharModalDrilldownValor()">×</button>
@@ -1898,6 +1892,7 @@ const STORAGE_KEY_PLANOS_DESPESAS = 'planos_despesas_personalizados';
 const STORAGE_KEY_COMPARATIVOS = 'dados_comparativos_fechamento';
 const STORAGE_KEY_FLAGS = 'caixa_flags_pdf_sinais';
 const STORAGE_KEY_CORES_LINHAS = 'linhas_fechamento_cores';
+const STORAGE_KEY_OPERACAO_PLANO = 'operacao_to_plano_map';
 
 // ============================================================
 // FUNÇÕES AUXILIARES
@@ -2011,6 +2006,7 @@ function gerarCelulaComDiferenca(valorOficial, valorComparativo) {
                 <span class="diferenca-valor ${diffClass}">${sinal}${diffFormatada}</span>
             </div>`;
 }
+
 // ============================================================
 // APLICAR CORES PADRÃO AOS SELECTS DO POP-UP DE CONVERSÃO
 // ============================================================
@@ -2063,10 +2059,10 @@ function aplicarCoresPadraoConversao() {
     document.head.appendChild(style);
 }
 
-// Chamar a função após carregar a página
 document.addEventListener('DOMContentLoaded', function() {
     aplicarCoresPadraoConversao();
 });
+
 // ============================================================
 // FUNÇÃO LIMPAR DRE
 // ============================================================
@@ -2215,36 +2211,29 @@ function aplicarPlanoConversaoReceita(id) {
     const receita = receitasDataReais.find(r => r.id === id);
     if (!receita) return;
     
-    // Buscar a condição de pagamento da receita
     const condPag = receita.cond_pag || '';
     
-    // Recarregar mapeamentos do localStorage
     const savedPlano = localStorage.getItem('condToPlanoMap');
     let planoMap = {};
     if (savedPlano) {
         planoMap = JSON.parse(savedPlano);
     }
     
-    // Verificar se existe plano de contas configurado para esta condição
     let planoConfigurado = null;
     if (condPag && planoMap[condPag]) {
         planoConfigurado = planoMap[condPag];
     }
     
     if (planoConfigurado) {
-        // Atualizar o registro
         receita.plano = planoConfigurado;
         
-        // Salvar no localStorage
         const planosSalvos = localStorage.getItem(STORAGE_KEY_PLANOS_RECEITAS);
         const planosMap = planosSalvos ? JSON.parse(planosSalvos) : {};
         planosMap[id] = planoConfigurado;
         localStorage.setItem(STORAGE_KEY_PLANOS_RECEITAS, JSON.stringify(planosMap));
         
-        // Re-renderizar a tabela
         renderizarTabelaReceitas();
         
-        // Mostrar feedback visual
         const linha = document.querySelector(`#tabelaReceitasBody tr td .btn-plano-lancamento[data-id="${id}"]`)?.closest('tr');
         if (linha) {
             linha.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
@@ -2263,36 +2252,29 @@ function aplicarPlanoConversaoDespesa(id) {
     const despesa = despesasDataReais.find(d => d.id === id);
     if (!despesa) return;
     
-    // Buscar a operação da despesa
     const operacao = despesa.operacao || '';
     
-    // Recarregar mapeamentos do localStorage
     const savedOperacaoPlano = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
     let operacaoPlanoMap = {};
     if (savedOperacaoPlano) {
         operacaoPlanoMap = JSON.parse(savedOperacaoPlano);
     }
     
-    // Verificar se existe plano de contas configurado para esta operação
     let planoConfigurado = null;
     if (operacao && operacaoPlanoMap[operacao]) {
         planoConfigurado = operacaoPlanoMap[operacao];
     }
     
     if (planoConfigurado) {
-        // Atualizar o registro
         despesa.plano = planoConfigurado;
         
-        // Salvar no localStorage
         const planosSalvos = localStorage.getItem(STORAGE_KEY_PLANOS_DESPESAS);
         const planosMap = planosSalvos ? JSON.parse(planosSalvos) : {};
         planosMap[id] = planoConfigurado;
         localStorage.setItem(STORAGE_KEY_PLANOS_DESPESAS, JSON.stringify(planosMap));
         
-        // Re-renderizar a tabela
         renderizarTabelaDespesas();
         
-        // Mostrar feedback visual
         const linha = document.querySelector(`#tabelaDespesasBody tr td .btn-plano-lancamento[data-id="${id}"]`)?.closest('tr');
         if (linha) {
             linha.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
@@ -2311,7 +2293,6 @@ function aplicarPlanoConversaoDespesa(id) {
 // FUNÇÃO APLICAR TODOS (BOTÃO APLICAR TODOS)
 // ============================================================
 function aplicarPlanoContasTodosLancamentos() {
-    // Verificar qual aba está ativa para aplicar apenas nos registros exibidos daquela aba
     const abaAtivaReceitas = document.getElementById('popup-tab-receitas').classList.contains('active');
     const abaAtivaDespesas = document.getElementById('popup-tab-despesas').classList.contains('active');
     
@@ -2319,7 +2300,6 @@ function aplicarPlanoContasTodosLancamentos() {
     let ignoradosSemRegra = 0;
     let ignoradosSemPlano = 0;
     
-    // Carregar os mapeamentos atuais das regras de conversão
     const savedPlanoReceitas = localStorage.getItem('condToPlanoMap');
     const planoMapReceitas = savedPlanoReceitas ? JSON.parse(savedPlanoReceitas) : {};
     
@@ -2327,7 +2307,6 @@ function aplicarPlanoContasTodosLancamentos() {
     const operacaoPlanoMap = savedOperacaoPlano ? JSON.parse(savedOperacaoPlano) : {};
     
     if (abaAtivaReceitas) {
-        // Obter os registros de receitas atualmente exibidos na tela (filtrados)
         const busca = document.getElementById('buscaReceitas')?.value.toLowerCase() || '';
         const dataInicio = document.getElementById('dataInicioReceitas')?.value;
         const dataFim = document.getElementById('dataFimReceitas')?.value;
@@ -2341,11 +2320,9 @@ function aplicarPlanoContasTodosLancamentos() {
         if(statusFiltro === 'SELECIONADAS') receitasFiltradas = receitasFiltradas.filter(r => receitasSelecionadas.has(r.id));
         if(statusFiltro === 'NAO_SELECIONADAS') receitasFiltradas = receitasFiltradas.filter(r => !receitasSelecionadas.has(r.id));
         
-        // Percorrer cada lançamento exibido
         for (const receita of receitasFiltradas) {
             const condPag = receita.cond_pag || '';
             
-            // Verificar se existe regra de conversão para esta condição
             if (!condPag || !planoMapReceitas[condPag]) {
                 ignoradosSemRegra++;
                 continue;
@@ -2353,16 +2330,13 @@ function aplicarPlanoContasTodosLancamentos() {
             
             const planoConfigurado = planoMapReceitas[condPag];
             
-            // Verificar se o plano de contas está preenchido
             if (!planoConfigurado || planoConfigurado === '') {
                 ignoradosSemPlano++;
                 continue;
             }
             
-            // Aplicar o plano de contas
             receita.plano = planoConfigurado;
             
-            // Salvar no localStorage
             const planosSalvos = localStorage.getItem(STORAGE_KEY_PLANOS_RECEITAS);
             const planosMap = planosSalvos ? JSON.parse(planosSalvos) : {};
             planosMap[receita.id] = planoConfigurado;
@@ -2371,11 +2345,9 @@ function aplicarPlanoContasTodosLancamentos() {
             registrosAtualizados++;
         }
         
-        // Re-renderizar a tabela de receitas
         renderizarTabelaReceitas();
         
     } else if (abaAtivaDespesas) {
-        // Obter os registros de despesas atualmente exibidos na tela (filtrados)
         const busca = document.getElementById('buscaDespesas')?.value.toLowerCase() || '';
         const dataInicio = document.getElementById('dataInicioDespesas')?.value;
         const dataFim = document.getElementById('dataFimDespesas')?.value;
@@ -2389,11 +2361,9 @@ function aplicarPlanoContasTodosLancamentos() {
         if(statusFiltro === 'SELECIONADAS') despesasFiltradas = despesasFiltradas.filter(d => despesasSelecionadas.has(d.id));
         if(statusFiltro === 'NAO_SELECIONADAS') despesasFiltradas = despesasFiltradas.filter(d => !despesasSelecionadas.has(d.id));
         
-        // Percorrer cada lançamento exibido
         for (const despesa of despesasFiltradas) {
             const operacao = despesa.operacao || '';
             
-            // Verificar se existe regra de conversão para esta operação
             if (!operacao || !operacaoPlanoMap[operacao]) {
                 ignoradosSemRegra++;
                 continue;
@@ -2401,16 +2371,13 @@ function aplicarPlanoContasTodosLancamentos() {
             
             const planoConfigurado = operacaoPlanoMap[operacao];
             
-            // Verificar se o plano de contas está preenchido
             if (!planoConfigurado || planoConfigurado === '') {
                 ignoradosSemPlano++;
                 continue;
             }
             
-            // Aplicar o plano de contas
             despesa.plano = planoConfigurado;
             
-            // Salvar no localStorage
             const planosSalvos = localStorage.getItem(STORAGE_KEY_PLANOS_DESPESAS);
             const planosMap = planosSalvos ? JSON.parse(planosSalvos) : {};
             planosMap[despesa.id] = planoConfigurado;
@@ -2419,11 +2386,9 @@ function aplicarPlanoContasTodosLancamentos() {
             registrosAtualizados++;
         }
         
-        // Re-renderizar a tabela de despesas
         renderizarTabelaDespesas();
     }
     
-    // Exibir resumo para o usuário
     let mensagem = ` APLICAÇÃO EM LOTE CONCLUÍDA!\n\n`;
     mensagem += ` Registros atualizados: ${registrosAtualizados}\n`;
     mensagem += ` Ignorados (sem regra de conversão): ${ignoradosSemRegra}\n`;
@@ -2506,7 +2471,6 @@ function gerarDRE() {
                     return;
                 }
                 
-                // Determinar se é Receita ou Despesa
                 let grupoTipo = null;
                 if (estruturaDRE.receitas.some(r => r.nome === nomeConta) || nomeConta === 'RECEITAS TOTAIS') {
                     grupoTipo = 'receitas';
@@ -2559,9 +2523,9 @@ function gerarDRE() {
 }
 
 // ============================================================
-// NOVA FUNÇÃO: DETALHAMENTO DO VALOR CLICADO NA DRE
+// FUNÇÃO CORRIGIDA: DETALHAMENTO DO VALOR CLICADO NA DRE (BUSCANDO DO SUPABASE)
 // ============================================================
-function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo, isTotal) {
+async function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo, isTotal) {
     if (!valor || valor === 0) {
         alert('Não há registros para detalhar este valor.');
         return;
@@ -2570,40 +2534,51 @@ function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo,
     const mesNome = mesesNomes[mesIndex] || 'Total';
     const periodo = mesIndex !== undefined ? `Mês de ${mesNome}` : 'Total do Ano';
     
-    // Atualizar cabeçalho do pop-up
     document.getElementById('drilldownValorTitulo').innerHTML = `Detalhamento - ${codConta ? codConta + ' - ' : ''}${nomeConta}`;
     document.getElementById('infoConta').innerHTML = `${codConta ? codConta + ' - ' : ''}${nomeConta}`;
     document.getElementById('infoPeriodo').innerHTML = periodo;
     document.getElementById('infoValorTotal').innerHTML = formatarMoeda(valor);
     
-    // Buscar os registros que compõem este valor
+    // Buscar registros do Supabase
     let registros = [];
     
     if (mesIndex !== undefined) {
         // Buscar para um mês específico
-        const dadosMes = JSON.parse(localStorage.getItem(`dadosModuloIII_mes_${mesIndex}`) || '[]');
+        const { data, error } = await supabaseClient
+            .from('dre_lancamentos')
+            .select('*')
+            .eq('mes', mesIndex)
+            .eq('plano', nomeConta);
         
-        // Filtrar registros do plano de conta específico
-        registros = dadosMes.filter(lanc => lanc.plano === nomeConta);
+        if (error) {
+            console.error('Erro ao buscar detalhamento:', error);
+            registros = [];
+        } else {
+            registros = data || [];
+        }
     } else {
-        // Buscar para o total do ano (somar todos os meses)
-        for (let m = 0; m < 12; m++) {
-            const dadosMes = JSON.parse(localStorage.getItem(`dadosModuloIII_mes_${m}`) || '[]');
-            const registrosMes = dadosMes.filter(lanc => lanc.plano === nomeConta);
-            registros.push(...registrosMes);
+        // Buscar para o total do ano (todos os meses)
+        const { data, error } = await supabaseClient
+            .from('dre_lancamentos')
+            .select('*')
+            .eq('plano', nomeConta);
+        
+        if (error) {
+            console.error('Erro ao buscar detalhamento anual:', error);
+            registros = [];
+        } else {
+            registros = data || [];
         }
     }
     
-    // Mapear e formatar os registros de acordo com o tipo (Receita ou Despesa)
     const isReceita = (grupoTipo === 'receitas' || (estruturaDRE.receitas.some(r => r.nome === nomeConta)));
     
-    // Construir a tabela de detalhamento
     const tableHead = document.getElementById('drilldownValorTableHead');
     const tableBody = document.getElementById('drilldownValorTableBody');
     const footerTotal = document.getElementById('drilldownValorFooter');
     
     if (registros.length === 0) {
-        tableHead.innerHTML = `</table><th>Data</th><th>Cliente / Fornecedor</th><th>Detalhe</th><th>Valor (R$)</th></table>`;
+        tableHead.innerHTML = `<tr><th>Data</th><th>Cliente / Fornecedor</th><th>Detalhe</th><th>Valor (R$)</th></tr>`;
         tableBody.innerHTML = `<tr><td colspan="4" class="mensagem-informativa">Nenhum registro encontrado para este valor.</td></tr>`;
         footerTotal.innerHTML = `Total Geral: R$ 0,00`;
         document.getElementById('modalDrilldownValor').classList.add('active');
@@ -2614,19 +2589,17 @@ function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo,
     let linhasHtml = '';
     
     if (isReceita) {
-        // Cabeçalho para RECEITAS
         tableHead.innerHTML = `<tr><th>Data</th><th>Cliente</th><th>Classificação</th><th>Valor (R$)</th></tr>`;
         
         for (const reg of registros) {
             const valorReg = parseFloat(reg.valor);
             somaTotal += valorReg;
             
-            // Tentar extrair cliente da descrição
             let cliente = 'Não identificado';
             let classificacao = '-';
-            if (reg.desc && reg.desc.startsWith('RECEITA: ')) {
-                cliente = reg.desc.replace('RECEITA: ', '');
-                // Buscar classificação nos dados reais de venda
+            
+            if (reg.descricao && reg.descricao.startsWith('RECEITA: ')) {
+                cliente = reg.descricao.replace('RECEITA: ', '');
                 const vendaRelacionada = receitasDataReais.find(r => 
                     r.cliente === cliente && 
                     Math.abs(r.valor - valorReg) < 0.01 &&
@@ -2638,26 +2611,24 @@ function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo,
             }
             
             linhasHtml += `<tr>
-                <td>${formatarDataExibicao(reg.data)}</td>
-                <td>${cliente}</td>
-                <td>${classificacao}</td>
-                <td style="text-align:right; font-weight:600;">${formatarMoeda(valorReg)}</td>
+                <td>${formatarDataExibicao(reg.data)}</div>
+                <td>${cliente}</div>
+                <td>${classificacao}</div>
+                <td style="text-align:right; font-weight:600;">${formatarMoeda(valorReg)}</div>
              </tr>`;
         }
     } else {
-        // Cabeçalho para DESPESAS
         tableHead.innerHTML = `<tr><th>Data</th><th>Fornecedor</th><th>Operação</th><th>Valor (R$)</th></tr>`;
         
         for (const reg of registros) {
             const valorReg = parseFloat(reg.valor);
             somaTotal += valorReg;
             
-            // Tentar extrair fornecedor e operação da descrição
             let fornecedor = 'Não identificado';
             let operacao = '-';
-            if (reg.desc && reg.desc.startsWith('DESPESA: ')) {
-                operacao = reg.desc.replace('DESPESA: ', '');
-                // Buscar fornecedor nos dados reais de despesa
+            
+            if (reg.descricao && reg.descricao.startsWith('DESPESA: ')) {
+                operacao = reg.descricao.replace('DESPESA: ', '');
                 const despesaRelacionada = despesasDataReais.find(d => 
                     d.operacao === operacao && 
                     Math.abs(d.valor - valorReg) < 0.01 &&
@@ -2669,10 +2640,10 @@ function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo,
             }
             
             linhasHtml += `<tr>
-                <td>${formatarDataExibicao(reg.data)}</td>
-                <td>${fornecedor}</td>
-                <td>${operacao}</td>
-                <td style="text-align:right; font-weight:600;">${formatarMoeda(valorReg)}</td>
+                <td>${formatarDataExibicao(reg.data)}</div>
+                <td>${fornecedor}</div>
+                <td>${operacao}</div>
+                <td style="text-align:right; font-weight:600;">${formatarMoeda(valorReg)}</div>
              </tr>`;
         }
     }
@@ -2680,10 +2651,8 @@ function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo,
     tableBody.innerHTML = linhasHtml;
     footerTotal.innerHTML = `Total Geral: ${formatarMoeda(somaTotal)}`;
     
-    // Verificar se o total no pop-up corresponde ao valor clicado
     if (Math.abs(somaTotal - valor) > 0.01) {
         console.warn(`Divergência no detalhamento: Total ${somaTotal} vs Valor Clicado ${valor}`);
-        // Adicionar um aviso sutil, mas sem quebrar a regra de negócio
         const aviso = document.createElement('div');
         aviso.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
         aviso.style.padding = '8px';
@@ -2701,7 +2670,6 @@ function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo,
 
 function fecharModalDrilldownValor() {
     document.getElementById('modalDrilldownValor').classList.remove('active');
-    // Limpar avisos temporários
     const aviso = document.querySelector('.drilldown-valor-footer + div');
     if (aviso && aviso.innerHTML.includes('Atenção')) aviso.remove();
 }
@@ -2724,14 +2692,12 @@ function fecharConfirm() {
 // FUNÇÃO GERAR PDF DRE - VERSÃO SUPABASE
 // ============================================================
 async function gerarPDFDRE() {
-    // Primeiro, garantir que a tabela esteja atualizada com dados do Supabase
     const dadosPorMes = await carregarDRESupabase();
     if (!dadosPorMes) {
         alert('Erro ao carregar dados do Supabase');
         return;
     }
     
-    // Função para calcular total de um grupo em um mês específico
     function getTotalGrupo(grupo, mes) {
         let total = 0;
         if (estruturaDRE[grupo]) {
@@ -2751,7 +2717,6 @@ async function gerarPDFDRE() {
         return total;
     }
     
-    // Calcular totais por mês para cada grupo
     const receitasMensais = [];
     const custosVarMensais = [];
     const custosFixMensais = [];
@@ -2762,11 +2727,9 @@ async function gerarPDFDRE() {
         custosFixMensais[m] = getTotalGrupo('custosFixos', m);
     }
     
-    // Calcular lucro bruto e resultado operacional
     const lucroBrutoMensal = receitasMensais.map((r, i) => r - custosVarMensais[i]);
     const resultadoOpMensal = lucroBrutoMensal.map((lb, i) => lb - custosFixMensais[i]);
     
-    // Função para construir os dados de cada grupo
     function construirDadosGrupo(grupo, incluirTotalGrupo = true) {
         const linhas = [];
         
@@ -2828,11 +2791,9 @@ async function gerarPDFDRE() {
         return linhas;
     }
     
-    // Construir dados para cada grupo
     const dadosReceitas = construirDadosGrupo('receitas', true);
     const dadosCustosVar = construirDadosGrupo('custosVariaveis', true);
     
-    // Adicionar Lucro Bruto
     let totalLucroBrutoAnual = 0;
     const lucroBrutoVals = [];
     for (let m = 0; m < 12; m++) {
@@ -2849,7 +2810,6 @@ async function gerarPDFDRE() {
     
     const dadosCustosFix = construirDadosGrupo('custosFixos', true);
     
-    // Adicionar Resultado Operacional
     let totalResultadoAnual = 0;
     const resultadoOpVals = [];
     for (let m = 0; m < 12; m++) {
@@ -3137,6 +3097,7 @@ async function gerarPDFDRE() {
     
     html2pdf().set(opt).from(conteudoPDF).save();
 }
+
 // ============================================================
 // FUNÇÕES DE LANCAMENTOS E DADOS REAIS
 // ============================================================
@@ -3269,7 +3230,7 @@ function renderizarTabelaReceitas() {
         const isChecked = receitasSelecionadas.has(r.id);
         const classificacaoDisplay = r.classificacao === 'Balcao' ? 'LOJA FISICA' : 'CORPORATIVO';
         
-        html += '</table>';
+        html += '<tr>';
         html += '<td style="text-align:center;"><input type="checkbox" class="receita-checkbox" data-id="' + r.id + '" ' + (isChecked ? 'checked' : '') + ' onchange="toggleReceitaSelecionada(' + r.id + ', this)"></td>';
         html += '<td>' + formatarDataExibicao(r.data) + '</td>';
         html += '<td style="color:#2ECC71; font-weight:600;"><div class="valor-cell">R$ ' + formatMoneySimple(r.valor) + '<span class="info-consulta" title="Consultar regras de classificação financeira" onclick="mostrarConsultaConversao(\'' + (r.cond_pag || '') + '\', \'' + r.plano + '\', true)">ⓘ</span></div></td>';
@@ -3358,158 +3319,9 @@ function abrirModalLancamentos() { document.getElementById('modalLancamentos').c
 function fecharModalLancamentos() { document.getElementById('modalLancamentos').classList.remove('active'); }
 function switchPopupTab(tab, btn) { document.querySelectorAll('.popup-tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.popup-tab-content').forEach(c => c.classList.remove('active')); btn.classList.add('active'); document.getElementById(`popup-tab-${tab}`).classList.add('active'); }
 
-function incluirSelecionadosNoDRE() {
-    salvarPlanosReceitas();
-    salvarPlanosDespesas();
-    const lancamentosPorMes = [[],[],[],[],[],[],[],[],[],[],[],[]];
-    let totalValidados = 0, totalRejeitados = 0;
-    const rejeitadosDetalhes = [];
-    
-    // MAPA PARA CONTROLAR LANÇAMENTOS ÚNICOS (evita duplicidade)
-    const hashLancamentosExistentes = new Set();
-    
-    // Carregar hashes dos lançamentos já existentes em todos os meses
-    for(let mes = 0; mes < 12; mes++) {
-        const dadosExistentes = localStorage.getItem(`dadosModuloIII_mes_${mes}`);
-        if(dadosExistentes) {
-            const dados = JSON.parse(dadosExistentes);
-            dados.forEach(lanc => {
-                // Criar um hash único baseado em: mês + plano + valor + data
-                const hash = `${mes}|${lanc.plano}|${parseMoeda(lanc.valor)}|${lanc.data}`;
-                hashLancamentosExistentes.add(hash);
-            });
-        }
-    }
-    
-    // Processar RECEITAS selecionadas
-    receitasSelecionadas.forEach(id => { 
-        const receita = receitasDataReais.find(r => r.id === id); 
-        if(receita) { 
-            const mes = getMesFromData(receita.data); 
-            const valorOriginal = receita.valor; 
-            const valorConvertido = parseMoeda(valorOriginal); 
-            const saoCompativeis = Math.abs(valorOriginal - valorConvertido) < 0.01; 
-            if (!saoCompativeis) { 
-                totalRejeitados++; 
-                rejeitadosDetalhes.push({ tipo:'RECEITA', id:id, descricao:receita.cliente, valorOriginal:valorOriginal, valorConvertido:valorConvertido }); 
-                return; 
-            } 
-            
-            // Criar hash para verificar se já existe
-            const hash = `${mes}|${receita.plano}|${valorConvertido}|${receita.data}`;
-            
-            if (!hashLancamentosExistentes.has(hash)) {
-                totalValidados++; 
-                lancamentosPorMes[mes].push({ 
-                    data:receita.data, 
-                    desc:`RECEITA: ${receita.cliente}`, 
-                    plano:receita.plano, 
-                    valor:valorConvertido.toString(), 
-                    dinamicas:[], 
-                    timestamp:new Date().toLocaleString('pt-br'),
-                    idOriginal: receita.id  // Guardar ID original para referência
-                }); 
-                hashLancamentosExistentes.add(hash);
-            }
-        } 
-    });
-    
-    // Processar DESPESAS selecionadas
-    despesasSelecionadas.forEach(id => { 
-        const despesa = despesasDataReais.find(d => d.id === id); 
-        if(despesa) { 
-            const mes = getMesFromData(despesa.data); 
-            const valorOriginal = despesa.valor; 
-            const valorConvertido = parseMoeda(valorOriginal); 
-            const saoCompativeis = Math.abs(valorOriginal - valorConvertido) < 0.01; 
-            if (!saoCompativeis) { 
-                totalRejeitados++; 
-                rejeitadosDetalhes.push({ tipo:'DESPESA', id:id, descricao:despesa.operacao, valorOriginal:valorOriginal, valorConvertido:valorConvertido }); 
-                return; 
-            } 
-            
-            // Criar hash para verificar se já existe
-            const hash = `${mes}|${despesa.plano}|${valorConvertido}|${despesa.data}`;
-            
-            if (!hashLancamentosExistentes.has(hash)) {
-                totalValidados++; 
-                lancamentosPorMes[mes].push({ 
-                    data:despesa.data, 
-                    desc:`DESPESA: ${despesa.operacao}`, 
-                    plano:despesa.plano, 
-                    valor:valorConvertido.toString(), 
-                    dinamicas:[], 
-                    timestamp:new Date().toLocaleString('pt-br'),
-                    idOriginal: despesa.id
-                }); 
-                hashLancamentosExistentes.add(hash);
-            }
-        } 
-    });
-    
-    if (totalRejeitados > 0) { 
-        let mensagem = `⚠️ VALIDAÇÃO DE VALORES ⚠️\n\n${totalRejeitados} registro(s) foram REJEITADOS por divergência de valor:\n\n`; 
-        rejeitadosDetalhes.slice(0,10).forEach(r => { 
-            mensagem += `• ${r.tipo}: ${r.descricao}\n  Original: ${r.valorOriginal} → Convertido: ${r.valorConvertido}\n`; 
-        }); 
-        if (rejeitadosDetalhes.length > 10) mensagem += `\n... e mais ${rejeitadosDetalhes.length - 10} registro(s) rejeitados.`; 
-        mensagem += `\n\n✅ ${totalValidados} registro(s) validados com sucesso.\n\nOs registros rejeitados NÃO foram incluídos no DRE.`; 
-        alert(mensagem); 
-    }
-    
-    if (totalValidados === 0 && totalRejeitados === 0) { 
-        alert('Nenhum registro novo para incluir no DRE. Os lançamentos selecionados já foram adicionados anteriormente.'); 
-        return; 
-    }
-    
-    if (totalValidados === 0 && totalRejeitados > 0) {
-        alert('Nenhum registro válido para incluir no DRE. Verifique os valores dos registros selecionados.');
-        return;
-    }
-    
-    let totalIncluidos = 0;
-    let totalIgnorados = 0;
-    
-    for(let mes = 0; mes < 12; mes++) { 
-        if(lancamentosPorMes[mes].length > 0) { 
-            const dadosExistentes = localStorage.getItem(`dadosModuloIII_mes_${mes}`); 
-            let dadosAtuais = dadosExistentes ? JSON.parse(dadosExistentes) : []; 
-            
-            // Filtrar apenas lançamentos que realmente não existem (dupla verificação)
-            const novosLancamentos = lancamentosPorMes[mes].filter(novoLanc => {
-                const existe = dadosAtuais.some(lancExistente => 
-                    lancExistente.data === novoLanc.data && 
-                    lancExistente.plano === novoLanc.plano && 
-                    Math.abs(parseMoeda(lancExistente.valor) - parseMoeda(novoLanc.valor)) < 0.01
-                );
-                return !existe;
-            });
-            
-            if(novosLancamentos.length > 0) { 
-                dadosAtuais.push(...novosLancamentos); 
-                localStorage.setItem(`dadosModuloIII_mes_${mes}`, JSON.stringify(dadosAtuais)); 
-                totalIncluidos += novosLancamentos.length; 
-            } else {
-                totalIgnorados += lancamentosPorMes[mes].length;
-            }
-        } 
-    }
-    
-    receitasSelecionadas.clear(); 
-    despesasSelecionadas.clear(); 
-    renderizarTabelaReceitas(); 
-    renderizarTabelaDespesas(); 
-    gerarDRE();
-    
-    let mensagemFinal = `${totalIncluidos} registro(s) incluído(s) no DRE com sucesso!`;
-    if (totalIgnorados > 0) mensagemFinal += ` ${totalIgnorados} registro(s) ignorados pois já existiam no DRE.`;
-    if (totalRejeitados > 0) mensagemFinal += ` ${totalRejeitados} registro(s) foram rejeitados por divergência de valor.`;
-    alert(mensagemFinal);
-}// Mapeamento para despesas (por operação)
+// Mapeamento para despesas (por operação)
 let operacaoToPlanoMap = {};
 
-// Chaves no localStorage
-const STORAGE_KEY_OPERACAO_PLANO = 'operacao_to_plano_map';
 // ============================================================
 // FUNÇÕES DE VENDAS (RECEITAS)
 // ============================================================
@@ -3573,7 +3385,7 @@ function atualizarTabelaVendas() {
     const filtradas = getVendasFiltradas(); 
     const tbody = document.getElementById('tabelaVendasBody'); 
     if(!tbody) return; 
-    if(filtradas.length === 0) { tbody.innerHTML='<tr><td colspan="7" style="text-align:center; padding:40px;">Nenhum registro encontrado</div>'; atualizarResumoVendas(); return; } 
+    if(filtradas.length === 0) { tbody.innerHTML='<td><td colspan="7" style="text-align:center; padding:40px;">Nenhum registro encontrado</div>'; atualizarResumoVendas(); return; } 
     let html = ''; 
     filtradas.forEach(v => { const valorClass = v.total >= 0 ? 'color:#2ECC71;' : 'color:#EF4444;'; html += `<tr><td>${v.numero}</div><td>${formatarDataExibicao(v.data_nota)}</div><td>${String(v.nfiscal).substring(0,20)}</div><td><select class="classificacao-dropdown" data-id="${v.id}" onchange="alterarClassificacaoVenda(${v.id}, this.value)"><option value="Balcao" ${v.classificacao === 'Balcao' ? 'selected' : ''}>LOJA FISICA</option><option value="Venda Corporativa" ${v.classificacao === 'Venda Corporativa' ? 'selected' : ''}>CORPORATIVO</option></select></div><td>${v.pedido}</div><td>${v.cliente.length > 40 ? v.cliente.substring(0,37)+'...' : v.cliente}</div><td style="${valorClass} font-weight:700;">R$ ${formatMoneySimple(v.total)}</div></tr>`; }); 
     tbody.innerHTML = html; 
@@ -3632,7 +3444,7 @@ function atualizarTabelaCompras() {
     const filtradas = getComprasFiltradas(); 
     const tbody = document.getElementById('tabelaComprasBody'); 
     if(!tbody) return; 
-    if(filtradas.length === 0) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center; padding:40px;">Nenhum registro encontrado</div>'; atualizarResumoCompras(); return; } 
+    if(filtradas.length === 0) { tbody.innerHTML='<td><td colspan="8" style="text-align:center; padding:40px;">Nenhum registro encontrado</div>'; atualizarResumoCompras(); return; } 
     let html = ''; 
     filtradas.forEach(c => { const diasExibido = c.diasCalculado > 0 ? `${c.diasCalculado} dias` : 'EM DIA'; html += `<tr><td>${c.documento}</div><td>${c.fornecedor}</div><td>${c.parcela}</div><td>${c.operacao}</div><td>${formatarDataExibicao(c.vencimento)}</div><td style="text-align:center;">${diasExibido}</div><td>${c.statusCalculado}</div><td style="color:#f59e0b; font-weight:700;">R$ ${formatMoneySimple(c.valor)}</div></tr>`; }); 
     tbody.innerHTML = html; 
@@ -3651,8 +3463,6 @@ function abrirModalPeriodoPDF() {
 }
 function fecharModalPeriodoPDF() { document.getElementById('modalPeriodoPDF').classList.remove('active'); }
 
-// Replace the existing gerarRelatorioPorPeriodo function with this restored version:
-
 async function gerarRelatorioPorPeriodo() {
     let periodo = document.getElementById('selectPeriodoRelatorio').value;
     fecharModalPeriodoPDF();
@@ -3669,7 +3479,6 @@ async function gerarRelatorioPorPeriodo() {
         fim.setDate(hoje.getDate() + 30);
     }
     
-    // Filtrar contas no período
     let contasFiltradas = comprasData.filter(d => {
         let v = parseDataBr(d.vencimento);
         return v && v >= hoje && v <= fim;
@@ -3683,7 +3492,6 @@ async function gerarRelatorioPorPeriodo() {
     let nomePeriodo = periodo === '7DIAS' ? "Próximos 7 Dias" : (periodo === '15DIAS' ? "Próximos 15 Dias" : "Mês Atual (30 dias)");
     let periodoTexto = `${formatarDataExibicao(hoje.toISOString().split('T')[0])} a ${formatarDataExibicao(fim.toISOString().split('T')[0])}`;
     
-    // Gerar HTML do PDF
     const conteudoPDF = `<!DOCTYPE html>
     <html>
     <head>
@@ -3831,7 +3639,6 @@ async function gerarRelatorioPorPeriodo() {
     </body>
     </html>`;
     
-    // Criar elemento temporário e gerar PDF
     const elementoTemp = document.createElement('div');
     elementoTemp.innerHTML = conteudoPDF;
     document.body.appendChild(elementoTemp);
@@ -3864,14 +3671,13 @@ async function gerarRelatorioPorPeriodo() {
     }
 }
 
-// Helper function to generate table rows
 function gerarLinhasTabelaDespesas(contas) {
     if (!contas || contas.length === 0) {
         return `
         <tr>
             <td colspan="7" style="text-align: center; padding: 40px;">
                 Nenhuma conta encontrada no período selecionado
-            </td>
+            </div>
         </tr>
         `;
     }
@@ -3901,7 +3707,9 @@ function gerarLinhasTabelaDespesas(contas) {
     }
     
     return linhas;
-}// ============================================================
+}
+
+// ============================================================
 // FUNÇÕES DE FECHAMENTO DE CAIXA
 // ============================================================
 function gerarDadosCaixa() {
@@ -3952,14 +3760,13 @@ function alterarCorPeloTicket(data, cor) {
         }
     }
     
-    // Salvar no Supabase
     salvarCoresNoSupabase();
     
-    // Atualizar as telas
     if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
     if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
     if (typeof atualizarTotaisPorClassificacao === 'function') atualizarTotaisPorClassificacao();
 }
+
 function atualizarTotaisPorClassificacao() {
     let vendasFiltradas = [...vendasData];
     if(caixaFiltroMes !== "TODOS") vendasFiltradas = vendasFiltradas.filter(v => getMesAno(v.data_nota) === caixaFiltroMes);
@@ -3980,7 +3787,6 @@ function renderizarCaixaPopup() {
     const grupos = gerarDadosCaixa(); 
     let gruposArray = Array.from(grupos.entries()).map(([data, row]) => ({ data, row }));
     
-    // CORREÇÃO: Ordenar corretamente
     gruposArray.sort((a, b) => {
         const [diaA, mesA, anoA] = a.data.split('/');
         const [diaB, mesB, anoB] = b.data.split('/');
@@ -4071,6 +3877,7 @@ function gerarPDFCaixaComFiltro(mesAtual, diasSelecionados) {
         return; 
     }
     
+    // Calcular totais para a primeira página
     let totalDinheiro = 0, totalDebito = 0, totalCredito = 0, totalCreditoParcelado = 0;
     let totalAg = 0, totalPix = 0, totalVnf = 0, totalSaida = 0, totalEntradasGeral = 0;
     let linhasHTML = '';
@@ -4092,9 +3899,15 @@ function gerarPDFCaixaComFiltro(mesAtual, diasSelecionados) {
         
         const isFlagged = flagsSalvas[data] === true;
         const dataDisplay = isFlagged ? `${data} *` : data;
-        const rowClass = isFlagged ? 'class="linha-destaque-vermelho"' : '';
         
-        linhasHTML += `<tr ${rowClass}>
+        // Aplicar a mesma cor da marcação (linhaCorSelecionada) - MESMO PADRÃO DA PRIMEIRA PÁGINA
+        let rowClass = '';
+        if (linhaCorSelecionada[data] === 'amarelo') rowClass = 'linha-destaque-amarelo';
+        else if (linhaCorSelecionada[data] === 'verde') rowClass = 'linha-destaque-verde';
+        else if (linhaCorSelecionada[data] === 'vermelho') rowClass = 'linha-destaque-vermelho';
+        else if (isFlagged) rowClass = 'linha-destaque-vermelho';
+        
+        linhasHTML += `<tr class="${rowClass}">
             <td style="padding: 8px 4px; text-align: left; border-bottom: 1px solid #CCCCCC; color: #000000;">${dataDisplay}</div>
             <td style="padding: 8px 4px; text-align: right; border-bottom: 1px solid #CCCCCC; color: #000000;">R$ ${formatMoneySimple(row.DINHEIRO || 0)}</div>
             <td style="padding: 8px 4px; text-align: right; border-bottom: 1px solid #CCCCCC; color: #000000;">R$ ${formatMoneySimple(row.DEBITO || 0)}</div>
@@ -4108,7 +3921,6 @@ function gerarPDFCaixaComFiltro(mesAtual, diasSelecionados) {
         </tr>`;
     });
     
-    // Linha de total
     linhasHTML += `<tr style="background-color: #F5F5F5; border-top: 2px solid #CCCCCC;">
         <td style="padding: 8px 4px; text-align: left; font-weight: 700; color: #000000;">TOTAL GERAL</div>
         <td style="padding: 8px 4px; text-align: right; font-weight: 700; color: #000000;">R$ ${formatMoneySimple(totalDinheiro)}</div>
@@ -4121,6 +3933,93 @@ function gerarPDFCaixaComFiltro(mesAtual, diasSelecionados) {
         <td style="padding: 8px 4px; text-align: right; font-weight: 700; color: #000000;">R$ ${formatMoneySimple(totalSaida)}</div>
         <td style="padding: 8px 4px; text-align: right; font-weight: 700; color: #000000;">R$ ${formatMoneySimple(totalEntradasGeral - totalSaida)}</div>
     </tr>`;
+    
+    // ============================================================
+    // PÁGINA DE CONCILIAÇÃO - SEMPRE EXIBIDA (AJUSTE 2)
+    // ============================================================
+    let conciliacaoLinhasHTML = '';
+    let totalConciliacaoLojaFisicaFech = 0;
+    let totalConciliacaoLojaFisicaComp = 0;
+    let totalConciliacaoCorporativoFech = 0;
+    let totalConciliacaoCorporativoComp = 0;
+    let totalConciliacaoGeralFech = 0;
+    let totalConciliacaoGeralComp = 0;
+    
+    for (const { data, row } of dadosParaPDF) {
+        const dadosComp = dadosComparativos[data] || {};
+        
+        // Buscar totais por classificação para este dia
+        let lojaFisicaValor = 0;
+        let corporativoValor = 0;
+        
+        if (vendasData) {
+            const vendasDoDia = vendasData.filter(v => formatarDataExibicao(v.data_nota) === data);
+            lojaFisicaValor = vendasDoDia.filter(v => v.classificacao === 'Balcao').reduce((sum, v) => sum + v.total, 0);
+            corporativoValor = vendasDoDia.filter(v => v.classificacao === 'Venda Corporativa').reduce((sum, v) => sum + v.total, 0);
+        }
+        
+        const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + 
+                              (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0);
+        const saidaValor = todasSaidasPorData[data] || 0;
+        const fechamentoTotalDia = totalEntradas - saidaValor;
+        
+        // Calcular valores do comparativo
+        let compLojaFisica = dadosComp.LOJA_FISICA !== undefined ? dadosComp.LOJA_FISICA : lojaFisicaValor;
+        let compCorporativo = dadosComp.CORPORATIVO !== undefined ? dadosComp.CORPORATIVO : corporativoValor;
+        let compTotalDia = dadosComp.TOTAL_DIA !== undefined ? dadosComp.TOTAL_DIA : fechamentoTotalDia;
+        
+        // Acumular totais (SEMPRE, pois a página é sempre exibida)
+        totalConciliacaoLojaFisicaFech += lojaFisicaValor;
+        totalConciliacaoLojaFisicaComp += compLojaFisica;
+        totalConciliacaoCorporativoFech += corporativoValor;
+        totalConciliacaoCorporativoComp += compCorporativo;
+        totalConciliacaoGeralFech += fechamentoTotalDia;
+        totalConciliacaoGeralComp += compTotalDia;
+        
+        // Verificar divergências para aplicar a MESMA sinalização da primeira página
+        const divergenciaLojaFisica = Math.abs(lojaFisicaValor - compLojaFisica) > 0.01;
+        const divergenciaCorporativo = Math.abs(corporativoValor - compCorporativo) > 0.01;
+        const divergenciaGeral = Math.abs(fechamentoTotalDia - compTotalDia) > 0.01;
+        
+        // Aplicar a MESMA classe de cor da primeira página (linhaCorSelecionada)
+        let linhaClass = '';
+        if (linhaCorSelecionada[data] === 'amarelo') linhaClass = 'linha-destaque-amarelo';
+        else if (linhaCorSelecionada[data] === 'verde') linhaClass = 'linha-destaque-verde';
+        else if (linhaCorSelecionada[data] === 'vermelho') linhaClass = 'linha-destaque-vermelho';
+        // Se tiver divergência e não tiver cor específica, marca como vermelho
+        else if (divergenciaLojaFisica || divergenciaCorporativo || divergenciaGeral) {
+            linhaClass = 'linha-destaque-vermelho';
+        }
+        
+        conciliacaoLinhasHTML += `<tr class="${linhaClass}">
+            <td style="padding: 8px 4px; text-align: left; border-bottom: 1px solid #CCCCCC; color: #000000;">${data}</div>
+            <td style="padding: 8px 4px; text-align: right; border-bottom: 1px solid #CCCCCC; color: #000000;">R$ ${formatMoneySimple(lojaFisicaValor)}</div>
+            <td style="padding: 8px 4px; text-align: right; border-bottom: 1px solid #CCCCCC; color: #000000;">R$ ${formatMoneySimple(compLojaFisica)}</div>
+            <td style="padding: 8px 4px; text-align: right; border-bottom: 1px solid #CCCCCC; color: #000000;">R$ ${formatMoneySimple(corporativoValor)}</div>
+            <td style="padding: 8px 4px; text-align: right; border-bottom: 1px solid #CCCCCC; color: #000000;">R$ ${formatMoneySimple(compCorporativo)}</div>
+            <td style="padding: 8px 4px; text-align: right; border-bottom: 1px solid #CCCCCC; font-weight: 600; color: #000000;">R$ ${formatMoneySimple(fechamentoTotalDia)}</div>
+            <td style="padding: 8px 4px; text-align: right; border-bottom: 1px solid #CCCCCC; font-weight: 600; color: #000000;">R$ ${formatMoneySimple(compTotalDia)}</div>
+        </tr>`;
+    }
+    
+    // Linha de total da conciliação (sempre exibida)
+    const totalDivergenciaLoja = Math.abs(totalConciliacaoLojaFisicaComp - totalConciliacaoLojaFisicaFech) > 0.01;
+    const totalDivergenciaCorp = Math.abs(totalConciliacaoCorporativoComp - totalConciliacaoCorporativoFech) > 0.01;
+    const totalDivergenciaGeral = Math.abs(totalConciliacaoGeralComp - totalConciliacaoGeralFech) > 0.01;
+    let totalLinhaClass = '';
+    if (totalDivergenciaLoja || totalDivergenciaCorp || totalDivergenciaGeral) {
+        totalLinhaClass = 'linha-destaque-vermelho';
+    }
+    
+    conciliacaoLinhasHTML += `<tr style="background-color: #F5F5F5; border-top: 2px solid #CCCCCC;" class="${totalLinhaClass}">
+        <td style="padding: 8px 4px; text-align: left; font-weight: 700; color: #000000;">TOTAL GERAL</div>
+        <td style="padding: 8px 4px; text-align: right; font-weight: 700; color: #000000;">R$ ${formatMoneySimple(totalConciliacaoLojaFisicaFech)}</div>
+        <td style="padding: 8px 4px; text-align: right; font-weight: 700; color: #000000;">R$ ${formatMoneySimple(totalConciliacaoLojaFisicaComp)}</div>
+        <td style="padding: 8px 4px; text-align: right; font-weight: 700; color: #000000;">R$ ${formatMoneySimple(totalConciliacaoCorporativoFech)}</div>
+        <td style="padding: 8px 4px; text-align: right; font-weight: 700; color: #000000;">R$ ${formatMoneySimple(totalConciliacaoCorporativoComp)}</div>
+        <td style="padding: 8px 4px; text-align: right; font-weight: 700; color: #000000;">R$ ${formatMoneySimple(totalConciliacaoGeralFech)}</div>
+        <td style="padding: 8px 4px; text-align: right; font-weight: 700; color: #000000;">R$ ${formatMoneySimple(totalConciliacaoGeralComp)}</div>
+    </table>`;
     
     const periodoDescricao = mesAtual ? 'Mês Atual' : `${diasSelecionados.length} dia(s) selecionado(s)`;
     const dataGeracao = new Date().toLocaleDateString('pt-BR');
@@ -4220,12 +4119,22 @@ function gerarPDFCaixaComFiltro(mesAtual, diasSelecionados) {
                 font-weight: bold;
                 color: #000000;
             }
+            .linha-destaque-amarelo, .linha-destaque-amarelo td {
+                background-color: #FEF9C3 !important;
+            }
+            .linha-destaque-verde, .linha-destaque-verde td {
+                background-color: #D1FAE5 !important;
+            }
             .linha-destaque-vermelho, .linha-destaque-vermelho td {
                 background-color: #FECACA !important;
+            }
+            .page-break {
+                page-break-before: always;
             }
         </style>
     </head>
     <body>
+        <!-- PÁGINA 1: FECHAMENTO DE CAIXA -->
         <div class="header">
             <h1>FECHAMENTO DE CAIXA</h1>
             <p>Aplikado Soluções | Módulo III</p>
@@ -4262,6 +4171,46 @@ function gerarPDFCaixaComFiltro(mesAtual, diasSelecionados) {
         
         <div class="footer">
             Documento gerado por Aplikado Gestão - Fechamento de Caixa
+        </div>
+        
+        <!-- PÁGINA 2: CONCILIAÇÃO DE FECHAMENTO DE CAIXA - SEMPRE EXIBIDA -->
+        <div class="page-break"></div>
+        
+        <div class="header">
+            <h1>CONCILIAÇÃO DE FECHAMENTO DE CAIXA</h1>
+            <p>Aplikado Soluções | Módulo III</p>
+        </div>
+        
+        <div class="periodo-info">
+            <strong>PERÍODO:</strong> ${periodoDescricao}<br>
+            <span>Comparativo vs Fechamento Sistema (ERP)</span><br>
+            <span>Gerado em: ${dataGeracao} às ${horaGeracao}</span>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 14%;">DATA</th>
+                    <th style="width: 14%;">LOJA FÍSICA<br><span style="font-size:8px;">Fechamento ERP</span></th>
+                    <th style="width: 14%;">LOJA FÍSICA<br><span style="font-size:8px;">Comparativo</span></th>
+                    <th style="width: 14%;">CORPORATIVO<br><span style="font-size:8px;">Fechamento ERP</span></th>
+                    <th style="width: 14%;">CORPORATIVO<br><span style="font-size:8px;">Comparativo</span></th>
+                    <th style="width: 15%;">TOTAL GERAL<br><span style="font-size:8px;">Fechamento ERP</span></th>
+                    <th style="width: 15%;">TOTAL GERAL<br><span style="font-size:8px;">Comparativo</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                ${conciliacaoLinhasHTML}
+            </tbody>
+        </table>
+        
+        <div class="aviso">
+            <strong>ATENÇÃO:</strong> Linhas destacadas em <span style="background-color:#FECACA; padding:2px 6px;">VERMELHO</span> indicam divergência entre o valor do Fechamento de Caixa (ERP) e o valor do Comparativo. 
+            Cores aplicadas: 🟡 Amarelo (dados não informados) | 🟢 Verde (dados conformes) | 🔴 Vermelho (divergência/sem conformidade)
+        </div>
+        
+        <div class="footer">
+            Documento gerado por Aplikado Gestão - Conciliação de Fechamento de Caixa
         </div>
     </body>
     </html>`;
@@ -4302,11 +4251,11 @@ function gerarPDFCaixaComFiltro(mesAtual, diasSelecionados) {
         }
         alert('Erro ao gerar o PDF. Tente novamente.');
     }
-}// ============================================================
+}
+// ============================================================
 // FUNÇÕES DE CONVERSÃO (AGORA VINCULADAS À TABELA DE CONVERSÃO)
 // ============================================================
 function abrirModalConversao() {
-    // Carregar mapeamentos salvos do localStorage (Tabela de Conversão)
     const savedTitulo = localStorage.getItem('condToTituloMap');
     const savedPlano = localStorage.getItem('condToPlanoMap');
     if (savedTitulo) condToTituloMap = JSON.parse(savedTitulo);
@@ -4315,13 +4264,9 @@ function abrirModalConversao() {
     const savedOperacaoPlano = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
     if (savedOperacaoPlano) operacaoToPlanoMap = JSON.parse(savedOperacaoPlano);
 
-    // Carregar condições de pagamento únicas das vendas (RECEITAS)
     const condUnicas = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
-    
-    // Carregar operações únicas das despesas reais (DESPESAS)
     const operacoesUnicas = [...new Set(despesasDataReais.map(d => d.operacao).filter(op => op && op !== '-'))];
     
-    // Montar tabela de RECEITAS
     const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
     if(tbodyReceitas) {
         let html = '';
@@ -4343,12 +4288,11 @@ function abrirModalConversao() {
                     <option value="">Selecione...</option>
                     ${estruturaDRE.receitas.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
                 </select></div>
-             </table>`;
+             </tr>`;
         });
         tbodyReceitas.innerHTML = html;
     }
     
-    // Montar tabela de DESPESAS
     const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
     if(tbodyDespesas) {
         let html = '';
@@ -4378,7 +4322,6 @@ function switchConversaoTab(tab, btn) {
 }
 
 function salvarMapeamentoConversaoCompleto() {
-    // Salvar mapeamento de RECEITAS (Condição de Pagamento -> Título e Plano)
     condToTituloMap = {};
     condToPlanoMap = {};
     
@@ -4396,7 +4339,6 @@ function salvarMapeamentoConversaoCompleto() {
         }
     });
     
-    // Salvar mapeamento de DESPESAS (Operação -> Plano de Contas)
     operacaoToPlanoMap = {};
     document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
         const operacao = select.getAttribute('data-operacao');
@@ -4405,14 +4347,12 @@ function salvarMapeamentoConversaoCompleto() {
         }
     });
     
-    // Persistir no localStorage (Tabela de Conversão)
     localStorage.setItem('condToTituloMap', JSON.stringify(condToTituloMap));
     localStorage.setItem('condToPlanoMap', JSON.stringify(condToPlanoMap));
     localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(operacaoToPlanoMap));
     
     alert(`Mapeamento salvo com sucesso!\n\nReceitas: ${Object.keys(condToTituloMap).length} condições mapeadas.\nDespesas: ${Object.keys(operacaoToPlanoMap).length} operações mapeadas.`);
     
-    // Atualizar interfaces dependentes
     const modalCaixa = document.getElementById('modalFechamentoCaixa');
     if(modalCaixa && modalCaixa.classList.contains('active')) {
         atualizarTitulosColunasCaixa();
@@ -4469,7 +4409,7 @@ function mostrarConsultaConversaoDespesa(operacao, planoContasAtual) {
     document.getElementById('consultaTituloCaixa').innerHTML = 'Saída de Caixa';
     document.getElementById('consultaPlanoContas').innerHTML = planoDisplay;
     document.getElementById('modalConsultaConversao').classList.add('active');
-};
+}
 
 // ============================================================
 // FUNÇÕES DE COMPARATIVOS
@@ -4477,29 +4417,12 @@ function mostrarConsultaConversaoDespesa(operacao, planoContasAtual) {
 function carregarDadosComparativos() { const saved = localStorage.getItem(STORAGE_KEY_COMPARATIVOS); if (saved) { try { dadosComparativos = JSON.parse(saved); } catch(e) { dadosComparativos = {}; } } else { inicializarDadosComparativos(); } }
 function inicializarDadosComparativos() {
     console.log('🔄 Inicializando dados comparativos...');
-    
     const gruposOficiais = gerarDadosCaixa();
     const gruposArray = Array.from(gruposOficiais.entries()).map(([data, row]) => ({ data, row }));
-    
     dadosComparativos = {};
-    
-    // NÃO criar registros automaticamente!
-    // Apenas logar quantos dias existem no período vigente
-    
     console.log('✅ Período vigente possui', gruposArray.length, 'dias');
-    
-    // NÃO chamar salvarDadosComparativos() aqui!
-    // Os registros só serão criados quando o usuário digitar um valor
-}    
-    console.log('✅ Dados comparativos inicializados com ZERO para', Object.keys(dadosComparativos).length, 'dias');
-    
-    // Salvar no Supabase (só as datas que existem)
-    if (Object.keys(dadosComparativos).length > 0) {
-        salvarDadosComparativos();
-    }
-// ============================================================
-// FUNÇÃO ATUALIZAR VALOR COMPARATIVO - VERSÃO SUPABASE
-// ============================================================
+}
+
 async function atualizarValorComparativo(data, campo, valor) {
     console.log('📝 Salvando no Supabase:', { data, campo, valor });
     
@@ -4526,24 +4449,20 @@ async function atualizarValorComparativo(data, campo, valor) {
                           (dadosComparativos[data].VNF || 0);
     dadosComparativos[data].TOTAL_DIA = totalEntradas - (dadosComparativos[data].SAIDA || 0);
     
-    // CHAMAR A FUNÇÃO QUE SALVA NO SUPABASE
     await salvarDadosComparativos();
     
     renderizarTabelaComparativos();
     renderizarCaixaPopup();
 }
-// FUNÇÃO SALVAR DADOS COMPARATIVOS CORRETA
+
 async function salvarDadosComparativos() {
     console.log('🚀 INICIANDO SALVAMENTO NO SUPABASE...');
-    console.log('dadosComparativos atual:', JSON.stringify(dadosComparativos, null, 2));
     
-    // Verificar se há dados
     if (!dadosComparativos || Object.keys(dadosComparativos).length === 0) {
         console.log('⚠️ Nenhum dado para salvar');
         return;
     }
     
-    // Converter para array
     const registros = [];
     for (const [data, valores] of Object.entries(dadosComparativos)) {
         registros.push({
@@ -4562,7 +4481,6 @@ async function salvarDadosComparativos() {
     
     console.log('📦 Registros a enviar:', registros);
     
-    // Tentar salvar no Supabase
     try {
         const { data, error } = await supabaseClient
             .from('comparativos_caixa')
@@ -4579,58 +4497,15 @@ async function salvarDadosComparativos() {
         console.error('❌ EXCEÇÃO:', err);
         alert('Erro: ' + err.message);
     }
-}function obterDadosOficiaisPorData(data) { const gruposOficiais = gerarDadosCaixa(); const row = gruposOficiais.get(data); const saidaValor = todasSaidasPorData[data] || 0; if (row) { const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0); return { DINHEIRO: row.DINHEIRO || 0, DEBITO: row.DEBITO || 0, CREDITO: row.CREDITO || 0, CREDITO_PARCELADO: row.CREDITO_PARCELADO || 0, AG: row.AG || 0, PIX: row.PIX || 0, VNF: row.VNF || 0, SAIDA: saidaValor, TOTAL_DIA: totalEntradas - saidaValor }; } return null; }
+}
+
+function obterDadosOficiaisPorData(data) { const gruposOficiais = gerarDadosCaixa(); const row = gruposOficiais.get(data); const saidaValor = todasSaidasPorData[data] || 0; if (row) { const totalEntradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0); return { DINHEIRO: row.DINHEIRO || 0, DEBITO: row.DEBITO || 0, CREDITO: row.CREDITO || 0, CREDITO_PARCELADO: row.CREDITO_PARCELADO || 0, AG: row.AG || 0, PIX: row.PIX || 0, VNF: row.VNF || 0, SAIDA: saidaValor, TOTAL_DIA: totalEntradas - saidaValor }; } return null; }
 function atualizarTitulosColunasComparativos() { const thDinheiro = document.getElementById('thDinheiroComp'), thDebito = document.getElementById('thDebitoComp'), thCredito = document.getElementById('thCreditoComp'), thCreditoParcelado = document.getElementById('thCreditoParceladoComp'), thAG = document.getElementById('thAGComp'), thPIX = document.getElementById('thPIXComp'), thVNF = document.getElementById('thVNFComp'); if (thDinheiro) thDinheiro.innerHTML = getTituloConfigurado('DINHEIRO') || 'DINHEIRO'; if (thDebito) thDebito.innerHTML = getTituloConfigurado('DEBITO') || 'DEBITO'; if (thCredito) thCredito.innerHTML = getTituloConfigurado('CREDITO') || 'CREDITO'; if (thCreditoParcelado) thCreditoParcelado.innerHTML = getTituloConfigurado('CREDITO PARCELADO') || 'CREDITO PARCELADO'; if (thAG) thAG.innerHTML = getTituloConfigurado('AG') || 'AG'; if (thPIX) thPIX.innerHTML = getTituloConfigurado('PIX') || 'PIX'; if (thVNF) thVNF.innerHTML = getTituloConfigurado('VNF') || 'VNF'; }
 
-function alterarCorLinhaFechamento(data, cor) {
-    // Validar cores permitidas
-    const coresPermitidas = ['verde', 'amarelo', 'vermelho'];
-    if (!coresPermitidas.includes(cor)) {
-        console.error('❌ Cor inválida:', cor);
-        return;
-    }
-    
-    console.log('🎨 alterarCorLinhaFechamento:', data, cor);
-    
-    if (cor === 'amarelo') {
-        if (linhaCorSelecionada[data] === 'amarelo') {
-            delete linhaCorSelecionada[data];
-        } else {
-            linhaCorSelecionada[data] = 'amarelo';
-        }
-    } else if (cor === 'verde') {
-        if (linhaCorSelecionada[data] === 'verde') {
-            delete linhaCorSelecionada[data];
-        } else {
-            linhaCorSelecionada[data] = 'verde';
-        }
-    } else if (cor === 'vermelho') {
-        if (linhaCorSelecionada[data] === 'vermelho') {
-            delete linhaCorSelecionada[data];
-        } else {
-            linhaCorSelecionada[data] = 'vermelho';
-        }
-    
-    
-    salvarCoresNoSupabase();
-    renderizarCaixaPopup();
-    renderizarTabelaComparativos();
-    atualizarTotaisPorClassificacao();
-}    
-    console.log('linhaCorSelecionada após alteração:', linhaCorSelecionada);
-    
-    // Salvar no Supabase
-    salvarCoresNoSupabase();
-    
-    // Atualizar as telas
-    if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
-    if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
-    if (typeof atualizarTotaisPorClassificacao === 'function') atualizarTotaisPorClassificacao();
-}function renderizarTabelaComparativos() {
+function renderizarTabelaComparativos() {
     const gruposOficiais = gerarDadosCaixa();
     let gruposArray = Array.from(gruposOficiais.entries()).map(([data, row]) => ({ data, row }));
     
-    // Ordenar por data (do mais novo para o mais antigo)
     gruposArray.sort((a, b) => {
         const [diaA, mesA, anoA] = a.data.split('/');
         const [diaB, mesB, anoB] = b.data.split('/');
@@ -4701,38 +4576,40 @@ function alterarCorLinhaFechamento(data, cor) {
                     <div class="btn-cor-amarelo ${isAmareloActive ? 'active' : ''}" onclick="alterarCorLinhaFechamento('${data}', 'amarelo')" title="Destacar linha em amarelo - Dados não informados"></div>
                     <div class="btn-cor-vermelho ${isVermelhoActive ? 'active' : ''}" onclick="alterarCorLinhaFechamento('${data}', 'vermelho')" title="Destacar linha em vermelho - Dados sem conformidade / Requer atenção"></div>
                 </div>
-            </td>
-            <td>${gerarCelula('DINHEIRO', dadosComp.DINHEIRO, dadosOficiais.DINHEIRO)}</td>
-            <td>${gerarCelula('DEBITO', dadosComp.DEBITO, dadosOficiais.DEBITO)}</td>
-            <td>${gerarCelula('CREDITO', dadosComp.CREDITO, dadosOficiais.CREDITO)}</td>
-            <td>${gerarCelula('CREDITO_PARCELADO', dadosComp.CREDITO_PARCELADO, dadosOficiais.CREDITO_PARCELADO)}</td>
-            <td>${gerarCelula('AG', dadosComp.AG, dadosOficiais.AG)}</td>
-            <td>${gerarCelula('PIX', dadosComp.PIX, dadosOficiais.PIX)}</td>
-            <td>${gerarCelula('VNF', dadosComp.VNF, dadosOficiais.VNF)}</td>
-            <td>${gerarCelula('SAIDA', dadosComp.SAIDA, dadosOficiais.SAIDA)}</td>
-            <td><strong style="color:var(--yellow);">R$ ${formatMoneySimple(totalDia)}</strong> ${indicatorTotalDia}</td>
+            </div>
+            <td>${gerarCelula('DINHEIRO', dadosComp.DINHEIRO, dadosOficiais.DINHEIRO)}</div>
+            <td>${gerarCelula('DEBITO', dadosComp.DEBITO, dadosOficiais.DEBITO)}</div>
+            <td>${gerarCelula('CREDITO', dadosComp.CREDITO, dadosOficiais.CREDITO)}</div>
+            <td>${gerarCelula('CREDITO_PARCELADO', dadosComp.CREDITO_PARCELADO, dadosOficiais.CREDITO_PARCELADO)}</div>
+            <td>${gerarCelula('AG', dadosComp.AG, dadosOficiais.AG)}</div>
+            <td>${gerarCelula('PIX', dadosComp.PIX, dadosOficiais.PIX)}</div>
+            <td>${gerarCelula('VNF', dadosComp.VNF, dadosOficiais.VNF)}</div>
+            <td>${gerarCelula('SAIDA', dadosComp.SAIDA, dadosOficiais.SAIDA)}</div>
+            <td><strong style="color:var(--yellow);">R$ ${formatMoneySimple(totalDia)}</strong> ${indicatorTotalDia}</div>
         </tr>`; 
     });
     
     tbodyHtml += `<tr style="background:rgba(230,160,23,0.1); border-top:2px solid var(--yellow);">
-        <td><strong style="color:var(--yellow);">TOTAL</strong></td>
-        <td><strong>R$ ${formatMoneySimple(totalDinheiroComp)}</strong></td>
-        <td><strong>R$ ${formatMoneySimple(totalDebitoComp)}</strong></td>
-        <td><strong>R$ ${formatMoneySimple(totalCreditoComp)}</strong></td>
-        <td><strong>R$ ${formatMoneySimple(totalCreditoParceladoComp)}</strong></td>
-        <td><strong>R$ ${formatMoneySimple(totalAgComp)}</strong></td>
-        <td><strong>R$ ${formatMoneySimple(totalPixComp)}</strong></td>
-        <td><strong>R$ ${formatMoneySimple(totalVnfComp)}</strong></td>
-        <td><strong>R$ ${formatMoneySimple(totalSaidaComp)}</strong></td>
-        <td><strong>R$ ${formatMoneySimple(totalEntradasComp - totalSaidaComp)}</strong></td>
-    </tr>`;
+        <td><strong style="color:var(--yellow);">TOTAL</strong></div>
+        <td><strong>R$ ${formatMoneySimple(totalDinheiroComp)}</strong></div>
+        <td><strong>R$ ${formatMoneySimple(totalDebitoComp)}</strong></div>
+        <td><strong>R$ ${formatMoneySimple(totalCreditoComp)}</strong></div>
+        <td><strong>R$ ${formatMoneySimple(totalCreditoParceladoComp)}</strong></div>
+        <td><strong>R$ ${formatMoneySimple(totalAgComp)}</strong></div>
+        <td><strong>R$ ${formatMoneySimple(totalPixComp)}</strong></div>
+        <td><strong>R$ ${formatMoneySimple(totalVnfComp)}</strong></div>
+        <td><strong>R$ ${formatMoneySimple(totalSaidaComp)}</strong></div>
+        <td><strong>R$ ${formatMoneySimple(totalEntradasComp - totalSaidaComp)}</strong></div>
+    </table>`;
     
     document.getElementById('comparativosTableBody').innerHTML = tbodyHtml;
     document.getElementById('totalSaidasComparativos').innerHTML = `R$ ${formatMoneySimple(totalSaidaComp)}`;
     document.getElementById('saldoLiquidoComparativos').innerHTML = `R$ ${formatMoneySimple(totalEntradasComp - totalSaidaComp)}`;
     document.getElementById('totalGeralComparativos').innerHTML = `R$ ${formatMoneySimple(totalEntradasComp)}`;
     atualizarTitulosColunasComparativos();
-}function aplicarFiltrosComparativos() { comparativoFiltroMes = document.getElementById('filtroMesComparativos')?.value || "TODOS"; comparativoFiltroTexto = document.getElementById('buscaComparativosInput')?.value || ""; renderizarTabelaComparativos(); }
+}
+
+function aplicarFiltrosComparativos() { comparativoFiltroMes = document.getElementById('filtroMesComparativos')?.value || "TODOS"; comparativoFiltroTexto = document.getElementById('buscaComparativosInput')?.value || ""; renderizarTabelaComparativos(); }
 function limparFiltrosComparativos() { if(document.getElementById('filtroMesComparativos')) document.getElementById('filtroMesComparativos').value = "TODOS"; if(document.getElementById('buscaComparativosInput')) document.getElementById('buscaComparativosInput').value = ""; comparativoFiltroTexto = ""; comparativoFiltroMes = "TODOS"; renderizarTabelaComparativos(); }
 function popularMesesComparativos() { const gruposOficiais = gerarDadosCaixa(); const mesesUnicos = new Set(); gruposOficiais.forEach((_, data) => { const mesAno = getMesAno(data); if(mesAno) mesesUnicos.add(mesAno); }); const selectMes = document.getElementById('filtroMesComparativos'); if(selectMes) { const valorAtual = selectMes.value; selectMes.innerHTML = '<option value="TODOS">TODOS OS MESES</option>'; Array.from(mesesUnicos).sort().forEach(m => { selectMes.innerHTML += `<option value="${m}" ${valorAtual === m ? 'selected' : ''}>${m}</option>`; }); } }
 
@@ -4748,18 +4625,13 @@ async function carregarComparativosSupabase() {
         return;
     }
     
-    // Obter apenas as datas que existem NO HTML (período vigente)
     const gruposOficiais = gerarDadosCaixa();
     const datasVigentes = new Set(Array.from(gruposOficiais.keys()));
     
-    console.log('📅 Datas vigentes no HTML:', Array.from(datasVigentes));
-    
-    // CARREGAR apenas dados de datas vigentes
     dadosComparativos = {};
     
     if (data && data.length > 0) {
         data.forEach(item => {
-            // SÓ carregar se a data existe no HTML atual
             if (datasVigentes.has(item.data)) {
                 dadosComparativos[item.data] = {
                     DINHEIRO: item.dinheiro || 0,
@@ -4772,27 +4644,13 @@ async function carregarComparativosSupabase() {
                     SAIDA: item.saida || 0,
                     TOTAL_DIA: item.total_dia || 0
                 };
-            } else {
-                console.log(`🗑️ Ignorando data antiga (não vigente): ${item.data}`);
             }
         });
     }
     
-    // Para datas vigentes que NÃO têm registro, NÃO criar! Deixar como undefined
-    // (A função renderizarTabelaComparativos já trata como 0)
-    
-    console.log('🎯 dadosComparativos após carregamento:', Object.keys(dadosComparativos));
-    
     renderizarTabelaComparativos();
     if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
-}   
- // Recarregar a tabela
-    renderizarTabelaComparativos();
-    
-    // Atualizar também o fechamento de caixa
-    if (typeof renderizarCaixaPopup === 'function') {
-        renderizarCaixaPopup();
-    }
+}
 
 // ============================================================
 // FUNÇÕES DE ESTATÍSTICAS
@@ -4844,7 +4702,7 @@ function abrirDrilldownReceitas() {
     chartDrilldownReceitas = new Chart(ctx, { type: 'bar', data: { labels: ['Loja Física', 'Corporativo'], datasets: [{ label: 'Receitas', data: [lojaTotal, corpTotal], backgroundColor: ['#10b981', '#8b5cf6'], borderRadius: 8, borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top', labels: { color: '#e8edf2' } }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: R$ ${ctx.raw.toLocaleString('pt-BR')}` } } }, scales: { y: { ticks: { color: '#e8edf2', callback: (v) => `R$ ${v.toLocaleString()}` }, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { ticks: { color: '#e8edf2' }, grid: { display: false } } } } });
     const diasOrdenados = Array.from(porDia.keys()).sort((a,b) => parseDataStats(a) - parseDataStats(b));
     let tableHtml = '';
-    diasOrdenados.forEach(data => { const valores = porDia.get(data); tableHtml += `<tr><td style="text-align:left;">${data}</div><td style="text-align:right;">R$ ${formatMoneySimple(valores.loja)}</div><td style="text-align:right;">R$ ${formatMoneySimple(valores.corp)}</div><td style="text-align:right; font-weight:700; color:var(--yellow);">R$ ${formatMoneySimple(valores.total)}</div><tr>`; });
+    diasOrdenados.forEach(data => { const valores = porDia.get(data); tableHtml += `<tr><td style="text-align:left;">${data}</div><td style="text-align:right;">R$ ${formatMoneySimple(valores.loja)}</div><td style="text-align:right;">R$ ${formatMoneySimple(valores.corp)}</div><td style="text-align:right; font-weight:700; color:var(--yellow);">R$ ${formatMoneySimple(valores.total)}</div></tr>`; });
     document.getElementById('drilldownReceitasTableBody').innerHTML = tableHtml;
     document.getElementById('modalDrilldownReceitas').classList.add('active');
 }
@@ -4867,7 +4725,6 @@ function salvarCores() { localStorage.setItem(STORAGE_KEY_CORES_LINHAS, JSON.str
 // FUNÇÃO DE CONSULTA CONVERSÃO
 // ============================================================
 function mostrarConsultaConversao(condicaoPagamento, planoContasAtual, isReceita = true) {
-    // Recarregar os mapeamentos do localStorage
     const savedTitulo = localStorage.getItem('condToTituloMap');
     const savedPlano = localStorage.getItem('condToPlanoMap');
     
@@ -4895,7 +4752,6 @@ function mostrarConsultaConversao(condicaoPagamento, planoContasAtual, isReceita
         }
     }
     
-    // Buscar o plano de contas configurado
     if (condFinal && condFinal !== '' && condFinal !== '-') {
         if (tituloMap[condFinal]) {
             titulo = tituloMap[condFinal];
@@ -4903,7 +4759,6 @@ function mostrarConsultaConversao(condicaoPagamento, planoContasAtual, isReceita
         
         if (planoMap[condFinal]) {
             planoContas = planoMap[condFinal];
-            // Buscar o código do plano na estruturaDRE
             const todosPlanos = [...estruturaDRE.receitas, ...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
             const planoEncontrado = todosPlanos.find(p => p.nome === planoContas);
             if (planoEncontrado) {
@@ -4912,10 +4767,8 @@ function mostrarConsultaConversao(condicaoPagamento, planoContasAtual, isReceita
         }
     }
     
-    // Fallback se não encontrou
     if (!planoContas || planoContas === '') {
         planoContas = planoContasAtual || (isReceita ? "RECEITA DE SERVICOS" : "DESPESAS ADMINISTRATIVAS");
-        // Buscar código do plano fallback
         const todosPlanos = [...estruturaDRE.receitas, ...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
         const planoEncontrado = todosPlanos.find(p => p.nome === planoContas);
         if (planoEncontrado) {
@@ -4931,7 +4784,6 @@ function mostrarConsultaConversao(condicaoPagamento, planoContasAtual, isReceita
         return;
     }
     
-    // Exibir com código do plano
     const planoDisplay = codigoPlano ? `${codigoPlano} - ${planoContas}` : planoContas;
     
     document.getElementById('consultaCondPag').innerHTML = `<strong>${condFinal}</strong>`;
@@ -4942,38 +4794,16 @@ function mostrarConsultaConversao(condicaoPagamento, planoContasAtual, isReceita
 function fecharModalConsultaConversao() { document.getElementById('modalConsultaConversao').classList.remove('active'); }
 
 // ============================================================
-// EVENTOS E INICIALIZAÇÃO
+// FUNÇÃO DETALHAMENTO DRE CORRIGIDA (AJUSTE 1)
 // ============================================================
-document.getElementById('modalDrilldownReceitas')?.addEventListener('click', function(e) { if (e.target === this) fecharDrilldownReceitas(); });
-document.getElementById('modalDrilldownDespesas')?.addEventListener('click', function(e) { if (e.target === this) fecharDrilldownDespesas(); });
-document.getElementById('modalConsultaConversao')?.addEventListener('click', function(e) { if (e.target === this) fecharModalConsultaConversao(); });
-document.getElementById('modalDrilldownValor')?.addEventListener('click', function(e) { if (e.target === this) fecharModalDrilldownValor(); });
-
-carregarPlanoContas();
-carregarCoresSalvas();
-carregarFlags();
-gerarDRE();
-loadMapeamentos();
-carregarVendas();
-carregarCompras();
-carregarSaidasCaixa();
-carregarDadosReaisLancamentos();
-carregarDadosEstatisticas();
-
-console.log('Sistema Aplikado Módulo III inicializado com sucesso!');
-function marcarSeIncluido(data, valor, desc) {
-    for(let m = 0; m < 12; m++) {
-        const dados = JSON.parse(localStorage.getItem(`dadosModuloIII_mes_${m}`) || '[]');
-        if(dados.some(l => l.data === data && Math.abs(parseMoeda(l.valor) - valor) < 0.01 && l.desc === desc))
-            return " ★";
-    }
-    return "";
+async function abrirDetalhamentoValorCorrigido(valor, mesIndex, nomeConta, codConta, grupoTipo, isTotal) {
+    await abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo, isTotal);
 }
+
 // ============================================================
-// FUNÇÕES MODIFICADAS PARA USAR SUPABASE - APENAS DRE_LANCAMENTOS E REGRAS_CONVERSAO
+// FUNÇÕES MODIFICADAS PARA USAR SUPABASE
 // ============================================================
 
-// === CARREGAR DRE DO SUPABASE ===
 async function carregarDRESupabase() {
     const { data, error } = await supabaseClient
         .from('dre_lancamentos')
@@ -4984,7 +4814,6 @@ async function carregarDRESupabase() {
         return null;
     }
     
-    // Organizar por mês
     const dadosPorMes = [[],[],[],[],[],[],[],[],[],[],[],[]];
     if (data) {
         data.forEach(item => {
@@ -5002,9 +4831,7 @@ async function carregarDRESupabase() {
     return dadosPorMes;
 }
 
-// === SALVAR DRE NO SUPABASE (SUBSTITUI O LOCALSTORAGE) ===
 async function salvarDRESupabase(mes, lancamentos) {
-    // Primeiro, deletar os lançamentos existentes deste mês
     const { error: deleteError } = await supabaseClient
         .from('dre_lancamentos')
         .delete()
@@ -5017,7 +4844,6 @@ async function salvarDRESupabase(mes, lancamentos) {
     
     if (lancamentos.length === 0) return true;
     
-    // Preparar para inserir
     const toInsert = lancamentos.map(l => ({
         mes: mes,
         data: l.data,
@@ -5039,7 +4865,6 @@ async function salvarDRESupabase(mes, lancamentos) {
     return true;
 }
 
-// === FUNÇÃO GERAR DRE MODIFICADA ===
 async function gerarDREComSupabase() {
     const dadosPorMes = await carregarDRESupabase();
     if (!dadosPorMes) return;
@@ -5164,7 +4989,6 @@ async function gerarDREComSupabase() {
     addLinha('','RESULTADO OPERACIONAL',resultadoOp,'dre-total-row',true, 'total'); 
 }
 
-// === FUNÇÃO LIMPAR DRE MODIFICADA ===
 async function limparDREComSupabase() {
     if(confirm('ATENÇÃO: Isso irá zerar TODOS os valores mensais inseridos na DRE. A estrutura do plano de contas será mantida. Confirmar limpeza?')) {
         for(let m = 0; m < 12; m++) {
@@ -5175,406 +4999,6 @@ async function limparDREComSupabase() {
     }
 }
 
-// === INCLUIR SELECIONADOS NO DRE MODIFICADO ===
-async function incluirSelecionadosNoDRESupabase() {
-    salvarPlanosReceitas();
-    salvarPlanosDespesas();
-    const lancamentosPorMes = [[],[],[],[],[],[],[],[],[],[],[],[]];
-    let totalValidados = 0, totalRejeitados = 0;
-    const rejeitadosDetalhes = [];
-    
-    // Carregar hashes existentes do Supabase
-    const hashLancamentosExistentes = new Set();
-    for(let mes = 0; mes < 12; mes++) {
-        const { data: dadosExistentes } = await supabaseClient
-            .from('dre_lancamentos')
-            .select('*')
-            .eq('mes', mes);
-        
-        if(dadosExistentes) {
-            dadosExistentes.forEach(lanc => {
-                const hash = `${mes}|${lanc.plano}|${parseFloat(lanc.valor)}|${lanc.data}`;
-                hashLancamentosExistentes.add(hash);
-            });
-        }
-    }
-    
-    // Processar RECEITAS selecionadas
-    receitasSelecionadas.forEach(id => { 
-        const receita = receitasDataReais.find(r => r.id === id); 
-        if(receita) { 
-            const mes = getMesFromData(receita.data); 
-            const valorOriginal = receita.valor; 
-            const valorConvertido = parseMoeda(valorOriginal); 
-            const saoCompativeis = Math.abs(valorOriginal - valorConvertido) < 0.01; 
-            if (!saoCompativeis) { 
-                totalRejeitados++; 
-                rejeitadosDetalhes.push({ tipo:'RECEITA', id:id, descricao:receita.cliente, valorOriginal:valorOriginal, valorConvertido:valorConvertido }); 
-                return; 
-            } 
-            
-            const hash = `${mes}|${receita.plano}|${valorConvertido}|${receita.data}`;
-            
-            if (!hashLancamentosExistentes.has(hash)) {
-                totalValidados++; 
-                lancamentosPorMes[mes].push({ 
-                    data:receita.data, 
-                    desc:`RECEITA: ${receita.cliente}`, 
-                    plano:receita.plano, 
-                    valor:valorConvertido.toString(), 
-                    timestamp:new Date().toLocaleString('pt-br')
-                }); 
-                hashLancamentosExistentes.add(hash);
-            }
-        } 
-    });
-    
-    // Processar DESPESAS selecionadas
-    despesasSelecionadas.forEach(id => { 
-        const despesa = despesasDataReais.find(d => d.id === id); 
-        if(despesa) { 
-            const mes = getMesFromData(despesa.data); 
-            const valorOriginal = despesa.valor; 
-            const valorConvertido = parseMoeda(valorOriginal); 
-            const saoCompativeis = Math.abs(valorOriginal - valorConvertido) < 0.01; 
-            if (!saoCompativeis) { 
-                totalRejeitados++; 
-                rejeitadosDetalhes.push({ tipo:'DESPESA', id:id, descricao:despesa.operacao, valorOriginal:valorOriginal, valorConvertido:valorConvertido }); 
-                return; 
-            } 
-            
-            const hash = `${mes}|${despesa.plano}|${valorConvertido}|${despesa.data}`;
-            
-            if (!hashLancamentosExistentes.has(hash)) {
-                totalValidados++; 
-                lancamentosPorMes[mes].push({ 
-                    data:despesa.data, 
-                    desc:`DESPESA: ${despesa.operacao}`, 
-                    plano:despesa.plano, 
-                    valor:valorConvertido.toString(), 
-                    timestamp:new Date().toLocaleString('pt-br')
-                }); 
-                hashLancamentosExistentes.add(hash);
-            }
-        } 
-    });
-    
-    if (totalRejeitados > 0) { 
-        let mensagem = `⚠️ VALIDAÇÃO DE VALORES ⚠️\n\n${totalRejeitados} registro(s) foram REJEITADOS por divergência de valor:\n\n`; 
-        rejeitadosDetalhes.slice(0,10).forEach(r => { 
-            mensagem += `• ${r.tipo}: ${r.descricao}\n  Original: ${r.valorOriginal} → Convertido: ${r.valorConvertido}\n`; 
-        }); 
-        if (rejeitadosDetalhes.length > 10) mensagem += `\n... e mais ${rejeitadosDetalhes.length - 10} registro(s) rejeitados.`; 
-        mensagem += `\n\n✅ ${totalValidados} registro(s) validados com sucesso.\n\nOs registros rejeitados NÃO foram incluídos no DRE.`; 
-        alert(mensagem); 
-    }
-    
-    if (totalValidados === 0 && totalRejeitados === 0) { 
-        alert('Nenhum registro novo para incluir no DRE. Os lançamentos selecionados já foram adicionados anteriormente.'); 
-        return; 
-    }
-    
-    if (totalValidados === 0 && totalRejeitados > 0) {
-        alert('Nenhum registro válido para incluir no DRE. Verifique os valores dos registros selecionados.');
-        return;
-    }
-    
-    let totalIncluidos = 0;
-    
-    for(let mes = 0; mes < 12; mes++) { 
-        if(lancamentosPorMes[mes].length > 0) { 
-            const { data: dadosExistentes } = await supabaseClient
-                .from('dre_lancamentos')
-                .select('*')
-                .eq('mes', mes);
-            
-            let dadosAtuais = dadosExistentes || [];
-            
-            const novosLancamentos = lancamentosPorMes[mes].filter(novoLanc => {
-                const existe = dadosAtuais.some(lancExistente => 
-                    lancExistente.data === novoLanc.data && 
-                    lancExistente.plano === novoLanc.plano && 
-                    Math.abs(parseFloat(lancExistente.valor) - parseFloat(novoLanc.valor)) < 0.01
-                );
-                return !existe;
-            });
-            
-            if(novosLancamentos.length > 0) { 
-                const toInsert = novosLancamentos.map(l => ({
-                    mes: mes,
-                    data: l.data,
-                    descricao: l.desc,
-                    plano: l.plano,
-                    valor: parseFloat(l.valor) || 0,
-                    timestamp: l.timestamp
-                }));
-                
-                const { error } = await supabaseClient
-                    .from('dre_lancamentos')
-                    .insert(toInsert);
-                
-                if (!error) {
-                    totalIncluidos += novosLancamentos.length;
-                }
-            }
-        } 
-    }
-    
-    receitasSelecionadas.clear(); 
-    despesasSelecionadas.clear(); 
-    renderizarTabelaReceitas(); 
-    renderizarTabelaDespesas(); 
-    await gerarDREComSupabase();
-    
-    let mensagemFinal = `${totalIncluidos} registro(s) incluído(s) no DRE com sucesso!`;
-    if (totalRejeitados > 0) mensagemFinal += ` ${totalRejeitados} registro(s) foram rejeitados por divergência de valor.`;
-    alert(mensagemFinal);
-}
-
-// === CARREGAR REGRAS DE CONVERSÃO DO SUPABASE ===
-async function carregarRegrasConversaoSupabase() {
-    const { data, error } = await supabaseClient
-        .from('regras_conversao')
-        .select('*');
-    
-    if (error) {
-        console.error('Erro ao carregar regras de conversão:', error);
-        return;
-    }
-    
-    if (data) {
-        // Limpar mapeamentos atuais
-        window.condToTituloMap = {};
-        window.condToPlanoMap = {};
-        window.operacaoToPlanoMap = {};
-        
-        data.forEach(regra => {
-            if (regra.tipo === 'RECEITA') {
-                if (regra.destino_caixa) {
-                    window.condToTituloMap[regra.origem] = regra.destino_caixa;
-                }
-                if (regra.destino_plano) {
-                    window.condToPlanoMap[regra.origem] = regra.destino_plano;
-                }
-            } else if (regra.tipo === 'DESPESA') {
-                if (regra.destino_plano) {
-                    window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
-                }
-            }
-        });
-        
-        // Salvar também no localStorage para compatibilidade com funções existentes
-        localStorage.setItem('condToTituloMap', JSON.stringify(window.condToTituloMap));
-        localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
-        localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
-    }
-}
-
-// === SALVAR REGRAS DE CONVERSÃO NO SUPABASE ===
-async function salvarRegrasConversaoSupabase() {
-    // Coletar regras de RECEITAS
-    const receitasRegras = [];
-    for (const [origem, destinoCaixa] of Object.entries(window.condToTituloMap || {})) {
-        const destinoPlano = window.condToPlanoMap?.[origem] || '';
-        receitasRegras.push({
-            tipo: 'RECEITA',
-            origem: origem,
-            destino_caixa: destinoCaixa,
-            destino_plano: destinoPlano
-        });
-    }
-    
-    // Coletar regras de DESPESAS
-    const despesasRegras = [];
-    for (const [origem, destinoPlano] of Object.entries(window.operacaoToPlanoMap || {})) {
-        despesasRegras.push({
-            tipo: 'DESPESA',
-            origem: origem,
-            destino_caixa: null,
-            destino_plano: destinoPlano
-        });
-    }
-    
-    const todasRegras = [...receitasRegras, ...despesasRegras];
-    
-    if (todasRegras.length === 0) return;
-    
-    // Deletar regras antigas
-    const { error: deleteError } = await supabaseClient
-        .from('regras_conversao')
-        .delete()
-        .neq('id', 0);
-    
-    if (deleteError) {
-        console.error('Erro ao deletar regras antigas:', deleteError);
-        return;
-    }
-    
-    // Inserir novas regras
-    const { error: insertError } = await supabaseClient
-        .from('regras_conversao')
-        .insert(todasRegras);
-    
-    if (insertError) {
-        console.error('Erro ao salvar regras de conversão:', insertError);
-        alert('Erro ao salvar regras no Supabase. Verifique sua conexão.');
-    } else {
-        alert(`Mapeamento salvo com sucesso!\n\nReceitas: ${receitasRegras.length} condições mapeadas.\nDespesas: ${despesasRegras.length} operações mapeadas.`);
-    }
-}
-
-// === FUNÇÃO SALVAR MAPEAMENTO CONVERSÃO MODIFICADA ===
-async function salvarMapeamentoConversaoCompletoSupabase() {
-    // Coletar dados dos selects da tela de conversão
-    window.condToTituloMap = {};
-    window.condToPlanoMap = {};
-    
-    document.querySelectorAll('#conversaoTabReceitas .conversao-select').forEach(select => {
-        const cond = select.getAttribute('data-cond');
-        if (cond && select.value) {
-            window.condToTituloMap[cond] = select.value;
-        }
-    });
-    
-    document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
-        const cond = select.getAttribute('data-plano-cond');
-        if (cond && select.value) {
-            window.condToPlanoMap[cond] = select.value;
-        }
-    });
-    
-    window.operacaoToPlanoMap = {};
-    document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
-        const operacao = select.getAttribute('data-operacao');
-        if (operacao && select.value) {
-            window.operacaoToPlanoMap[operacao] = select.value;
-        }
-    });
-    
-    // Salvar no Supabase
-    await salvarRegrasConversaoSupabase();
-    
-    // Salvar também no localStorage para compatibilidade
-    localStorage.setItem('condToTituloMap', JSON.stringify(window.condToTituloMap));
-    localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
-    localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
-    
-    // Atualizar interfaces
-    const modalCaixa = document.getElementById('modalFechamentoCaixa');
-    if(modalCaixa && modalCaixa.classList.contains('active')) {
-        atualizarTitulosColunasCaixa();
-        renderizarCaixaPopup();
-    }
-    
-    fecharModalConversao();
-}
-
-// === FUNÇÃO ABRIR MODAL CONVERSAO MODIFICADA ===
-async function abrirModalConversaoSupabase() {
-    // Carregar regras do Supabase primeiro
-    await carregarRegrasConversaoSupabase();
-    
-    // Carregar condições de pagamento únicas das vendas
-    const condUnicas = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
-    
-    // Carregar operações únicas das despesas
-    const operacoesUnicas = [...new Set(despesasDataReais.map(d => d.operacao).filter(op => op && op !== '-'))];
-    
-    // Montar tabela de RECEITAS
-    const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
-    if(tbodyReceitas) {
-        let html = '';
-        condUnicas.forEach(cond => {
-            const tituloAtual = window.condToTituloMap?.[cond] || 'VNF';
-            const planoAtual = window.condToPlanoMap?.[cond] || '';
-            html += `<tr>
-                <td>${cond}</td>
-                <td><select class="conversao-select" data-cond="${cond}">
-                    <option value="DINHEIRO" ${tituloAtual === 'DINHEIRO' ? 'selected' : ''}>DINHEIRO</option>
-                    <option value="DEBITO" ${tituloAtual === 'DEBITO' ? 'selected' : ''}>DEBITO</option>
-                    <option value="CREDITO" ${tituloAtual === 'CREDITO' ? 'selected' : ''}>CREDITO</option>
-                    <option value="CREDITO PARCELADO" ${tituloAtual === 'CREDITO PARCELADO' ? 'selected' : ''}>CREDITO PARCELADO</option>
-                    <option value="AG" ${tituloAtual === 'AG' ? 'selected' : ''}>AG</option>
-                    <option value="PIX" ${tituloAtual === 'PIX' ? 'selected' : ''}>PIX</option>
-                    <option value="VNF" ${tituloAtual === 'VNF' ? 'selected' : ''}>VNF</option>
-                </select></td>
-                <td><select class="conversao-select-plano-receita" data-plano-cond="${cond}">
-                    <option value="">Selecione...</option>
-                    ${estruturaDRE.receitas.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
-                </select></td>
-             </tr>`;
-        });
-        tbodyReceitas.innerHTML = html;
-    }
-    
-    // Montar tabela de DESPESAS
-    const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
-    if(tbodyDespesas) {
-        let html = '';
-        const todosPlanosDespesa = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
-        operacoesUnicas.forEach(operacao => {
-            const planoAtual = window.operacaoToPlanoMap?.[operacao] || '';
-            html += `<tr>
-                <td>${operacao}</td>
-                <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></td>
-                <td><select class="conversao-select-plano-despesa" data-operacao="${operacao}">
-                    <option value="">Selecione...</option>
-                    ${todosPlanosDespesa.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
-                </select></td>
-             </tr>`;
-        });
-        tbodyDespesas.innerHTML = html;
-    }
-    
-    document.getElementById('modalConversao').classList.add('active');
-}
-
-// === SUBSTITUIR AS FUNÇÕES ORIGINAIS ===
-// Para manter compatibilidade, substitua as chamadas antigas:
-// - gerarDRE() → gerarDREComSupabase()
-// - limparDRE() → limparDREComSupabase()
-// - incluirSelecionadosNoDRE() → incluirSelecionadosNoDRESupabase()
-// - abrirModalConversao() → abrirModalConversaoSupabase()
-// - salvarMapeamentoConversaoCompleto() → salvarMapeamentoConversaoCompletoSupabase()
-
-// Carregar DRE ao iniciar
-document.addEventListener('DOMContentLoaded', async function() {
-    await carregarRegrasConversaoSupabase();
-    await gerarDREComSupabase();
-    await carregarCoresDoSupabase();
-    await carregarCoresDoSupabase();
-    carregarVendas();
-    carregarCompras();
-    carregarDadosReaisLancamentos();
-    carregarDadosComparativos();
-    
-    // CARREGAR COMPARATIVOS DO SUPABASE
-    const { data } = await supabaseClient.from('comparativos_caixa').select('*');
-    if (data) {
-        dadosComparativos = {};
-        data.forEach(item => {
-            dadosComparativos[item.data] = {
-                DINHEIRO: item.dinheiro || 0,
-                DEBITO: item.debito || 0,
-                CREDITO: item.credito || 0,
-                CREDITO_PARCELADO: item.credito_parcelado || 0,
-                AG: item.ag || 0,
-                PIX: item.pix || 0,
-                VNF: item.vnf || 0,
-                SAIDA: item.saida || 0,
-                TOTAL_DIA: item.total_dia || 0
-            };
-        });
-    }
-    
-    renderizarCaixaPopup();
-    renderizarTabelaComparativos();
-});
-// ============================================================
-// FUNÇÕES SUPABASE CORRIGIDAS - SUBSTITUA AS EXISTENTES
-// ============================================================
-
-// FUNÇÃO PRINCIPAL PARA INCLUIR NO DRE
 async function incluirSelecionadosNoDRESupabase() {
     console.log('INICIANDO INCLUSÃO NO SUPABASE...');
     
@@ -5585,129 +5009,6 @@ async function incluirSelecionadosNoDRESupabase() {
     let totalValidados = 0, totalRejeitados = 0;
     const rejeitadosDetalhes = [];
     
-    // Para cada receita selecionada
-    for (const id of receitasSelecionadas) {
-        const receita = receitasDataReais.find(r => r.id === id);
-        if (!receita) continue;
-        
-        const mes = getMesFromData(receita.data);
-        const valor = receita.valor;
-        
-        if (isNaN(valor) || valor <= 0) {
-            totalRejeitados++;
-            rejeitadosDetalhes.push({ tipo:'RECEITA', descricao:receita.cliente, valor:valor });
-            continue;
-        }
-        
-        totalValidados++;
-        lancamentosPorMes[mes].push({
-            data: receita.data,
-            desc: `RECEITA: ${receita.cliente}`,
-            plano: receita.plano,
-            valor: valor.toString(),
-            timestamp: new Date().toLocaleString('pt-br')
-        });
-    }
-    
-    // Para cada despesa selecionada
-    for (const id of despesasSelecionadas) {
-        const despesa = despesasDataReais.find(d => d.id === id);
-        if (!despesa) continue;
-        
-        const mes = getMesFromData(despesa.data);
-        const valor = despesa.valor;
-        
-        if (isNaN(valor) || valor <= 0) {
-            totalRejeitados++;
-            rejeitadosDetalhes.push({ tipo:'DESPESA', descricao:despesa.operacao, valor:valor });
-            continue;
-        }
-        
-        totalValidados++;
-        lancamentosPorMes[mes].push({
-            data: despesa.data,
-            desc: `DESPESA: ${despesa.operacao}`,
-            plano: despesa.plano,
-            valor: valor.toString(),
-            timestamp: new Date().toLocaleString('pt-br')
-        });
-    }
-    
-    if (totalValidados === 0) {
-        alert('Nenhum registro selecionado para incluir.');
-        return;
-    }
-    
-    // SALVAR NO SUPABASE
-    let totalIncluidos = 0;
-    
-    for (let mes = 0; mes < 12; mes++) {
-        if (lancamentosPorMes[mes].length === 0) continue;
-        
-        // Prepara os dados para inserir
-        const toInsert = lancamentosPorMes[mes].map(l => ({
-            mes: mes,
-            data: l.data,
-            descricao: l.desc,
-            plano: l.plano,
-            valor: parseFloat(l.valor) || 0,
-            timestamp: l.timestamp
-        }));
-        
-        // Insere no Supabase
-        const { data, error } = await supabaseClient
-            .from('dre_lancamentos')
-            .insert(toInsert);
-        
-        if (error) {
-            console.error('Erro ao inserir no Supabase:', error);
-            alert('Erro ao salvar no Supabase: ' + error.message);
-            return;
-        }
-        
-        totalIncluidos += toInsert.length;
-        console.log(`Mês ${mes}: ${toInsert.length} registros inseridos`);
-    }
-    
-    // Limpar seleções e recarregar
-    receitasSelecionadas.clear();
-    despesasSelecionadas.clear();
-    renderizarTabelaReceitas();
-    renderizarTabelaDespesas();
-    
-    // Recarregar o DRE
-    await gerarDREComSupabase();
-    
-    alert(`${totalIncluidos} registro(s) incluído(s) no DRE com sucesso!`);
-}
-
-// ============================================================
-// FUNÇÃO PARA CONVERTER DATA PARA FORMATO DO SUPABASE
-// ============================================================
-function formatarDataParaSupabase(dataStr) {
-    if (!dataStr) return new Date().toISOString().split('T')[0];
-    if (dataStr.includes('/')) {
-        const partes = dataStr.split('/');
-        return `${partes[2]}-${partes[1].padStart(2,'0')}-${partes[0].padStart(2,'0')}`;
-    }
-    if (dataStr.includes('-')) return dataStr;
-    return new Date().toISOString().split('T')[0];
-}
-
-// ============================================================
-// FUNÇÃO INCLUIR NO DRE CORRIGIDA (SUBSTITUA A EXISTENTE)
-// ============================================================
-async function incluirSelecionadosNoDRESupabase() {
-    console.log('INICIANDO INCLUSÃO NO SUPABASE...');
-    
-    salvarPlanosReceitas();
-    salvarPlanosDespesas();
-    
-    const lancamentosPorMes = [[],[],[],[],[],[],[],[],[],[],[],[]];
-    let totalValidados = 0, totalRejeitados = 0;
-    const rejeitadosDetalhes = [];
-    
-    // Processar RECEITAS selecionadas
     for (const id of receitasSelecionadas) {
         const receita = receitasDataReais.find(r => r.id === id);
         if (!receita) continue;
@@ -5731,7 +5032,6 @@ async function incluirSelecionadosNoDRESupabase() {
         });
     }
     
-    // Processar DESPESAS selecionadas
     for (const id of despesasSelecionadas) {
         const despesa = despesasDataReais.find(d => d.id === id);
         if (!despesa) continue;
@@ -5760,7 +5060,6 @@ async function incluirSelecionadosNoDRESupabase() {
         return;
     }
     
-    // SALVAR NO SUPABASE
     let totalIncluidos = 0;
     
     for (let mes = 0; mes < 12; mes++) {
@@ -5790,7 +5089,6 @@ async function incluirSelecionadosNoDRESupabase() {
         totalIncluidos += toInsert.length;
     }
     
-    // Limpar seleções e recarregar
     receitasSelecionadas.clear();
     despesasSelecionadas.clear();
     renderizarTabelaReceitas();
@@ -5802,22 +5100,255 @@ async function incluirSelecionadosNoDRESupabase() {
     if (totalRejeitados > 0) mensagemFinal += ` ${totalRejeitados} registro(s) foram rejeitados por divergência de valor.`;
     alert(mensagemFinal);
 }
-// ============================================================
-// FUNÇÃO CORRIGIDA PARA ATUALIZAR COMPARATIVOS
-// ============================================================
+
+function formatarDataParaSupabase(dataStr) {
+    if (!dataStr) return new Date().toISOString().split('T')[0];
+    if (dataStr.includes('/')) {
+        const partes = dataStr.split('/');
+        return `${partes[2]}-${partes[1].padStart(2,'0')}-${partes[0].padStart(2,'0')}`;
+    }
+    if (dataStr.includes('-')) return dataStr;
+    return new Date().toISOString().split('T')[0];
+}
+
+async function carregarRegrasConversaoSupabase() {
+    const { data, error } = await supabaseClient
+        .from('regras_conversao')
+        .select('*');
+    
+    if (error) {
+        console.error('Erro ao carregar regras de conversão:', error);
+        return;
+    }
+    
+    if (data) {
+        window.condToTituloMap = {};
+        window.condToPlanoMap = {};
+        window.operacaoToPlanoMap = {};
+        
+        data.forEach(regra => {
+            if (regra.tipo === 'RECEITA') {
+                if (regra.destino_caixa) {
+                    window.condToTituloMap[regra.origem] = regra.destino_caixa;
+                }
+                if (regra.destino_plano) {
+                    window.condToPlanoMap[regra.origem] = regra.destino_plano;
+                }
+            } else if (regra.tipo === 'DESPESA') {
+                if (regra.destino_plano) {
+                    window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
+                }
+            }
+        });
+        
+        localStorage.setItem('condToTituloMap', JSON.stringify(window.condToTituloMap));
+        localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
+        localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
+    }
+}
+
+async function salvarRegrasConversaoSupabase() {
+    const receitasRegras = [];
+    for (const [origem, destinoCaixa] of Object.entries(window.condToTituloMap || {})) {
+        const destinoPlano = window.condToPlanoMap?.[origem] || '';
+        receitasRegras.push({
+            tipo: 'RECEITA',
+            origem: origem,
+            destino_caixa: destinoCaixa,
+            destino_plano: destinoPlano
+        });
+    }
+    
+    const despesasRegras = [];
+    for (const [origem, destinoPlano] of Object.entries(window.operacaoToPlanoMap || {})) {
+        despesasRegras.push({
+            tipo: 'DESPESA',
+            origem: origem,
+            destino_caixa: null,
+            destino_plano: destinoPlano
+        });
+    }
+    
+    const todasRegras = [...receitasRegras, ...despesasRegras];
+    
+    if (todasRegras.length === 0) return;
+    
+    const { error: deleteError } = await supabaseClient
+        .from('regras_conversao')
+        .delete()
+        .neq('id', 0);
+    
+    if (deleteError) {
+        console.error('Erro ao deletar regras antigas:', deleteError);
+        return;
+    }
+    
+    const { error: insertError } = await supabaseClient
+        .from('regras_conversao')
+        .insert(todasRegras);
+    
+    if (insertError) {
+        console.error('Erro ao salvar regras de conversão:', insertError);
+        alert('Erro ao salvar regras no Supabase. Verifique sua conexão.');
+    } else {
+        alert(`Mapeamento salvo com sucesso!\n\nReceitas: ${receitasRegras.length} condições mapeadas.\nDespesas: ${despesasRegras.length} operações mapeadas.`);
+    }
+}
+
+async function salvarMapeamentoConversaoCompletoSupabase() {
+    window.condToTituloMap = {};
+    window.condToPlanoMap = {};
+    
+    document.querySelectorAll('#conversaoTabReceitas .conversao-select').forEach(select => {
+        const cond = select.getAttribute('data-cond');
+        if (cond && select.value) {
+            window.condToTituloMap[cond] = select.value;
+        }
+    });
+    
+    document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
+        const cond = select.getAttribute('data-plano-cond');
+        if (cond && select.value) {
+            window.condToPlanoMap[cond] = select.value;
+        }
+    });
+    
+    window.operacaoToPlanoMap = {};
+    document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
+        const operacao = select.getAttribute('data-operacao');
+        if (operacao && select.value) {
+            window.operacaoToPlanoMap[operacao] = select.value;
+        }
+    });
+    
+    await salvarRegrasConversaoSupabase();
+    
+    localStorage.setItem('condToTituloMap', JSON.stringify(window.condToTituloMap));
+    localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
+    localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
+    
+    const modalCaixa = document.getElementById('modalFechamentoCaixa');
+    if(modalCaixa && modalCaixa.classList.contains('active')) {
+        atualizarTitulosColunasCaixa();
+        renderizarCaixaPopup();
+    }
+    
+    fecharModalConversao();
+}
+
+async function abrirModalConversaoSupabase() {
+    await carregarRegrasConversaoSupabase();
+    
+    const condUnicas = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
+    const operacoesUnicas = [...new Set(despesasDataReais.map(d => d.operacao).filter(op => op && op !== '-'))];
+    
+    const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
+    if(tbodyReceitas) {
+        let html = '';
+        condUnicas.forEach(cond => {
+            const tituloAtual = window.condToTituloMap?.[cond] || 'VNF';
+            const planoAtual = window.condToPlanoMap?.[cond] || '';
+            html += `<tr>
+                <td>${cond}</div>
+                <td><select class="conversao-select" data-cond="${cond}">
+                    <option value="DINHEIRO" ${tituloAtual === 'DINHEIRO' ? 'selected' : ''}>DINHEIRO</option>
+                    <option value="DEBITO" ${tituloAtual === 'DEBITO' ? 'selected' : ''}>DEBITO</option>
+                    <option value="CREDITO" ${tituloAtual === 'CREDITO' ? 'selected' : ''}>CREDITO</option>
+                    <option value="CREDITO PARCELADO" ${tituloAtual === 'CREDITO PARCELADO' ? 'selected' : ''}>CREDITO PARCELADO</option>
+                    <option value="AG" ${tituloAtual === 'AG' ? 'selected' : ''}>AG</option>
+                    <option value="PIX" ${tituloAtual === 'PIX' ? 'selected' : ''}>PIX</option>
+                    <option value="VNF" ${tituloAtual === 'VNF' ? 'selected' : ''}>VNF</option>
+                </select></div>
+                <td><select class="conversao-select-plano-receita" data-plano-cond="${cond}">
+                    <option value="">Selecione...</option>
+                    ${estruturaDRE.receitas.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
+                </select></div>
+             </tr>`;
+        });
+        tbodyReceitas.innerHTML = html;
+    }
+    
+    const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
+    if(tbodyDespesas) {
+        let html = '';
+        const todosPlanosDespesa = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
+        operacoesUnicas.forEach(operacao => {
+            const planoAtual = window.operacaoToPlanoMap?.[operacao] || '';
+            html += `<tr>
+                <td>${operacao}</div>
+                <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></div>
+                <td><select class="conversao-select-plano-despesa" data-operacao="${operacao}">
+                    <option value="">Selecione...</option>
+                    ${todosPlanosDespesa.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
+                </select></div>
+            </tr>`;
+        });
+        tbodyDespesas.innerHTML = html;
+    }
+    
+    document.getElementById('modalConversao').classList.add('active');
+}
+
+async function carregarCoresDoSupabase() {
+    console.log('🎨 Carregando cores do Supabase...');
+    
+    const { data, error } = await supabaseClient
+        .from('cores_linhas_caixa')
+        .select('*');
+    
+    if (error) {
+        console.error('❌ Erro ao carregar cores:', error);
+        return;
+    }
+    
+    linhaCorSelecionada = {};
+    
+    if (data && data.length > 0) {
+        data.forEach(item => {
+            linhaCorSelecionada[item.data] = item.cor;
+        });
+        console.log('✅ Cores carregadas:', linhaCorSelecionada);
+    }
+    
+    if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
+    if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
+}
+
+async function salvarCoresNoSupabase() {
+    console.log('🎨 Salvando cores no Supabase...');
+    
+    const registros = [];
+    for (const [data, cor] of Object.entries(linhaCorSelecionada)) {
+        if (data && cor) {
+            registros.push({ data: data, cor: cor });
+        }
+    }
+    
+    if (registros.length === 0) {
+        console.log('⚠️ Nenhuma cor para salvar');
+        return;
+    }
+    
+    for (const registro of registros) {
+        const { error } = await supabaseClient
+            .from('cores_linhas_caixa')
+            .upsert(registro, { onConflict: 'data' });
+        
+        if (error) {
+            console.error('❌ Erro ao salvar cor', registro.data, ':', error);
+        } else {
+            console.log('✅ Cor salva:', registro.data, '=', registro.cor);
+        }
+    }
+}
+
 window.atualizarValorComparativo = async function(data, campo, valor) {
     console.log('🔧 FUNÇÃO CHAMADA!');
-    console.log('Data:', data);
-    console.log('Campo:', campo);
-    console.log('Valor:', valor);
     
-    // Garantir que dadosComparativos existe
     if (typeof dadosComparativos === 'undefined') {
-        console.log('dadosComparativos não existe, criando...');
         window.dadosComparativos = {};
     }
     
-    // Converter valor para número
     let novoValor = 0;
     if (typeof valor === 'string') {
         novoValor = parseFloat(valor.replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]/g, '')) || 0;
@@ -5825,249 +5356,148 @@ window.atualizarValorComparativo = async function(data, campo, valor) {
         novoValor = valor || 0;
     }
     
-    // Criar registro se não existir
     if (!dadosComparativos[data]) {
         dadosComparativos[data] = {
-            DINHEIRO: 0,
-            DEBITO: 0,
-            CREDITO: 0,
-            CREDITO_PARCELADO: 0,
-            AG: 0,
-            PIX: 0,
-            VNF: 0,
-            SAIDA: 0,
-            TOTAL_DIA: 0
+            DINHEIRO: 0, DEBITO: 0, CREDITO: 0, CREDITO_PARCELADO: 0,
+            AG: 0, PIX: 0, VNF: 0, SAIDA: 0, TOTAL_DIA: 0
         };
     }
     
-    // Atualizar o campo
     dadosComparativos[data][campo] = novoValor;
     
-    // Recalcular TOTAL_DIA
     const totalEntradas = (dadosComparativos[data].DINHEIRO || 0) + (dadosComparativos[data].DEBITO || 0) +
                           (dadosComparativos[data].CREDITO || 0) + (dadosComparativos[data].CREDITO_PARCELADO || 0) +
                           (dadosComparativos[data].AG || 0) + (dadosComparativos[data].PIX || 0) +
                           (dadosComparativos[data].VNF || 0);
     dadosComparativos[data].TOTAL_DIA = totalEntradas - (dadosComparativos[data].SAIDA || 0);
     
-    console.log('dadosComparativos após atualização:', dadosComparativos[data]);
-    
-    // Salvar no Supabase
     await salvarDadosComparativos();
     
-    // Recarregar as telas
     if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
     if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
     
     alert(`Valor ${campo} = ${formatMoneySimple(novoValor)} salvo para ${data}`);
 };
+
 function abrirModalComparativos() {
     console.log('🔘 Botão COMPARATIVOS clicado!');
-    document.getElementById('modalComparativos').classList.add('active');
-    carregarCoresDoSupabase();
-    
-    // Verificar se o modal existe
     const modal = document.getElementById('modalComparativos');
     if (!modal) {
         console.error('❌ Modal não encontrado!');
         alert('Erro: Modal não encontrado');
         return;
     }
-    
-    // Abrir o modal
     modal.classList.add('active');
     console.log('✅ Modal aberto');
-    
-    // Recarregar os dados do Supabase
     if (typeof carregarComparativosSupabase === 'function') {
         carregarComparativosSupabase();
-    } else {
-        console.error('❌ Função carregarComparativosSupabase não encontrada');
     }
 }
+
 function fecharModalComparativos() {
     console.log('🔘 Fechando modal COMPARATIVOS');
     const modal = document.getElementById('modalComparativos');
     if (modal) {
         modal.classList.remove('active');
         console.log('✅ Modal fechado');
-    } else {
-        console.error('❌ Modal não encontrado');
     }
 }
-// ============================================================
-// FUNÇÕES PARA SALVAR CORES NO SUPABASE
-// ============================================================
 
-
-// ============================================================
-// FUNÇÕES PARA SALVAR E CARREGAR CORES NO SUPABASE
-// ============================================================
-
-async function salvarCoresNoSupabase() {
-    console.log('🎨 Salvando cores no Supabase...');
-    console.log('Cores a salvar:', linhaCorSelecionada);
-    
-    const registros = [];
-    for (const [data, cor] of Object.entries(linhaCorSelecionada)) {
-        if (data && cor) {
-            registros.push({ data: data, cor: cor });
-        }
-    }
-    
-    if (registros.length === 0) {
-        console.log('⚠️ Nenhuma cor para salvar');
+function alterarCorLinhaFechamento(data, cor) {
+    const coresPermitidas = ['verde', 'amarelo', 'vermelho'];
+    if (!coresPermitidas.includes(cor)) {
+        console.error('❌ Cor inválida:', cor);
         return;
     }
     
-    console.log('📦 Registros:', registros);
+    console.log('🎨 alterarCorLinhaFechamento:', data, cor);
     
-    for (const registro of registros) {
-        const { data, error } = await supabaseClient
-            .from('cores_linhas_caixa')
-            .upsert(registro, { onConflict: 'data' })
-            .select();
-        
-        if (error) {
-            console.error('❌ Erro ao salvar cor', registro.data, ':', error);
+    if (cor === 'amarelo') {
+        if (linhaCorSelecionada[data] === 'amarelo') {
+            delete linhaCorSelecionada[data];
         } else {
-            console.log('✅ Cor salva:', registro.data, '=', registro.cor);
+            linhaCorSelecionada[data] = 'amarelo';
         }
-    }
-// ============================================================
-// FUNÇÕES PARA SALVAR E CARREGAR CORES NO SUPABASE
-// ============================================================
-
-async function salvarCoresNoSupabase() {
-    console.log('🎨 Salvando cores no Supabase...');
-    console.log('Cores a salvar:', linhaCorSelecionada);
-    
-    const registros = [];
-    for (const [data, cor] of Object.entries(linhaCorSelecionada)) {
-        if (data && cor) {
-            registros.push({ data: data, cor: cor });
-        }
-    }
-    
-    if (registros.length === 0) {
-        console.log('⚠️ Nenhuma cor para salvar');
-        return;
-    }
-    
-    console.log('📦 Registros:', registros);
-    
-    for (const registro of registros) {
-        const { data, error } = await supabaseClient
-            .from('cores_linhas_caixa')
-            .upsert(registro, { onConflict: 'data' })
-            .select();
-        
-        if (error) {
-            console.error('❌ Erro ao salvar cor', registro.data, ':', error);
+    } else if (cor === 'verde') {
+        if (linhaCorSelecionada[data] === 'verde') {
+            delete linhaCorSelecionada[data];
         } else {
-            console.log('✅ Cor salva:', registro.data, '=', registro.cor);
+            linhaCorSelecionada[data] = 'verde';
+        }
+    } else if (cor === 'vermelho') {
+        if (linhaCorSelecionada[data] === 'vermelho') {
+            delete linhaCorSelecionada[data];
+        } else {
+            linhaCorSelecionada[data] = 'vermelho';
         }
     }
-}
-
-async function carregarCoresDoSupabase() {
-    console.log('🎨 Carregando cores do Supabase...');
     
-    const { data, error } = await supabaseClient
-        .from('cores_linhas_caixa')
-        .select('*');
-    
-    if (error) {
-        console.error('❌ Erro ao carregar cores:', error);
-        return;
-    }
-    
-    console.log('📦 Dados do Supabase:', data);
-    
-    // Limpar objeto atual
-    linhaCorSelecionada = {};
-    
-    // Preencher com os dados do banco
-    if (data && data.length > 0) {
-        data.forEach(item => {
-            linhaCorSelecionada[item.data] = item.cor;
-        });
-        console.log('✅ Cores carregadas:', linhaCorSelecionada);
-    } else {
-        console.log('⚠️ Nenhuma cor encontrada no banco');
-    }
-    
-    // Forçar atualização das telas
-    if (typeof renderizarCaixaPopup === 'function') {
-        renderizarCaixaPopup();
-    }
-    if (typeof renderizarTabelaComparativos === 'function') {
-        renderizarTabelaComparativos();
-    }
-}
-    
-    // Forçar atualização das telas
-    if (typeof renderizarCaixaPopup === 'function') {
-        renderizarCaixaPopup();
-    }
-    if (typeof renderizarTabelaComparativos === 'function') {
-        renderizarTabelaComparativos();
-    }
-}
-async function carregarCoresDoSupabase() {
-    console.log('🎨 Carregando cores do Supabase...');
-    
-    const { data, error } = await supabaseClient
-        .from('cores_linhas_caixa')
-        .select('*');
-    
-    if (error) {
-        console.error('❌ Erro ao carregar cores:', error);
-        return;
-    }
-    
-    linhaCorSelecionada = {};
-    
-    if (data && data.length > 0) {
-        data.forEach(item => {
-            linhaCorSelecionada[item.data] = item.cor;
-        });
-        console.log('✅ Cores carregadas:', linhaCorSelecionada);
-    }
-    
-    // Recarregar as telas com as cores
+    salvarCoresNoSupabase();
     if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
     if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
+    if (typeof atualizarTotaisPorClassificacao === 'function') atualizarTotaisPorClassificacao();
 }
 
-
-async function carregarCoresDoSupabase() {
-    console.log('🎨 Carregando cores do Supabase...');
-    
-    const { data, error } = await supabaseClient
-        .from('cores_linhas_caixa')
-        .select('*');
-    
-    if (error) {
-        console.error('❌ Erro ao carregar cores:', error);
-        return;
+function marcarSeIncluido(data, valor, desc) {
+    for(let m = 0; m < 12; m++) {
+        const dados = JSON.parse(localStorage.getItem(`dadosModuloIII_mes_${m}`) || '[]');
+        if(dados.some(l => l.data === data && Math.abs(parseMoeda(l.valor) - valor) < 0.01 && l.desc === desc))
+            return " ★";
     }
+    return "";
+}
+
+// ============================================================
+// EVENTOS E INICIALIZAÇÃO
+// ============================================================
+document.getElementById('modalDrilldownReceitas')?.addEventListener('click', function(e) { if (e.target === this) fecharDrilldownReceitas(); });
+document.getElementById('modalDrilldownDespesas')?.addEventListener('click', function(e) { if (e.target === this) fecharDrilldownDespesas(); });
+document.getElementById('modalConsultaConversao')?.addEventListener('click', function(e) { if (e.target === this) fecharModalConsultaConversao(); });
+document.getElementById('modalDrilldownValor')?.addEventListener('click', function(e) { if (e.target === this) fecharModalDrilldownValor(); });
+
+carregarPlanoContas();
+carregarCoresSalvas();
+carregarFlags();
+gerarDRE();
+loadMapeamentos();
+carregarVendas();
+carregarCompras();
+carregarSaidasCaixa();
+carregarDadosReaisLancamentos();
+carregarDadosEstatisticas();
+
+console.log('Sistema Aplikado Módulo III inicializado com sucesso!');
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await carregarRegrasConversaoSupabase();
+    await gerarDREComSupabase();
+    await carregarCoresDoSupabase();
+    carregarVendas();
+    carregarCompras();
+    carregarDadosReaisLancamentos();
+    carregarDadosComparativos();
     
-    linhaCorSelecionada = {};
-    
-    if (data && data.length > 0) {
+    const { data } = await supabaseClient.from('comparativos_caixa').select('*');
+    if (data) {
+        dadosComparativos = {};
         data.forEach(item => {
-            linhaCorSelecionada[item.data] = item.cor;
+            dadosComparativos[item.data] = {
+                DINHEIRO: item.dinheiro || 0,
+                DEBITO: item.debito || 0,
+                CREDITO: item.credito || 0,
+                CREDITO_PARCELADO: item.credito_parcelado || 0,
+                AG: item.ag || 0,
+                PIX: item.pix || 0,
+                VNF: item.vnf || 0,
+                SAIDA: item.saida || 0,
+                TOTAL_DIA: item.total_dia || 0
+            };
         });
-        console.log('✅ Cores carregadas:', linhaCorSelecionada);
     }
     
-    if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
-    if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
-}
-
-
-
+    renderizarCaixaPopup();
+    renderizarTabelaComparativos();
+});
 </script>
 </body>
 </html>
