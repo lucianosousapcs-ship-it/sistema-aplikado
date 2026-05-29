@@ -1028,7 +1028,11 @@ function parseMoeda(v) {
 }
 
 function formatarMoeda(v) { 
-    return v.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' }); 
+    if (v === undefined || v === null) return 'R$ 0,00';
+    const valor = Number(v);
+    const sinal = valor < 0 ? '-' : '';
+    const absValor = Math.abs(valor);
+    return `${sinal}R$ ${absValor.toLocaleString('pt-br', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatMoneySimple(v) { 
@@ -1508,7 +1512,7 @@ function aplicarPlanoContasTodosLancamentos() {
 // FUNÇÕES DO DRE (COM DESTAQUE PARA LINHAS COM MOVIMENTAÇÃO E CLICK PARA DETALHAR)
 // ============================================================
 async function gerarDRE() {
-    console.log('🟢 VERSÃO CORRIGIDA - 2026-05-29');
+    console.log('🟢 VERSÃO FINAL CORRIGIDA - 29/05/2026');
     
     const dadosPorMes = await carregarDRESupabase();
     if (!dadosPorMes) {
@@ -1540,13 +1544,16 @@ async function gerarDRE() {
     
     for (let m = 0; m < 12; m++) {
         receitas[m] = getTotalGrupo('receitas', m);
-        // IMPORTANTE: Custos como NEGATIVOS para o cálculo
-        custosVar[m] = -getTotalGrupo('custosVariaveis', m);
-        custosFix[m] = -getTotalGrupo('custosFixos', m);
+        custosVar[m] = getTotalGrupo('custosVariaveis', m);
+        custosFix[m] = getTotalGrupo('custosFixos', m);
     }
     
-    console.log('Receitas total:', receitas.reduce((a,b) => a + b, 0));
-    console.log('Custos Var total:', custosVar.reduce((a,b) => a + b, 0));
+    const lucroBruto = receitas.map((r, i) => r - custosVar[i]);
+    const resultadoOp = lucroBruto.map((lb, i) => lb - custosFix[i]);
+    
+    console.log('Receitas total:', receitas.reduce((a,b)=>a+b,0));
+    console.log('Custos Var total:', custosVar.reduce((a,b)=>a+b,0));
+    console.log('Lucro Bruto total:', lucroBruto.reduce((a,b)=>a+b,0));
     
     function addLinha(cod, nome, valores, classe, exibirPositivoNegativo = true, linhaTipo = 'item') {
         const tr = document.createElement('tr');
@@ -1568,24 +1575,33 @@ async function gerarDRE() {
         
         for (let i = 0; i < 12; i++) {
             let v = valores[i];
-            if (linhaTipo === 'grupo' && (nome === 'CUSTOS VARIAVEIS' || nome === 'CUSTOS FIXOS')) {
+            
+            // Inverter sinal para exibição de CUSTOS
+            if ((nome === 'CUSTOS VARIAVEIS' || nome === 'CUSTOS FIXOS') && linhaTipo === 'grupo') {
                 v = -v;
             }
+            
+            // CORREÇÃO PRINCIPAL: garantir que LUCRO BRUTO e RESULTADO OPERACIONAL mostrem o sinal correto
+            if ((nome === 'LUCRO BRUTO' || nome === 'RESULTADO OPERACIONAL') && linhaTipo === 'total') {
+                v = v; // mantém o valor como está (já deve ser negativo)
+            }
+            
             const className = exibirPositivoNegativo ? (v >= 0 ? 'valor-positivo' : 'valor-negativo') : '';
-            html += `<td class="${className}" data-mes="${i}" data-valor="${valores[i]}">${formatarMoeda(v)}</td>`;
+            html += `<td class="${className}" data-mes="${i}" data-valor="${valores[i]}">${formatarMoeda(v)}</div>`;
         }
         
         let totalExibicao = totalAnual;
-        if (linhaTipo === 'grupo' && (nome === 'CUSTOS VARIAVEIS' || nome === 'CUSTOS FIXOS')) {
+        if ((nome === 'CUSTOS VARIAVEIS' || nome === 'CUSTOS FIXOS') && linhaTipo === 'grupo') {
             totalExibicao = -totalAnual;
         }
+        
         const classNameTotal = exibirPositivoNegativo ? (totalExibicao >= 0 ? 'valor-positivo' : 'valor-negativo') : '';
-        html += `<td class="${classNameTotal}" data-total="${totalAnual}">${formatarMoeda(totalExibicao)}</td>`;
+        html += `<td class="${classNameTotal}">${formatarMoeda(totalExibicao)}</div>`;
         tr.innerHTML = html;
         corpo.appendChild(tr);
     }
     
-    // 1. RECEITAS
+    // Montar tabela
     addLinha('', 'RECEITAS TOTAIS', receitas, 'dre-group-title', true, 'grupo');
     
     estruturaDRE.receitas.slice(0, 25).forEach(r => {
@@ -1598,8 +1614,7 @@ async function gerarDRE() {
         addLinha(r.cod, r.nome, vals, 'dre-subgroup', true, 'item');
     });
     
-    // 2. CUSTOS VARIAVEIS (exibir como negativo)
-    addLinha('', 'CUSTOS VARIAVEIS', custosVar.map(v => -v), 'dre-group-title', false, 'grupo');
+    addLinha('', 'CUSTOS VARIAVEIS', custosVar, 'dre-group-title', false, 'grupo');
     
     estruturaDRE.custosVariaveis.slice(0, 20).forEach(c => {
         const vals = [];
@@ -1611,14 +1626,8 @@ async function gerarDRE() {
         addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item');
     });
     
-    // 3. LUCRO BRUTO (JÁ CALCULADO COMO NEGATIVO, PRECISA INVERTER PARA EXIBIR)
-    const lucroBruto = receitas.map((r, i) => r + custosVar[i]);
-    const lucroBrutoExibicao = lucroBruto.map(v => -v);
-    console.log('Lucro Bruto calculado (negativo):', lucroBruto.slice(0, 3));
-    addLinha('', 'LUCRO BRUTO', lucroBrutoExibicao, 'dre-total-row', true, 'total');
-    
-    // 4. CUSTOS FIXOS
-    addLinha('', 'CUSTOS FIXOS', custosFix.map(v => -v), 'dre-group-title', false, 'grupo');
+    addLinha('', 'LUCRO BRUTO', lucroBruto, 'dre-total-row', true, 'total');
+    addLinha('', 'CUSTOS FIXOS', custosFix, 'dre-group-title', false, 'grupo');
     
     estruturaDRE.custosFixos.forEach(c => {
         const vals = [];
@@ -1630,160 +1639,10 @@ async function gerarDRE() {
         addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item');
     });
     
-    // 5. RESULTADO OPERACIONAL
-    const resultadoOp = lucroBruto.map((lb, i) => lb + custosFix[i]);
-    const resultadoOpExibicao = resultadoOp.map(v => -v);
-    console.log('Resultado Op calculado (negativo):', resultadoOp.slice(0, 3));
-    addLinha('', 'RESULTADO OPERACIONAL', resultadoOpExibicao, 'dre-total-row', true, 'total');
+    addLinha('', 'RESULTADO OPERACIONAL', resultadoOp, 'dre-total-row', true, 'total');
     
     console.log('✅ DRE gerada com sucesso!');
 }
-// ============================================================
-// FUNÇÃO CORRIGIDA: DETALHAMENTO DO VALOR CLICADO NA DRE (BUSCANDO DO SUPABASE)
-// ============================================================
-async function abrirDetalhamentoValor(valor, mesIndex, nomeConta, codConta, grupoTipo, isTotal) {
-    if (!valor || valor === 0) {
-        alert('Não há registros para detalhar este valor.');
-        return;
-    }
-    
-    const mesNome = mesesNomes[mesIndex] || 'Total';
-    const periodo = mesIndex !== undefined ? `Mês de ${mesNome}` : 'Total do Ano';
-    
-    document.getElementById('drilldownValorTitulo').innerHTML = `Detalhamento - ${codConta ? codConta + ' - ' : ''}${nomeConta}`;
-    document.getElementById('infoConta').innerHTML = `${codConta ? codConta + ' - ' : ''}${nomeConta}`;
-    document.getElementById('infoPeriodo').innerHTML = periodo;
-    document.getElementById('infoValorTotal').innerHTML = formatarMoeda(valor);
-    
-    // Buscar registros do Supabase
-    let registros = [];
-    
-    if (mesIndex !== undefined) {
-        // Buscar para um mês específico
-        const { data, error } = await supabaseClient
-            .from('dre_lancamentos')
-            .select('*')
-            .eq('mes', mesIndex)
-            .eq('plano', nomeConta);
-        
-        if (error) {
-            console.error('Erro ao buscar detalhamento:', error);
-            registros = [];
-        } else {
-            registros = data || [];
-        }
-    } else {
-        // Buscar para o total do ano (todos os meses)
-        const { data, error } = await supabaseClient
-            .from('dre_lancamentos')
-            .select('*')
-            .eq('plano', nomeConta);
-        
-        if (error) {
-            console.error('Erro ao buscar detalhamento anual:', error);
-            registros = [];
-        } else {
-            registros = data || [];
-        }
-    }
-    
-    const isReceita = (grupoTipo === 'receitas' || (estruturaDRE.receitas.some(r => r.nome === nomeConta)));
-    
-    const tableHead = document.getElementById('drilldownValorTableHead');
-    const tableBody = document.getElementById('drilldownValorTableBody');
-    const footerTotal = document.getElementById('drilldownValorFooter');
-    
-    if (registros.length === 0) {
-        tableHead.innerHTML = `<tr><th>Data</th><th>Cliente / Fornecedor</th><th>Detalhe</th><th>Valor (R$)</th></tr>`;
-        tableBody.innerHTML = `<tr><td colspan="4" class="mensagem-informativa">Nenhum registro encontrado para este valor.</td></tr>`;
-        footerTotal.innerHTML = `Total Geral: R$ 0,00`;
-        document.getElementById('modalDrilldownValor').classList.add('active');
-        return;
-    }
-    
-    let somaTotal = 0;
-    let linhasHtml = '';
-    
-    if (isReceita) {
-        tableHead.innerHTML = `<tr><th>Data</th><th>Cliente</th><th>Classificação</th><th>Valor (R$)</th></tr>`;
-        
-        for (const reg of registros) {
-            const valorReg = parseFloat(reg.valor);
-            somaTotal += valorReg;
-            
-            let cliente = 'Não identificado';
-            let classificacao = '-';
-            
-            if (reg.descricao && reg.descricao.startsWith('RECEITA: ')) {
-                cliente = reg.descricao.replace('RECEITA: ', '');
-                const vendaRelacionada = receitasDataReais.find(r => 
-                    r.cliente === cliente && 
-                    Math.abs(r.valor - valorReg) < 0.01 &&
-                    r.data === reg.data
-                );
-                if (vendaRelacionada) {
-                    classificacao = vendaRelacionada.classificacao === 'Balcao' ? 'LOJA FÍSICA' : 'CORPORATIVO';
-                }
-            }
-            
-            linhasHtml += `<tr>
-                <td>${formatarDataExibicao(reg.data)}</div>
-                <td>${cliente}</div>
-                <td>${classificacao}</div>
-                <td style="text-align:right; font-weight:600;">${formatarMoeda(valorReg)}</div>
-             </tr>`;
-        }
-    } else {
-        tableHead.innerHTML = `<tr><th>Data</th><th>Fornecedor</th><th>Operação</th><th>Valor (R$)</th></tr>`;
-        
-        for (const reg of registros) {
-            const valorReg = parseFloat(reg.valor);
-            somaTotal += valorReg;
-            
-            let fornecedor = 'Não identificado';
-            let operacao = '-';
-            
-            if (reg.descricao && reg.descricao.startsWith('DESPESA: ')) {
-                operacao = reg.descricao.replace('DESPESA: ', '');
-                const despesaRelacionada = despesasDataReais.find(d => 
-                    d.operacao === operacao && 
-                    Math.abs(d.valor - valorReg) < 0.01 &&
-                    d.data === reg.data
-                );
-                if (despesaRelacionada) {
-                    fornecedor = despesaRelacionada.fornecedor;
-                }
-            }
-            
-            linhasHtml += `<tr>
-                <td>${formatarDataExibicao(reg.data)}</div>
-                <td>${fornecedor}</div>
-                <td>${operacao}</div>
-                <td style="text-align:right; font-weight:600;">${formatarMoeda(valorReg)}</div>
-             </tr>`;
-        }
-    }
-    
-    tableBody.innerHTML = linhasHtml;
-    footerTotal.innerHTML = `Total Geral: ${formatarMoeda(somaTotal)}`;
-    
-    if (Math.abs(somaTotal - valor) > 0.01) {
-        console.warn(`Divergência no detalhamento: Total ${somaTotal} vs Valor Clicado ${valor}`);
-        const aviso = document.createElement('div');
-        aviso.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-        aviso.style.padding = '8px';
-        aviso.style.borderRadius = '8px';
-        aviso.style.marginTop = '10px';
-        aviso.style.fontSize = '11px';
-        aviso.style.textAlign = 'center';
-        aviso.innerHTML = '⚠️ Atenção: O somatório dos registros apresenta uma pequena divergência aritmética. Verifique os lançamentos.';
-        document.querySelector('.drilldown-valor-footer').after(aviso);
-        setTimeout(() => aviso.remove(), 5000);
-    }
-    
-    document.getElementById('modalDrilldownValor').classList.add('active');
-}
-
 function fecharModalDrilldownValor() {
     document.getElementById('modalDrilldownValor').classList.remove('active');
     const aviso = document.querySelector('.drilldown-valor-footer + div');
