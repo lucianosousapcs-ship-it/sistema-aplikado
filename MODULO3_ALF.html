@@ -4686,6 +4686,415 @@ document.addEventListener('DOMContentLoaded', async function() {
     renderizarCaixaPopup();
     renderizarTabelaComparativos();
 });
+// ============================================================
+// POP-UP DE DETALHAMENTO DO DRE - VERSÃO COMPLETA E CORRIGIDA
+// ============================================================
+
+// Cache para melhor performance
+let detalhamentoCache = new Map();
+const TEMPO_CACHE = 30000;
+
+// Função auxiliar para escapar HTML
+function escapeHtml(texto) {
+    if (!texto) return '';
+    const div = document.createElement('div');
+    div.textContent = texto;
+    return div.innerHTML;
+}
+
+// Função auxiliar para formatar data
+function formatarDataExibicao(dataStr) {
+    if (!dataStr) return '-';
+    if (dataStr.includes('/')) return dataStr;
+    if (dataStr.includes('-')) {
+        const partes = dataStr.split('-');
+        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+    return dataStr;
+}
+
+// Função auxiliar para parse de data
+function parseDataBr(dataStr) {
+    if (!dataStr) return null;
+    if (dataStr.includes('/')) {
+        const partes = dataStr.split('/');
+        return new Date(partes[2], partes[1] - 1, partes[0]);
+    }
+    if (dataStr.includes('-')) {
+        const partes = dataStr.split('-');
+        return new Date(partes[0], partes[1] - 1, partes[2]);
+    }
+    return null;
+}
+
+// Função auxiliar para formatar moeda
+function formatarMoeda(valor) {
+    if (valor === undefined || valor === null || isNaN(valor)) return 'R$ 0,00';
+    return valor.toLocaleString('pt-br', { minimumFractionDigits: 2, maximumFractionDigits: 2, style: 'currency', currency: 'BRL' });
+}
+
+// ============================================================
+// FUNÇÃO PRINCIPAL - ABRIR DETALHAMENTO
+// ============================================================
+
+window.abrirDetalhamentoValor = async function(valorClicado, mesIndex, nomeConta, codConta, grupoTipo, isTotal) {
+    const mesNumero = parseInt(mesIndex);
+    const ano = new Date().getFullYear();
+    const periodo = (mesNumero >= 0 && mesNumero <= 11) ? mesesNomes[mesNumero] + '/' + ano : 'Ano Completo';
+    
+    console.log('Buscando registros para:', nomeConta, 'Cod:', codConta, 'Mês:', mesNumero);
+    
+    // Atualizar cabeçalho
+    const infoConta = document.getElementById('infoConta');
+    const infoPeriodo = document.getElementById('infoPeriodo');
+    const infoValorTotal = document.getElementById('infoValorTotal');
+    
+    if (infoConta) infoConta.innerHTML = (codConta ? codConta + ' - ' : '') + nomeConta;
+    if (infoPeriodo) infoPeriodo.innerHTML = periodo;
+    if (infoValorTotal) infoValorTotal.innerHTML = formatarMoeda(Math.abs(valorClicado));
+    
+    // Mostrar loading
+    const tableBody = document.getElementById('drilldownValorTableBody');
+    if (tableBody) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align:center; padding:60px;">
+                    <div class="loading-spinner"></div>
+                    <p style="margin-top:16px;">Carregando registros detalhados...</p>
+                 </div>
+            </tr>
+        `;
+    }
+    
+    // Data início e fim do mês
+    const dataInicio = `${ano}-${String(mesNumero + 1).padStart(2, '0')}-01`;
+    const ultimoDia = new Date(ano, mesNumero + 1, 0).getDate();
+    const dataFim = `${ano}-${String(mesNumero + 1).padStart(2, '0')}-${ultimoDia}`;
+    
+    let registrosDetalhados = [];
+    
+    try {
+        // CARREGAR REGRAS DE CONVERSAO
+        const savedPlanoMap = localStorage.getItem('condToPlanoMap');
+        const planoMap = savedPlanoMap ? JSON.parse(savedPlanoMap) : {};
+        
+        // Para DESPESAS
+        const savedOperacaoPlano = localStorage.getItem('operacao_to_plano_map');
+        const operacaoPlanoMap = savedOperacaoPlano ? JSON.parse(savedOperacaoPlano) : {};
+        
+        let vendasFiltradas = [];
+        
+        if (grupoTipo === 'receitas' || nomeConta.toUpperCase().includes('REC')) {
+            // RECEITAS: qual condicao de pagamento mapeia para esta conta?
+            const condicoesDestaConta = Object.keys(planoMap).filter(
+                cond => planoMap[cond] === nomeConta
+            );
+            
+            console.log(`Condicoes que mapeiam para ${nomeConta}:`, condicoesDestaConta);
+            
+            // Buscar VENDAS do mês
+            let todasVendas = [];
+            let page = 0;
+            
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('vendas_alf')
+                    .select('*')
+                    .gte('data', dataInicio)
+                    .lte('data', dataFim)
+                    .range(page * 1000, (page + 1) * 1000 - 1);
+                
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+                todasVendas.push(...data);
+                page++;
+            }
+            
+            console.log(`Total de vendas em ${periodo}:`, todasVendas.length);
+            
+            // Filtrar APENAS as vendas cuja condicao de pagamento mapeia para esta conta
+            if (condicoesDestaConta.length > 0) {
+                vendasFiltradas = todasVendas.filter(v => {
+                    const condPag = v['COND.PAG'] || v.cond_pag || '';
+                    return condicoesDestaConta.includes(condPag);
+                });
+            } else {
+                // Se não tem regra, mostrar todas (fallback)
+                vendasFiltradas = todasVendas;
+            }
+            
+            console.log(`Vendas filtradas para ${nomeConta}:`, vendasFiltradas.length);
+            
+            registrosDetalhados = vendasFiltradas.map(v => ({
+                data: v.data || '01/01/2000',
+                tipo: 'RECEITA',
+                descricao: `${v['CLIENTE/FORNECEDOR'] || v.cliente || 'Cliente'} - ${v['COND.PAG'] || v.cond_pag || 'Venda'}`,
+                valor: Number(v['TOTAL NOTA'] || v.total || 0),
+                condicao: v['COND.PAG'] || v.cond_pag || '',
+                cor: '#2ECC71'
+            }));
+            
+        } else {
+            // DESPESAS: qual operacao mapeia para esta conta?
+            const operacoesDestaConta = Object.keys(operacaoPlanoMap).filter(
+                op => operacaoPlanoMap[op] === nomeConta
+            );
+            
+            console.log(`Operacoes que mapeiam para ${nomeConta}:`, operacoesDestaConta);
+            
+            // Buscar DESPESAS do mês
+            let todasDespesas = [];
+            let page = 0;
+            
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('dados_m2')
+                    .select('*')
+                    .gte('vencimento', dataInicio)
+                    .lte('vencimento', dataFim)
+                    .range(page * 1000, (page + 1) * 1000 - 1);
+                
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+                todasDespesas.push(...data);
+                page++;
+            }
+            
+            console.log(`Total de despesas em ${periodo}:`, todasDespesas.length);
+            
+            // Filtrar APENAS as despesas cuja operacao mapeia para esta conta
+            if (operacoesDestaConta.length > 0) {
+                vendasFiltradas = todasDespesas.filter(d => {
+                    const operacao = d.operacao || '';
+                    return operacoesDestaConta.includes(operacao);
+                });
+            } else {
+                vendasFiltradas = todasDespesas;
+            }
+            
+            console.log(`Despesas filtradas para ${nomeConta}:`, vendasFiltradas.length);
+            
+            registrosDetalhados = vendasFiltradas.map(d => ({
+                data: d.vencimento || '01/01/2000',
+                tipo: 'DESPESA',
+                descricao: `${d.fornecedor || 'Fornecedor'} - ${d.operacao || d.documento || 'Despesa'}`,
+                valor: Number(d.valor || 0),
+                operacao: d.operacao || '',
+                cor: '#EF4444'
+            }));
+        }
+        
+        // Ordenar por data (mais recente primeiro)
+        registrosDetalhados.sort((a, b) => {
+            const dateA = parseDataBr(a.data);
+            const dateB = parseDataBr(b.data);
+            return dateB - dateA;
+        });
+        
+        console.log(`${registrosDetalhados.length} registros encontrados para ${nomeConta}`);
+        
+    } catch (error) {
+        console.error('Erro ao buscar registros:', error);
+        if (tableBody) {
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:40px; color:#EF4444;">ERRO AO CARREGAR REGISTROS</div></tr>';
+        }
+        const modal = document.getElementById('modalDrilldownValor');
+        if (modal) modal.classList.add('active');
+        return;
+    }
+    
+    // RENDERIZAR CABECALHO DA TABELA
+    const tableHead = document.getElementById('drilldownValorTableHead');
+    if (tableHead) {
+        tableHead.innerHTML = `
+            <thead>
+                <tr style="background: #1A1E2A; border-bottom: 2px solid #E6A017;">
+                    <th style="width:15%; padding:14px 12px; text-align:center; color:#E6A017; font-size:14px;">DATA</th>
+                    <th style="width:12%; padding:14px 12px; text-align:center; color:#E6A017; font-size:14px;">TIPO</th>
+                    <th style="width:58%; padding:14px 12px; text-align:left; color:#E6A017; font-size:14px;">DESCRICAO / DETALHE</th>
+                    <th style="width:15%; padding:14px 12px; text-align:right; color:#E6A017; font-size:14px;">VALOR (R$)</th>
+                </tr>
+            </thead>
+        `;
+    }
+    
+    // RENDERIZAR CORPO DA TABELA
+    if (!tableBody) return;
+    
+    let tbodyHtml = '<tbody>';
+    let totalEncontrado = 0;
+    
+    if (registrosDetalhados.length === 0) {
+        tbodyHtml += `
+            <tr>
+                <td colspan="4" style="text-align:center; padding:60px;">
+                    Nenhum registro encontrado para ${nomeConta} em ${periodo}<br>
+                    <small>Verifique as regras de conversão para esta conta.</small>
+                 </div>
+            </tr>
+        `;
+    } else {
+        for (let i = 0; i < registrosDetalhados.length; i++) {
+            const reg = registrosDetalhados[i];
+            totalEncontrado += Math.abs(reg.valor);
+            const rowBg = (i % 2 === 0) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)';
+            
+            tbodyHtml += `
+                <tr style="background:${rowBg}; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding:14px 12px; text-align:center; font-size:14px; white-space: nowrap;">
+                        ${formatarDataExibicao(reg.data)}
+                     </td>
+                    <td style="padding:14px 12px; text-align:center;">
+                        <span style="color:${reg.cor}; font-weight:700; background:${reg.cor}15; padding:5px 12px; border-radius:20px; font-size:12px;">
+                            ${reg.tipo}
+                        </span>
+                     </td>
+                    <td style="padding:14px 12px; text-align:left; font-size:13px; line-height:1.4;">
+                        ${escapeHtml(reg.descricao)}
+                     </td>
+                    <td style="padding:14px 12px; text-align:right; color:${reg.cor}; font-weight:700; font-size:15px;">
+                        ${formatarMoeda(Math.abs(reg.valor))}
+                     </td>
+                 </tr>
+            `;
+        }
+        
+        tbodyHtml += `
+            <tr style="background: rgba(230,160,23,0.12); border-top: 2px solid #E6A017;">
+                <td colspan="3" style="padding:14px 16px; text-align:right; font-weight:800; font-size:16px;">
+                    TOTAL GERAL (${registrosDetalhados.length} registros):
+                 </td>
+                <td style="padding:14px 16px; text-align:right; font-weight:900; font-size:20px; color: #E6A017;">
+                    ${formatarMoeda(totalEncontrado)}
+                 </td>
+            </tr>
+        `;
+    }
+    
+    tbodyHtml += '</tbody>';
+    tableBody.innerHTML = tbodyHtml;
+    
+    // RENDERIZAR FOOTER
+    const diferenca = Math.abs(valorClicado) - totalEncontrado;
+    const footer = document.getElementById('drilldownValorFooter');
+    
+    if (footer) {
+        let footerHtml = `
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; padding:8px 0;">
+                <div style="background: rgba(16,185,129,0.1); padding:8px 20px; border-radius:12px;">
+                    <span>REGISTROS ENCONTRADOS:</span>
+                    <strong style="color: #2ECC71; font-size:20px; margin-left:10px;">${registrosDetalhados.length}</strong>
+                </div>
+                <div style="background: rgba(245,158,11,0.1); padding:8px 20px; border-radius:12px;">
+                    <span>VALOR NO DRE:</span>
+                    <strong style="color: #F59E0B; font-size:20px; margin-left:10px;">${formatarMoeda(Math.abs(valorClicado))}</strong>
+                </div>
+            </div>
+        `;
+        
+        if (Math.abs(diferenca) > 0.01) {
+            const percentual = (Math.abs(diferenca) / Math.abs(valorClicado)) * 100;
+            footerHtml += `
+                <div style="margin-top:12px; padding:12px 16px; background:rgba(239,68,68,0.1); border-left:4px solid #EF4444; border-radius:8px;">
+                    <span style="color: #EF4444; font-weight:700;">ATENCAO:</span>
+                    Diferenca de ${formatarMoeda(Math.abs(diferenca))} (${percentual.toFixed(1)}%) entre o DRE e os registros encontrados.
+                </div>
+            `;
+        }
+        
+        footer.innerHTML = footerHtml;
+    }
+    
+    // ABRIR MODAL
+    const modal = document.getElementById('modalDrilldownValor');
+    if (modal) {
+        modal.classList.add('active');
+        console.log('Modal aberto com', registrosDetalhados.length, 'registros');
+    }
+};
+
+// Função para fechar o pop-up
+function fecharModalDrilldownValor() {
+    const modal = document.getElementById('modalDrilldownValor');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// Configurar evento de clique na tabela DRE
+function configurarCliqueDRE() {
+    var tabela = document.getElementById('dreTable');
+    if (!tabela) {
+        console.error('Tabela DRE nao encontrada');
+        return;
+    }
+    
+    if (tabela._clickHandler) {
+        tabela.removeEventListener('click', tabela._clickHandler);
+    }
+    
+    var clickHandler = function(e) {
+        var cell = e.target.closest('td');
+        if (!cell) return;
+        if (cell.cellIndex === 0) return;
+        
+        var valorTexto = cell.innerText;
+        valorTexto = valorTexto.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+        var valorNumerico = parseFloat(valorTexto);
+        
+        if (isNaN(valorNumerico) || Math.abs(valorNumerico) < 0.01) {
+            alert('Nao ha registros para este valor.');
+            return;
+        }
+        
+        var mesIndex = cell.cellIndex - 1;
+        if (mesIndex >= 12) {
+            alert('Clique em um mes especifico, nao no total.');
+            return;
+        }
+        
+        var linha = cell.parentElement;
+        var nomeConta = linha.cells[0].innerText;
+        
+        var codConta = '';
+        var codMatch = nomeConta.match(/^([\d\.]+)/);
+        if (codMatch) codConta = codMatch[1];
+        
+        if (nomeConta.indexOf('-') !== -1) {
+            nomeConta = nomeConta.split('-').pop().trim();
+        }
+        
+        console.log('Clique: Conta="' + nomeConta + '", Mes=' + mesIndex + ' (' + mesesNomes[mesIndex] + '), Valor=' + valorNumerico);
+        
+        var grupoTipo = 'despesas';
+        if (nomeConta.indexOf('REC') !== -1 || nomeConta.indexOf('RECEITA') !== -1) {
+            grupoTipo = 'receitas';
+        }
+        
+        abrirDetalhamentoValor(Math.abs(valorNumerico), mesIndex, nomeConta, codConta, grupoTipo, false);
+    };
+    
+    tabela.addEventListener('click', clickHandler);
+    tabela._clickHandler = clickHandler;
+    console.log('Evento de clique configurado na tabela DRE');
+}
+
+// Inicializar quando a pagina carregar
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        configurarCliqueDRE();
+    });
+} else {
+    configurarCliqueDRE();
+}
+
+// Exportar funções para uso global
+window.fecharModalDrilldownValor = fecharModalDrilldownValor;
+window.limparCacheDetalhamento = function() {
+    detalhamentoCache.clear();
+    console.log('Cache de detalhamento limpo');
+};
+
 </script>
 </body>
 </html>
