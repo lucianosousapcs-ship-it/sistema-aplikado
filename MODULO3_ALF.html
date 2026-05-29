@@ -1517,18 +1517,18 @@ function gerarDRE() {
         dadosPorMes[m] = s ? JSON.parse(s) : []; 
     } 
     function getTotalGrupo(grupo, mes) { 
-        let total = 0; 
-        estruturaDRE[grupo].forEach(item => { 
-            dadosPorMes[mes].forEach(lanc => { 
-                if(lanc.plano === item.nome) { 
-                    let soma = parseMoeda(lanc.valor); 
-                    if(grupo === 'receitas') total += soma; 
-                    else total -= soma; 
-                } 
-            }); 
+    let total = 0; 
+    estruturaDRE[grupo].forEach(item => { 
+        dadosPorMes[mes].forEach(lanc => { 
+            if(lanc.plano === item.nome) { 
+                let soma = parseMoeda(lanc.valor); 
+                // CORREÇÃO: sempre soma, pois custos já são negativos no banco
+                total += soma;
+            } 
         }); 
-        return total; 
-    } 
+    }); 
+    return total; 
+}
     const receitas = [], custosVar = [], custosFix = []; 
     for(let m=0;m<12;m++) { 
         receitas[m] = getTotalGrupo('receitas',m); 
@@ -1612,7 +1612,7 @@ function gerarDRE() {
         } 
         addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item'); 
     }); 
-    const lucroBruto = receitas.map((r,i) => r - custosVar[i]); 
+    const lucroBruto = receitas.map((r,i) => r + custosVar[i]);  // MUDOU DE - PARA + 
     addLinha('','LUCRO BRUTO',lucroBruto,'dre-total-row',true, 'total'); 
     addLinha('','CUSTOS FIXOS',custosFix,'dre-group-title',false, 'grupo'); 
     estruturaDRE.custosFixos.forEach(c => { 
@@ -1624,7 +1624,7 @@ function gerarDRE() {
         } 
         addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item'); 
     }); 
-    const resultadoOp = lucroBruto.map((lb,i) => lb - custosFix[i]); 
+   const resultadoOp = lucroBruto.map((lb,i) => lb + custosFix[i]);  // MUDOU DE - PARA +
     addLinha('','RESULTADO OPERACIONAL',resultadoOp,'dre-total-row',true, 'total'); 
 }
 
