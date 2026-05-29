@@ -1516,24 +1516,19 @@ function gerarDRE() {
         const s = localStorage.getItem(`dadosModuloIII_mes_${m}`); 
         dadosPorMes[m] = s ? JSON.parse(s) : []; 
     } 
-    // CÓDIGO CORRIGIDO
-// CÓDIGO CORRIGIDO (alternativa mais clara)
-function getTotalGrupo(grupo, mes) { 
-    let total = 0; 
-    estruturaDRE[grupo].forEach(item => { 
-        dadosPorMes[mes].forEach(lanc => { 
-            if(lanc.plano === item.nome) { 
-                let soma = parseMoeda(lanc.valor); 
-                if(grupo === 'receitas') {
-                    total += soma;  // Receitas: soma normalmente
-                } else {
-                    total -= soma;  // Custos: SUBTRAI (pois estão positivos no banco)
-                }
-            } 
+    function getTotalGrupo(grupo, mes) { 
+        let total = 0; 
+        estruturaDRE[grupo].forEach(item => { 
+            dadosPorMes[mes].forEach(lanc => { 
+                if(lanc.plano === item.nome) { 
+                    let soma = parseMoeda(lanc.valor); 
+                    if(grupo === 'receitas') total += soma; 
+                    else total -= soma; 
+                } 
+            }); 
         }); 
-    }); 
-    return total; 
-}
+        return total; 
+    } 
     const receitas = [], custosVar = [], custosFix = []; 
     for(let m=0;m<12;m++) { 
         receitas[m] = getTotalGrupo('receitas',m); 
@@ -1629,7 +1624,7 @@ function getTotalGrupo(grupo, mes) {
         } 
         addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item'); 
     }); 
-    const resultadoOp = lucroBruto.map((lb,i) => lb - custosFix[i]);
+    const resultadoOp = lucroBruto.map((lb,i) => lb - custosFix[i]); 
     addLinha('','RESULTADO OPERACIONAL',resultadoOp,'dre-total-row',true, 'total'); 
 }
 
@@ -4813,7 +4808,7 @@ console.log('Sistema Aplikado Módulo III inicializado com sucesso!');
 
 document.addEventListener('DOMContentLoaded', async function() {
     await carregarRegrasConversaoSupabase();
-    await gerarDREComSupabase();  // ← ESTA É A QUE FUNCIONA
+    await gerarDREComSupabase();
     await carregarCoresDoSupabase();
     carregarVendas();
     carregarCompras();
