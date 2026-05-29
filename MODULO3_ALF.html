@@ -1517,6 +1517,16 @@ function gerarDRE() {
         dadosPorMes[m] = s ? JSON.parse(s) : []; 
     } 
     
+    function gerarDRE() { 
+    const corpo = document.getElementById('corpoDRE'); 
+    if(!corpo) return; 
+    corpo.innerHTML = ''; 
+    const dadosPorMes = []; 
+    for(let m=0;m<12;m++) { 
+        const s = localStorage.getItem(`dadosModuloIII_mes_${m}`); 
+        dadosPorMes[m] = s ? JSON.parse(s) : []; 
+    } 
+    
     function getTotalGrupo(grupo, mes) { 
         let total = 0; 
         estruturaDRE[grupo].forEach(item => { 
@@ -1526,9 +1536,14 @@ function gerarDRE() {
                     if(grupo === 'receitas') {
                         total += soma;
                     } else {
-                        total -= soma;   // ← MUDAR DE + PARA -
+                        total -= soma;
                     }
-                 
+                } 
+            }); 
+        }); 
+        return total; 
+    }
+    
     const receitas = [], custosVar = [], custosFix = []; 
     for(let m=0;m<12;m++) { 
         receitas[m] = getTotalGrupo('receitas',m); 
@@ -1536,13 +1551,97 @@ function gerarDRE() {
         custosFix[m] = getTotalGrupo('custosFixos',m); 
     }
     
-    // ... resto da função (addLinha, etc.)
+    function addLinha(cod, nome, valores, classe, exibirPositivoNegativo=true, linhaTipo='item') { 
+        const tr = document.createElement('tr'); 
+        tr.className = classe; 
+        let totalAnual = 0; 
+        let temMovimentacao = false;
+        for(let i=0;i<12;i++) { 
+            const v = valores[i]; 
+            totalAnual += v; 
+            if (v !== 0) temMovimentacao = true;
+        } 
+        if (temMovimentacao || totalAnual !== 0) {
+            tr.classList.add('linha-com-movimentacao');
+        } else {
+            tr.classList.add('linha-sem-movimentacao');
+        }
+        let html = `<tr>${cod ? cod + ' - ' + nome : nome}</td>`; 
+        for(let i=0;i<12;i++) { 
+            const v = valores[i]; 
+            const className = exibirPositivoNegativo ? (v>=0?'valor-positivo':'valor-negativo') : ''; 
+            html += `<td class="${className}" data-mes="${i}" data-valor="${v}" data-nome-conta="${nome}" data-cod-conta="${cod || ''}" data-tipo-conta="${linhaTipo}">${formatarMoeda(v)}</td>`; 
+        } 
+        const classNameTotal = exibirPositivoNegativo ? (totalAnual>=0?'valor-positivo':'valor-negativo') : ''; 
+        html += `<td class="${classNameTotal}" data-total="${totalAnual}" data-nome-conta="${nome}" data-cod-conta="${cod || ''}" data-tipo-conta="${linhaTipo}">${formatarMoeda(totalAnual)}</td>`; 
+        tr.innerHTML = html; 
+        
+        const valorCells = tr.querySelectorAll('td:not(:first-child)');
+        valorCells.forEach(cell => {
+            cell.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const valor = parseFloat(cell.getAttribute('data-valor') || cell.getAttribute('data-total') || '0');
+                const mes = cell.getAttribute('data-mes');
+                const nomeConta = cell.getAttribute('data-nome-conta');
+                const codConta = cell.getAttribute('data-cod-conta');
+                const tipoConta = cell.getAttribute('data-tipo-conta');
+                const isTotal = cell.hasAttribute('data-total');
+                
+                if (valor === 0) {
+                    alert('Não há registros para este valor.');
+                    return;
+                }
+                
+                let grupoTipo = null;
+                if (estruturaDRE.receitas.some(r => r.nome === nomeConta) || nomeConta === 'RECEITAS TOTAIS') {
+                    grupoTipo = 'receitas';
+                } else if (estruturaDRE.custosVariaveis.some(c => c.nome === nomeConta) || 
+                           estruturaDRE.custosFixos.some(c => c.nome === nomeConta) ||
+                           nomeConta === 'CUSTOS VARIAVEIS' || nomeConta === 'CUSTOS FIXOS') {
+                    grupoTipo = 'despesas';
+                }
+                
+                abrirDetalhamentoValor(valor, mes, nomeConta, codConta, grupoTipo, isTotal);
+            });
+        });
+        
+        corpo.appendChild(tr); 
+    }
     
-    const lucroBruto = receitas.map((r,i) => r - custosVar[i]);   // ← MUDAR DE + PARA -
-    
-    // ... depois dos custos fixos
-    
-    const resultadoOp = lucroBruto.map((lb,i) => lb - custosFix[i]);   // ← MUDAR DE + PARA -
+    addLinha('','RECEITAS TOTAIS',receitas,'dre-group-title',true, 'grupo'); 
+    estruturaDRE.receitas.slice(0,25).forEach(r => { 
+        const vals = []; 
+        for(let m=0;m<12;m++) { 
+            let total = 0; 
+            dadosPorMes[m].forEach(lanc => { if(lanc.plano === r.nome) total += parseMoeda(lanc.valor); }); 
+            vals[m] = total; 
+        } 
+        addLinha(r.cod, r.nome, vals, 'dre-subgroup', true, 'item'); 
+    }); 
+    addLinha('','CUSTOS VARIAVEIS',custosVar,'dre-group-title',false, 'grupo'); 
+    estruturaDRE.custosVariaveis.slice(0,20).forEach(c => { 
+        const vals = []; 
+        for(let m=0;m<12;m++) { 
+            let total = 0; 
+            dadosPorMes[m].forEach(lanc => { if(lanc.plano === c.nome) total += parseMoeda(lanc.valor); }); 
+            vals[m] = total; 
+        } 
+        addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item'); 
+    }); 
+    const lucroBruto = receitas.map((r,i) => r - custosVar[i]); 
+    addLinha('','LUCRO BRUTO',lucroBruto,'dre-total-row',true, 'total'); 
+    addLinha('','CUSTOS FIXOS',custosFix,'dre-group-title',false, 'grupo'); 
+    estruturaDRE.custosFixos.forEach(c => { 
+        const vals = []; 
+        for(let m=0;m<12;m++) { 
+            let total = 0; 
+            dadosPorMes[m].forEach(lanc => { if(lanc.plano === c.nome) total += parseMoeda(lanc.valor); }); 
+            vals[m] = total; 
+        } 
+        addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item'); 
+    }); 
+    const resultadoOp = lucroBruto.map((lb,i) => lb - custosFix[i]); 
+    addLinha('','RESULTADO OPERACIONAL',resultadoOp,'dre-total-row',true, 'total'); 
 }
     function addLinha(cod, nome, valores, classe, exibirPositivoNegativo=true, linhaTipo='item') { 
         const tr = document.createElement('tr'); 
