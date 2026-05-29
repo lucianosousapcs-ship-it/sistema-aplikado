@@ -1512,13 +1512,10 @@ function aplicarPlanoContasTodosLancamentos() {
 // FUNÇÕES DO DRE (COM DESTAQUE PARA LINHAS COM MOVIMENTAÇÃO E CLICK PARA DETALHAR)
 // ============================================================
 async function gerarDRE() {
-    console.log('🟢 VERSÃO FINAL CORRIGIDA - 29/05/2026');
+    console.log('🟢 GERANDO DRE - VERSÃO FINAL CORRIGIDA');
     
     const dadosPorMes = await carregarDRESupabase();
-    if (!dadosPorMes) {
-        console.error('Erro ao carregar dados do Supabase');
-        return;
-    }
+    if (!dadosPorMes) return;
     
     const corpo = document.getElementById('corpoDRE');
     if (!corpo) return;
@@ -1538,36 +1535,30 @@ async function gerarDRE() {
         return total;
     }
     
-    const receitas = [];
-    const custosVar = [];
-    const custosFix = [];
+    const receitasAbs = [];
+    const custosVarAbs = [];
+    const custosFixAbs = [];
     
     for (let m = 0; m < 12; m++) {
-        receitas[m] = getTotalGrupo('receitas', m);
-        custosVar[m] = getTotalGrupo('custosVariaveis', m);
-        custosFix[m] = getTotalGrupo('custosFixos', m);
+        receitasAbs[m] = getTotalGrupo('receitas', m);
+        custosVarAbs[m] = getTotalGrupo('custosVariaveis', m);
+        custosFixAbs[m] = getTotalGrupo('custosFixos', m);
     }
     
-    const lucroBruto = receitas.map((r, i) => r - custosVar[i]);
-    const resultadoOp = lucroBruto.map((lb, i) => lb - custosFix[i]);
+    const lucroBruto = receitasAbs.map((r, i) => r - custosVarAbs[i]);
+    const resultadoOp = lucroBruto.map((lb, i) => lb - custosFixAbs[i]);
     
-    console.log('Receitas total:', receitas.reduce((a,b)=>a+b,0));
-    console.log('Custos Var total:', custosVar.reduce((a,b)=>a+b,0));
-    console.log('Lucro Bruto total:', lucroBruto.reduce((a,b)=>a+b,0));
-    
-    function addLinha(cod, nome, valores, classe, exibirPositivoNegativo = true, linhaTipo = 'item') {
+    function addLinha(cod, nome, valores, classe, exibirComoNegativo = false) {
         const tr = document.createElement('tr');
         tr.className = classe;
-        let totalAnual = 0;
-        let temMovimentacao = false;
         
+        let totalAnual = 0;
         for (let i = 0; i < 12; i++) {
-            const v = valores[i];
-            totalAnual += v;
-            if (v !== 0) temMovimentacao = true;
+            totalAnual += valores[i];
         }
         
-        if (temMovimentacao || totalAnual !== 0) {
+        let temMovimentacao = valores.some(v => v !== 0) || totalAnual !== 0;
+        if (temMovimentacao) {
             tr.classList.add('linha-com-movimentacao');
         }
         
@@ -1575,34 +1566,25 @@ async function gerarDRE() {
         
         for (let i = 0; i < 12; i++) {
             let v = valores[i];
-            
-            // Inverter sinal para exibição de CUSTOS
-            if ((nome === 'CUSTOS VARIAVEIS' || nome === 'CUSTOS FIXOS') && linhaTipo === 'grupo') {
+            if (exibirComoNegativo && v > 0) {
                 v = -v;
             }
-            
-            // CORREÇÃO PRINCIPAL: garantir que LUCRO BRUTO e RESULTADO OPERACIONAL mostrem o sinal correto
-            if ((nome === 'LUCRO BRUTO' || nome === 'RESULTADO OPERACIONAL') && linhaTipo === 'total') {
-                v = v; // mantém o valor como está (já deve ser negativo)
-            }
-            
-            const className = exibirPositivoNegativo ? (v >= 0 ? 'valor-positivo' : 'valor-negativo') : '';
-            html += `<td class="${className}" data-mes="${i}" data-valor="${valores[i]}">${formatarMoeda(v)}</div>`;
+            const className = v >= 0 ? 'valor-positivo' : 'valor-negativo';
+            html += `<td class="${className}">${formatarMoeda(v)}</div>`;
         }
         
-        let totalExibicao = totalAnual;
-        if ((nome === 'CUSTOS VARIAVEIS' || nome === 'CUSTOS FIXOS') && linhaTipo === 'grupo') {
-            totalExibicao = -totalAnual;
+        let totalExibir = totalAnual;
+        if (exibirComoNegativo && totalAnual > 0) {
+            totalExibir = -totalAnual;
         }
+        const classNameTotal = totalExibir >= 0 ? 'valor-positivo' : 'valor-negativo';
+        html += `<td class="${classNameTotal}">${formatarMoeda(totalExibir)}</div>`;
         
-        const classNameTotal = exibirPositivoNegativo ? (totalExibicao >= 0 ? 'valor-positivo' : 'valor-negativo') : '';
-        html += `<td class="${classNameTotal}">${formatarMoeda(totalExibicao)}</div>`;
         tr.innerHTML = html;
         corpo.appendChild(tr);
     }
     
-    // Montar tabela
-    addLinha('', 'RECEITAS TOTAIS', receitas, 'dre-group-title', true, 'grupo');
+    addLinha('', 'RECEITAS TOTAIS', receitasAbs, 'dre-group-title', false);
     
     estruturaDRE.receitas.slice(0, 25).forEach(r => {
         const vals = [];
@@ -1611,10 +1593,10 @@ async function gerarDRE() {
             dadosPorMes[m].forEach(lanc => { if (lanc.plano === r.nome) total += parseFloat(lanc.valor) || 0; });
             vals[m] = total;
         }
-        addLinha(r.cod, r.nome, vals, 'dre-subgroup', true, 'item');
+        addLinha(r.cod, r.nome, vals, 'dre-subgroup', false);
     });
     
-    addLinha('', 'CUSTOS VARIAVEIS', custosVar, 'dre-group-title', false, 'grupo');
+    addLinha('', 'CUSTOS VARIAVEIS', custosVarAbs, 'dre-group-title', true);
     
     estruturaDRE.custosVariaveis.slice(0, 20).forEach(c => {
         const vals = [];
@@ -1623,11 +1605,11 @@ async function gerarDRE() {
             dadosPorMes[m].forEach(lanc => { if (lanc.plano === c.nome) total += parseFloat(lanc.valor) || 0; });
             vals[m] = total;
         }
-        addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item');
+        addLinha(c.cod, c.nome, vals, 'dre-subgroup', false);
     });
     
-    addLinha('', 'LUCRO BRUTO', lucroBruto, 'dre-total-row', true, 'total');
-    addLinha('', 'CUSTOS FIXOS', custosFix, 'dre-group-title', false, 'grupo');
+    addLinha('', 'LUCRO BRUTO', lucroBruto, 'dre-total-row', false);
+    addLinha('', 'CUSTOS FIXOS', custosFixAbs, 'dre-group-title', true);
     
     estruturaDRE.custosFixos.forEach(c => {
         const vals = [];
@@ -1636,12 +1618,12 @@ async function gerarDRE() {
             dadosPorMes[m].forEach(lanc => { if (lanc.plano === c.nome) total += parseFloat(lanc.valor) || 0; });
             vals[m] = total;
         }
-        addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item');
+        addLinha(c.cod, c.nome, vals, 'dre-subgroup', false);
     });
     
-    addLinha('', 'RESULTADO OPERACIONAL', resultadoOp, 'dre-total-row', true, 'total');
+    addLinha('', 'RESULTADO OPERACIONAL', resultadoOp, 'dre-total-row', false);
     
-    console.log('✅ DRE gerada com sucesso!');
+    console.log('✅ DRE FINAL GERADA COM SUCESSO!');
 }
 function fecharModalDrilldownValor() {
     document.getElementById('modalDrilldownValor').classList.remove('active');
