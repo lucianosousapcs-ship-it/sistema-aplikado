@@ -1516,19 +1516,23 @@ function gerarDRE() {
         const s = localStorage.getItem(`dadosModuloIII_mes_${m}`); 
         dadosPorMes[m] = s ? JSON.parse(s) : []; 
     } 
-    function getTotalGrupo(grupo, mes) { 
-        let total = 0; 
-        estruturaDRE[grupo].forEach(item => { 
-            dadosPorMes[mes].forEach(lanc => { 
-                if(lanc.plano === item.nome) { 
-                    let soma = parseMoeda(lanc.valor); 
-                    if(grupo === 'receitas') total += soma; 
-                    else total -= soma; 
-                } 
-            }); 
+    // CÓDIGO CORRIGIDO
+function getTotalGrupo(grupo, mes) { 
+    let total = 0; 
+    estruturaDRE[grupo].forEach(item => { 
+        dadosPorMes[mes].forEach(lanc => { 
+            if(lanc.plano === item.nome) { 
+                let soma = parseMoeda(lanc.valor); 
+                // CORREÇÃO: 
+                // - Para receitas: soma normalmente (valores positivos)
+                // - Para custos: soma também (pois os valores já são negativos)
+                //   Ex: receita 100 + custo -50 = 50 (lucro bruto correto)
+                total += soma;  // ← MUDANÇA: sempre soma, sem condicional especial
+            } 
         }); 
-        return total; 
-    } 
+    }); 
+    return total; 
+}
     const receitas = [], custosVar = [], custosFix = []; 
     for(let m=0;m<12;m++) { 
         receitas[m] = getTotalGrupo('receitas',m); 
