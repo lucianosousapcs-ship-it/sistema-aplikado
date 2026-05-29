@@ -1516,25 +1516,39 @@ function gerarDRE() {
         const s = localStorage.getItem(`dadosModuloIII_mes_${m}`); 
         dadosPorMes[m] = s ? JSON.parse(s) : []; 
     } 
+    
     function getTotalGrupo(grupo, mes) { 
-    let total = 0; 
-    estruturaDRE[grupo].forEach(item => { 
-        dadosPorMes[mes].forEach(lanc => { 
-            if(lanc.plano === item.nome) { 
-                let soma = parseMoeda(lanc.valor); 
-                // CORREÇÃO: sempre soma, pois custos já são negativos no banco
-                total += soma;
-            } 
+        let total = 0; 
+        estruturaDRE[grupo].forEach(item => { 
+            dadosPorMes[mes].forEach(lanc => { 
+                if(lanc.plano === item.nome) { 
+                    let soma = parseMoeda(lanc.valor); 
+                    if(grupo === 'receitas') {
+                        total += soma;
+                    } else {
+                        total -= soma;   // ← MUDAR DE + PARA -
+                    }
+                } 
+            }); 
         }); 
-    }); 
-    return total; 
-}
+        return total; 
+    }
+    
     const receitas = [], custosVar = [], custosFix = []; 
     for(let m=0;m<12;m++) { 
         receitas[m] = getTotalGrupo('receitas',m); 
         custosVar[m] = getTotalGrupo('custosVariaveis',m); 
         custosFix[m] = getTotalGrupo('custosFixos',m); 
-    } 
+    }
+    
+    // ... resto da função (addLinha, etc.)
+    
+    const lucroBruto = receitas.map((r,i) => r - custosVar[i]);   // ← MUDAR DE + PARA -
+    
+    // ... depois dos custos fixos
+    
+    const resultadoOp = lucroBruto.map((lb,i) => lb - custosFix[i]);   // ← MUDAR DE + PARA -
+}
     function addLinha(cod, nome, valores, classe, exibirPositivoNegativo=true, linhaTipo='item') { 
         const tr = document.createElement('tr'); 
         tr.className = classe; 
@@ -4796,7 +4810,7 @@ document.getElementById('modalDrilldownValor')?.addEventListener('click', functi
 carregarPlanoContas();
 carregarCoresSalvas();
 carregarFlags();
-gerarDRE();
+// gerarDRE();  ← REMOVIDA (ou apenas apague a linha)
 loadMapeamentos();
 carregarVendas();
 carregarCompras();
