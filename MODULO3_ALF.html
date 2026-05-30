@@ -1521,20 +1521,19 @@ async function gerarDRE() {
     if (!corpo) return;
     corpo.innerHTML = '';
     
-    function getTotalGrupo(grupo, mes) {
-        let total = 0;
-        if (estruturaDRE[grupo]) {
-            estruturaDRE[grupo].forEach(item => {
-                dadosPorMes[mes].forEach(lanc => {
-                    if(lanc.plano === item.nome) {
-                        total += parseFloat(lanc.valor) || 0;
-                    }
-                });
-            });
-        }
-        return total;
+    function getTotalGrupo(grupo, mes) { 
+    let total = 0; 
+    if (estruturaDRE[grupo]) {
+        estruturaDRE[grupo].forEach(item => { 
+            dadosPorMes[mes].forEach(lanc => { 
+                if(lanc.plano === item.nome) { 
+                    total += parseFloat(lanc.valor) || 0;  // ← CORRETO
+                } 
+            }); 
+        });
     }
-    
+    return total; 
+}
     const receitasAbs = [];
     const custosVarAbs = [];
     const custosFixAbs = [];
@@ -1545,9 +1544,9 @@ async function gerarDRE() {
         custosFixAbs[m] = getTotalGrupo('custosFixos', m);
     }
     
-    const lucroBruto = receitasAbs.map((r, i) => r - custosVarAbs[i]);
-    const resultadoOp = lucroBruto.map((lb, i) => lb - custosFixAbs[i]);
-    
+    const lucroBruto = receitasAbs.map((r, i) => r + custosVarAbs[i]);
+    const resultadoOp = lucroBruto.map((lb, i) => lb + custosFixAbs[i]);
+
     function addLinha(cod, nome, valores, classe, exibirComoNegativo = false) {
         const tr = document.createElement('tr');
         tr.className = classe;
@@ -5071,7 +5070,7 @@ function configurarCliqueDRE() {
             grupoTipo = 'receitas';
         }
         
-        abrirDetalhamentoValor(Math.abs(valorNumerico), mesIndex, nomeConta, codConta, grupoTipo, false);
+        abrirDetalhamentoValor(valorNumerico, mesIndex, nomeConta, codConta, grupoTipo, false);
     };
     
     tabela.addEventListener('click', clickHandler);
