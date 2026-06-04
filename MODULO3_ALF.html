@@ -1521,19 +1521,20 @@ async function gerarDRE() {
     if (!corpo) return;
     corpo.innerHTML = '';
     
-    function getTotalGrupo(grupo, mes) { 
-    let total = 0; 
-    if (estruturaDRE[grupo]) {
-        estruturaDRE[grupo].forEach(item => { 
-            dadosPorMes[mes].forEach(lanc => { 
-                if(lanc.plano === item.nome) { 
-                    total += parseFloat(lanc.valor) || 0;  // ← CORRETO
-                } 
-            }); 
-        });
+    function getTotalGrupo(grupo, mes) {
+        let total = 0;
+        if (estruturaDRE[grupo]) {
+            estruturaDRE[grupo].forEach(item => {
+                dadosPorMes[mes].forEach(lanc => {
+                    if(lanc.plano === item.nome) {
+                        total += parseFloat(lanc.valor) || 0;
+                    }
+                });
+            });
+        }
+        return total;
     }
-    return total; 
-}
+    
     const receitasAbs = [];
     const custosVarAbs = [];
     const custosFixAbs = [];
@@ -1544,9 +1545,9 @@ async function gerarDRE() {
         custosFixAbs[m] = getTotalGrupo('custosFixos', m);
     }
     
-    const lucroBruto = receitasAbs.map((r, i) => r + custosVarAbs[i]);
-    const resultadoOp = lucroBruto.map((lb, i) => lb + custosFixAbs[i]);
-
+    const lucroBruto = receitasAbs.map((r, i) => r - custosVarAbs[i]);
+    const resultadoOp = lucroBruto.map((lb, i) => lb - custosFixAbs[i]);
+    
     function addLinha(cod, nome, valores, classe, exibirComoNegativo = false) {
         const tr = document.createElement('tr');
         tr.className = classe;
@@ -2944,7 +2945,7 @@ function gerarPDFCaixaComFiltro(mesAtual, diasSelecionados) {
         <td style="padding: 8px 4px; text-align: right; font-weight: 700; color: #000000;">R$ ${formatMoneySimple(totalEntradasGeral - totalSaida)}</div>
     </tr>`;
     
-// ============================================================
+ // ============================================================
     // PÁGINA DE CONCILIAÇÃO - SEMPRE EXIBIDA (AJUSTE 2)
     // ============================================================
     let conciliacaoLinhasHTML = '';
@@ -3193,7 +3194,7 @@ function gerarPDFCaixaComFiltro(mesAtual, diasSelecionados) {
         
         <div class="periodo-info">
             <strong>PERÍODO:</strong> ${periodoDescricao}<br>
-            <span>Conciliação Caixa – Loja Nova Iguaçu x ERP</span><br>
+            <span>Comparativo vs Fechamento Sistema (ERP)</span><br>
             <span>Gerado em: ${dataGeracao} às ${horaGeracao}</span>
         </div>
         
@@ -3202,6 +3203,7 @@ function gerarPDFCaixaComFiltro(mesAtual, diasSelecionados) {
                 <tr>
                     <th style="width: 14%;">DATA</th>
                     <th style="width: 14%;">LOJA FÍSICA<br><span style="font-size:8px;">Fechamento ERP</span></th>
+                    <th style="width: 14%;">LOJA N.IGUAÇU<br><span style="font-size:8px;">Caixa N.Iguaçu</span></th>
                     <th style="width: 14%;">CORPORATIVO<br><span style="font-size:8px;">Fechamento ERP</span></th>
                     
                     <th style="width: 15%;">TOTAL GERAL<br><span style="font-size:8px;">Fechamento ERP</span></th>
@@ -5069,7 +5071,7 @@ function configurarCliqueDRE() {
             grupoTipo = 'receitas';
         }
         
-        abrirDetalhamentoValor(valorNumerico, mesIndex, nomeConta, codConta, grupoTipo, false);
+        abrirDetalhamentoValor(Math.abs(valorNumerico), mesIndex, nomeConta, codConta, grupoTipo, false);
     };
     
     tabela.addEventListener('click', clickHandler);
