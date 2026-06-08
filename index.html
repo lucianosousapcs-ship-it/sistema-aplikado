@@ -174,6 +174,48 @@
             .taas-buttons-panel { grid-template-columns: 1fr; }
             .taas-chat-wrapper { bottom: 80px; }
         }
+
+        /* ===== AJUSTES EXCLUSIVOS MOBILE/TABLET (max-width: 991px) ===== */
+        @media (max-width: 991px) {
+            /* 1. Remove o botão "Diagnóstico em 5 Minutos" do cabeçalho */
+            header .social-icons-top .btn-diagnostic-top {
+                display: none !important;
+            }
+            
+            /* 2. Remove completamente o chatbot flutuante na versão mobile/tablet */
+            .taas-chat-wrapper {
+                display: none !important;
+            }
+            
+            /* 3. Reposiciona o botão Login para ocupar a posição do botão removido */
+            header {
+                justify-content: space-between;
+            }
+            
+            header .social-icons-top {
+                margin-right: 0;
+                order: 1;
+            }
+            
+            header .btn-login {
+                margin-left: 0;
+                margin-right: 0;
+                order: 2;
+            }
+            
+            /* 4. Remove o ícone de menu hambúrguer e impede abertura do menu mobile */
+            .mobile-menu {
+                display: none !important;
+            }
+            
+            .nav-mobile,
+            .nav-mobile.active {
+                display: none !important;
+            }
+        }
+        
+        /* Versão desktop (acima de 991px) - NENHUMA ALTERAÇÃO */
+        /* Todas as regras acima são aplicadas apenas em telas menores que 991px, mantendo o desktop 100% intacto */
     </style>
 </head>
 <body>
@@ -559,16 +601,11 @@
         let idx = 0;
         if(slides.length) { setInterval(() => { slides[idx].classList.remove("active"); idx = (idx + 1) % slides.length; slides[idx].classList.add("active"); }, 5000); }
         
-        // Mobile menu
-        const mobileToggle = document.getElementById('mobileMenuToggle');
-        const navMobile = document.getElementById('navMobile');
-        if(mobileToggle && navMobile) { mobileToggle.addEventListener('click', () => navMobile.classList.toggle('active')); }
-        
         // Login modal
         const loginModal = document.getElementById('loginModal');
         const openLoginBtns = document.querySelectorAll('#openModalBtn, #openModalBtnMobile');
         const closeLogin = document.getElementById('closeModal');
-        openLoginBtns.forEach(btn => { btn.addEventListener('click', (e) => { e.preventDefault(); loginModal.style.display = 'flex'; if(navMobile) navMobile.classList.remove('active'); }); });
+        openLoginBtns.forEach(btn => { btn.addEventListener('click', (e) => { e.preventDefault(); loginModal.style.display = 'flex'; }); });
         if(closeLogin) closeLogin.onclick = () => loginModal.style.display = 'none';
         window.addEventListener('click', (e) => { if(e.target === loginModal) loginModal.style.display = 'none'; });
         
@@ -589,7 +626,7 @@
         if(closeImagePopup) closeImagePopup.addEventListener('click', closePopupAndOpenChat);
         if(imagePopup) imagePopup.addEventListener('click', (e) => { if(e.target === imagePopup) closePopupAndOpenChat(); });
         
-        // CHATBOT - Funcionalidades preservadas
+        // CHATBOT - Funcionalidades preservadas (será ocultado no mobile pelo CSS, mas código permanece)
         const chatWindow = document.getElementById('taasChatWindow');
         const closeChatBtn = document.getElementById('taasCloseBtn');
         const messagesContainer = document.getElementById('taasMessages');
@@ -693,9 +730,9 @@
         function openChat() { chatWindow.classList.add('open'); }
         function closeChat() { chatWindow.classList.remove('open'); }
         
-        closeChatBtn.addEventListener('click', closeChat);
-        sendBtn.addEventListener('click', sendClientMessage);
-        inputField.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendClientMessage(); });
+        if(closeChatBtn) closeChatBtn.addEventListener('click', closeChat);
+        if(sendBtn) sendBtn.addEventListener('click', sendClientMessage);
+        if(inputField) inputField.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendClientMessage(); });
         
         function initializeChatbot() {
             if(chatInitialized) return;
