@@ -763,7 +763,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 
                 <button class="btn-aplicar-todos" onclick="limparEConverterContasExtras()" style="background: linear-gradient(135deg, #ef4444, #dc2626); margin-left: 5px;"> LIMPAR E APLICAR TODOS</button>
 
-                <button class="btn-padrao btn-padrao-gerar-pdf" onclick="gerarPDFContasExtras()">GERAR PDF EXTRAS</button>
+                <button class="btn-padrao btn-padrao-gerar-pdf" onclick="abrirModalPeriodoSangriaPDF()">GERAR PDF</button>
 
             </div>
         </div>
@@ -824,9 +824,9 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
                     <tr>
                         <th style="width:30px;"><input type="checkbox" id="selectAllContasExtras" onchange="toggleSelectAllContasExtras(this)"></th>
                         <th>ID</th>
-                        <th>DATA PAGAMENTO</th>
+                        <th>DATA</th>
                         <th>CÓDIGO</th>
-                        <th>NÚMERO</th>
+                        <th>EMPRESA</th>
                         <th>FORNECEDOR</th>
                         <th>OPERAÇÃO</th>
                         <th>VALOR (R$)</th>
@@ -3301,12 +3301,12 @@ async function gerarPDFContasExtras() {
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>CONTAS EXTRAS - Página 1</title>
+        <title>DESPESAS EXTRAS (SANGRIAS) - Página 1</title>
         <style>${gerarCSS()}</style>
     </head>
     <body>
         <div class="header">
-            <h1>CONTAS EXTRAS</h1>
+            <h1>DESPESAS EXTRAS (SANGRIAS)</h1>
             <p>Aplikado Soluções | Módulo III</p>
         </div>
         
@@ -3334,7 +3334,7 @@ async function gerarPDFContasExtras() {
         </table>
         
         <div class="footer">
-            Documento gerado por Aplikado Gestao - Contas Extras (Página 1)
+            Documento gerado por Aplikado Gestao - Despesas Extras (Sangrias) (Página 1)
         </div>
     </body>
     </html>`;
@@ -3391,12 +3391,12 @@ async function gerarPDFContasExtras() {
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>CONTAS EXTRAS - Detalhamento Pág. ${numeroPagina}</title>
+            <title>DESPESAS EXTRAS (SANGRIAS) - Detalhamento Pág. ${numeroPagina}</title>
             <style>${gerarCSS()}</style>
         </head>
         <body>
             <div class="header">
-                <h1>CONTAS EXTRAS</h1>
+                <h1>DESPESAS EXTRAS (SANGRIAS</h1>
                 <p>Aplikado Soluções | Módulo III</p>
             </div>
             
@@ -3411,7 +3411,7 @@ async function gerarPDFContasExtras() {
                         <th>ID</th>
                         <th>DATA PAGTO</th>
                         <th>CODIGO</th>
-                        <th>NUMERO</th>
+                        <th>EMPRESA</th>
                         <th>FORNECEDOR</th>
                         <th>OPERACAO</th>
                         <th>VALOR</th>
@@ -3425,7 +3425,7 @@ async function gerarPDFContasExtras() {
             </table>
             
             <div class="footer">
-                Documento gerado por Aplikado Gestao - Contas Extras (Página ${numeroPagina})
+                Documento gerado por Aplikado Gestao - Despesas Extras (Sangrias) (Página ${numeroPagina})
             </div>
         </body>
         </html>`;
@@ -3617,7 +3617,7 @@ async function incluirContasExtrasSelecionadasNoDRE() {
     console.log(`   Despesas: R$ ${valoresNegativos.toFixed(2)}`);
 
     const confirmar = confirm(
-        `📊 CONTAS EXTRAS - RESUMO FINAL\n\n` +
+        `📊 DESPESAS EXTRAS - RESUMO FINAL\n\n` +
         `📋 Registros: ${registrosProcessados}\n` +
         `💰 Receitas: R$ ${valoresPositivos.toFixed(2)}\n` +
         `💰 Despesas: R$ ${valoresNegativos.toFixed(2)}\n` +
@@ -3670,7 +3670,7 @@ async function incluirContasExtrasSelecionadasNoDRE() {
     renderizarTabelaContasExtras();
     await gerarDREComSupabase();
 
-    alert(`✅ CONTAS EXTRAS ADICIONADAS AO DRE!\n\n` +
+    alert(`✅ DESPESAS EXTRAS ADICIONADAS AO DRE!\n\n` +
            `📊 Registros: ${registrosProcessados}\n` +
            `💰 Receitas: R$ ${valoresPositivos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n` +
            `💰 Despesas: R$ ${valoresNegativos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n` +
@@ -6749,6 +6749,245 @@ function fecharTodosOsModais() {
         const modal = document.getElementById(id);
         if (modal) modal.classList.remove('active');
     });
-}</script>
+}
+
+// ============================================================
+// FUNÇÕES PARA FILTRO DE PERÍODO DO PDF DA SANGRIA
+// ============================================================
+
+function abrirModalPeriodoSangriaPDF() {
+    carregarDiasDisponiveisParaSangria();
+    carregarMesesDisponiveisParaSangria();
+    
+    document.querySelectorAll('#diasDisponiveisGridSangria input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#mesesDisponiveisGridSangria input[type="checkbox"]').forEach(cb => cb.checked = false);
+    
+    document.getElementById('radioMesAtualSangria').checked = true;
+    document.getElementById('radioSelecionarDiasSangria').checked = false;
+    document.getElementById('radioSelecionarMesesSangria').checked = false;
+    
+    document.getElementById('diasDisponiveisContainerSangria').classList.remove('visible');
+    document.getElementById('mesesDisponiveisContainerSangria').classList.remove('visible');
+    
+    document.getElementById('modalPeriodoSangriaPDF').classList.add('active');
+}
+
+function fecharModalPeriodoSangriaPDF() {
+    document.getElementById('modalPeriodoSangriaPDF').classList.remove('active');
+}
+
+function toggleDiasContainerSangria(show) {
+    const container = document.getElementById('diasDisponiveisContainerSangria');
+    if (show) container.classList.add('visible');
+    else container.classList.remove('visible');
+}
+
+function toggleMesesContainerSangria(show) {
+    const container = document.getElementById('mesesDisponiveisContainerSangria');
+    if (show) container.classList.add('visible');
+    else container.classList.remove('visible');
+}
+
+function carregarDiasDisponiveisParaSangria() {
+    let diasDisponiveis = [...new Set(contasExtrasData.map(r => r.dt_pagto).filter(d => d))];
+    
+    diasDisponiveis.sort((a,b) => {
+        const da = parseDataBr(a), db = parseDataBr(b);
+        if(!da && !db) return 0;
+        if(!da) return 1;
+        if(!db) return -1;
+        return da - db;
+    });
+    
+    const gridContainer = document.getElementById('diasDisponiveisGridSangria');
+    if (!gridContainer) return;
+    
+    if (diasDisponiveis.length === 0) {
+        gridContainer.innerHTML = '<p style="color: var(--soft-light); text-align: center;">Nenhum dia disponível.</p>';
+        return;
+    }
+    
+    let html = '';
+    diasDisponiveis.forEach(data => {
+        html += `<div class="dia-checkbox">
+                    <input type="checkbox" id="dia_sangria_${data.replace(/\//g, '_')}" value="${data}" class="dia-checkbox-input-sangria">
+                    <label for="dia_sangria_${data.replace(/\//g, '_')}">${data}</label>
+                 </div>`;
+    });
+    gridContainer.innerHTML = html;
+}
+
+function carregarMesesDisponiveisParaSangria() {
+    let mesesDisponiveis = new Set();
+    contasExtrasData.forEach(reg => {
+        const mesAno = getMesAno(reg.dt_pagto);
+        if (mesAno) mesesDisponiveis.add(mesAno);
+    });
+    
+    const mesesArray = Array.from(mesesDisponiveis).sort();
+    const gridContainer = document.getElementById('mesesDisponiveisGridSangria');
+    if (!gridContainer) return;
+    
+    if (mesesArray.length === 0) {
+        gridContainer.innerHTML = '<p style="color: var(--soft-light); text-align: center;">Nenhum mês disponível.</p>';
+        return;
+    }
+    
+    let html = '';
+    mesesArray.forEach(mesAno => {
+        html += `<div class="mes-checkbox">
+                    <input type="checkbox" id="mes_sangria_${mesAno.replace('/', '_')}" value="${mesAno}" class="mes-checkbox-input-sangria">
+                    <label for="mes_sangria_${mesAno.replace('/', '_')}">${mesAno}</label>
+                 </div>`;
+    });
+    gridContainer.innerHTML = html;
+    
+    // Eventos
+    document.querySelectorAll('#mesesDisponiveisGridSangria .mes-checkbox-input-sangria').forEach(checkbox => {
+        checkbox.onclick = (e) => {
+            if (checkbox.checked) {
+                document.querySelectorAll('#mesesDisponiveisGridSangria .mes-checkbox-input-sangria').forEach(cb => {
+                    if (cb !== checkbox) cb.checked = false;
+                });
+            }
+        };
+    });
+}
+
+function confirmarGeracaoPDFSangria() {
+    const isMesAtual = document.getElementById('radioMesAtualSangria').checked;
+    const isSelecionarDias = document.getElementById('radioSelecionarDiasSangria').checked;
+    const isSelecionarMeses = document.getElementById('radioSelecionarMesesSangria').checked;
+    
+    const diasSelecionados = [];
+    const mesesSelecionados = [];
+    
+    if (isSelecionarDias) {
+        document.querySelectorAll('#diasDisponiveisGridSangria input[type="checkbox"]:checked').forEach(cb => {
+            diasSelecionados.push(cb.value);
+        });
+        if (diasSelecionados.length === 0) {
+            alert('Selecione pelo menos um dia.');
+            return;
+        }
+    } else if (isSelecionarMeses) {
+        document.querySelectorAll('#mesesDisponiveisGridSangria input[type="checkbox"]:checked').forEach(cb => {
+            mesesSelecionados.push(cb.value);
+        });
+        if (mesesSelecionados.length === 0) {
+            alert('Selecione pelo menos um mês.');
+            return;
+        }
+    }
+    
+    fecharModalPeriodoSangriaPDF();
+    
+    // Aplicar filtro nos dados
+    let dadosFiltrados = [...contasExtrasData];
+    
+    function getMesAnoFromData(dataStr) {
+        const data = parseDataBr(dataStr);
+        if (!data) return null;
+        return `${String(data.getMonth() + 1).padStart(2, '0')}/${data.getFullYear()}`;
+    }
+    
+    if (isMesAtual) {
+        const hoje = new Date();
+        const mesCorrente = hoje.getMonth();
+        const anoCorrente = hoje.getFullYear();
+        dadosFiltrados = dadosFiltrados.filter(r => {
+            const data = parseDataBr(r.dt_pagto);
+            return data && data.getMonth() === mesCorrente && data.getFullYear() === anoCorrente;
+        });
+    } else if (diasSelecionados.length > 0) {
+        dadosFiltrados = dadosFiltrados.filter(r => diasSelecionados.includes(r.dt_pagto));
+    } else if (mesesSelecionados.length > 0) {
+        dadosFiltrados = dadosFiltrados.filter(r => {
+            const mesAnoItem = getMesAnoFromData(r.dt_pagto);
+            return mesesSelecionados.includes(mesAnoItem);
+        });
+    }
+    
+    if (dadosFiltrados.length === 0) {
+        alert('Nenhum registro encontrado para o período selecionado.');
+        return;
+    }
+    
+    // Chamar função original com dados filtrados (sobrescrever global temporariamente)
+    const originalData = [...contasExtrasData];
+    contasExtrasData = dadosFiltrados;
+    gerarPDFContasExtras();
+    contasExtrasData = originalData;
+}
+
+// Adicionar eventos de toggle para os rádios
+document.addEventListener('DOMContentLoaded', function() {
+    const radioDias = document.getElementById('radioSelecionarDiasSangria');
+    const radioMeses = document.getElementById('radioSelecionarMesesSangria');
+    const radioMesAtual = document.getElementById('radioMesAtualSangria');
+    
+    if (radioDias) {
+        radioDias.addEventListener('change', function() {
+            if (this.checked) toggleDiasContainerSangria(true);
+            else toggleDiasContainerSangria(false);
+        });
+    }
+    if (radioMeses) {
+        radioMeses.addEventListener('change', function() {
+            if (this.checked) toggleMesesContainerSangria(true);
+            else toggleMesesContainerSangria(false);
+        });
+    }
+    if (radioMesAtual) {
+        radioMesAtual.addEventListener('change', function() {
+            if (this.checked) {
+                toggleDiasContainerSangria(false);
+                toggleMesesContainerSangria(false);
+            }
+        });
+    }
+});
+
+
+
+</script>
+
+<!-- POP-UP FILTRO PERÍODO PDF PARA SANGRIA (IGUAL AO DO FECHAMENTO) -->
+<div id="modalPeriodoSangriaPDF" class="modal-periodo-caixa-pdf">
+    <div class="modal-periodo-caixa-content">
+        <h3>PERÍODO DO RELATÓRIO - SANGRIA</h3>
+        
+        <div class="periodo-opcoes">
+            <div class="periodo-option">
+                <input type="radio" name="periodoRelatorioSangria" id="radioMesAtualSangria" value="mes_atual" checked>
+                <label for="radioMesAtualSangria"> Mês Atual</label>
+            </div>
+            <div class="periodo-option">
+                <input type="radio" name="periodoRelatorioSangria" id="radioSelecionarDiasSangria" value="selecionar_dias">
+                <label for="radioSelecionarDiasSangria"> Selecionar Dias</label>
+            </div>
+            <div class="periodo-option">
+                <input type="radio" name="periodoRelatorioSangria" id="radioSelecionarMesesSangria" value="selecionar_meses">
+                <label for="radioSelecionarMesesSangria"> Selecionar Mês</label>
+            </div>
+        </div>
+        
+        <div id="diasDisponiveisContainerSangria" class="dias-container">
+            <p style="font-size: 12px; color: var(--soft-light); margin-bottom: 12px; text-align: left;">Selecione os dias para o relatório:</p>
+            <div id="diasDisponiveisGridSangria" class="dias-grid"></div>
+        </div>
+
+        <div id="mesesDisponiveisContainerSangria" class="meses-container">
+            <p style="font-size: 12px; color: var(--soft-light); margin-bottom: 12px; text-align: left;">Selecione o mês para o relatório:</p>
+            <div id="mesesDisponiveisGridSangria" class="dias-grid"></div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button class="btn-padrao btn-padrao-gerar-pdf" onclick="confirmarGeracaoPDFSangria()">GERAR PDF</button>
+            <button class="btn-cancelar-modal" onclick="fecharModalPeriodoSangriaPDF()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
