@@ -3998,32 +3998,30 @@ function atualizarTabelaCompras() {
     const filtradas = getComprasFiltradas(); 
     const tbody = document.getElementById('tabelaComprasBody'); 
     if(!tbody) return; 
+    
     if(filtradas.length === 0) { 
-        tbody.innerHTML='<td><td colspan="8" style="text-align:center; padding:40px;">Nenhum registro encontrado</div>'; 
+        tbody.innerHTML='<tr><td colspan="8" style="text-align:center; padding:40px;">Nenhum registro encontrado</td></tr>'; 
         atualizarResumoCompras(); 
         return; 
     } 
+    
     let html = ''; 
     for (const c of filtradas) { 
         const diasExibido = c.diasCalculado > 0 ? `${c.diasCalculado} dias` : 'EM DIA'; 
         html += `<tr>
-            <td>${c.documento}
+            <td>${c.documento}</td>
             <td>${c.fornecedor}</td>
             <td>${c.parcela}</td>
-            <!-- COLUNA OPERACAO / DESPESA REMOVIDA -->
-            <td style="display: none;">${c.operacao}<!-- REMOVIDA --></div>
-            <td>${formatarDataExibicao(c.vencimento)}</div>
-            <td style="text-align:center;">${diasExibido}</div>
-            <td>${c.statusCalculado}</div>
-            <td style="color:#f59e0b; font-weight:700;">R$ ${formatMoneySimple(c.valor)}</div>
-            <!-- COLUNA PLANO DE CONTAS (DRE) - DESPESAS REMOVIDA -->
-            <td style="display: none;"><!-- PLANO DE CONTAS REMOVIDO --></div>
+            <td>${c.operacao || '-'}</td>   <!-- ← COLUNA OPERAÇÃO RESTAURADA -->
+            <td>${formatarDataExibicao(c.vencimento)}</td>
+            <td style="text-align:center;">${diasExibido}</td>
+            <td>${c.statusCalculado}</td>
+            <td style="color:#f59e0b; font-weight:700;">R$ ${formatMoneySimple(c.valor)}</td>
         </tr>`;
     }
     tbody.innerHTML = html;
     atualizarResumoCompras();
-}
-function setFiltroStatusCompras(valor) { filtroStatusCompras = valor; document.querySelectorAll('.classif-btn').forEach(btn => btn.classList.remove('active')); document.querySelector(`.classif-btn[data-status="${valor}"]`)?.classList.add('active'); atualizarTabelaCompras(); }
+}function setFiltroStatusCompras(valor) { filtroStatusCompras = valor; document.querySelectorAll('.classif-btn').forEach(btn => btn.classList.remove('active')); document.querySelector(`.classif-btn[data-status="${valor}"]`)?.classList.add('active'); atualizarTabelaCompras(); }
 function aplicarFiltrosCompras() { filtroFornecedorCompras = document.getElementById('filtroFornecedor')?.value || "TODOS"; filtroOperacaoCompras = document.getElementById('filtroOperacao')?.value || "TODAS"; atualizarTabelaCompras(); }
 function aplicarBuscaCompras() { termoBuscaCompras = document.getElementById('buscaCompras')?.value || ""; atualizarTabelaCompras(); }
 function limparTodosFiltrosCompras() { filtroStatusCompras = "TODAS"; filtroFornecedorCompras = "TODOS"; filtroOperacaoCompras = "TODAS"; termoBuscaCompras = ""; if(document.getElementById('buscaCompras')) document.getElementById('buscaCompras').value = ""; if(document.getElementById('filtroFornecedor')) document.getElementById('filtroFornecedor').value = "TODOS"; if(document.getElementById('filtroOperacao')) document.getElementById('filtroOperacao').value = "TODAS"; document.querySelectorAll('.classif-btn').forEach(btn => btn.classList.remove('active')); document.querySelector('.classif-btn[data-status="TODAS"]')?.classList.add('active'); atualizarTabelaCompras(); }
