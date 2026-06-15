@@ -1643,31 +1643,69 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
             <button class="close-modal-btn" onclick="fecharModalConversao()">X</button>
         </div>
         
+        <!-- BARRA DE FERRAMENTAS COM BOTÕES -->
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 20px;">
+            <button class="btn-atualizar" onclick="atualizarRegrasConversao()" style="background: linear-gradient(135deg, #2c3e50, #1a2632); border: 1px solid rgba(230,160,23,0.3); border-radius: 8px; padding: 8px 16px; font-weight: 600; font-size: 12px; cursor: pointer; color: var(--yellow); display: inline-flex; align-items: center; gap: 8px;">
+                 ATUALIZAR
+            </button>
+            <button class="btn-aplicar-todos" onclick="aplicarRegrasConversaoEmTodosLancamentos()" style="background: linear-gradient(135deg, #10b981, #0d9668); border: none; color: white; padding: 8px 20px; border-radius: 40px; font-weight: 800; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                 APLICAR A TODOS
+            </button>
+
+
+        </div>
+        
         <!-- Abas -->
         <div class="popup-tabs" style="margin-bottom: 20px;">
             <button class="popup-tab-btn active" onclick="switchConversaoTab('receitas', this)">RECEITAS</button>
             <button class="popup-tab-btn" onclick="switchConversaoTab('despesas', this)">DESPESAS</button>
         </div>
-        
-        <!-- Aba RECEITAS -->
-        <div id="conversaoTabReceitas" class="popup-tab-content active">
-            <table class="conversao-table">
-                <thead><tr><th>Condicao de Pagamento</th><th>Titulo no Fechamento de Caixa</th><th>Plano de Contas (DRE) - RECEITAS</th> </thead>
-                <tbody id="conversaoTableBodyReceitas"></tbody>
-            </table>
-        </div>
-        
         <!-- Aba DESPESAS -->
-        <div id="conversaoTabDespesas" class="popup-tab-content">
-            <table class="conversao-table">
-                <thead><tr><th>Operação / Despesa</th><th>Titulo no Fechamento de Caixa</th><th>Plano de Contas (DRE) - DESPESAS</th> </thead>
-                <tbody id="conversaoTableBodyDespesas"></tbody>
-            </table>
-        </div>
-        
-        <button class="btn-salvar-conversao" onclick="salvarMapeamentoConversaoCompletoSupabase()">SALVAR MAPEAMENTO</button>
-    </div>
+
+
+
+
+
+<div id="conversaoTabDespesas" class="popup-tab-content">
+    <table class="conversao-table">
+        <thead>
+            <tr>
+                <th>Plano de Contas (DRE)</th>
+                <th>Operação / Despesa</th>
+                <th>Tipo Classificação</th>
+                <th>Titulo no Fechamento de Caixa</th>
+                <th>Plano de Contas (DRE) - DESPESAS</th>
+             </thead>
+        <tbody id="conversaoTableBodyDespesas"></tbody>
+    </table>
 </div>
+
+<div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+    
+<button class="btn-salvar-conversao" onclick="salvarMapeamentoConversaoCompletoSupabase()" style="background: linear-gradient(135deg, #E6A017, #C17F0B); color: #0A0C10; border: none; padding: 10px 28px; border-radius: 40px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; font-size: 12px;"> SALVAR MAPEAMENTO</button>
+</div>
+
+
+
+       <!-- Aba RECEITAS -->
+<div id="conversaoTabReceitas" class="popup-tab-content active">
+    <table class="conversao-table">
+        <thead>
+            <tr>
+                <th>Plano de Contas (DRE)</th>
+                <th>Operação / Receita</th>
+                <th>Tipo Classificação</th>
+                <th>Titulo no Fechamento de Caixa</th>
+                <th>Plano de Contas (DRE) - RECEITAS</th>
+             </thead>
+        <tbody id="conversaoTableBodyReceitas"></tbody>
+    </table>
+</div>
+
+<div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+    
+
+
 <!-- POP-UP ESTATÍSTICAS -->
 <div id="modalEstatisticas" class="modal-estatisticas">
     <div class="modal-estatisticas-content">
@@ -5291,16 +5329,75 @@ function gerarPDFCaixaComFiltro(mesAtual, diasSelecionados, mesesSelecionados) {
 }
 
 // ============================================================
-// FUNÇÕES DE CONVERSÃO
+// FUNÇÕES DE CONVERSÃO - INTEGRADAS AO SUPABASE
 // ============================================================
-function abrirModalConversao() {
-    const savedTitulo = localStorage.getItem('condToTituloMap');
-    const savedPlano = localStorage.getItem('condToPlanoMap');
-    if (savedTitulo) condToTituloMap = JSON.parse(savedTitulo);
-    if (savedPlano) condToPlanoMap = JSON.parse(savedPlano);
+
+// NOVA FUNÇÃO: Carregar plano de contas do Supabase
+async function carregarPlanoContasSupabase() {
+    try {
+        console.log('🔄 Carregando plano_contas do Supabase com grupos...');
+        
+        const { data, error } = await supabaseClient
+            .from('plano_contas')
+            .select('codigo, nome, tipo, grupo_dre, tipo_classificacao')  // ← ADICIONOU grupo_dre e tipo_classificacao
+            .order('codigo', { ascending: true });
+        
+        if (error) {
+            console.error('❌ Erro ao carregar plano_contas:', error);
+            return null;
+        }
+        
+        console.log(`✅ Total de registros no banco: ${data?.length || 0}`);
+        
+        if (data && data.length > 0) {
+            const planosReceita = data.filter(p => p.tipo === 'RECEITA');
+            const planosDespesa = data.filter(p => p.tipo === 'DESPESA');
+            
+            console.log(`📊 Receitas: ${planosReceita.length}, Despesas: ${planosDespesa.length}`);
+            
+            estruturaDRE = {
+                receitas: planosReceita.map(p => ({ 
+                    cod: p.codigo, 
+                    nome: p.nome,
+                    grupo_dre: p.grupo_dre || '1 RECEITAS DE VENDAS',
+                    tipo_classificacao: p.tipo_classificacao || 'RECEITAS'
+                })),
+                custosVariaveis: planosDespesa.map(p => ({ 
+                    cod: p.codigo, 
+                    nome: p.nome,
+                    grupo_dre: p.grupo_dre || '4 DESPESAS ADMINISTRATIVAS',
+                    tipo_classificacao: p.tipo_classificacao || 'DESPESAS VARIAVEIS'
+                })),
+                custosFixos: []
+            };
+            
+            localStorage.setItem('estruturaDREModuloIII', JSON.stringify(estruturaDRE));
+            
+            console.log('✅ estruturaDRE atualizada com sucesso!');
+            console.log('📋 Primeiras receitas:', estruturaDRE.receitas.slice(0, 3));
+            
+            return estruturaDRE;
+        }
+        
+        return null;
+        
+    } catch(e) {
+        console.error('❌ Exceção ao carregar plano_contas:', e);
+        return null;
+    }
+}
+// FUNÇÃO MODIFICADA: Agora carrega do Supabase
+async function abrirModalConversao() {
+    // Carregar regras de conversão do Supabase
+    await carregarRegrasConversaoSupabase();
     
-    const savedOperacaoPlano = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
-    if (savedOperacaoPlano) operacaoToPlanoMap = JSON.parse(savedOperacaoPlano);
+    // Carregar plano de contas do Supabase (tabela plano_contas)
+    const planoContasSupabase = await carregarPlanoContasSupabase();
+    
+    // Se não conseguiu carregar do Supabase, usa fallback local
+    if (!planoContasSupabase || estruturaDRE.receitas.length === 0) {
+        carregarPlanoContas();
+    }
 
     const condUnicas = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
     const operacoesUnicas = [...new Set(despesasDataReais.map(d => d.operacao).filter(op => op && op !== '-'))];
@@ -5309,8 +5406,8 @@ function abrirModalConversao() {
     if(tbodyReceitas) {
         let html = '';
         condUnicas.forEach(cond => {
-            const tituloAtual = condToTituloMap[cond] || 'VNF';
-            const planoAtual = condToPlanoMap[cond] || '';
+            const tituloAtual = window.condToTituloMap?.[cond] || 'VNF';
+            const planoAtual = window.condToPlanoMap?.[cond] || '';
             html += `<tr>
                 <td>${cond}</div>
                 <td><select class="conversao-select" data-cond="${cond}">
@@ -5336,7 +5433,7 @@ function abrirModalConversao() {
         let html = '';
         const todosPlanosDespesa = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
         operacoesUnicas.forEach(operacao => {
-            const planoAtual = operacaoToPlanoMap[operacao] || '';
+            const planoAtual = window.operacaoToPlanoMap?.[operacao] || '';
             html += `<tr>
                 <td>${operacao}</div>
                 <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></div>
@@ -5359,58 +5456,158 @@ function switchConversaoTab(tab, btn) {
     document.getElementById(`conversaoTab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
 }
 
-function salvarMapeamentoConversaoCompleto() {
-    condToTituloMap = {};
-    condToPlanoMap = {};
+// FUNÇÃO MODIFICADA: Agora salva no Supabase
+// FUNÇÃO MODIFICADA: Agora salva no Supabase
+async function salvarMapeamentoConversaoCompleto() {
+    // Coletar regras de receitas
+    const receitasRegras = [];
     
     document.querySelectorAll('#conversaoTabReceitas .conversao-select').forEach(select => {
         const cond = select.getAttribute('data-cond');
         if (cond && select.value) {
-            condToTituloMap[cond] = select.value;
+            window.condToTituloMap[cond] = select.value;
         }
     });
     
     document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
         const cond = select.getAttribute('data-plano-cond');
         if (cond && select.value) {
-            condToPlanoMap[cond] = select.value;
+            window.condToPlanoMap[cond] = select.value;
+            receitasRegras.push({
+                tipo: 'RECEITA',
+                origem: cond,
+                destino_caixa: window.condToTituloMap[cond] || 'VNF',
+                destino_plano: select.value
+            });
         }
     });
     
-    operacaoToPlanoMap = {};
+    // Coletar regras de despesas
+    const despesasRegras = [];
+    window.operacaoToPlanoMap = {};
+    
     document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
         const operacao = select.getAttribute('data-operacao');
         if (operacao && select.value) {
-            operacaoToPlanoMap[operacao] = select.value;
+            window.operacaoToPlanoMap[operacao] = select.value;
+            despesasRegras.push({
+                tipo: 'DESPESA',
+                origem: operacao,
+                destino_caixa: null,
+                destino_plano: select.value
+            });
         }
     });
     
-    localStorage.setItem('condToTituloMap', JSON.stringify(condToTituloMap));
-    localStorage.setItem('condToPlanoMap', JSON.stringify(condToPlanoMap));
-    localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(operacaoToPlanoMap));
+    const todasRegras = [...receitasRegras, ...despesasRegras];
     
-    alert(`Mapeamento salvo com sucesso!\n\nReceitas: ${Object.keys(condToTituloMap).length} condições mapeadas.\nDespesas: ${Object.keys(operacaoToPlanoMap).length} operações mapeadas.`);
+    if (todasRegras.length === 0) {
+        alert('Nenhuma regra para salvar!');
+        return;
+    }
     
-    const modalCaixa = document.getElementById('modalFechamentoCaixa');
-    if(modalCaixa && modalCaixa.classList.contains('active')) {
-        atualizarTitulosColunasCaixa();
-        renderizarCaixaPopup();
+    // Salvar no Supabase - tabela regras_conversao
+    try {
+        // Deletar regras antigas
+        const { error: deleteError } = await supabaseClient
+            .from('regras_conversao')
+            .delete()
+            .neq('id', 0);
+        
+        if (deleteError) {
+            console.error('Erro ao deletar regras antigas:', deleteError);
+            alert('Erro ao salvar: ' + deleteError.message);
+            return;
+        }
+        
+        // Inserir novas regras em lotes
+        const batchSize = 100;
+        let sucesso = true;
+        
+        for (let i = 0; i < todasRegras.length; i += batchSize) {
+            const batch = todasRegras.slice(i, i + batchSize);
+            const { error: insertError } = await supabaseClient
+                .from('regras_conversao')
+                .insert(batch);
+            
+            if (insertError) {
+                console.error('Erro ao inserir regras:', insertError);
+                alert('Erro ao salvar: ' + insertError.message);
+                sucesso = false;
+                break;
+            }
+        }
+        
+        if (sucesso) {
+            // Salvar também no localStorage para compatibilidade
+            localStorage.setItem('condToTituloMap', JSON.stringify(window.condToTituloMap));
+            localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
+            localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
+            
+            alert(`Mapeamento salvo com sucesso!\n\nReceitas: ${receitasRegras.length} condições mapeadas.\nDespesas: ${despesasRegras.length} operações mapeadas.`);
+            
+            const modalCaixa = document.getElementById('modalFechamentoCaixa');
+            if(modalCaixa && modalCaixa.classList.contains('active')) {
+                atualizarTitulosColunasCaixa();
+                renderizarCaixaPopup();
+            }
+        }
+    } catch (err) {
+        console.error('Erro ao salvar:', err);
+        alert('Erro ao salvar: ' + err.message);
     }
     
     fecharModalConversao();
-}
-
-function fecharModalConversao() {
+}function fecharModalConversao() {
     document.getElementById('modalConversao').classList.remove('active');
 }
 
-function loadMapeamentos() {
-    const savedTitulo = localStorage.getItem('condToTituloMap');
-    if(savedTitulo) condToTituloMap = JSON.parse(savedTitulo);
-    const savedPlano = localStorage.getItem('condToPlanoMap');
-    if(savedPlano) condToPlanoMap = JSON.parse(savedPlano);
-    const savedOperacaoPlano = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
-    if(savedOperacaoPlano) operacaoToPlanoMap = JSON.parse(savedOperacaoPlano);
+// FUNÇÃO MODIFICADA: Agora carrega do Supabase
+async function loadMapeamentos() {
+    await carregarRegrasConversaoSupabase();
+}
+// FUNÇÃO MODIFICADA: Carregar regras do Supabase
+// FUNÇÃO: Carregar regras do Supabase
+async function carregarRegrasConversaoSupabase() {
+   const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';  // URL CORRETA
+    const SUPABASE_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';  // KEY CORRETA
+    
+    try {
+        console.log('🔄 Carregando regras de conversão da tabela conversao_operacoes...');
+        
+        const { data, error } = await supabaseClient
+            .from('conversao_operacoes')
+            .select('*');
+        
+        if (error) {
+            console.error('❌ Erro ao carregar regras:', error);
+            return;
+        }
+        
+        if (data && data.length > 0) {
+            window.condToTituloMap = {};
+            window.condToPlanoMap = {};
+            window.operacaoToPlanoMap = {};
+            
+            data.forEach(regra => {
+                if (regra.tipo === 'RECEITA') {
+                    window.condToPlanoMap[regra.operacao] = regra.plano_contas_codigo;
+                } else if (regra.tipo === 'DESPESA') {
+                    window.operacaoToPlanoMap[regra.operacao] = regra.plano_contas_codigo;
+                }
+            });
+            
+            localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
+            localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
+            
+            console.log('✅ Regras carregadas:', {
+                receitas: Object.keys(window.condToPlanoMap).length,
+                despesas: Object.keys(window.operacaoToPlanoMap).length
+            });
+        }
+    } catch (err) {
+        console.error('❌ Erro:', err);
+    }
 }
 
 function mostrarConsultaConversaoDespesa(operacao, planoContasAtual) {
@@ -5420,15 +5617,15 @@ function mostrarConsultaConversaoDespesa(operacao, planoContasAtual) {
     }
     
     const operacaoMap = window.operacaoToPlanoMap || {};
-    let planoContas = '';
     let codigoPlano = '';
+    let planoContas = '';
     
     if (operacaoMap[operacao]) {
-        planoContas = operacaoMap[operacao];
+        codigoPlano = operacaoMap[operacao];
         const todosPlanos = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
-        const planoEncontrado = todosPlanos.find(p => p.nome === planoContas);
+        const planoEncontrado = todosPlanos.find(p => p.cod === codigoPlano);
         if (planoEncontrado) {
-            codigoPlano = planoEncontrado.cod;
+            planoContas = planoEncontrado.nome;
         }
     }
     
@@ -5448,7 +5645,6 @@ function mostrarConsultaConversaoDespesa(operacao, planoContasAtual) {
     document.getElementById('consultaPlanoContas').innerHTML = planoDisplay;
     document.getElementById('modalConsultaConversao').classList.add('active');
 }
-
 // ============================================================
 // FUNÇÕES DE COMPARATIVOS
 // ============================================================
@@ -6574,37 +6770,70 @@ async function salvarRegrasConversaoSupabase() {
 }
 
 async function salvarMapeamentoConversaoCompletoSupabase() {
-    window.condToTituloMap = {};
-    window.condToPlanoMap = {};
+    const receitasRegras = [];
     
-    document.querySelectorAll('#conversaoTabReceitas .conversao-select').forEach(select => {
-        const cond = select.getAttribute('data-cond');
-        if (cond && select.value) {
-            window.condToTituloMap[cond] = select.value;
-        }
-    });
-    
+    // Coletar regras de RECEITAS
     document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
         const cond = select.getAttribute('data-plano-cond');
-        if (cond && select.value) {
-            window.condToPlanoMap[cond] = select.value;
+        const codigoPlano = select.value;
+        if (cond && codigoPlano && codigoPlano !== '') {
+            receitasRegras.push({
+                operacao: cond,
+                tipo: 'RECEITA',
+                plano_contas_codigo: codigoPlano
+            });
         }
     });
     
-    window.operacaoToPlanoMap = {};
+    // Coletar regras de DESPESAS
+    const despesasRegras = [];
     document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
         const operacao = select.getAttribute('data-operacao');
-        if (operacao && select.value) {
-            window.operacaoToPlanoMap[operacao] = select.value;
+        const codigoPlano = select.value;
+        if (operacao && codigoPlano && codigoPlano !== '') {
+            despesasRegras.push({
+                operacao: operacao,
+                tipo: 'DESPESA',
+                plano_contas_codigo: codigoPlano
+            });
         }
     });
     
-    await salvarRegrasConversaoSupabase();
+    const todasRegras = [...receitasRegras, ...despesasRegras];
     
-    localStorage.setItem('condToTituloMap', JSON.stringify(window.condToTituloMap));
+    if (todasRegras.length === 0) {
+        alert('Nenhuma regra para salvar!');
+        return;
+    }
+    
+    // Salvar no Supabase (upsert)
+    let salvos = 0;
+    for (const regra of todasRegras) {
+        const { error } = await supabaseClient
+            .from('conversao_operacoes')
+            .upsert(regra, { onConflict: 'operacao' });
+        
+        if (error) {
+            console.error('Erro ao salvar:', error);
+        } else {
+            salvos++;
+        }
+    }
+    
+    // Atualizar os maps locais
+    for (const regra of receitasRegras) {
+        window.condToPlanoMap[regra.operacao] = regra.plano_contas_codigo;
+    }
+    for (const regra of despesasRegras) {
+        window.operacaoToPlanoMap[regra.operacao] = regra.plano_contas_codigo;
+    }
+    
     localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
     localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
     
+    alert(`✅ ${salvos} regras salvas com sucesso!`);
+    
+    // Atualizar a tela de fechamento de caixa
     const modalCaixa = document.getElementById('modalFechamentoCaixa');
     if(modalCaixa && modalCaixa.classList.contains('active')) {
         atualizarTitulosColunasCaixa();
@@ -6613,114 +6842,104 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     
     fecharModalConversao();
 }
-
 async function abrirModalConversaoSupabase() {
-    await carregarRegrasConversaoSupabase();
+    console.log('🔧 Carregando planos do Supabase...');
     
-    const condUnicas = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
-    const operacoesUnicas = [...new Set(despesasDataReais.map(d => d.operacao).filter(op => op && op !== '-'))];
-    
-    const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
-    if(tbodyReceitas) {
-        let html = '';
-        condUnicas.forEach(cond => {
-            const tituloAtual = window.condToTituloMap?.[cond] || 'VNF';
-            const planoAtual = window.condToPlanoMap?.[cond] || '';
-            html += `<tr>
-                <td>${cond}</div>
-                <td><select class="conversao-select" data-cond="${cond}">
-                    <option value="DINHEIRO" ${tituloAtual === 'DINHEIRO' ? 'selected' : ''}>DINHEIRO</option>
-                    <option value="DEBITO" ${tituloAtual === 'DEBITO' ? 'selected' : ''}>DEBITO</option>
-                    <option value="CREDITO" ${tituloAtual === 'CREDITO' ? 'selected' : ''}>CREDITO</option>
-                    <option value="CREDITO PARCELADO" ${tituloAtual === 'CREDITO PARCELADO' ? 'selected' : ''}>CREDITO PARCELADO</option>
-                    <option value="AG" ${tituloAtual === 'AG' ? 'selected' : ''}>AG</option>
-                    <option value="PIX" ${tituloAtual === 'PIX' ? 'selected' : ''}>PIX</option>
-                    <option value="VNF" ${tituloAtual === 'VNF' ? 'selected' : ''}>VNF</option>
-                </select></div>
-                <td><select class="conversao-select-plano-receita" data-plano-cond="${cond}">
-                    <option value="">Selecione...</option>
-                    ${estruturaDRE.receitas.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
-                </select></div>
-             </tr>`;
-        });
-        tbodyReceitas.innerHTML = html;
-    }
-    
-    const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
-    if(tbodyDespesas) {
-        let html = '';
-        const todosPlanosDespesa = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
-        operacoesUnicas.forEach(operacao => {
-            const planoAtual = window.operacaoToPlanoMap?.[operacao] || '';
-            html += `<tr>
-                <td>${operacao}</div>
-                <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></div>
-                <td><select class="conversao-select-plano-despesa" data-operacao="${operacao}">
-                    <option value="">Selecione...</option>
-                    ${todosPlanosDespesa.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
-                </select></div>
-            </tr>`;
-        });
-        tbodyDespesas.innerHTML = html;
-    }
-    
-    document.getElementById('modalConversao').classList.add('active');
-}
-
-async function carregarCoresDoSupabase() {
-    console.log('🎨 Carregando cores do Supabase...');
-    
-    const { data, error } = await supabaseClient
-        .from('cores_linhas_caixa')
-        .select('*');
-    
-    if (error) {
-        console.error('❌ Erro ao carregar cores:', error);
-        return;
-    }
-    
-    linhaCorSelecionada = {};
-    
-    if (data && data.length > 0) {
-        data.forEach(item => {
-            linhaCorSelecionada[item.data] = item.cor;
-        });
-        console.log('✅ Cores carregadas:', linhaCorSelecionada);
-    }
-    
-    if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
-    if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
-}
-
-async function salvarCoresNoSupabase() {
-    console.log('🎨 Salvando cores no Supabase...');
-    
-    const registros = [];
-    for (const [data, cor] of Object.entries(linhaCorSelecionada)) {
-        if (data && cor) {
-            registros.push({ data: data, cor: cor });
-        }
-    }
-    
-    if (registros.length === 0) {
-        console.log('⚠️ Nenhuma cor para salvar');
-        return;
-    }
-    
-    for (const registro of registros) {
-        const { error } = await supabaseClient
-            .from('cores_linhas_caixa')
-            .upsert(registro, { onConflict: 'data' });
+    try {
+        await carregarPlanoContasSupabase();
+        await carregarRegrasConversaoSupabase();
         
-        if (error) {
-            console.error('❌ Erro ao salvar cor', registro.data, ':', error);
-        } else {
-            console.log('✅ Cor salva:', registro.data, '=', registro.cor);
+        // ========== RECEITAS ==========
+        const todasReceitas = estruturaDRE.receitas || [];
+        console.log(`📊 Receitas: ${todasReceitas.length}`);
+        
+        const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
+        if (tbodyReceitas) {
+            let html = '';
+            for (const receita of todasReceitas) {
+                const codigo = receita.cod;
+                const nome = receita.nome;
+                const grupoDre = receita.grupo_dre || '1 RECEITAS DE VENDAS';
+                const tipoClass = receita.tipo_classificacao || 'RECEITAS';
+                const nomeOperacao = `${codigo}-${nome}`;
+                const codigoSalvo = window.condToPlanoMap?.[nome] || '';
+                
+                html += `<tr>
+                    <td style="white-space: nowrap;">${grupoDre}</div>
+                    <td>${nomeOperacao}</div>
+                    <td>${tipoClass}</div>
+                    <td>
+                        <select class="conversao-select" data-cond="${nome}">
+                            <option value="DINHEIRO">DINHEIRO</option>
+                            <option value="DEBITO">DEBITO</option>
+                            <option value="CREDITO">CREDITO</option>
+                            <option value="CREDITO PARCELADO">CREDITO PARCELADO</option>
+                            <option value="AG">AG</option>
+                            <option value="PIX">PIX</option>
+                            <option value="VNF" selected>VNF</option>
+                        </select>
+                    </div>
+                    <td>
+                        <select class="conversao-select-plano-receita" data-plano-cond="${nome}">
+                            <option value="">Selecione...</option>`;
+                
+                for (const p of todasReceitas) {
+                    const selected = (codigoSalvo === p.cod) ? 'selected' : '';
+                    html += `<option value="${p.cod}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                }
+                
+                html += `     </select>
+                    </div>
+                </tr>`;
+            }
+            tbodyReceitas.innerHTML = html;
+            console.log(`✅ Receitas: ${todasReceitas.length} itens`);
         }
+        
+        // ========== DESPESAS ==========
+        const todasDespesas = [...(estruturaDRE.custosVariaveis || []), ...(estruturaDRE.custosFixos || [])];
+        console.log(`📊 Despesas: ${todasDespesas.length}`);
+        
+        const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
+        if (tbodyDespesas) {
+            let html = '';
+            for (const despesa of todasDespesas) {
+                const codigo = despesa.cod;
+                const nome = despesa.nome;
+                const grupoDre = despesa.grupo_dre || '4 DESPESAS ADMINISTRATIVAS';
+                const tipoClass = despesa.tipo_classificacao || 'DESPESAS VARIAVEIS';
+                const nomeOperacao = `${codigo}-${nome}`;
+                const codigoSalvo = window.operacaoToPlanoMap?.[nome] || '';
+                
+                html += `<tr>
+                    <td style="white-space: nowrap;">${grupoDre}</div>
+                    <td>${nomeOperacao}</div>
+                    <td>${tipoClass}</div>
+                    <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></div>
+                    <td>
+                        <select class="conversao-select-plano-despesa" data-operacao="${nome}">
+                            <option value="">Selecione...</option>`;
+                
+                for (const p of todasDespesas) {
+                    const selected = (codigoSalvo === p.cod) ? 'selected' : '';
+                    html += `<option value="${p.cod}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                }
+                
+                html += `     </select>
+                    </div>
+                </tr>`;
+            }
+            tbodyDespesas.innerHTML = html;
+            console.log(`✅ Despesas: ${todasDespesas.length} itens`);
+        }
+        
+        document.getElementById('modalConversao').classList.add('active');
+        console.log(`🎯 TOTAL: ${todasReceitas.length + todasDespesas.length} itens`);
+        
+    } catch (error) {
+        console.error('❌ Erro:', error);
     }
-}
-
-function abrirModalComparativos() {
+}function abrirModalComparativos() {
     console.log('🔘 Botão COMPARATIVOS clicado!');
     const modal = document.getElementById('modalComparativos');
     if (!modal) {
@@ -6803,21 +7022,22 @@ async function limparEConverterTodosLancamentos() {
     const confirmar = confirm('ATENÇÃO: Isso irá LIMPAR TODOS os planos de contas e REAPLICAR as regras de conversão para todos os registros visíveis.\n\nDeseja continuar?');
     if (!confirmar) return;
     
-    const savedPlanoReceitas = localStorage.getItem('condToPlanoMap');
-    const planoMapReceitas = savedPlanoReceitas ? JSON.parse(savedPlanoReceitas) : {};
+    // CARREGAR REGRAS DIRETAMENTE DO SUPABASE
+    await carregarRegrasConversaoSupabase();
     
-    const savedOperacaoPlano = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
-    const operacaoPlanoMap = savedOperacaoPlano ? JSON.parse(savedOperacaoPlano) : {};
+    const planoMapReceitas = window.condToPlanoMap || {};
+    const operacaoPlanoMap = window.operacaoToPlanoMap || {};
     
     let registrosAtualizados = 0;
     let ignoradosSemRegra = 0;
     
     if (abaAtivaReceitas) {
+        // Resetar planos
         for (const receita of receitasDataReais) {
-            delete receita.plano;
             receita.plano = "RECEITA DE SERVICOS";
         }
         
+        // Aplicar regras
         for (const receita of receitasDataReais) {
             const condPag = receita.cond_pag || '';
             
@@ -6836,6 +7056,7 @@ async function limparEConverterTodosLancamentos() {
             registrosAtualizados++;
         }
         
+        // Salvar no localStorage
         const planosSalvos = {};
         for (const receita of receitasDataReais) {
             planosSalvos[receita.id] = receita.plano;
@@ -6845,11 +7066,12 @@ async function limparEConverterTodosLancamentos() {
         renderizarTabelaReceitas();
         
     } else if (abaAtivaDespesas) {
+        // Resetar planos
         for (const despesa of despesasDataReais) {
-            delete despesa.plano;
             despesa.plano = "DESPESAS ADMINISTRATIVAS";
         }
         
+        // Aplicar regras
         for (const despesa of despesasDataReais) {
             const operacao = despesa.operacao || '';
             
@@ -6868,6 +7090,7 @@ async function limparEConverterTodosLancamentos() {
             registrosAtualizados++;
         }
         
+        // Salvar no localStorage
         const planosSalvos = {};
         for (const despesa of despesasDataReais) {
             planosSalvos[despesa.id] = despesa.plano;
@@ -6877,14 +7100,13 @@ async function limparEConverterTodosLancamentos() {
         renderizarTabelaDespesas();
     }
     
-    let mensagem = ` LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n`;
-    mensagem += ` Registros atualizados: ${registrosAtualizados}\n`;
-    mensagem += ` Ignorados (sem regra de conversão): ${ignoradosSemRegra}\n\n`;
-    mensagem += `Todos os planos de contas foram limpos e reaplicados conforme as regras de conversão.`;
+    let mensagem = `✅ LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n`;
+    mensagem += `📋 Registros atualizados: ${registrosAtualizados}\n`;
+    mensagem += `⚠️ Ignorados (sem regra): ${ignoradosSemRegra}\n\n`;
+    mensagem += `Foram aplicados os Planos de Contas configurados nas Regras de Conversão.`;
     
     alert(mensagem);
 }
-
 // ============================================================
 // EVENTOS E INICIALIZAÇÃO
 // ============================================================
@@ -8318,6 +8540,339 @@ function exportarResultadosPDF() { alert(' Exportação PDF em desenvolvimento p
         selectAno.value = anoAtual;
     }
 })();
+// ============================================================
+// FUNÇÃO: ATUALIZAR REGRAS DE CONVERSÃO (BOTÃO ATUALIZAR)
+// ============================================================
+async function atualizarRegrasConversao() {
+    console.log('🔄 ATUALIZANDO REGRAS DE CONVERSÃO DO SUPABASE...');
+    
+    try {
+        // Recarregar regras do Supabase
+        await carregarRegrasConversaoSupabase();
+        
+        // Recarregar plano de contas do Supabase
+        const planosCarregados = await carregarPlanoContasSupabase();
+        
+        // VERIFICAR SE OS DADOS FORAM CARREGADOS CORRETAMENTE
+        console.log('📊 Planos carregados?', planosCarregados);
+        console.log('📊 Receitas disponíveis:', estruturaDRE.receitas);
+        console.log('📊 Quantidade de receitas:', estruturaDRE.receitas.length);
+        
+        // NÃO USAR FALLBACK LOCAL - os dados já devem vir do Supabase
+        if (!estruturaDRE.receitas || estruturaDRE.receitas.length === 0) {
+            console.error('❌ Nenhum plano de contas carregado!');
+            alert('Erro: Nenhum plano de contas encontrado no Supabase.');
+            return;
+        }
+        
+        // Obter condições únicas de receitas
+        const condUnicas = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
+        console.log('📊 Condições de pagamento:', condUnicas.length);
+        
+        // Obter operações únicas de despesas
+        const operacoesUnicas = [...new Set(despesasDataReais.map(d => d.operacao).filter(op => op && op !== '-'))];
+        console.log('📊 Operações:', operacoesUnicas.length);
+        
+        // Reconstruir tabela de RECEITAS
+        const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
+        if (tbodyReceitas) {
+            let html = '';
+            for (const cond of condUnicas) {
+                const tituloAtual = window.condToTituloMap?.[cond] || 'VNF';
+                const planoAtual = window.condToPlanoMap?.[cond] || '';
+                html += `<tr>
+                    <td>${escapeHtml(cond)}</div>
+                    <td>
+                        <select class="conversao-select" data-cond="${escapeHtml(cond)}">
+                            <option value="DINHEIRO" ${tituloAtual === 'DINHEIRO' ? 'selected' : ''}>DINHEIRO</option>
+                            <option value="DEBITO" ${tituloAtual === 'DEBITO' ? 'selected' : ''}>DEBITO</option>
+                            <option value="CREDITO" ${tituloAtual === 'CREDITO' ? 'selected' : ''}>CREDITO</option>
+                            <option value="CREDITO PARCELADO" ${tituloAtual === 'CREDITO PARCELADO' ? 'selected' : ''}>CREDITO PARCELADO</option>
+                            <option value="AG" ${tituloAtual === 'AG' ? 'selected' : ''}>AG</option>
+                            <option value="PIX" ${tituloAtual === 'PIX' ? 'selected' : ''}>PIX</option>
+                            <option value="VNF" ${tituloAtual === 'VNF' ? 'selected' : ''}>VNF</option>
+                        </select>
+                     </div>
+                    <td>
+                        <select class="conversao-select-plano-receita" data-plano-cond="${escapeHtml(cond)}">
+                            <option value="">Selecione...</option>
+                            ${estruturaDRE.receitas.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
+                        </select>
+                     </div>
+                </tr>`;
+            }
+            tbodyReceitas.innerHTML = html;
+            console.log('✅ Tabela de RECEITAS reconstruída com', estruturaDRE.receitas.length, 'planos');
+        }
+        
+        // Reconstruir tabela de DESPESAS
+        const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
+        if (tbodyDespesas) {
+            let html = '';
+            const todosPlanosDespesa = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
+            for (const operacao of operacoesUnicas) {
+                const planoAtual = window.operacaoToPlanoMap?.[operacao] || '';
+                html += `<tr>
+                    <td>${escapeHtml(operacao)}</div>
+                    <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></div>
+                    <td>
+                        <select class="conversao-select-plano-despesa" data-operacao="${escapeHtml(operacao)}">
+                            <option value="">Selecione...</option>
+                            ${todosPlanosDespesa.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
+                        </select>
+                     </div>
+                </tr>`;
+            }
+            tbodyDespesas.innerHTML = html;
+            console.log('✅ Tabela de DESPESAS reconstruída com', todosPlanosDespesa.length, 'planos');
+        }
+        
+        alert('✅ Regras de conversão atualizadas do Supabase com sucesso!');
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar regras:', error);
+        alert('Erro ao atualizar regras: ' + error.message);
+    }
+}// ============================================================
+// FUNÇÃO: APLICAR REGRAS A TODOS OS LANÇAMENTOS (BOTÃO APLICAR A TODOS)
+// ============================================================
+async function aplicarRegrasConversaoEmTodosLancamentos() {
+    console.log('🚀 APLICANDO REGRAS DE CONVERSÃO EM TODOS OS LANÇAMENTOS...');
+    
+    const confirmar = confirm(
+        '⚠️ ATENÇÃO!\n\n' +
+        'Isso irá APLICAR as regras de conversão atuais em TODOS os lançamentos:\n\n' +
+        '📋 RECEITAS: Serão classificadas com base na Condição de Pagamento\n' +
+        '📋 DESPESAS: Serão classificadas com base na Operação\n\n' +
+        'Os planos de contas existentes serão SUBSTITUÍDOS.\n\n' +
+        'A tela de LANÇAMENTOS passará a usar estas regras automaticamente.\n\n' +
+        'Deseja continuar?'
+    );
+    
+    if (!confirmar) return;
+    
+    // Carregar as regras mais recentes do Supabase
+    await carregarRegrasConversaoSupabase();
+    
+    const planoMapReceitas = window.condToPlanoMap || {};
+    const operacaoPlanoMap = window.operacaoToPlanoMap || {};
+    
+    console.log('📚 Regras de Receitas:', planoMapReceitas);
+    console.log('📚 Regras de Despesas:', operacaoPlanoMap);
+    
+    let receitasAtualizadas = 0;
+    let receitasIgnoradas = 0;
+    let despesasAtualizadas = 0;
+    let despesasIgnoradas = 0;
+    
+    // ============================================================
+    // APLICAR NAS RECEITAS
+    // ============================================================
+    console.log('📊 Processando RECEITAS (' + receitasDataReais.length + ' registros)...');
+    
+    for (const receita of receitasDataReais) {
+        const condPag = receita.cond_pag || '';
+        
+        if (!condPag || !planoMapReceitas[condPag]) {
+            receitasIgnoradas++;
+            continue;
+        }
+        
+        const planoConfigurado = planoMapReceitas[condPag];
+        if (!planoConfigurado || planoConfigurado === '') {
+            receitasIgnoradas++;
+            continue;
+        }
+        
+        receita.plano = planoConfigurado;
+        receitasAtualizadas++;
+    }
+    
+    // Salvar receitas no localStorage
+    const planosReceitasSalvos = {};
+    for (const receita of receitasDataReais) {
+        planosReceitasSalvos[receita.id] = receita.plano;
+    }
+    localStorage.setItem(STORAGE_KEY_PLANOS_RECEITAS, JSON.stringify(planosReceitasSalvos));
+    
+    // ============================================================
+    // APLICAR NAS DESPESAS
+    // ============================================================
+    console.log('📊 Processando DESPESAS (' + despesasDataReais.length + ' registros)...');
+    
+    for (const despesa of despesasDataReais) {
+        const operacao = despesa.operacao || '';
+        
+        if (!operacao || !operacaoPlanoMap[operacao]) {
+            despesasIgnoradas++;
+            continue;
+        }
+        
+        const planoConfigurado = operacaoPlanoMap[operacao];
+        if (!planoConfigurado || planoConfigurado === '') {
+            despesasIgnoradas++;
+            continue;
+        }
+        
+        despesa.plano = planoConfigurado;
+        despesasAtualizadas++;
+    }
+    
+    // Salvar despesas no localStorage
+    const planosDespesasSalvos = {};
+    for (const despesa of despesasDataReais) {
+        planosDespesasSalvos[despesa.id] = despesa.plano;
+    }
+    localStorage.setItem(STORAGE_KEY_PLANOS_DESPESAS, JSON.stringify(planosDespesasSalvos));
+    
+    // ============================================================
+    // ATUALIZAR AS TABELAS DA TELA DE LANÇAMENTOS
+    // ============================================================
+    renderizarTabelaReceitas();
+    renderizarTabelaDespesas();
+    
+    // ============================================================
+    // MENSAGEM FINAL
+    // ============================================================
+    const totalAtualizados = receitasAtualizadas + despesasAtualizadas;
+    const totalIgnorados = receitasIgnoradas + despesasIgnoradas;
+    
+    let mensagem = `✅ REGRAS APLICADAS COM SUCESSO!\n\n`;
+    mensagem += `📊 RECEITAS:\n`;
+    mensagem += `   ✅ Atualizadas: ${receitasAtualizadas}\n`;
+    mensagem += `   ⚠️ Ignoradas (sem regra): ${receitasIgnoradas}\n\n`;
+    mensagem += `📊 DESPESAS:\n`;
+    mensagem += `   ✅ Atualizadas: ${despesasAtualizadas}\n`;
+    mensagem += `   ⚠️ Ignoradas (sem regra): ${despesasIgnoradas}\n\n`;
+    mensagem += `📦 TOTAL: ${totalAtualizados} lançamentos atualizados\n`;
+    mensagem += `⚠️ TOTAL ignorados: ${totalIgnorados}\n\n`;
+    mensagem += `✨ A tela de LANÇAMENTOS agora usa as regras do Supabase!`;
+    
+    alert(mensagem);
+    
+    console.log(`✅ FINALIZADO: ${receitasAtualizadas} receitas, ${despesasAtualizadas} despesas atualizadas`);
+}
+// Função para carregar regras de conversão do Supabase
+async function carregarRegrasConversao() {
+    const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmaXB5Z3doYndqdGRrcWRtbXRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgxMDE4MDQsImV4cCI6MjA1MzY3NzgwNH0.7QrJW1kRWxwIjHK1pAtYkFzNf9c8r6UyIA8RoMPFg-U';
+    
+    try {
+        console.log('🔄 Carregando regras de conversão...');
+        
+        // Buscar regras do banco
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/conversao_operacoes`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const regras = await response.json();
+        
+        // Buscar planos de contas
+        const responsePlanos = await fetch(`${SUPABASE_URL}/rest/v1/plano_contas?select=codigo,nome`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const planos = await responsePlanos.json();
+        
+        // Mapear planos
+        const mapaPlanos = {};
+        planos.forEach(p => { mapaPlanos[p.codigo] = `${p.codigo} - ${p.nome}`; });
+        
+        // Aplicar nos selects
+        let count = 0;
+        document.querySelectorAll('.conversao-select-plano-receita, .conversao-select-plano-despesa').forEach(select => {
+            const operacao = select.getAttribute('data-plano-cond') || select.getAttribute('data-operacao');
+            const regra = regras.find(r => r.operacao === operacao);
+            if (regra && mapaPlanos[regra.plano_contas_codigo]) {
+                select.value = mapaPlanos[regra.plano_contas_codigo];
+                count++;
+            }
+        });
+        
+        console.log(`✅ ${count} regras carregadas`);
+        
+    } catch (error) {
+        console.error('Erro ao carregar regras:', error);
+    }
+}
+
+// Chamar quando a página carregar
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', carregarRegrasConversao);
+} else {
+    carregarRegrasConversao();
+}
+
+// Adicionar esta função no seu sistema
+async function carregarRegrasDoSupabase() {
+    const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+    
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/conversao_operacoes`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    const regras = await response.json();
+    
+    const responsePlanos = await fetch(`${SUPABASE_URL}/rest/v1/plano_contas?select=codigo,nome`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    const planos = await responsePlanos.json();
+    
+    const mapaPlanos = {};
+    planos.forEach(p => { mapaPlanos[p.codigo] = `${p.codigo} - ${p.nome}`; });
+    
+    document.querySelectorAll('.conversao-select-plano-receita, .conversao-select-plano-despesa').forEach(select => {
+        const operacao = select.getAttribute('data-plano-cond') || select.getAttribute('data-operacao');
+        const regra = regras.find(r => r.operacao === operacao);
+        if (regra && mapaPlanos[regra.plano_contas_codigo]) {
+            select.value = mapaPlanos[regra.plano_contas_codigo];
+        }
+    });
+}
 </script>
+<script>
+// Carregar regras do Supabase e aplicar nos selects
+async function carregarRegras() {
+    const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq
+
+.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmaXB5Z3doYndqdGRrcWRtbXRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgxMDE4MDQsImV4cCI6MjA1MzY3NzgwNH0.7QrJW1kRWxwIjHK1pAtYkFzNf9c8r6UyIA8RoMPFg-U';
+    
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/conversao_operacoes`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const regras = await res.json();
+        
+        const resPlanos = await fetch(`${SUPABASE_URL}/rest/v1/plano_contas?select=codigo,nome`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const planos = await resPlanos.json();
+        
+        const mapaPlanos = {};
+        planos.forEach(p => { mapaPlanos[p.codigo] = `${p.codigo} - ${p.nome}`; });
+        
+        let count = 0;
+        document.querySelectorAll('.conversao-select-plano-receita, .conversao-select-plano-despesa').forEach(select => {
+            const operacao = select.getAttribute('data-plano-cond') || select.getAttribute('data-operacao');
+            const regra = regras.find(r => r.operacao === operacao);
+            if (regra && mapaPlanos[regra.plano_contas_codigo]) {
+                select.value = mapaPlanos[regra.plano_contas_codigo];
+                count++;
+            }
+        });
+        console.log(`✅ ${count} regras carregadas`);
+    } catch (error) {
+        console.error('Erro:', error);
+    }
+}
+
+// Executar quando a página carregar
+document.addEventListener('DOMContentLoaded', carregarRegras);
+
+// Observar mudanças na tabela (pois o sistema recria os selects)
+const observer = new MutationObserver(() => carregarRegras());
+observer.observe(document.body, { childList: true, subtree: true });
+</script>
+
+
 </body>
 </html>
