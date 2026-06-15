@@ -2598,165 +2598,87 @@ function fecharConfirm() {
 // FUNÇÃO GERAR PDF DRE - VERSÃO SUPABASE CORRIGIDA
 // ============================================================
 async function gerarPDFDRE() {
-    const dadosPorMes = await carregarDRESupabase();
-    if (!dadosPorMes) {
-        alert('Erro ao carregar dados do Supabase');
+    // 1. Aguarda o DRE ser completamente gerado e a tabela estar pronta
+    await gerarDREComSupabase();
+
+    // 2. Captura a tabela do DRE já renderizada na tela
+    const tabelaDRE = document.getElementById('dreTable');
+    if (!tabelaDRE) {
+        alert('Erro: Tabela do DRE não encontrada na tela.');
         return;
     }
 
-    // Helper para formatar valores sem símbolo e com sinal
-    const formatarValorSemSimbolo = (valor) => {
-        if (valor === undefined || valor === null) return '0,00';
-        const sinal = valor < 0 ? '-' : '';
-        const absValor = Math.abs(valor);
-        return `${sinal}${absValor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    };
-
-    const formatarValorComSimbolo = (valor) => {
-        if (valor === undefined || valor === null) return 'R$ 0,00';
-        const sinal = valor < 0 ? '-' : '';
-        const absValor = Math.abs(valor);
-        return `${sinal}R$ ${absValor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    };
-
-    // Função para calcular totais de um grupo
-    const calcularTotaisGrupo = (grupo, multiplicador = 1) => {
-        const totais = Array(12).fill(0);
-        if (estruturaDRE[grupo]) {
-            estruturaDRE[grupo].forEach(item => {
-                for (let m = 0; m < 12; m++) {
-                    dadosPorMes[m].forEach(lanc => {
-                        if (lanc.plano === item.nome) {
-                            totais[m] += (parseFloat(lanc.valor) || 0) * multiplicador;
-                        }
-                    });
-                }
-            });
+    // 3. Função auxiliar para extrair dados numéricos de uma célula formatada
+    const extrairNumeroDaCelula = (cell) => {
+        // O texto da célula tem o formato "R$ 1.234,56" ou "-R$ 1.234,56"
+        let text = cell.innerText.trim();
+        // Remove o "R$" e espaços
+        let numeroTexto = text.replace(/R\$\s*/g, '').replace(/\s/g, '');
+        
+        let isNegative = numeroTexto.startsWith('-');
+        if (isNegative) {
+            numeroTexto = numeroTexto.substring(1);
         }
-        return totais;
+        
+        // Troca o ponto de milhar e vírgula decimal
+        let numero = parseFloat(numeroTexto.replace(/\./g, '').replace(',', '.'));
+        if (isNaN(numero)) {
+            return 0;
+        }
+        return isNegative ? -numero : numero;
     };
 
-    const receitasMensais = calcularTotaisGrupo('receitas', 1);
-    const custosVarMensais = calcularTotaisGrupo('custosVariaveis', -1);
-    const custosFixMensais = calcularTotaisGrupo('custosFixos', -1);
-    const lucroBrutoMensal = receitasMensais.map((r, i) => r + custosVarMensais[i]); // + porque custosVar já estão negativos
-    const resultadoOpMensal = lucroBrutoMensal.map((lb, i) => lb + custosFixMensais[i]); // + porque custosFix já estão negativos
-
-    // Função para construir os dados de uma seção do DRE
-    const construirDadosGrupo = (grupo, titulo, incluirItens = true, multiplicador = 1) => {
-        const linhas = [];
-        let totaisGrupo = Array(12).fill(0);
-        let totalAnualGrupo = 0;
-
-        if (incluirItens && estruturaDRE[grupo]) {
-            estruturaDRE[grupo].forEach(item => {
-                const valoresItem = Array(12).fill(0);
-                let totalItem = 0;
-                for (let m = 0; m < 12; m++) {
-                    let soma = 0;
-                    dadosPorMes[m].forEach(lanc => {
-                        if (lanc.plano === item.nome) soma += parseFloat(lanc.valor) || 0;
-                    });
-                    const valorFinal = soma * multiplicador;
-                    valoresItem[m] = valorFinal;
-                    totalItem += valorFinal;
-                    totaisGrupo[m] += valorFinal;
-                    totalAnualGrupo += valorFinal;
-                }
-                if (totalItem !== 0) {
-                    linhas.push({
-                        tipo: 'item',
-                        codigo: item.cod,
-                        descricao: item.nome,
-                        valores: valoresItem,
-                        total: totalItem
-                    });
-                }
-            });
-        }
-
-        // Adiciona a linha de total do grupo (se houver itens ou se for um subtotal)
-        if (titulo) {
-            linhas.unshift({
-                tipo: 'total',
-                descricao: titulo,
-                codigo: '',
-                valores: totaisGrupo,
-                total: totalAnualGrupo
-            });
-        }
-        return linhas;
-    };
-
-    const dadosReceitas = construirDadosGrupo('receitas', 'RECEITAS TOTAIS', true, 1);
-    const dadosCustosVar = construirDadosGrupo('custosVariaveis', 'CUSTOS VARIÁVEIS', true, -1);
-    
-    // Adiciona linha de Lucro Bruto
-    let totalLucroBrutoAnual = 0;
-    const lucroBrutoVals = [];
-    for (let m = 0; m < 12; m++) {
-        lucroBrutoVals[m] = lucroBrutoMensal[m];
-        totalLucroBrutoAnual += lucroBrutoMensal[m];
+    // 4. Extrair dados estruturados da tabela
+    const linhasDados = [];
+    const cabecalhos = tabelaDRE.querySelectorAll('thead th');
+    const meses = [];
+    for (let i = 1; i < cabecalhos.length - 1; i++) { // Pula a primeira coluna "Descrição" e a última "Total"
+        meses.push(cabecalhos[i].innerText);
     }
-    dadosCustosVar.push({
-        tipo: 'total',
-        descricao: 'LUCRO BRUTO',
-        codigo: '',
-        valores: lucroBrutoVals,
-        total: totalLucroBrutoAnual
-    });
 
-    const dadosCustosFix = construirDadosGrupo('custosFixos', 'CUSTOS FIXOS', true, -1);
-    
-    // Adiciona linha de Resultado Operacional
-    let totalResultadoAnual = 0;
-    const resultadoOpVals = [];
-    for (let m = 0; m < 12; m++) {
-        resultadoOpVals[m] = resultadoOpMensal[m];
-        totalResultadoAnual += resultadoOpMensal[m];
-    }
-    dadosCustosFix.push({
-        tipo: 'total',
-        descricao: 'RESULTADO OPERACIONAL',
-        codigo: '',
-        valores: resultadoOpVals,
-        total: totalResultadoAnual
-    });
+    const linhasCorpo = tabelaDRE.querySelectorAll('tbody tr');
+    for (const linha of linhasCorpo) {
+        const colunas = linha.querySelectorAll('td');
+        if (colunas.length === 0) continue;
 
-    // Função para criar o cabeçalho da tabela
-    const criarCabecalhoTabela = () => {
-        const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
-        const colunas = [
-            { nome: 'Descrição', largura: '15%', align: 'left' },
-            { nome: 'Jan', largura: '7%', align: 'center' }, { nome: 'Fev', largura: '7%', align: 'center' },
-            { nome: 'Mar', largura: '7%', align: 'center' }, { nome: 'Abr', largura: '7%', align: 'center' },
-            { nome: 'Mai', largura: '7%', align: 'center' }, { nome: 'Jun', largura: '7%', align: 'center' },
-            { nome: 'Jul', largura: '7%', align: 'center' }, { nome: 'Ago', largura: '7%', align: 'center' },
-            { nome: 'Set', largura: '7%', align: 'center' }, { nome: 'Out', largura: '7%', align: 'center' },
-            { nome: 'Nov', largura: '7%', align: 'center' }, { nome: 'Dez', largura: '7%', align: 'center' },
-            { nome: 'Total', largura: '8%', align: 'center' }
-        ];
-        colunas.forEach(col => {
-            const th = document.createElement('th');
-            th.innerText = col.nome;
-            th.style.width = col.largura;
-            th.style.backgroundColor = '#E0E0E0';
-            th.style.color = '#000000';
-            th.style.border = '1px solid #000000';
-            th.style.padding = '10px 6px';
-            th.style.textAlign = col.align;
-            th.style.fontWeight = 'bold';
-            th.style.fontSize = '11px';
-            th.style.whiteSpace = 'nowrap';
-            headerRow.appendChild(th);
+        const descricaoCell = colunas[0];
+        let descricaoTexto = descricaoCell.innerText.trim();
+        let codigo = '';
+        let nome = descricaoTexto;
+        
+        // Tenta separar código e nome (ex: "1.1 - Receita de Vendas")
+        const separador = descricaoTexto.indexOf(' - ');
+        if (separador !== -1) {
+            codigo = descricaoTexto.substring(0, separador);
+            nome = descricaoTexto.substring(separador + 3);
+        }
+
+        const valoresMensais = [];
+        // Pega os valores das colunas de meses (ignora a última, que é o total)
+        for (let i = 1; i < colunas.length - 1; i++) {
+            const valorNumerico = extrairNumeroDaCelula(colunas[i]);
+            valoresMensais.push(valorNumerico);
+        }
+        
+        // Pega o valor total da última coluna
+        const totalAnual = extrairNumeroDaCelula(colunas[colunas.length - 1]);
+
+        // Determina o tipo da linha (se é um título de grupo, subtotal ou item normal)
+        let tipo = 'item';
+        if (linha.classList.contains('dre-group-title')) tipo = 'grupo';
+        if (linha.classList.contains('dre-total-row')) tipo = 'total';
+
+        linhasDados.push({
+            tipo: tipo,
+            codigo: codigo,
+            nome: nome,
+            valores: valoresMensais,
+            total: totalAnual
         });
-        thead.appendChild(headerRow);
-        return thead;
-    };
+    }
 
-    // Função para gerar uma página do PDF
-    const criarPaginaPDF = (tituloPagina, dadosPagina, numeroPagina, totalPaginas) => {
+    // 5. Função para gerar o HTML de uma página do PDF
+    const gerarPaginaPDF = (tituloSecao, dadosLinhas, numeroPagina, totalPaginas) => {
         const pagina = document.createElement('div');
         pagina.style.padding = '20px 15px';
         pagina.style.fontFamily = 'Arial, Helvetica, sans-serif';
@@ -2765,13 +2687,13 @@ async function gerarPDFDRE() {
         pagina.style.pageBreakAfter = 'always';
         pagina.style.minHeight = '100%';
         pagina.style.width = '100%';
-        
-        // Cabeçalho
+
+        // --- Cabeçalho da página ---
         const header = document.createElement('div');
         header.style.marginBottom = '15px';
         header.style.padding = '8px 0';
         header.style.borderBottom = '2px solid #000000';
-        
+
         const tituloRel = document.createElement('div');
         tituloRel.style.textAlign = 'center';
         tituloRel.style.fontSize = '16px';
@@ -2780,7 +2702,7 @@ async function gerarPDFDRE() {
         tituloRel.style.marginBottom = '5px';
         tituloRel.innerText = 'DRE - DEMONSTRATIVO DE RESULTADO DO EXERCÍCIO';
         header.appendChild(tituloRel);
-        
+
         const anoAtual = new Date().getFullYear();
         const periodo = document.createElement('div');
         periodo.style.textAlign = 'center';
@@ -2789,7 +2711,7 @@ async function gerarPDFDRE() {
         periodo.style.marginBottom = '6px';
         periodo.innerText = `Período: Janeiro a Dezembro de ${anoAtual}`;
         header.appendChild(periodo);
-        
+
         const dataEmissao = document.createElement('div');
         dataEmissao.style.display = 'flex';
         dataEmissao.style.justifyContent = 'space-between';
@@ -2798,7 +2720,7 @@ async function gerarPDFDRE() {
         dataEmissao.style.marginTop = '6px';
         dataEmissao.style.paddingTop = '4px';
         dataEmissao.style.borderTop = '1px solid #000000';
-        
+
         const agora = new Date();
         const dataSpan = document.createElement('span');
         dataSpan.innerText = `Emissão: ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR')}`;
@@ -2808,8 +2730,8 @@ async function gerarPDFDRE() {
         dataEmissao.appendChild(paginaSpan);
         header.appendChild(dataEmissao);
         pagina.appendChild(header);
-        
-        // Título da seção
+
+        // --- Título da Seção ---
         const tituloSeccao = document.createElement('div');
         tituloSeccao.style.backgroundColor = '#D3D3D3';
         tituloSeccao.style.color = '#000000';
@@ -2820,27 +2742,51 @@ async function gerarPDFDRE() {
         tituloSeccao.style.textAlign = 'center';
         tituloSeccao.style.borderRadius = '4px';
         tituloSeccao.style.border = '1px solid #000000';
-        tituloSeccao.innerText = tituloPagina;
+        tituloSeccao.innerText = tituloSecao;
         pagina.appendChild(tituloSeccao);
-        
-        // Tabela
+
+        // --- Tabela de Dados ---
         const tabela = document.createElement('table');
         tabela.style.width = '100%';
         tabela.style.borderCollapse = 'collapse';
         tabela.style.fontSize = '10px';
-        tabela.style.backgroundColor = '#FFFFFF';
         tabela.style.marginBottom = '15px';
         tabela.style.tableLayout = 'fixed';
-        tabela.appendChild(criarCabecalhoTabela());
-        
+
+        // Cabeçalho da tabela
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        const colunas = [{ nome: 'Descrição', largura: '15%', align: 'left' }];
+        for (const mes of meses) colunas.push({ nome: mes, largura: '7%', align: 'center' });
+        colunas.push({ nome: 'Total', largura: '8%', align: 'center' });
+
+        colunas.forEach(col => {
+            const th = document.createElement('th');
+            th.innerText = col.nome;
+            th.style.width = col.largura;
+            th.style.backgroundColor = '#E0E0E0';
+            th.style.color = '#000000';
+            th.style.border = '1px solid #000000';
+            th.style.padding = '8px 4px';
+            th.style.textAlign = col.align;
+            th.style.fontWeight = 'bold';
+            th.style.fontSize = '10px';
+            th.style.whiteSpace = 'nowrap';
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        tabela.appendChild(thead);
+
+        // Corpo da tabela
         const tbody = document.createElement('tbody');
-        for (const item of dadosPagina) {
+        for (const item of dadosLinhas) {
             const tr = document.createElement('tr');
             const isTotalRow = (item.tipo === 'total');
-            
+
+            // Célula de Descrição
             const tdDesc = document.createElement('td');
-            let descricao = item.descricao;
-            if (item.codigo && item.codigo !== '') descricao = `${item.codigo} - ${item.descricao}`;
+            let descricao = item.nome;
+            if (item.codigo && item.codigo !== '') descricao = `${item.codigo} - ${item.nome}`;
             tdDesc.innerText = descricao;
             tdDesc.style.border = '1px solid #000000';
             tdDesc.style.padding = '6px 5px';
@@ -2851,11 +2797,14 @@ async function gerarPDFDRE() {
             tdDesc.style.backgroundColor = isTotalRow ? '#F0F0F0' : '#FFFFFF';
             tdDesc.style.fontWeight = isTotalRow ? 'bold' : 'normal';
             tr.appendChild(tdDesc);
-            
-            for (let i = 0; i < 12; i++) {
+
+            // Células dos Meses
+            for (let i = 0; i < meses.length; i++) {
                 const td = document.createElement('td');
-                const valor = item.valores && item.valores[i] !== undefined ? item.valores[i] : 0;
-                td.innerText = formatarValorSemSimbolo(valor);
+                const valor = item.valores[i] !== undefined ? item.valores[i] : 0;
+                // Formata o valor com o sinal correto
+                const valorFormatado = valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                td.innerText = valorFormatado;
                 td.style.border = '1px solid #000000';
                 td.style.padding = '6px 4px';
                 td.style.textAlign = 'center';
@@ -2866,9 +2815,11 @@ async function gerarPDFDRE() {
                 if (isTotalRow) td.style.fontWeight = 'bold';
                 tr.appendChild(td);
             }
-            
+
+            // Célula do Total
             const tdTotal = document.createElement('td');
-            tdTotal.innerText = formatarValorComSimbolo(item.total || 0);
+            const totalFormatado = item.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            tdTotal.innerText = totalFormatado;
             tdTotal.style.border = '1px solid #000000';
             tdTotal.style.padding = '6px 4px';
             tdTotal.style.textAlign = 'center';
@@ -2878,12 +2829,13 @@ async function gerarPDFDRE() {
             tdTotal.style.color = '#000000';
             tdTotal.style.backgroundColor = isTotalRow ? '#F0F0F0' : '#FFFFFF';
             tr.appendChild(tdTotal);
+
             tbody.appendChild(tr);
         }
         tabela.appendChild(tbody);
         pagina.appendChild(tabela);
-        
-        // Rodapé
+
+        // --- Rodapé ---
         const footer = document.createElement('div');
         footer.style.textAlign = 'center';
         footer.style.fontSize = '7px';
@@ -2893,36 +2845,72 @@ async function gerarPDFDRE() {
         footer.style.borderTop = '1px solid #000000';
         footer.innerText = 'Aplikado Soluções - Sistema de Gestão Financeira';
         pagina.appendChild(footer);
-        
+
         return pagina;
     };
 
-    const dividirEmPaginas = (dados, linhasPorPagina = 22) => {
-        const paginas = [];
-        for (let i = 0; i < dados.length; i += linhasPorPagina) {
-            paginas.push(dados.slice(i, i + linhasPorPagina));
+    // 6. Agrupar linhas em seções para o PDF
+    const secaoReceitas = { titulo: 'RECEITAS OPERACIONAIS', linhas: [] };
+    const secaoCustosVariaveis = { titulo: 'CUSTOS VARIÁVEIS', linhas: [] };
+    const secaoCustosFixos = { titulo: 'CUSTOS FIXOS', linhas: [] };
+    const secaoResultados = { titulo: 'RESULTADO DO EXERCÍCIO', linhas: [] };
+
+    let secaoAtual = secaoReceitas;
+    for (const linha of linhasDados) {
+        if (linha.nome === 'RECEITAS TOTAIS') {
+            secaoAtual = secaoReceitas;
+            secaoAtual.linhas.push(linha);
+        } 
+        else if (linha.nome === 'CUSTOS VARIAVEIS') {
+            secaoAtual = secaoCustosVariaveis;
+            secaoAtual.linhas.push(linha);
         }
-        return paginas;
-    };
+        else if (linha.nome === 'CUSTOS FIXOS') {
+            secaoAtual = secaoCustosFixos;
+            secaoAtual.linhas.push(linha);
+        }
+        else if (linha.nome === 'RESULTADO OPERACIONAL') {
+            secaoAtual = secaoResultados;
+            secaoAtual.linhas.push(linha);
+        }
+        else if (secaoAtual) {
+            secaoAtual.linhas.push(linha);
+        }
+    }
 
-    const conteudoPDF = document.createElement('div');
-    conteudoPDF.style.backgroundColor = '#FFFFFF';
-    let paginaAtual = 1;
+    const secoes = [secaoReceitas, secaoCustosVariaveis, secaoCustosFixos, secaoResultados];
     const linhasPorPagina = 22;
-    const totalPaginas = Math.ceil(dadosReceitas.length / linhasPorPagina) + Math.ceil(dadosCustosVar.length / linhasPorPagina) + Math.ceil(dadosCustosFix.length / linhasPorPagina);
-    
-    const adicionarSecaoAoPDF = (titulo, dados) => {
-        const paginasDados = dividirEmPaginas(dados, linhasPorPagina);
-        paginasDados.forEach(paginaDados => {
-            const pagina = criarPaginaPDF(titulo, paginaDados, paginaAtual++, totalPaginas);
+    let numeroPagina = 1;
+    let totalPaginas = 0;
+
+    // Calcula o total de páginas primeiro
+    for (const secao of secoes) {
+        totalPaginas += Math.ceil(secao.linhas.length / linhasPorPagina);
+    }
+    if (totalPaginas === 0) totalPaginas = 1;
+
+    // Constrói o documento final
+    const conteudoPDF = document.createElement('div');
+    for (const secao of secoes) {
+        if (secao.linhas.length === 0) continue;
+        
+        for (let i = 0; i < secao.linhas.length; i += linhasPorPagina) {
+            const paginasLinhas = secao.linhas.slice(i, i + linhasPorPagina);
+            const pagina = gerarPaginaPDF(secao.titulo, paginasLinhas, numeroPagina++, totalPaginas);
             conteudoPDF.appendChild(pagina);
-        });
-    };
+        }
+    }
 
-    adicionarSecaoAoPDF('RECEITAS TOTAIS', dadosReceitas);
-    adicionarSecaoAoPDF('CUSTOS VARIÁVEIS', dadosCustosVar);
-    adicionarSecaoAoPDF('CUSTOS FIXOS', dadosCustosFix);
+    // Se nenhuma página foi gerada (tabela vazia), cria uma página com aviso
+    if (conteudoPDF.children.length === 0) {
+        const paginaVazia = document.createElement('div');
+        paginaVazia.innerHTML = '<div style="text-align:center; padding:100px; font-family:Arial;">Nenhum dado encontrado no DRE para gerar o relatório.</div>';
+        paginaVazia.style.backgroundColor = '#FFFFFF';
+        paginaVazia.style.height = '100%';
+        conteudoPDF.appendChild(paginaVazia);
+    }
 
+    // Configurações de impressão do html2pdf
     const opt = {
         margin: [0.3, 0.3, 0.3, 0.3],
         filename: `DRE_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '_')}.pdf`,
@@ -2931,10 +2919,9 @@ async function gerarPDFDRE() {
         jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
     };
     
+    // Gera e salva o PDF
     html2pdf().set(opt).from(conteudoPDF).save();
-}
-
-// ============================================================
+}// ============================================================
 // FUNÇÕES DE LANCAMENTOS E DADOS REAIS
 // ============================================================
 async function buscarUltimaAtualizacao() {
@@ -7708,7 +7695,7 @@ function obterClassificacaoPorOperacao(operacao) {
 // ============================================================
 
 async function carregarDadosResultados() {
-    console.log(' [RESULTADOS] Carregando dados...');
+    console.log('📊 [RESULTADOS] Carregando dados dos LANÇAMENTOS...');
     
     try {
         carregarRateiosFixosResultados();
@@ -7719,33 +7706,25 @@ async function carregarDadosResultados() {
         const classificacaoFiltro = document.getElementById('filtroClassificacao')?.value || 'TODOS';
         const canalFiltro = document.getElementById('filtroCanal')?.value || 'TODOS';
         
-        // Buscar vendas
-        let vendasQuery = supabaseClient.from('vendas_alf').select('*');
-        vendasQuery = vendasQuery.gte('data', `${ano}-01-01`).lte('data', `${ano}-12-31`);
+        // ============================================================
+        // USAR OS MESMOS DADOS DOS POP-UPS DE LANÇAMENTOS
+        // receitasDataReais e despesasDataReais são as variáveis globais
+        // que alimentam o DRE!
+        // ============================================================
         
-        if (mes && mes !== '') {
-            const dataInicio = `${ano}-${String(mes).padStart(2,'0')}-01`;
-            const ultimoDia = new Date(ano, parseInt(mes), 0).getDate();
-            const dataFim = `${ano}-${String(mes).padStart(2,'0')}-${ultimoDia}`;
-            vendasQuery = vendasQuery.gte('data', dataInicio).lte('data', dataFim);
+        // Garantir que os dados estão carregados
+        if (!receitasDataReais || receitasDataReais.length === 0) {
+            console.log('⚠️ Carregando receitas...');
+            await carregarDadosReaisLancamentos();
         }
         
-        const { data: vendas, error: errVendas } = await vendasQuery;
-        if (errVendas) console.error('Erro vendas:', errVendas);
-        
-        // Buscar despesas
-        let despesasQuery = supabaseClient.from('dados_m2').select('*');
-        despesasQuery = despesasQuery.gte('vencimento', `${ano}-01-01`).lte('vencimento', `${ano}-12-31`);
-        
-        if (mes && mes !== '') {
-            const dataInicio = `${ano}-${String(mes).padStart(2,'0')}-01`;
-            const ultimoDia = new Date(ano, parseInt(mes), 0).getDate();
-            const dataFim = `${ano}-${String(mes).padStart(2,'0')}-${ultimoDia}`;
-            despesasQuery = despesasQuery.gte('vencimento', dataInicio).lte('vencimento', dataFim);
+        if (!despesasDataReais || despesasDataReais.length === 0) {
+            console.log('⚠️ Carregando despesas...');
+            await carregarDadosReaisLancamentos();
         }
         
-        const { data: despesas, error: errDespesas } = await despesasQuery;
-        if (errDespesas) console.error('Erro despesas:', errDespesas);
+        console.log(`📊 Receitas: ${receitasDataReais?.length || 0} registros`);
+        console.log(`📊 Despesas: ${despesasDataReais?.length || 0} registros`);
         
         // Inicializar estrutura mensal
         const dadosMensais = [];
@@ -7756,29 +7735,43 @@ async function carregarDadosResultados() {
             };
         }
         
-        // Processar RECEITAS
-        for (const venda of (vendas || [])) {
-            const dataVenda = venda.data;
-            if (!dataVenda) continue;
+        // ============================================================
+        // PROCESSAR RECEITAS (usando receitasDataReais)
+        // ============================================================
+        for (const receita of (receitasDataReais || [])) {
+            const dataReceita = receita.data;
+            if (!dataReceita) continue;
             
+            // Extrair mês
             let mesNumero = -1;
-            if (dataVenda.includes('-')) mesNumero = parseInt(dataVenda.split('-')[1]) - 1;
-            else if (dataVenda.includes('/')) mesNumero = parseInt(dataVenda.split('/')[1]) - 1;
+            if (dataReceita.includes('-')) mesNumero = parseInt(dataReceita.split('-')[1]) - 1;
+            else if (dataReceita.includes('/')) mesNumero = parseInt(dataReceita.split('/')[1]) - 1;
             if (mesNumero < 0 || mesNumero > 11) continue;
             
-            const valor = Number(venda['TOTAL NOTA'] || venda.total || 0);
-            const tipo = (venda.tipo || '').toLowerCase();
-            const isCorporativo = (tipo === 'corporativo' || tipo === 'venda corporativa');
+            const valor = Number(receita.valor || 0);
             
-            if (isCorporativo) dadosMensais[mesNumero].receitaCorp += valor;
-            else dadosMensais[mesNumero].receitaLoja += valor;
+            // USAR A CLASSIFICAÇÃO QUE ESTÁ NO POP-UP DE RECEITAS
+            // A variável receita.classificacao já tem 'Balcao' ou 'Venda Corporativa'
+            const classificacao = receita.classificacao || '';
+            const isCorporativo = (classificacao === 'Venda Corporativa' || 
+                                   classificacao === 'corporativo' || 
+                                   classificacao === 'CORPORATIVO');
+            
+            if (isCorporativo) {
+                dadosMensais[mesNumero].receitaCorp += valor;
+            } else {
+                dadosMensais[mesNumero].receitaLoja += valor;
+            }
         }
         
-        // Processar DESPESAS com RATEIO
-        for (const despesa of (despesas || [])) {
-            const dataDesp = despesa.vencimento;
+        // ============================================================
+        // PROCESSAR DESPESAS (usando despesasDataReais)
+        // ============================================================
+        for (const despesa of (despesasDataReais || [])) {
+            const dataDesp = despesa.data;
             if (!dataDesp) continue;
             
+            // Extrair mês
             let mesNumero = -1;
             if (dataDesp.includes('-')) mesNumero = parseInt(dataDesp.split('-')[1]) - 1;
             else if (dataDesp.includes('/')) mesNumero = parseInt(dataDesp.split('/')[1]) - 1;
@@ -7787,6 +7780,7 @@ async function carregarDadosResultados() {
             const valor = Number(despesa.valor || 0);
             const operacao = despesa.operacao || '';
             
+            // Obter classificação da despesa
             let classificacaoDespesa = obterClassificacaoPorOperacao(operacao);
             
             if (classificacaoFiltro !== 'TODOS' && classificacaoDespesa !== classificacaoFiltro) continue;
@@ -7794,10 +7788,12 @@ async function carregarDadosResultados() {
             // Obter percentuais de rateio
             let percentualLoja = 50, percentualCorp = 50;
             
+            // Verificar rateio individual (por ID)
             if (rateiosIndividuaisResultados[despesa.id]) {
                 percentualLoja = rateiosIndividuaisResultados[despesa.id].lojaFisica || 50;
                 percentualCorp = rateiosIndividuaisResultados[despesa.id].corporativo || 50;
-            } else if (rateiosFixosResultados[classificacaoDespesa]) {
+            } else {
+                // Rateio fixo por classificação
                 const fixo = rateiosFixosResultados.find(r => r.classificacao === classificacaoDespesa);
                 if (fixo && fixo.ativo) {
                     percentualLoja = fixo.lojaFisica || 50;
@@ -7805,7 +7801,10 @@ async function carregarDadosResultados() {
                 }
             }
             
-            if (percentualLoja + percentualCorp !== 100) { percentualLoja = 50; percentualCorp = 50; }
+            if (percentualLoja + percentualCorp !== 100) {
+                percentualLoja = 50;
+                percentualCorp = 50;
+            }
             
             const valorLoja = (valor * percentualLoja) / 100;
             const valorCorp = (valor * percentualCorp) / 100;
@@ -7813,6 +7812,21 @@ async function carregarDadosResultados() {
             dadosMensais[mesNumero].despesaLoja += valorLoja;
             dadosMensais[mesNumero].despesaCorp += valorCorp;
         }
+        
+        // ============================================================
+        // LOG PARA VERIFICAR OS VALORES
+        // ============================================================
+        let totalLojaReceita = 0, totalCorpReceita = 0;
+        let totalLojaDespesa = 0, totalCorpDespesa = 0;
+        for (let i = 0; i < 12; i++) {
+            totalLojaReceita += dadosMensais[i].receitaLoja;
+            totalCorpReceita += dadosMensais[i].receitaCorp;
+            totalLojaDespesa += dadosMensais[i].despesaLoja;
+            totalCorpDespesa += dadosMensais[i].despesaCorp;
+        }
+        console.log(`📊 RESULTADOS DOS LANÇAMENTOS:`);
+        console.log(`   🏪 Loja Física - Receita: R$ ${totalLojaReceita.toLocaleString('pt-BR', {minimumFractionDigits:2})} | Despesa: R$ ${totalLojaDespesa.toLocaleString('pt-BR', {minimumFractionDigits:2})}`);
+        console.log(`   💼 Corporativo - Receita: R$ ${totalCorpReceita.toLocaleString('pt-BR', {minimumFractionDigits:2})} | Despesa: R$ ${totalCorpDespesa.toLocaleString('pt-BR', {minimumFractionDigits:2})}`);
         
         dadosResultadosMensais = dadosMensais;
         
@@ -7829,17 +7843,34 @@ async function carregarDadosResultados() {
             }
         }
         
-        atualizarCardsResultados(dadosMensais);
-        atualizarTabelaResultados(dadosMensais);
-        atualizarTodosGraficosResultados(dadosMensais);
+        // Aplicar filtro de mês
+        if (mes && mes !== '') {
+            const mesIndex = parseInt(mes) - 1;
+            const dadosFiltrados = [];
+            for (let i = 0; i < 12; i++) {
+                if (i === mesIndex) {
+                    dadosFiltrados[i] = dadosMensais[i];
+                } else {
+                    dadosFiltrados[i] = {
+                        receitaLoja: 0, receitaCorp: 0,
+                        despesaLoja: 0, despesaCorp: 0
+                    };
+                }
+            }
+            dadosResultadosMensais = dadosFiltrados;
+        }
         
-        console.log('✅ [RESULTADOS] Dados carregados com sucesso!');
+        // Atualizar interface
+        atualizarCardsResultados(dadosResultadosMensais);
+        atualizarTabelaResultados(dadosResultadosMensais);
+        atualizarTodosGraficosResultados(dadosResultadosMensais);
+        
+        console.log('✅ [RESULTADOS] Dados carregados com sucesso dos LANÇAMENTOS!');
         
     } catch (error) {
         console.error('❌ [RESULTADOS] Erro:', error);
     }
 }
-
 // ============================================================
 // 5. ATUALIZAR CARDS
 // ============================================================
