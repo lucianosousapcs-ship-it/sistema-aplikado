@@ -6838,7 +6838,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     fecharModalConversao();
 }
 async function abrirModalConversaoSupabase() {
-    console.log('🔧 Carregando planos do Supabase...');
+    console.log('🔧 Abrindo CONVERSÃO e carregando regras...');
     
     try {
         await carregarPlanoContasSupabase();
@@ -6930,6 +6930,47 @@ async function abrirModalConversaoSupabase() {
         
         document.getElementById('modalConversao').classList.add('active');
         console.log(`🎯 TOTAL: ${todasReceitas.length + todasDespesas.length} itens`);
+        
+        // ========== NOVO: AUTO PREENCHER OS SELECTS ==========
+        // Depois de renderizar a tabela, preencher automaticamente
+        setTimeout(() => {
+            // RECEITAS: copiar o valor da operação para o plano
+            document.querySelectorAll('.conversao-select-plano-receita').forEach(select => {
+                const operacao = select.getAttribute('data-plano-cond');
+                if (operacao) {
+                    // Verifica se existe uma opção com este valor
+                    let opcaoExiste = false;
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].value === operacao) {
+                            opcaoExiste = true;
+                            break;
+                        }
+                    }
+                    if (opcaoExiste) {
+                        select.value = operacao;
+                    }
+                }
+            });
+            
+            // DESPESAS: copiar o valor da operação para o plano
+            document.querySelectorAll('.conversao-select-plano-despesa').forEach(select => {
+                const operacao = select.getAttribute('data-operacao');
+                if (operacao) {
+                    let opcaoExiste = false;
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].value === operacao) {
+                            opcaoExiste = true;
+                            break;
+                        }
+                    }
+                    if (opcaoExiste) {
+                        select.value = operacao;
+                    }
+                }
+            });
+            
+            console.log('✅ Selects preenchidos automaticamente!');
+        }, 200);
         
     } catch (error) {
         console.error('❌ Erro:', error);
