@@ -5571,40 +5571,51 @@ async function loadMapeamentos() {
 async function carregarRegrasConversaoSupabase() {
     console.log('🔄 Carregando regras da tabela regras_conversao...');
     
-    const { data, error } = await supabaseClient
-        .from('regras_conversao')
-        .select('*');
-    
-    if (error) {
-        console.error('❌ Erro ao carregar regras:', error);
-        return;
-    }
-    
-    window.condToTituloMap = {};
-    window.condToPlanoMap = {};
-    window.operacaoToPlanoMap = {};
-    
-    data.forEach(regra => {
-        if (regra.tipo === 'RECEITA') {
-            if (regra.destino_caixa) {
-                window.condToTituloMap[regra.origem] = regra.destino_caixa;
-            }
-            if (regra.destino_plano) {
-                window.condToPlanoMap[regra.origem] = regra.destino_plano;
-            }
-        } else if (regra.tipo === 'DESPESA_VARIAVEL') {
-            if (regra.destino_plano) {
-                window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
-            }
+    try {
+        const { data, error } = await supabaseClient
+            .from('regras_conversao')
+            .select('*');
+        
+        if (error) {
+            console.error('❌ Erro ao carregar regras:', error);
+            return;
         }
-    });
-    
-    console.log('✅ Regras carregadas:', {
-        titulos: Object.keys(window.condToTituloMap).length,
-        planosReceitas: Object.keys(window.condToPlanoMap).length,
-        planosDespesas: Object.keys(window.operacaoToPlanoMap).length
-    });
+        
+        console.log(`✅ ${data?.length || 0} regras encontradas`);
+        
+        // Inicializar os maps
+        window.condToTituloMap = {};
+        window.condToPlanoMap = {};
+        window.operacaoToPlanoMap = {};
+        
+        if (data && data.length > 0) {
+            data.forEach(regra => {
+                if (regra.tipo === 'RECEITA') {
+                    if (regra.destino_caixa) {
+                        window.condToTituloMap[regra.origem] = regra.destino_caixa;
+                    }
+                    if (regra.destino_plano) {
+                        window.condToPlanoMap[regra.origem] = regra.destino_plano;
+                    }
+                } else if (regra.tipo === 'DESPESA_VARIAVEL') {
+                    if (regra.destino_plano) {
+                        window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
+                    }
+                }
+            });
+        }
+        
+        console.log('✅ Regras carregadas:', {
+            titulos: Object.keys(window.condToTituloMap).length,
+            planosReceitas: Object.keys(window.condToPlanoMap).length,
+            planosDespesas: Object.keys(window.operacaoToPlanoMap).length
+        });
+        
+    } catch (err) {
+        console.error('❌ Erro:', err);
+    }
 }
+
 function mostrarConsultaConversaoDespesa(operacao, planoContasAtual) {
     const savedOperacaoPlano = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
     if (savedOperacaoPlano) {
