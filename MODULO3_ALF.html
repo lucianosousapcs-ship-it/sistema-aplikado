@@ -7113,23 +7113,37 @@ async function limparEConverterTodosLancamentos() {
     if (!confirmar) return;
     
     try {
-        // 1. BUSCAR REGRAS E PLANOS DIRETAMENTE DO SUPABASE
         console.log('🔄 Buscando regras e planos do Supabase...');
         
         const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmaXB5Z3doYndqdGRrcWRtbXRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgxMDE4MDQsImV4cCI6MjA1MzY3NzgwNH0.7QrJW1kRWxwIjHK1pAtYkFzNf9c8r6UyIA8RoMPFg-U';
+        // ========== CHAVE CORRETA (mesma do supabaseClient) ==========
+        const SUPABASE_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';
         
         // Buscar REGRAS DE CONVERSÃO
         const responseRegras = await fetch(`${SUPABASE_URL}/rest/v1/conversao_operacoes`, {
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            headers: { 
+                'apikey': SUPABASE_KEY, 
+                'Authorization': `Bearer ${SUPABASE_KEY}` 
+            }
         });
+        
+        if (!responseRegras.ok) {
+            throw new Error(`Erro ao buscar regras: ${responseRegras.status} - ${responseRegras.statusText}`);
+        }
         const regras = await responseRegras.json();
         console.log(`📚 Regras carregadas: ${regras.length}`);
         
         // Buscar PLANO DE CONTAS
         const responsePlanos = await fetch(`${SUPABASE_URL}/rest/v1/plano_contas?select=codigo,nome`, {
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            headers: { 
+                'apikey': SUPABASE_KEY, 
+                'Authorization': `Bearer ${SUPABASE_KEY}` 
+            }
         });
+        
+        if (!responsePlanos.ok) {
+            throw new Error(`Erro ao buscar planos: ${responsePlanos.status} - ${responsePlanos.statusText}`);
+        }
         const planos = await responsePlanos.json();
         console.log(`📚 Planos carregados: ${planos.length}`);
         
@@ -7244,69 +7258,6 @@ async function limparEConverterTodosLancamentos() {
         alert('Erro ao aplicar regras: ' + error.message);
     }
 }
-
-// ============================================================
-// EVENTOS E INICIALIZAÇÃO
-// ============================================================
-document.getElementById('modalDrilldownReceitas')?.addEventListener('click', function(e) { if (e.target === this) fecharDrilldownReceitas(); });
-document.getElementById('modalDrilldownDespesas')?.addEventListener('click', function(e) { if (e.target === this) fecharDrilldownDespesas(); });
-document.getElementById('modalConsultaConversao')?.addEventListener('click', function(e) { if (e.target === this) fecharModalConsultaConversao(); });
-document.getElementById('modalDrilldownValor')?.addEventListener('click', function(e) { if (e.target === this) fecharModalDrilldownValor(); });
-
-carregarPlanoContas();
-carregarCoresSalvas();
-carregarFlags();
-loadMapeamentos();
-carregarVendas();
-carregarCompras();
-carregarSaidasCaixa();
-carregarDadosReaisLancamentos();
-carregarDadosEstatisticas();
-
-console.log('Sistema Aplikado Módulo III inicializado com sucesso!');
-
-document.addEventListener('DOMContentLoaded', async function() {
-    await carregarRegrasConversaoSupabase();
-    await gerarDREComSupabase();
-    await carregarCoresDoSupabase();
-    carregarVendas();
-    carregarCompras();
-    carregarDadosReaisLancamentos();
-    carregarDadosComparativos();
-    
-    const { data } = await supabaseClient.from('comparativos_caixa').select('*');
-    if (data) {
-        dadosComparativos = {};
-        data.forEach(item => {
-            dadosComparativos[item.data] = {
-                DINHEIRO: item.dinheiro || 0,
-                DEBITO: item.debito || 0,
-                CREDITO: item.credito || 0,
-                CREDITO_PARCELADO: item.credito_parcelado || 0,
-                AG: item.ag || 0,
-                PIX: item.pix || 0,
-                VNF: item.vnf || 0,
-                SAIDA: item.saida || 0,
-                TOTAL_DIA: item.total_dia || 0
-            };
-        });
-    }
-    
-    renderizarCaixaPopup();
-    renderizarTabelaComparativos();
-    
-    const modalContasExtras = document.getElementById('modalContasExtras');
-    if (modalContasExtras) {
-        console.log('Modal Contas Extras encontrado e corrigido');
-    }
-});
-
-// Exportar funções para uso global
-window.fecharModalDrilldownValor = fecharModalDrilldownValor;
-window.limparCacheDetalhamento = function() {
-    detalhamentoCache.clear();
-    console.log('Cache de detalhamento limpo');
-};
 // ============================================================
 // FUNÇÃO CARREGAR CONTAS EXTRAS (CORRIGIDA)
 // ============================================================
