@@ -5556,7 +5556,8 @@ async function carregarRegrasConversaoSupabase() {
     try {
         const { data, error } = await supabaseClient
             .from('regras_conversao')
-            .select('*');
+            .select('*')
+            .eq('ativo', true);
         
         if (error) {
             console.error('❌ Erro ao carregar regras:', error);
@@ -5576,12 +5577,12 @@ async function carregarRegrasConversaoSupabase() {
                     if (regra.destino_caixa) {
                         condToTituloMap[regra.origem] = regra.destino_caixa;
                     }
-                    if (regra.destino_plano) {
-                        condToPlanoMap[regra.origem] = regra.destino_plano;
+                    if (regra.destino_identificador) {  // ← USANDO destino_identificador
+                        condToPlanoMap[regra.origem] = regra.destino_identificador;
                     }
-                } else if (regra.tipo === 'DESPESA_VARIAVEL' || regra.tipo === 'DESPESA') {
-                    if (regra.destino_plano) {
-                        operacaoToPlanoMap[regra.origem] = regra.destino_plano;
+                } else if (regra.tipo === 'DESPESA' || regra.tipo === 'DESPESA_VARIAVEL') {
+                    if (regra.destino_identificador) {  // ← USANDO destino_identificador
+                        operacaoToPlanoMap[regra.origem] = regra.destino_identificador;
                     }
                 }
             });
@@ -5606,7 +5607,6 @@ async function carregarRegrasConversaoSupabase() {
         console.error('❌ Erro ao carregar regras:', e);
     }
 }
-
 // FUNÇÃO: Abrir modal de conversão
 async function abrirModalConversaoSupabase() {
     console.log('🔧 Abrindo CONVERSÃO e carregando regras...');
