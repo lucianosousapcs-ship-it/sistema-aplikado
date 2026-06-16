@@ -1648,7 +1648,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
             <button class="btn-atualizar" onclick="atualizarRegrasConversao()" style="background: linear-gradient(135deg, #2c3e50, #1a2632); border: 1px solid rgba(230,160,23,0.3); border-radius: 8px; padding: 8px 16px; font-weight: 600; font-size: 12px; cursor: pointer; color: var(--yellow); display: inline-flex; align-items: center; gap: 8px;">
                  ATUALIZAR
             </button>
-           <button class="btn-aplicar-todos" onclick="aplicarRegrasConversaoEmTodosLancamentos()"> style="background: linear-gradient(135deg, #10b981, #0d9668); border: none; color: white; padding: 8px 20px; border-radius: 40px; font-weight: 800; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+            <button class="btn-aplicar-todos" onclick="aplicarRegrasConversaoEmTodosLancamentos()" style="background: linear-gradient(135deg, #10b981, #0d9668); border: none; color: white; padding: 8px 20px; border-radius: 40px; font-weight: 800; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
                  APLICAR A TODOS
             </button>
 
@@ -2328,65 +2328,6 @@ function aplicarPlanoConversaoReceita(id) {
         const planosMap = planosSalvos ? JSON.parse(planosSalvos) : {};
         planosMap[id] = planoConfigurado;
         localStorage.setItem(STORAGE_KEY_PLANOS_RECEITAS, JSON.stringify(planosMap));
-        function marcarSeIncluido(data, valor, desc) {
-    for(let m = 0; m < 12; m++) {
-        const dados = JSON.parse(localStorage.getItem(`dadosModuloIII_mes_${m}`) || '[]');
-        if(dados.some(l => l.data === data && Math.abs(parseMoeda(l.valor) - valor) < 0.01 && l.desc === desc))
-            return " ★";
-    }
-    return "";
-}
-     async function carregarCoresDoSupabase() {
-    console.log('🔄 Carregando cores salvas...');
-    try {
-        const { data, error } = await supabaseClient
-            .from('cores_linhas_caixa')
-            .select('*');
-        
-        if (error) {
-            console.error('❌ Erro ao carregar cores:', error);
-            return;
-        }
-        
-        if (data && data.length > 0) {
-            linhaCorSelecionada = {};
-            data.forEach(item => {
-                linhaCorSelecionada[item.data] = item.cor;
-            });
-        }
-        
-        console.log(`✅ ${data?.length || 0} cores carregadas`);
-    } catch (err) {
-        console.error('❌ Erro:', err);
-    }
-}
-
-async function salvarCoresNoSupabase() {
-    console.log('💾 Salvando cores...');
-    try {
-        const registros = Object.entries(linhaCorSelecionada).map(([data, cor]) => ({
-            data: data,
-            cor: cor
-        }));
-        
-        for (const registro of registros) {
-            const { error } = await supabaseClient
-                .from('cores_linhas_caixa')
-                .upsert(registro, { onConflict: 'data' });
-            
-            if (error) {
-                console.error(`❌ Erro ao salvar cor para ${registro.data}:`, error);
-            }
-        }
-        
-        console.log(`✅ ${registros.length} cores salvas`);
-    } catch (err) {
-        console.error('❌ Erro:', err);
-    }
-}
-        
-        
-        
         
         renderizarTabelaReceitas();
         
@@ -5630,51 +5571,40 @@ async function loadMapeamentos() {
 async function carregarRegrasConversaoSupabase() {
     console.log('🔄 Carregando regras da tabela regras_conversao...');
     
-    try {
-        const { data, error } = await supabaseClient
-            .from('regras_conversao')
-            .select('*');
-        
-        if (error) {
-            console.error('❌ Erro ao carregar regras:', error);
-            return;
-        }
-        
-        console.log(`✅ ${data?.length || 0} regras encontradas`);
-        
-        // Inicializar os maps
-        window.condToTituloMap = {};
-        window.condToPlanoMap = {};
-        window.operacaoToPlanoMap = {};
-        
-        if (data && data.length > 0) {
-            data.forEach(regra => {
-                if (regra.tipo === 'RECEITA') {
-                    if (regra.destino_caixa) {
-                        window.condToTituloMap[regra.origem] = regra.destino_caixa;
-                    }
-                    if (regra.destino_plano) {
-                        window.condToPlanoMap[regra.origem] = regra.destino_plano;
-                    }
-                } else if (regra.tipo === 'DESPESA_VARIAVEL') {
-                    if (regra.destino_plano) {
-                        window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
-                    }
-                }
-            });
-        }
-        
-        console.log('✅ Regras carregadas:', {
-            titulos: Object.keys(window.condToTituloMap).length,
-            planosReceitas: Object.keys(window.condToPlanoMap).length,
-            planosDespesas: Object.keys(window.operacaoToPlanoMap).length
-        });
-        
-    } catch (err) {
-        console.error('❌ Erro:', err);
+    const { data, error } = await supabaseClient
+        .from('regras_conversao')
+        .select('*');
+    
+    if (error) {
+        console.error('❌ Erro ao carregar regras:', error);
+        return;
     }
+    
+    window.condToTituloMap = {};
+    window.condToPlanoMap = {};
+    window.operacaoToPlanoMap = {};
+    
+    data.forEach(regra => {
+        if (regra.tipo === 'RECEITA') {
+            if (regra.destino_caixa) {
+                window.condToTituloMap[regra.origem] = regra.destino_caixa;
+            }
+            if (regra.destino_plano) {
+                window.condToPlanoMap[regra.origem] = regra.destino_plano;
+            }
+        } else if (regra.tipo === 'DESPESA_VARIAVEL') {
+            if (regra.destino_plano) {
+                window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
+            }
+        }
+    });
+    
+    console.log('✅ Regras carregadas:', {
+        titulos: Object.keys(window.condToTituloMap).length,
+        planosReceitas: Object.keys(window.condToPlanoMap).length,
+        planosDespesas: Object.keys(window.operacaoToPlanoMap).length
+    });
 }
-
 function mostrarConsultaConversaoDespesa(operacao, planoContasAtual) {
     const savedOperacaoPlano = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
     if (savedOperacaoPlano) {
@@ -6906,40 +6836,17 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     }
     
     fecharModalConversao();
-}async function abrirModalConversaoSupabase() {
-    console.log('🔧 Abrindo CONVERSÃO e carregando regras da tabela regras_conversao...');
+}
+async function abrirModalConversaoSupabase() {
+    console.log('🔧 Carregando planos do Supabase...');
     
     try {
-        // 1. Carregar planos de contas do Supabase
         await carregarPlanoContasSupabase();
-        
-        // 2. Abrir o modal
-        const modal = document.getElementById('modalConversao');
-        if (modal) modal.classList.add('active');
-        
-        // 3. Aguardar o modal renderizar
-        await new Promise(r => setTimeout(r, 300));
+        await carregarRegrasConversaoSupabase();
         
         // ========== RECEITAS ==========
         const todasReceitas = estruturaDRE.receitas || [];
         console.log(`📊 Receitas: ${todasReceitas.length}`);
-        
-        // Buscar regras de RECEITAS do banco
-        const { data: regrasReceitas } = await supabaseClient
-            .from('regras_conversao')
-            .select('*')
-            .eq('tipo', 'RECEITA');
-        
-        const mapaReceitas = {};
-        const mapaTitulos = {};
-        regrasReceitas.forEach(r => {
-            if (r.destino_plano) {
-                mapaReceitas[r.origem] = r.destino_plano;
-            }
-            if (r.destino_caixa) {
-                mapaTitulos[r.origem] = r.destino_caixa;
-            }
-        });
         
         const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
         if (tbodyReceitas) {
@@ -6950,8 +6857,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                 const grupoDre = receita.grupo_dre || '1 RECEITAS DE VENDAS';
                 const tipoClass = receita.tipo_classificacao || 'RECEITAS';
                 const nomeOperacao = `${codigo}-${nome}`;
-                const planoSalvo = mapaReceitas[nome] || '';
-                const tituloSalvo = mapaTitulos[nome] || 'VNF';
+                const codigoSalvo = window.condToPlanoMap?.[nome] || '';
                 
                 html += `<tr>
                     <td style="white-space: nowrap;">${grupoDre}</div>
@@ -6959,13 +6865,13 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                     <td>${tipoClass}</div>
                     <td>
                         <select class="conversao-select" data-cond="${nome}">
-                            <option value="DINHEIRO" ${tituloSalvo === 'DINHEIRO' ? 'selected' : ''}>DINHEIRO</option>
-                            <option value="DEBITO" ${tituloSalvo === 'DEBITO' ? 'selected' : ''}>DEBITO</option>
-                            <option value="CREDITO" ${tituloSalvo === 'CREDITO' ? 'selected' : ''}>CREDITO</option>
-                            <option value="CREDITO PARCELADO" ${tituloSalvo === 'CREDITO PARCELADO' ? 'selected' : ''}>CREDITO PARCELADO</option>
-                            <option value="AG" ${tituloSalvo === 'AG' ? 'selected' : ''}>AG</option>
-                            <option value="PIX" ${tituloSalvo === 'PIX' ? 'selected' : ''}>PIX</option>
-                            <option value="VNF" ${tituloSalvo === 'VNF' ? 'selected' : ''}>VNF</option>
+                            <option value="DINHEIRO">DINHEIRO</option>
+                            <option value="DEBITO">DEBITO</option>
+                            <option value="CREDITO">CREDITO</option>
+                            <option value="CREDITO PARCELADO">CREDITO PARCELADO</option>
+                            <option value="AG">AG</option>
+                            <option value="PIX">PIX</option>
+                            <option value="VNF" selected>VNF</option>
                         </select>
                     </div>
                     <td>
@@ -6973,8 +6879,8 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                             <option value="">Selecione...</option>`;
                 
                 for (const p of todasReceitas) {
-                    const selected = (planoSalvo === p.nome || planoSalvo === p.cod) ? 'selected' : '';
-                    html += `<option value="${p.nome}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                    const selected = (codigoSalvo === p.cod) ? 'selected' : '';
+                    html += `<option value="${p.cod}" ${selected}>${p.cod} - ${p.nome}</option>`;
                 }
                 
                 html += `     </select>
@@ -6989,19 +6895,6 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
         const todasDespesas = [...(estruturaDRE.custosVariaveis || []), ...(estruturaDRE.custosFixos || [])];
         console.log(`📊 Despesas: ${todasDespesas.length}`);
         
-        // Buscar regras de DESPESAS do banco
-        const { data: regrasDespesas } = await supabaseClient
-            .from('regras_conversao')
-            .select('*')
-            .eq('tipo', 'DESPESA_VARIAVEL');
-        
-        const mapaDespesas = {};
-        regrasDespesas.forEach(r => {
-            if (r.destino_plano) {
-                mapaDespesas[r.origem] = r.destino_plano;
-            }
-        });
-        
         const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
         if (tbodyDespesas) {
             let html = '';
@@ -7011,7 +6904,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                 const grupoDre = despesa.grupo_dre || '4 DESPESAS ADMINISTRATIVAS';
                 const tipoClass = despesa.tipo_classificacao || 'DESPESAS VARIAVEIS';
                 const nomeOperacao = `${codigo}-${nome}`;
-                const planoSalvo = mapaDespesas[nome] || '';
+                const codigoSalvo = window.operacaoToPlanoMap?.[nome] || '';
                 
                 html += `<tr>
                     <td style="white-space: nowrap;">${grupoDre}</div>
@@ -7023,8 +6916,8 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                             <option value="">Selecione...</option>`;
                 
                 for (const p of todasDespesas) {
-                    const selected = (planoSalvo === p.nome || planoSalvo === p.cod) ? 'selected' : '';
-                    html += `<option value="${p.nome}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                    const selected = (codigoSalvo === p.cod) ? 'selected' : '';
+                    html += `<option value="${p.cod}" ${selected}>${p.cod} - ${p.nome}</option>`;
                 }
                 
                 html += `     </select>
@@ -7035,16 +6928,78 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
             console.log(`✅ Despesas: ${todasDespesas.length} itens`);
         }
         
+        document.getElementById('modalConversao').classList.add('active');
         console.log(`🎯 TOTAL: ${todasReceitas.length + todasDespesas.length} itens`);
         
-        // Atualizar os maps globais
-        window.condToPlanoMap = mapaReceitas;
-        window.operacaoToPlanoMap = mapaDespesas;
-        window.condToTituloMap = mapaTitulos;
-        
     } catch (error) {
-        console.error('❌ Erro ao abrir CONVERSÃO:', error);
+        console.error('❌ Erro:', error);
     }
+}function abrirModalComparativos() {
+    console.log('🔘 Botão COMPARATIVOS clicado!');
+    const modal = document.getElementById('modalComparativos');
+    if (!modal) {
+        console.error('❌ Modal não encontrado!');
+        alert('Erro: Modal não encontrado');
+        return;
+    }
+    modal.classList.add('active');
+    console.log('✅ Modal aberto');
+    if (typeof carregarComparativosSupabase === 'function') {
+        carregarComparativosSupabase();
+    }
+}
+
+function fecharModalComparativos() {
+    console.log('🔘 Fechando modal COMPARATIVOS');
+    const modal = document.getElementById('modalComparativos');
+    if (modal) {
+        modal.classList.remove('active');
+        console.log('✅ Modal fechado');
+    }
+}
+
+function alterarCorLinhaFechamento(data, cor) {
+    const coresPermitidas = ['verde', 'amarelo', 'vermelho'];
+    if (!coresPermitidas.includes(cor)) {
+        console.error('❌ Cor inválida:', cor);
+        return;
+    }
+    
+    console.log('🎨 alterarCorLinhaFechamento:', data, cor);
+    
+    if (cor === 'amarelo') {
+        if (linhaCorSelecionada[data] === 'amarelo') {
+            delete linhaCorSelecionada[data];
+        } else {
+            linhaCorSelecionada[data] = 'amarelo';
+        }
+    } else if (cor === 'verde') {
+        if (linhaCorSelecionada[data] === 'verde') {
+            delete linhaCorSelecionada[data];
+        } else {
+            linhaCorSelecionada[data] = 'verde';
+        }
+    } else if (cor === 'vermelho') {
+        if (linhaCorSelecionada[data] === 'vermelho') {
+            delete linhaCorSelecionada[data];
+        } else {
+            linhaCorSelecionada[data] = 'vermelho';
+        }
+    }
+    
+    salvarCoresNoSupabase();
+    if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
+    if (typeof renderizarTabelaComparativos === 'function') renderizarTabelaComparativos();
+    if (typeof atualizarTotaisPorClassificacao === 'function') atualizarTotaisPorClassificacao();
+}
+
+function marcarSeIncluido(data, valor, desc) {
+    for(let m = 0; m < 12; m++) {
+        const dados = JSON.parse(localStorage.getItem(`dadosModuloIII_mes_${m}`) || '[]');
+        if(dados.some(l => l.data === data && Math.abs(parseMoeda(l.valor) - valor) < 0.01 && l.desc === desc))
+            return " ★";
+    }
+    return "";
 }
 
 // ============================================================
@@ -8725,6 +8680,9 @@ async function aplicarRegrasConversaoEmTodosLancamentos() {
             despesasAtualizadas++;
         } else {
             despesasIgnoradas++;
+            if (despesasIgnoradas <= 10) {
+                console.log(`⚠️ Sem regra: "${operacao}"`);
+            }
         }
     }
     
