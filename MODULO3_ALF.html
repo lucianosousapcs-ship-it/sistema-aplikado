@@ -3511,6 +3511,18 @@ function renderizarTabelaContasExtras() {
     const buscaGeral = document.getElementById('buscaGeralContasExtras')?.value.toLowerCase() || '';
     const statusFiltro = document.getElementById('statusContasExtras')?.value || 'TODOS';
     
+   function renderizarTabelaContasExtras() {
+    console.log('🎨 Renderizando contas extras, total:', contasExtrasData.length);
+    
+    let filtradas = [...contasExtrasData];
+    
+    const dtInicio = document.getElementById('filtroDtPagtoInicio')?.value;
+    const dtFim = document.getElementById('filtroDtPagtoFim')?.value;
+    const filtroOperacao = document.getElementById('filtroOperacaoContasExtras')?.value.toLowerCase() || '';
+    const filtroFornecedor = document.getElementById('filtroFornecedorContasExtras')?.value.toLowerCase() || '';
+    const buscaGeral = document.getElementById('buscaGeralContasExtras')?.value.toLowerCase() || '';
+    const statusFiltro = document.getElementById('statusContasExtras')?.value || 'TODOS';
+    
     function converterDataParaComparacao(dataStr) {
         if (!dataStr) return null;
         if (dataStr.includes('-')) {
@@ -7334,10 +7346,8 @@ async function limparEConverterContasExtras() {
     );
     if (!confirmar) return;
     
-    // CARREGAR REGRAS DO SUPABASE
     await carregarRegrasConversaoSupabase();
     
-    // Criar mapa: operação → nome do plano (sem o código)
     const operacaoParaPlanoNome = {};
     for (const [operacao, identificador] of Object.entries(operacaoToPlanoMap)) {
         let nomePlano = identificador;
@@ -7352,32 +7362,25 @@ async function limparEConverterContasExtras() {
     let ignorados = 0;
     let resetados = 0;
     
-    // LIMPAR E APLICAR EM TODOS OS REGISTROS
     for (const reg of contasExtrasData) {
         const operacao = reg.operacao || '';
         
-        // RESETA O PLANO
         reg.plano = "DESPESAS ADMINISTRATIVAS";
         resetados++;
         
-        // APLICA A REGRA SE EXISTIR
         const planoNome = operacaoParaPlanoNome[operacao];
         if (planoNome && planoNome !== '') {
             reg.plano = planoNome;
             planosContasExtrasSalvos[reg.id] = planoNome;
-            // 🔹 ATUALIZA O temRegra
             reg.temRegra = true;
             atualizados++;
         } else {
-            // 🔹 ATUALIZA O temRegra
             reg.temRegra = false;
             ignorados++;
         }
     }
     
     localStorage.setItem('planos_contas_extras', JSON.stringify(planosContasExtrasSalvos));
-    
-    // RENDERIZAR A TABELA (já aplica as cores corretamente)
     renderizarTabelaContasExtras();
     
     alert(`✅ LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n📋 Registros resetados: ${resetados}\n✅ Atualizados com regra: ${atualizados}\n⚠️ Ignorados (sem regra): ${ignorados}`);
