@@ -6898,7 +6898,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     console.log('✅ Processo concluído!');
 }
 // ============================================================
-// FUNÇÃO CORRIGIDA: AGORA USA O IDENTIFICADOR DA TABELA plano_contas
+// FUNÇÃO CORRIGIDA: ABRIR CONVERSÃO - VERSÃO FINAL
 // ============================================================
 async function abrirModalConversaoSupabase() {
     console.log('🔧 Abrindo CONVERSÃO com IDENTIFICADOR...');
@@ -6933,6 +6933,8 @@ async function abrirModalConversaoSupabase() {
         const despesas = (planos || []).filter(p => p.tipo === 'DESPESA');
         
         console.log(`📊 Receitas: ${receitas.length}, Despesas: ${despesas.length}`);
+        console.log('📚 condToPlanoMap:', Object.keys(condToPlanoMap).length, 'regras');
+        console.log('📚 operacaoToPlanoMap:', Object.keys(operacaoToPlanoMap).length, 'regras');
         
         // ============================================================
         // 5. MONTAR TABELA DE RECEITAS - USANDO OPERAÇÕES REAIS
@@ -7076,6 +7078,7 @@ async function abrirModalConversaoSupabase() {
         alert('Erro ao abrir conversão: ' + error.message);
     }
 }
+
 // ============================================================
 // FUNÇÃO CORRIGIDA: SALVAR MAPEAMENTO - VERSÃO FINAL
 // ============================================================
@@ -7085,16 +7088,12 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     try {
         // ========== COLETAR RECEITAS ==========
         const receitasRegras = [];
-        
-        // 🔥 CORREÇÃO: Usar o seletor correto para a aba de receitas
         const selectsReceitas = document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita');
         console.log(`📊 Selects de RECEITAS encontrados: ${selectsReceitas.length}`);
         
         selectsReceitas.forEach(select => {
             const operacao = select.getAttribute('data-plano-cond');
             const codigoPlano = select.value;
-            
-            console.log(`   → Operação: "${operacao}", Código: "${codigoPlano}"`);
             
             if (operacao && codigoPlano && codigoPlano !== '') {
                 const option = select.options[select.selectedIndex];
@@ -7114,16 +7113,12 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
         
         // ========== COLETAR DESPESAS ==========
         const despesasRegras = [];
-        
-        // 🔥 CORREÇÃO: Usar o seletor correto para a aba de despesas
         const selectsDespesas = document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa');
         console.log(`📊 Selects de DESPESAS encontrados: ${selectsDespesas.length}`);
         
         selectsDespesas.forEach(select => {
             const operacao = select.getAttribute('data-operacao');
             const codigoPlano = select.value;
-            
-            console.log(`   → Operação: "${operacao}", Código: "${codigoPlano}"`);
             
             if (operacao && codigoPlano && codigoPlano !== '') {
                 const option = select.options[select.selectedIndex];
@@ -7148,7 +7143,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
         console.log(`   Despesas: ${despesasRegras.length}`);
         
         if (todasRegras.length === 0) {
-            alert('⚠️ Nenhuma regra para salvar! Verifique se você selecionou planos de contas.');
+            alert('⚠️ Nenhuma regra para salvar! Selecione um plano de contas para cada operação.');
             return;
         }
         
