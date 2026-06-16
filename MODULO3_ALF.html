@@ -7307,34 +7307,26 @@ async function limparEConverterContasExtras() {
     const confirmar = confirm('ATENÇÃO: Isso irá LIMPAR os planos de contas e REAPLICAR conforme as regras de conversão para os itens SELECIONADOS.\n\nDeseja continuar?');
     if (!confirmar) return;
     
-    // CARREGAR REGRAS DIRETAMENTE DO SUPABASE
+    // CARREGAR REGRAS DO SUPABASE
     await carregarRegrasConversaoSupabase();
     
-    // CARREGAR PLANO DE CONTAS PARA TER A LISTA COMPLETA
-    await carregarPlanoContasSupabase();
+    // Criar mapa: operação → nome do plano (sem o código)
+    const operacaoParaPlanoNome = {};
     
-    // Criar um mapa de lookup: nome do plano → nome completo com código
-    const todosPlanos = [
-        ...estruturaDRE.receitas,
-        ...estruturaDRE.custosVariaveis,
-        ...estruturaDRE.custosFixos
-    ];
-    
-    const planoLookup = {};
-    for (const p of todosPlanos) {
-        // Mapeia tanto pelo nome quanto pelo identificador
-        planoLookup[p.nome] = p.nome;
-        if (p.identificador) {
-            planoLookup[p.identificador] = p.nome;
+    for (const [operacao, identificador] of Object.entries(operacaoToPlanoMap)) {
+        let nomePlano = identificador;
+        
+        // Se tiver " - ", extrai só a parte depois do traço
+        if (identificador && identificador.includes(' - ')) {
+            const partes = identificador.split(' - ');
+            nomePlano = partes.slice(1).join(' - '); // Pega tudo depois do primeiro " - "
         }
-        // Também mapeia pelo código + nome
-        const codNome = `${p.cod} - ${p.nome}`;
-        planoLookup[codNome] = p.nome;
+        
+        operacaoParaPlanoNome[operacao] = nomePlano;
+        console.log(`📌 ${operacao} → ${nomePlano}`);
     }
     
-    console.log('📚 Plano Lookup criado com', Object.keys(planoLookup).length, 'entradas');
-    
-    const operacaoPlanoMap = operacaoToPlanoMap;
+    console.log('📚 Mapeamento simplificado:', operacaoParaPlanoNome);
     
     let atualizados = 0;
     let ignorados = 0;
@@ -7345,54 +7337,36 @@ async function limparEConverterContasExtras() {
         if (!contasExtrasSelecionadas.has(reg.id)) continue;
         
         const operacao = reg.operacao || '';
-        let planoDaRegra = operacaoPlanoMap[operacao];
         
-        // 🔹 PASSO 1: SEMPRE RESETA O PLANO (LIMPAR)
+        // 🔹 PASSO 1: RESETA O PLANO
         reg.plano = "DESPESAS ADMINISTRATIVAS";
         resetados++;
         
-        // 🔹 PASSO 2: APLICA A REGRA SE EXISTIR
-        if (planoDaRegra && planoDaRegra !== '') {
-            // Verifica se o plano existe no lookup
-            if (planoLookup[planoDaRegra]) {
-                reg.plano = planoLookup[planoDaRegra];
-                detalhes.push(`✅ ${operacao} → ${reg.plano}`);
-            } else {
-                // Tenta encontrar por similaridade
-                let encontrado = null;
-                for (const [key, value] of Object.entries(planoLookup)) {
-                    if (key.toLowerCase().includes(operacao.toLowerCase()) || 
-                        operacao.toLowerCase().includes(key.toLowerCase())) {
-                        encontrado = value;
-                        break;
-                    }
-                }
-                if (encontrado) {
-                    reg.plano = encontrado;
-                    detalhes.push(`🔍 ${operacao} → ${encontrado} (por similaridade)`);
-                } else {
-                    // Usa o plano da regra mesmo assim
-                    reg.plano = planoDaRegra;
-                    detalhes.push(`⚠️ ${operacao} → ${planoDaRegra} (não encontrado no lookup)`);
-                }
-            }
-            planosContasExtrasSalvos[reg.id] = reg.plano;
+        // 🔹 PASSO 2: APLICA A REGRA
+        const planoNome = operacaoParaPlanoNome[operacao];
+        
+        if (planoNome && planoNome !== '') {
+            reg.plano = planoNome;
+            planosContasExtrasSalvos[reg.id] = planoNome;
             atualizados++;
+            detalhes.push(`✅ ${operacao} → ${planoNome}`);
         } else {
             ignorados++;
-            detalhes.push(`❌ ${operacao} → SEM REGRA (mantido como DESPESAS ADMINISTRATIVAS)`);
+            detalhes.push(`❌ ${operacao} → SEM REGRA`);
         }
     }
     
     localStorage.setItem('planos_contas_extras', JSON.stringify(planosContasExtrasSalvos));
     renderizarTabelaContasExtras();
     
-    // Mostrar detalhes no console
+    // Log detalhado no console
     console.log('📋 Detalhes da aplicação:');
-    detalhes.slice(0, 20).forEach(d => console.log(d));
-    if (detalhes.length > 20) console.log(`... e mais ${detalhes.length - 20} registros`);
+    detalhes.slice(0, 30).forEach(d => console.log(d));
+    if (detalhes.length > 30) {
+        console.log(`... e mais ${detalhes.length - 30} registros`);
+    }
     
-    alert(`✅ LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n📋 Registros resetados: ${resetados}\n✅ Atualizados com regra: ${atualizados}\n⚠️ Ignorados (sem regra): ${ignorados}\n\n${atualizados > 0 ? '🟢 Verifique o console para mais detalhes.' : ''}`);
+    alert(`✅ LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n📋 Registros resetados: ${resetados}\n✅ Atualizados com regra: ${atualizados}\n⚠️ Ignorados (sem regra): ${ignorados}`);
 }
 // ============================================================
 // FUNÇÕES DE FILTRO PARA PDF DA SANGRIA
