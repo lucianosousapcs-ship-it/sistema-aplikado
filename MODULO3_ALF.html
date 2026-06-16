@@ -6765,31 +6765,39 @@ async function salvarRegrasConversaoSupabase() {
 }
 
 async function salvarMapeamentoConversaoCompletoSupabase() {
-    const receitasRegras = [];
+    console.log('💾 Salvando mapeamento de conversão...');
     
-    // Coletar regras de RECEITAS
+    const receitasRegras = [];
+    const despesasRegras = [];
+    
+    // ========== RECEITAS ==========
     document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
-        const cond = select.getAttribute('data-plano-cond');
+        const operacao = select.getAttribute('data-plano-cond');
         const codigoPlano = select.value;
-        if (cond && codigoPlano && codigoPlano !== '') {
+        const textoSelecionado = select.options[select.selectedIndex]?.text;
+        
+        if (operacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
             receitasRegras.push({
-                operacao: cond,
+                operacao: operacao,
                 tipo: 'RECEITA',
-                plano_contas_codigo: codigoPlano
+                plano_contas_codigo: codigoPlano,
+                plano_contas_dre: textoSelecionado
             });
         }
     });
     
-    // Coletar regras de DESPESAS
-    const despesasRegras = [];
+    // ========== DESPESAS ==========
     document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
         const operacao = select.getAttribute('data-operacao');
         const codigoPlano = select.value;
-        if (operacao && codigoPlano && codigoPlano !== '') {
+        const textoSelecionado = select.options[select.selectedIndex]?.text;
+        
+        if (operacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
             despesasRegras.push({
                 operacao: operacao,
                 tipo: 'DESPESA',
-                plano_contas_codigo: codigoPlano
+                plano_contas_codigo: codigoPlano,
+                plano_contas_dre: textoSelecionado
             });
         }
     });
@@ -6797,47 +6805,77 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     const todasRegras = [...receitasRegras, ...despesasRegras];
     
     if (todasRegras.length === 0) {
-        alert('Nenhuma regra para salvar!');
+        alert('⚠️ Nenhuma regra para salvar!');
         return;
     }
     
-    // Salvar no Supabase (upsert)
-    let salvos = 0;
-    for (const regra of todasRegras) {
-        const { error } = await supabaseClient
-            .from('conversao_operacoes')
-            .upsert(regra, { onConflict: 'operacao' });
+    console.log(`📋 ${todasRegras.length} regras para salvar`);
+    
+    // ========== DELETAR REGRAS ANTIGAS ==========
+    console.log('🗑️ Removendo regras antigas...');
+    const { error: deleteError } = await supabaseClient
+        .from('conversao_operacoes')
+        .delete()
+        .neq('id', 0);
+    
+    if (deleteError) {
+        console.error('❌ Erro ao deletar regras antigas:', deleteError);
+        alert('Erro ao deletar regras antigas: ' + deleteError.message);
+        return;
+    }
+    
+    console.log('✅ Regras antigas removidas');
+    
+    // ========== INSERIR NOVAS REGRAS ==========
+    console.log('📝 Inserindo novas regras...');
+    let inseridos = 0;
+    let erros = 0;
+    
+    // Inserir em lotes de 100 para evitar timeout
+    const batchSize = 100;
+    for (let i = 0; i < todasRegras.length; i += batchSize) {
+        const batch = todasRegras.slice(i, i + batchSize);
         
-        if (error) {
-            console.error('Erro ao salvar:', error);
+        const { error: insertError } = await supabaseClient
+            .from('conversao_operacoes')
+            .insert(batch);
+        
+        if (insertError) {
+            console.error('❌ Erro ao inserir lote:', insertError);
+            erros += batch.length;
         } else {
-            salvos++;
+            inseridos += batch.length;
+            console.log(`✅ Lote ${i / batchSize + 1}: ${batch.length} inseridos`);
         }
     }
     
-    // Atualizar os maps locais
+    // ========== ATUALIZAR MAPS LOCAIS ==========
     for (const regra of receitasRegras) {
-        window.condToPlanoMap[regra.operacao] = regra.plano_contas_codigo;
+        window.condToPlanoMap[regra.operacao] = regra.plano_contas_dre;
     }
     for (const regra of despesasRegras) {
-        window.operacaoToPlanoMap[regra.operacao] = regra.plano_contas_codigo;
+        window.operacaoToPlanoMap[regra.operacao] = regra.plano_contas_dre;
     }
     
     localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
     localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
     
-    alert(`✅ ${salvos} regras salvas com sucesso!`);
+    // ========== MENSAGEM FINAL ==========
+    if (erros === 0) {
+        alert(`✅ ${inseridos} regras salvas com sucesso!`);
+    } else {
+        alert(`⚠️ ${inseridos} regras salvas, ${erros} erros. Verifique o console.`);
+    }
     
-    // Atualizar a tela de fechamento de caixa
+    // ========== ATUALIZAR TELA DE CAIXA ==========
     const modalCaixa = document.getElementById('modalFechamentoCaixa');
-    if(modalCaixa && modalCaixa.classList.contains('active')) {
+    if (modalCaixa && modalCaixa.classList.contains('active')) {
         atualizarTitulosColunasCaixa();
         renderizarCaixaPopup();
     }
     
     fecharModalConversao();
-}
-async function abrirModalConversaoSupabase() {
+}async function abrirModalConversaoSupabase() {
     console.log('🔧 Abrindo CONVERSÃO e carregando regras...');
     
     try {
@@ -6860,9 +6898,9 @@ async function abrirModalConversaoSupabase() {
                 const codigoSalvo = window.condToPlanoMap?.[nome] || '';
                 
                 html += `<tr>
-                    <td style="white-space: nowrap;">${grupoDre}</div>
-                    <td>${nomeOperacao}</div>
-                    <td>${tipoClass}</div>
+                    <td style="white-space: nowrap;">${grupoDre}</td>
+                    <td>${nomeOperacao}</td>
+                    <td>${tipoClass}</td>
                     <td>
                         <select class="conversao-select" data-cond="${nome}">
                             <option value="DINHEIRO">DINHEIRO</option>
@@ -6873,7 +6911,7 @@ async function abrirModalConversaoSupabase() {
                             <option value="PIX">PIX</option>
                             <option value="VNF" selected>VNF</option>
                         </select>
-                    </div>
+                    </td>
                     <td>
                         <select class="conversao-select-plano-receita" data-plano-cond="${nome}">
                             <option value="">Selecione...</option>`;
@@ -6884,7 +6922,7 @@ async function abrirModalConversaoSupabase() {
                 }
                 
                 html += `     </select>
-                    </div>
+                    </td>
                 </tr>`;
             }
             tbodyReceitas.innerHTML = html;
@@ -6907,10 +6945,10 @@ async function abrirModalConversaoSupabase() {
                 const codigoSalvo = window.operacaoToPlanoMap?.[nome] || '';
                 
                 html += `<tr>
-                    <td style="white-space: nowrap;">${grupoDre}</div>
-                    <td>${nomeOperacao}</div>
-                    <td>${tipoClass}</div>
-                    <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></div>
+                    <td style="white-space: nowrap;">${grupoDre}</td>
+                    <td>${nomeOperacao}</td>
+                    <td>${tipoClass}</td>
+                    <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></td>
                     <td>
                         <select class="conversao-select-plano-despesa" data-operacao="${nome}">
                             <option value="">Selecione...</option>`;
@@ -6921,56 +6959,51 @@ async function abrirModalConversaoSupabase() {
                 }
                 
                 html += `     </select>
-                    </div>
+                    </td>
                 </tr>`;
             }
             tbodyDespesas.innerHTML = html;
             console.log(`✅ Despesas: ${todasDespesas.length} itens`);
         }
         
+        // ========== ABRIR MODAL ==========
         document.getElementById('modalConversao').classList.add('active');
         console.log(`🎯 TOTAL: ${todasReceitas.length + todasDespesas.length} itens`);
         
-        // ========== NOVO: AUTO PREENCHER OS SELECTS ==========
-        // Depois de renderizar a tabela, preencher automaticamente
+        // ========== AUTO PREENCHER OS SELECTS PELO TEXTO ==========
         setTimeout(() => {
-            // RECEITAS: copiar o valor da operação para o plano
+            let preenchidos = 0;
+            
+            // RECEITAS
             document.querySelectorAll('.conversao-select-plano-receita').forEach(select => {
                 const operacao = select.getAttribute('data-plano-cond');
                 if (operacao) {
-                    // Verifica se existe uma opção com este valor
-                    let opcaoExiste = false;
                     for (let i = 0; i < select.options.length; i++) {
-                        if (select.options[i].value === operacao) {
-                            opcaoExiste = true;
+                        if (select.options[i].text.includes(operacao)) {
+                            select.selectedIndex = i;
+                            preenchidos++;
                             break;
                         }
-                    }
-                    if (opcaoExiste) {
-                        select.value = operacao;
                     }
                 }
             });
             
-            // DESPESAS: copiar o valor da operação para o plano
+            // DESPESAS
             document.querySelectorAll('.conversao-select-plano-despesa').forEach(select => {
                 const operacao = select.getAttribute('data-operacao');
                 if (operacao) {
-                    let opcaoExiste = false;
                     for (let i = 0; i < select.options.length; i++) {
-                        if (select.options[i].value === operacao) {
-                            opcaoExiste = true;
+                        if (select.options[i].text.includes(operacao)) {
+                            select.selectedIndex = i;
+                            preenchidos++;
                             break;
                         }
-                    }
-                    if (opcaoExiste) {
-                        select.value = operacao;
                     }
                 }
             });
             
-            console.log('✅ Selects preenchidos automaticamente!');
-        }, 200);
+            console.log(`✅ ${preenchidos} selects preenchidos automaticamente!`);
+        }, 300);
         
     } catch (error) {
         console.error('❌ Erro:', error);
