@@ -6906,8 +6906,15 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     console.log('🔧 Abrindo CONVERSÃO e carregando regras...');
     
     try {
+        // Carregar plano de contas
         await carregarPlanoContasSupabase();
+        
+        // Carregar regras salvas do Supabase
         await carregarRegrasConversaoSupabase();
+        
+        console.log('📊 Regras carregadas:');
+        console.log('  Receitas:', Object.keys(window.condToPlanoMap || {}).length);
+        console.log('  Despesas:', Object.keys(window.operacaoToPlanoMap || {}).length);
         
         // ========== RECEITAS ==========
         const todasReceitas = estruturaDRE.receitas || [];
@@ -6923,6 +6930,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                 const tipoClass = receita.tipo_classificacao || 'RECEITAS';
                 const nomeOperacao = `${codigo}-${nome}`;
                 
+                // Buscar regra salva pelo NOME (sem código)
                 const planoSalvo = window.condToPlanoMap ? window.condToPlanoMap[nome] : null;
                 const codigoSalvo = planoSalvo ? 
                     Object.entries(window.condToPlanoMap).find(([key, value]) => value === nome)?.[0] : '';
@@ -6947,7 +6955,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                             <option value="">Selecione...</option>`;
                 
                 for (const p of todasReceitas) {
-                    const selected = (window.condToPlanoMap && window.condToPlanoMap[nome] === p.nome) ? 'selected' : '';
+                    const selected = (planoSalvo === p.nome) ? 'selected' : '';
                     html += `<option value="${escapeHtml(p.cod)}" ${selected}>${escapeHtml(p.cod)} - ${escapeHtml(p.nome)}</option>`;
                 }
                 
@@ -6959,7 +6967,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
             console.log(`✅ Receitas: ${todasReceitas.length} itens`);
         }
         
-        // ========== DESPESAS - BUSCA CORRIGIDA ==========
+        // ========== DESPESAS - CORRIGIDO ==========
         const todasDespesas = [...(estruturaDRE.custosVariaveis || []), ...(estruturaDRE.custosFixos || [])];
         console.log(`📊 Despesas: ${todasDespesas.length}`);
         
@@ -6973,7 +6981,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                 const tipoClass = despesa.tipo_classificacao || 'DESPESAS VARIAVEIS';
                 const nomeOperacao = `${codigo}-${nome}`;
                 
-                // 🔑 BUSCA CORRETA: usa o nome SEM o código
+                // 🔑 BUSCA CORRETA: usa o nome SEM o código para encontrar a regra
                 const planoSalvo = window.operacaoToPlanoMap ? window.operacaoToPlanoMap[nome] : null;
                 
                 html += `<tr>
@@ -6986,7 +6994,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                             <option value="">Selecione...</option>`;
                 
                 for (const p of todasDespesas) {
-                    // 🔑 COMPARAÇÃO CORRETA: usa o nome da despesa para verificar se está salvo
+                    // 🔑 COMPARAÇÃO CORRETA: verifica se o nome da despesa está salvo
                     const selected = (planoSalvo === p.nome) ? 'selected' : '';
                     html += `<option value="${escapeHtml(p.cod)}" ${selected}>${escapeHtml(p.cod)} - ${escapeHtml(p.nome)}</option>`;
                 }
@@ -6999,8 +7007,10 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
             console.log(`✅ Despesas: ${todasDespesas.length} itens`);
         }
         
+        // ========== ABRIR MODAL ==========
         document.getElementById('modalConversao').classList.add('active');
         console.log(`🎯 TOTAL: ${todasReceitas.length + todasDespesas.length} itens`);
+        console.log('✅ Modal de conversão aberto com regras carregadas!');
         
     } catch (error) {
         console.error('❌ Erro ao abrir conversão:', error);
