@@ -5569,47 +5569,42 @@ async function loadMapeamentos() {
 // FUNÇÃO MODIFICADA: Carregar regras do Supabase
 // FUNÇÃO: Carregar regras do Supabase
 async function carregarRegrasConversaoSupabase() {
-   const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';  // URL CORRETA
-    const SUPABASE_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';  // KEY CORRETA
+    console.log('🔄 Carregando regras da tabela regras_conversao...');
     
-    try {
-        console.log('🔄 Carregando regras de conversão da tabela conversao_operacoes...');
-        
-        const { data, error } = await supabaseClient
-            .from('conversao_operacoes')
-            .select('*');
-        
-        if (error) {
-            console.error('❌ Erro ao carregar regras:', error);
-            return;
-        }
-        
-        if (data && data.length > 0) {
-            window.condToTituloMap = {};
-            window.condToPlanoMap = {};
-            window.operacaoToPlanoMap = {};
-            
-            data.forEach(regra => {
-                if (regra.tipo === 'RECEITA') {
-                    window.condToPlanoMap[regra.operacao] = regra.plano_contas_codigo;
-                } else if (regra.tipo === 'DESPESA') {
-                    window.operacaoToPlanoMap[regra.operacao] = regra.plano_contas_codigo;
-                }
-            });
-            
-            localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
-            localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
-            
-            console.log('✅ Regras carregadas:', {
-                receitas: Object.keys(window.condToPlanoMap).length,
-                despesas: Object.keys(window.operacaoToPlanoMap).length
-            });
-        }
-    } catch (err) {
-        console.error('❌ Erro:', err);
+    const { data, error } = await supabaseClient
+        .from('regras_conversao')
+        .select('*');
+    
+    if (error) {
+        console.error('❌ Erro ao carregar regras:', error);
+        return;
     }
+    
+    window.condToTituloMap = {};
+    window.condToPlanoMap = {};
+    window.operacaoToPlanoMap = {};
+    
+    data.forEach(regra => {
+        if (regra.tipo === 'RECEITA') {
+            if (regra.destino_caixa) {
+                window.condToTituloMap[regra.origem] = regra.destino_caixa;
+            }
+            if (regra.destino_plano) {
+                window.condToPlanoMap[regra.origem] = regra.destino_plano;
+            }
+        } else if (regra.tipo === 'DESPESA_VARIAVEL') {
+            if (regra.destino_plano) {
+                window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
+            }
+        }
+    });
+    
+    console.log('✅ Regras carregadas:', {
+        titulos: Object.keys(window.condToTituloMap).length,
+        planosReceitas: Object.keys(window.condToPlanoMap).length,
+        planosDespesas: Object.keys(window.operacaoToPlanoMap).length
+    });
 }
-
 function mostrarConsultaConversaoDespesa(operacao, planoContasAtual) {
     const savedOperacaoPlano = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
     if (savedOperacaoPlano) {
