@@ -5569,47 +5569,41 @@ async function loadMapeamentos() {
 // FUNÇÃO MODIFICADA: Carregar regras do Supabase
 // FUNÇÃO: Carregar regras do Supabase
 async function carregarRegrasConversaoSupabase() {
-    console.log('🔄 Carregando regras da tabela conversao_operacoes...');
+    console.log('🔄 Carregando regras da tabela regras_conversao...');
     
-    try {
-        const { data, error } = await supabaseClient
-            .from('conversao_operacoes')
-            .select('*');
-        
-        if (error) {
-            console.error('❌ Erro ao carregar regras:', error);
-            return;
-        }
-        
-        console.log(`📊 ${data?.length || 0} regras carregadas da tabela conversao_operacoes`);
-        
-        window.condToTituloMap = {};
-        window.condToPlanoMap = {};
-        window.operacaoToPlanoMap = {};
-        
-        if (data && data.length > 0) {
-            data.forEach(regra => {
-                if (regra.tipo === 'RECEITA' && regra.operacao) {
-                    window.condToPlanoMap[regra.operacao] = regra.plano_contas_dre;
-                    console.log(`   RECEITA: ${regra.operacao} → ${regra.plano_contas_dre}`);
-                } else if (regra.tipo === 'DESPESA' && regra.operacao) {
-                    window.operacaoToPlanoMap[regra.operacao] = regra.plano_contas_dre;
-                    console.log(`   DESPESA: ${regra.operacao} → ${regra.plano_contas_dre}`);
-                }
-            });
-            
-            localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
-            localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
-        }
-        
-        console.log('✅ Regras carregadas:', {
-            planosReceitas: Object.keys(window.condToPlanoMap).length,
-            planosDespesas: Object.keys(window.operacaoToPlanoMap).length
-        });
-        
-    } catch (error) {
+    const { data, error } = await supabaseClient
+        .from('regras_conversao')
+        .select('*');
+    
+    if (error) {
         console.error('❌ Erro ao carregar regras:', error);
+        return;
     }
+    
+    window.condToTituloMap = {};
+    window.condToPlanoMap = {};
+    window.operacaoToPlanoMap = {};
+    
+    data.forEach(regra => {
+        if (regra.tipo === 'RECEITA') {
+            if (regra.destino_caixa) {
+                window.condToTituloMap[regra.origem] = regra.destino_caixa;
+            }
+            if (regra.destino_plano) {
+                window.condToPlanoMap[regra.origem] = regra.destino_plano;
+            }
+        } else if (regra.tipo === 'DESPESA_VARIAVEL') {
+            if (regra.destino_plano) {
+                window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
+            }
+        }
+    });
+    
+    console.log('✅ Regras carregadas:', {
+        titulos: Object.keys(window.condToTituloMap).length,
+        planosReceitas: Object.keys(window.condToPlanoMap).length,
+        planosDespesas: Object.keys(window.operacaoToPlanoMap).length
+    });
 }
 function mostrarConsultaConversaoDespesa(operacao, planoContasAtual) {
     const savedOperacaoPlano = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
@@ -6982,15 +6976,14 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                 
                 for (const p of todasDespesas) {
                     const selected = (codigoSalvo === p.cod) ? 'selected' : '';
-            html += `<option value="${p.cod}" ${selected}>${p.cod} - ${p.nome}</option>`;
-        }
-        
-        html += `     </select>
-            </td>
-        </tr>`;
-    }
-    tbodyDespesas.innerHTML = html;
-}
+                    html += `<option value="${p.cod}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                }
+                
+                html += `     </select>
+                    </td>
+                </tr>`;
+            }
+            tbodyDespesas.innerHTML = html;
             console.log(`✅ Despesas: ${todasDespesas.length} itens`);
         }
         
@@ -7036,8 +7029,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     } catch (error) {
         console.error('❌ Erro:', error);
     }
-}
-    function abrirModalComparativos() {
+}function abrirModalComparativos() {
     console.log('🔘 Botão COMPARATIVOS clicado!');
     const modal = document.getElementById('modalComparativos');
     if (!modal) {
