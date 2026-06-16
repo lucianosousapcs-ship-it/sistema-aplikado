@@ -6991,40 +6991,46 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
         document.getElementById('modalConversao').classList.add('active');
         console.log(`🎯 TOTAL: ${todasReceitas.length + todasDespesas.length} itens`);
         
-        // ========== AUTO PREENCHER OS SELECTS PELO TEXTO ==========
-        setTimeout(() => {
-            let preenchidos = 0;
+        // ========== AUTO PREENCHER OS SELECTS PELO VALOR SALVO ==========
+setTimeout(() => {
+    let preenchidos = 0;
+    
+    // RECEITAS
+    document.querySelectorAll('.conversao-select-plano-receita').forEach(select => {
+        const operacao = select.getAttribute('data-plano-cond');
+        if (operacao) {
+            const valorSalvo = window.condToPlanoMap?.[operacao] || '';
+            if (!valorSalvo) return;
             
-            // RECEITAS
-            document.querySelectorAll('.conversao-select-plano-receita').forEach(select => {
-                const operacao = select.getAttribute('data-plano-cond');
-                if (operacao) {
-                    for (let i = 0; i < select.options.length; i++) {
-                        if (select.options[i].text.includes(operacao)) {
-                            select.selectedIndex = i;
-                            preenchidos++;
-                            break;
-                        }
-                    }
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].text === valorSalvo) {
+                    select.selectedIndex = i;
+                    preenchidos++;
+                    break;
                 }
-            });
+            }
+        }
+    });
+    
+    // DESPESAS
+    document.querySelectorAll('.conversao-select-plano-despesa').forEach(select => {
+        const operacao = select.getAttribute('data-operacao');
+        if (operacao) {
+            const valorSalvo = window.operacaoToPlanoMap?.[operacao] || '';
+            if (!valorSalvo) return;
             
-            // DESPESAS
-            document.querySelectorAll('.conversao-select-plano-despesa').forEach(select => {
-                const operacao = select.getAttribute('data-operacao');
-                if (operacao) {
-                    for (let i = 0; i < select.options.length; i++) {
-                        if (select.options[i].text.includes(operacao)) {
-                            select.selectedIndex = i;
-                            preenchidos++;
-                            break;
-                        }
-                    }
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].text === valorSalvo) {
+                    select.selectedIndex = i;
+                    preenchidos++;
+                    break;
                 }
-            });
-            
-            console.log(`✅ ${preenchidos} selects preenchidos automaticamente!`);
-        }, 300);
+            }
+        }
+    });
+    
+    console.log(`✅ ${preenchidos} selects preenchidos automaticamente!`);
+}, 300);
         
     } catch (error) {
         console.error('❌ Erro:', error);
