@@ -7307,20 +7307,45 @@ async function limparEConverterContasExtras() {
     const confirmar = confirm('ATENÇÃO: Isso irá LIMPAR os planos de contas e REAPLICAR conforme as regras de conversão para os itens SELECIONADOS.\n\nDeseja continuar?');
     if (!confirmar) return;
     
-    // CARREGAR REGRAS DIRETAMENTE DO SUPABASE (garantir dados frescos)
+    // CARREGAR REGRAS DIRETAMENTE DO SUPABASE
     await carregarRegrasConversaoSupabase();
+    
+    // CARREGAR PLANO DE CONTAS PARA TER A LISTA COMPLETA
+    await carregarPlanoContasSupabase();
+    
+    // Criar um mapa de lookup: nome do plano → nome completo com código
+    const todosPlanos = [
+        ...estruturaDRE.receitas,
+        ...estruturaDRE.custosVariaveis,
+        ...estruturaDRE.custosFixos
+    ];
+    
+    const planoLookup = {};
+    for (const p of todosPlanos) {
+        // Mapeia tanto pelo nome quanto pelo identificador
+        planoLookup[p.nome] = p.nome;
+        if (p.identificador) {
+            planoLookup[p.identificador] = p.nome;
+        }
+        // Também mapeia pelo código + nome
+        const codNome = `${p.cod} - ${p.nome}`;
+        planoLookup[codNome] = p.nome;
+    }
+    
+    console.log('📚 Plano Lookup criado com', Object.keys(planoLookup).length, 'entradas');
     
     const operacaoPlanoMap = operacaoToPlanoMap;
     
     let atualizados = 0;
     let ignorados = 0;
     let resetados = 0;
+    let detalhes = [];
     
     for (const reg of contasExtrasData) {
         if (!contasExtrasSelecionadas.has(reg.id)) continue;
         
         const operacao = reg.operacao || '';
-        const planoDaRegra = operacaoPlanoMap[operacao];
+        let planoDaRegra = operacaoPlanoMap[operacao];
         
         // 🔹 PASSO 1: SEMPRE RESETA O PLANO (LIMPAR)
         reg.plano = "DESPESAS ADMINISTRATIVAS";
@@ -7328,18 +7353,46 @@ async function limparEConverterContasExtras() {
         
         // 🔹 PASSO 2: APLICA A REGRA SE EXISTIR
         if (planoDaRegra && planoDaRegra !== '') {
-            reg.plano = planoDaRegra;
-            planosContasExtrasSalvos[reg.id] = planoDaRegra;
+            // Verifica se o plano existe no lookup
+            if (planoLookup[planoDaRegra]) {
+                reg.plano = planoLookup[planoDaRegra];
+                detalhes.push(`✅ ${operacao} → ${reg.plano}`);
+            } else {
+                // Tenta encontrar por similaridade
+                let encontrado = null;
+                for (const [key, value] of Object.entries(planoLookup)) {
+                    if (key.toLowerCase().includes(operacao.toLowerCase()) || 
+                        operacao.toLowerCase().includes(key.toLowerCase())) {
+                        encontrado = value;
+                        break;
+                    }
+                }
+                if (encontrado) {
+                    reg.plano = encontrado;
+                    detalhes.push(`🔍 ${operacao} → ${encontrado} (por similaridade)`);
+                } else {
+                    // Usa o plano da regra mesmo assim
+                    reg.plano = planoDaRegra;
+                    detalhes.push(`⚠️ ${operacao} → ${planoDaRegra} (não encontrado no lookup)`);
+                }
+            }
+            planosContasExtrasSalvos[reg.id] = reg.plano;
             atualizados++;
         } else {
             ignorados++;
+            detalhes.push(`❌ ${operacao} → SEM REGRA (mantido como DESPESAS ADMINISTRATIVAS)`);
         }
     }
     
     localStorage.setItem('planos_contas_extras', JSON.stringify(planosContasExtrasSalvos));
     renderizarTabelaContasExtras();
     
-    alert(`✅ LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n📋 Registros resetados: ${resetados}\n✅ Atualizados com regra: ${atualizados}\n⚠️ Ignorados (sem regra): ${ignorados}`);
+    // Mostrar detalhes no console
+    console.log('📋 Detalhes da aplicação:');
+    detalhes.slice(0, 20).forEach(d => console.log(d));
+    if (detalhes.length > 20) console.log(`... e mais ${detalhes.length - 20} registros`);
+    
+    alert(`✅ LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n📋 Registros resetados: ${resetados}\n✅ Atualizados com regra: ${atualizados}\n⚠️ Ignorados (sem regra): ${ignorados}\n\n${atualizados > 0 ? '🟢 Verifique o console para mais detalhes.' : ''}`);
 }
 // ============================================================
 // FUNÇÕES DE FILTRO PARA PDF DA SANGRIA
