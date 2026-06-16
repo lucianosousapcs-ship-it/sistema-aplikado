@@ -5566,7 +5566,6 @@ async function carregarRegrasConversaoSupabase() {
                     if (regra.destino_caixa) {
                         condToTituloMap[regra.origem] = regra.destino_caixa;
                     }
-                    // PRIORIDADE: destino_identificador (fallback para destino_plano)
                     if (regra.destino_identificador) {
                         condToPlanoMap[regra.origem] = regra.destino_identificador;
                     } else if (regra.destino_plano) {
@@ -5574,9 +5573,8 @@ async function carregarRegrasConversaoSupabase() {
                     }
                 }
                 
-                // DESPESAS (ACEITA 'DESPESA' E 'DESPESA_VARIAVEL')
+                // DESPESAS
                 if (regra.tipo === 'DESPESA' || regra.tipo === 'DESPESA_VARIAVEL') {
-                    // PRIORIDADE: destino_identificador (fallback para destino_plano)
                     if (regra.destino_identificador) {
                         operacaoToPlanoMap[regra.origem] = regra.destino_identificador;
                     } else if (regra.destino_plano) {
@@ -5600,22 +5598,20 @@ async function carregarRegrasConversaoSupabase() {
         console.error('❌ Erro ao carregar regras:', e);
     }
 }
+
+// ============================================================
 // FUNÇÃO: Abrir modal de conversão
+// ============================================================
 async function abrirModalConversaoSupabase() {
     console.log('🔧 Abrindo CONVERSÃO e carregando regras...');
     
     try {
-        // 1. Carregar plano de contas
         await carregarPlanoContasSupabase();
-        
-        // 2. Carregar regras de conversão
         await carregarRegrasConversaoSupabase();
         
-        // 3. Construir as tabelas
         const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
         if (tbodyReceitas) {
             let html = '';
-            // Usar as condições de pagamento das vendas
             const condUnicas = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
             
             for (const cond of condUnicas) {
@@ -5670,7 +5666,6 @@ async function abrirModalConversaoSupabase() {
             console.log(`✅ Tabela de DESPESAS: ${operacoesUnicas.length} operações`);
         }
         
-        // 4. Abrir modal
         document.getElementById('modalConversao').classList.add('active');
         
     } catch (error) {
@@ -5679,10 +5674,16 @@ async function abrirModalConversaoSupabase() {
     }
 }
 
+// ============================================================
+// FUNÇÃO: Fechar modal de conversão
+// ============================================================
 function fecharModalConversao() {
     document.getElementById('modalConversao').classList.remove('active');
 }
 
+// ============================================================
+// FUNÇÃO: Trocar aba na conversão
+// ============================================================
 function switchConversaoTab(tab, btn) {
     document.querySelectorAll('#modalConversao .popup-tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('#modalConversao .popup-tab-content').forEach(c => c.classList.remove('active'));
@@ -5690,14 +5691,15 @@ function switchConversaoTab(tab, btn) {
     document.getElementById(`conversaoTab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
 }
 
+// ============================================================
 // FUNÇÃO: Salvar mapeamento de conversão
+// ============================================================
 async function salvarMapeamentoConversaoCompletoSupabase() {
     console.log('💾 Salvando mapeamento de conversão na tabela regras_conversao...');
     
     const receitasRegras = [];
     const despesasRegras = [];
     
-    // ========== RECEITAS ==========
     document.querySelectorAll('#conversaoTabReceitas .conversao-select').forEach(select => {
         const cond = select.getAttribute('data-cond');
         if (cond && select.value) {
@@ -5719,7 +5721,6 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
         }
     });
     
-    // ========== DESPESAS ==========
     document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
         const operacao = select.getAttribute('data-operacao');
         const planoSelecionado = select.value;
@@ -5744,7 +5745,6 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     console.log(`📋 ${todasRegras.length} regras para salvar`);
     
     try {
-        // DELETAR regras antigas
         const { error: deleteError } = await supabaseClient
             .from('regras_conversao')
             .delete()
@@ -5756,7 +5756,6 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
             return;
         }
         
-        // INSERIR em lotes
         const batchSize = 50;
         let inseridos = 0;
         
@@ -5775,18 +5774,15 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
             console.log(`✅ Lote ${Math.floor(i/batchSize) + 1}: ${batch.length} inseridos`);
         }
         
-        // SALVAR no localStorage
         localStorage.setItem('condToTituloMap', JSON.stringify(condToTituloMap));
         localStorage.setItem('condToPlanoMap', JSON.stringify(condToPlanoMap));
         localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(operacaoToPlanoMap));
         
         alert(`✅ ${inseridos} regras salvas com sucesso!`);
         
-        // ATUALIZAR tela de lançamentos
         if (typeof renderizarTabelaReceitas === 'function') renderizarTabelaReceitas();
         if (typeof renderizarTabelaDespesas === 'function') renderizarTabelaDespesas();
         
-        // ATUALIZAR tela de caixa
         const modalCaixa = document.getElementById('modalFechamentoCaixa');
         if (modalCaixa && modalCaixa.classList.contains('active')) {
             atualizarTitulosColunasCaixa();
@@ -5801,7 +5797,9 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     }
 }
 
+// ============================================================
 // FUNÇÃO: Atualizar regras de conversão
+// ============================================================
 async function atualizarRegrasConversao() {
     console.log('🔄 ATUALIZANDO REGRAS DE CONVERSÃO DO SUPABASE...');
     
@@ -5809,7 +5807,6 @@ async function atualizarRegrasConversao() {
         await carregarRegrasConversaoSupabase();
         await carregarPlanoContasSupabase();
         
-        // Recarregar as tabelas
         const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
         if (tbodyReceitas) {
             const condUnicas = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
@@ -5870,7 +5867,7 @@ async function atualizarRegrasConversao() {
 }
 
 // ============================================================
-// FUNÇÃO APLICAR REGRAS A TODOS OS LANÇAMENTOS
+// FUNÇÃO: Aplicar regras a todos os lançamentos
 // ============================================================
 async function aplicarRegrasConversaoEmTodosLancamentos() {
     console.log('🚀 APLICANDO REGRAS DE CONVERSÃO EM TODOS OS LANÇAMENTOS...');
@@ -5888,8 +5885,6 @@ async function aplicarRegrasConversaoEmTodosLancamentos() {
     let despesasAtualizadas = 0;
     let despesasIgnoradas = 0;
     
-    // APLICAR NAS RECEITAS
-    console.log('📊 Processando RECEITAS (' + receitasDataReais.length + ' registros)...');
     for (const receita of receitasDataReais) {
         const condPag = receita.cond_pag || '';
         const plano = condToPlanoMap[condPag];
@@ -5902,15 +5897,12 @@ async function aplicarRegrasConversaoEmTodosLancamentos() {
         }
     }
     
-    // Salvar receitas
     const planosReceitasSalvos = {};
     for (const r of receitasDataReais) {
         planosReceitasSalvos[r.id] = r.plano;
     }
     localStorage.setItem(STORAGE_KEY_PLANOS_RECEITAS, JSON.stringify(planosReceitasSalvos));
     
-    // APLICAR NAS DESPESAS
-    console.log('📊 Processando DESPESAS (' + despesasDataReais.length + ' registros)...');
     for (const despesa of despesasDataReais) {
         const operacao = despesa.operacao || '';
         const plano = operacaoToPlanoMap[operacao];
@@ -5923,18 +5915,15 @@ async function aplicarRegrasConversaoEmTodosLancamentos() {
         }
     }
     
-    // Salvar despesas
     const planosDespesasSalvos = {};
     for (const d of despesasDataReais) {
         planosDespesasSalvos[d.id] = d.plano;
     }
     localStorage.setItem(STORAGE_KEY_PLANOS_DESPESAS, JSON.stringify(planosDespesasSalvos));
     
-    // Recarregar tabelas
     renderizarTabelaReceitas();
     renderizarTabelaDespesas();
     
-    // Mensagem final
     const totalAtualizados = receitasAtualizadas + despesasAtualizadas;
     const totalIgnorados = receitasIgnoradas + despesasIgnoradas;
     
@@ -5950,6 +5939,7 @@ async function aplicarRegrasConversaoEmTodosLancamentos() {
     alert(mensagem);
     console.log(`✅ FINALIZADO: ${receitasAtualizadas} receitas, ${despesasAtualizadas} despesas atualizadas`);
 }
+
 
 // ============================================================
 // FUNÇÕES DE COMPARATIVOS
