@@ -3119,7 +3119,7 @@ function carregarPlanosSalvosLocalmente() {
 
 async function carregarDadosReaisLancamentos() {
     try {
-        // ========== PAGINAÇÃO PARA VENDAS (RECEITAS) ==========
+        // ========== 1. CARREGAR VENDAS (RECEITAS) ==========
         let todasVendas = [];
         let page = 0;
         
@@ -3136,19 +3136,9 @@ async function carregarDadosReaisLancamentos() {
             page++;
         }
         
-        console.log(`✅ Vendas carregadas: ${todasVendas.length} registros`);
-        
-        receitasDataReais = todasVendas.map(v => ({
-            id: v.id,
-            data: v.data || '01/01/2000',
-            valor: Number(v['TOTAL NOTA'] || v.total || 0),
-            cliente: v['CLIENTE/FORNECEDOR'] || v.cliente || 'NAO INFORMADO',
-            classificacao: obterClassificacaoDoTipo(v),
-            plano: "RECEITA DE SERVICOS",
-            cond_pag: v['COND.PAG'] || v.cond_pag || ''
-        }));
-        
-        // ========== PAGINAÇÃO PARA COMPRAS (DESPESAS) ==========
+        console.log(`✅ Vendas: ${todasVendas.length} registros`);
+
+        // ========== 2. CARREGAR COMPRAS (DESPESAS) ==========
         let todasCompras = [];
         page = 0;
         
@@ -3165,18 +3155,105 @@ async function carregarDadosReaisLancamentos() {
             page++;
         }
         
-        console.log(`✅ Compras carregadas: ${todasCompras.length} registros`);
+        console.log(`✅ Compras: ${todasCompras.length} registros`);
+
+        // ========== 3. CARREGAR REGRAS DE CONVERSÃO ==========
+        const { data: regras, error: erroRegras } = await supabaseClient
+            .from('regras_conversao')
+            .select('origem, destino_identificador, tipo')
+            .eq('ativo', true);
         
-        despesasDataReais = todasCompras.map(c => ({
-            id: c.id,
-            data: c.vencimento || '01/01/2000',
-            valor: Number(c.valor || 0),
-            fornecedor: c.fornecedor || 'NAO INFORMADO',
-            operacao: c.operacao || c.documento || 'DESPESA',
-            plano: "DESPESAS ADMINISTRATIVAS"
-        }));
+        if (erroRegras) {
+            console.error('❌ Erro ao carregar regras:', erroRegras);
+        }
         
-        carregarPlanosSalvosLocalmente();
+        // ========== 4. CRIAR MAPAS DE REGRAS ==========
+        const mapaDespesas = {};
+        const mapaReceitas = {};
+        
+        if (regras && regras.length > 0) {
+            regras.forEach(r => {
+                if (r.tipo === 'DESPESA' || r.tipo === 'DESPESA_VARIAVEL') {
+                    if (r.origem && r.destino_identificador) {
+                        mapaDespesas[r.origem] = r.destino_identificador;
+                    }
+                } else if (r.tipo === 'RECEITA') {
+                    if (r.origem && r.destino_identificador) {
+                        mapaReceitas[r.origem] = r.destino_identificador;
+                    }
+                }
+            });
+        }
+        
+        console.log(`📚 Regras: Despesas: ${Object.keys(mapaDespesas).length}, Receitas: ${Object.keys(mapaReceitas).length}`);
+
+        // ========== 5. CRIAR MAPA DE PLANOS POR IDENTIFICADOR ==========
+        const mapaPlanos = {};
+        const todosPlanos = [
+            ...estruturaDRE.receitas,
+            ...estruturaDRE.custosVariaveis,
+            ...estruturaDRE.custosFixos
+        ];
+        
+        todosPlanos.forEach(p => {
+            const id = p.identificador || p.cod;
+            mapaPlanos[id] = `${p.cod} - ${p.nome}`;
+        });
+
+        // ========== 6. PROCESSAR RECEITAS ==========
+        receitasDataReais = todasVendas.map(v => {
+            const condPag = v['COND.PAG'] || v.cond_pag || '';
+            const identificador = mapaReceitas[condPag];
+            
+            let plano = "RECEITA DE SERVICOS";
+            let temRegra = false;
+            
+            if (identificador && mapaPlanos[identificador]) {
+                plano = mapaPlanos[identificador];
+                temRegra = true;
+            }
+            
+            return {
+                id: v.id,
+                data: v.data || '01/01/2000',
+                valor: Number(v['TOTAL NOTA'] || v.total || 0),
+                cliente: v['CLIENTE/FORNECEDOR'] || v.cliente || 'NAO INFORMADO',
+                classificacao: obterClassificacaoDoTipo(v),
+                plano: plano,
+                cond_pag: condPag,
+                identificador: identificador || null,
+                temRegra: temRegra  // ← NOVO: indica se tem regra
+            };
+        });
+
+        // ========== 7. PROCESSAR DESPESAS ==========
+        despesasDataReais = todasCompras.map(c => {
+            const operacao = c.operacao || c.documento || 'DESPESA';
+            const identificador = mapaDespesas[operacao];
+            
+            let plano = "DESPESAS ADMINISTRATIVAS";
+            let temRegra = false;
+            
+            if (identificador && mapaPlanos[identificador]) {
+                plano = mapaPlanos[identificador];
+                temRegra = true;
+            }
+            
+            return {
+                id: c.id,
+                data: c.vencimento || '01/01/2000',
+                valor: Number(c.valor || 0),
+                fornecedor: c.fornecedor || 'NAO INFORMADO',
+                operacao: operacao,
+                plano: plano,
+                identificador: identificador || null,
+                temRegra: temRegra  // ← NOVO: indica se tem regra
+            };
+        });
+
+        console.log(`📊 Receitas: ${receitasDataReais.length}, Despesas: ${despesasDataReais.length}`);
+
+        // ========== 8. RENDERIZAR ==========
         renderizarTabelaReceitas();
         renderizarTabelaDespesas();
         buscarUltimaAtualizacao();
@@ -3229,24 +3306,11 @@ function renderizarTabelaReceitas() {
     if(statusFiltro === 'SELECIONADAS') filtradas = filtradas.filter(r => receitasSelecionadas.has(r.id));
     if(statusFiltro === 'NAO_SELECIONADAS') filtradas = filtradas.filter(r => !receitasSelecionadas.has(r.id));
     
-    const mesAtual = new Date().getMonth();
-    filtradas.sort((a,b) => {
-        const mesA = getMesFromData(a.data), mesB = getMesFromData(b.data);
-        const aEhAtual = mesA === mesAtual, bEhAtual = mesB === mesAtual;
-        if(aEhAtual && !bEhAtual) return -1;
-        if(!aEhAtual && bEhAtual) return 1;
-        const dateA = parseDataBr(a.data), dateB = parseDataBr(b.data);
-        if(!dateA && !dateB) return 0;
-        if(!dateA) return 1;
-        if(!dateB) return -1;
-        return dateB - dateA;
-    });
-    
     const tbody = document.getElementById('tabelaReceitasBody');
     if(!tbody) return;
     
     if(filtradas.length === 0) { 
-        tbody.innerHTML='<tr><td colspan="6" style="text-align:center; padding:40px;">Nenhum registro encontrado</div>'; 
+        tbody.innerHTML='<tr><td colspan="6" style="text-align:center; padding:40px;">Nenhum registro encontrado</td></tr>'; 
         document.getElementById('totalReceitas').innerText='0'; 
         document.getElementById('selecionadasReceitas').innerText=receitasSelecionadas.size; 
         return; 
@@ -3258,13 +3322,36 @@ function renderizarTabelaReceitas() {
         const isChecked = receitasSelecionadas.has(r.id);
         const classificacaoDisplay = r.classificacao === 'Balcao' ? 'LOJA FISICA' : 'CORPORATIVO';
         
+        // ========== VERIFICA SE TEM REGRA ==========
+        const temRegra = r.temRegra === true;
+        const corPlano = temRegra ? 'color: #E6A017;' : 'color: #ef4444; font-weight: 700;';
+        const tituloPlano = temRegra ? '' : 'title="⚠️ SEM REGRA DE CONVERSÃO! Clique em APLICAR ou configure na tela CONVERSÃO"';
+        
         html += '<tr>';
         html += '<td style="text-align:center;"><input type="checkbox" class="receita-checkbox" data-id="' + r.id + '" ' + (isChecked ? 'checked' : '') + ' onchange="toggleReceitaSelecionada(' + r.id + ', this)"></td>';
         html += '<td>' + formatarDataExibicao(r.data) + '</td>';
-        html += '<td style="color:#2ECC71; font-weight:600;"><div class="valor-cell">R$ ' + formatMoneySimple(r.valor) + '<span class="info-consulta" title="Consultar regras de classificação financeira" onclick="mostrarConsultaConversao(\'' + (r.cond_pag || '') + '\', \'' + r.plano + '\', true)">ⓘ</span></div></td>';
-        html += '<td>' + r.cliente + marcarSeIncluido(r.data, r.valor, 'RECEITA: ' + r.cliente) + '</td>';
+        html += '<td style="color:#2ECC71; font-weight:600;">R$ ' + formatMoneySimple(r.valor) + '</td>';
+        html += '<td>' + r.cliente + '</td>';
         html += '<td>' + classificacaoDisplay + '</td>';
-        html += `<td><div class="plano-cell"><button class="btn-plano-lancamento" data-id="${r.id}" onclick="abrirModalPlano(this.parentElement.querySelector('.plano-hidden'), (plano) => { this.innerHTML = plano; this.parentElement.querySelector('.plano-hidden').value = plano; })">${r.plano}</button><button class="btn-aplicar-plano-conversao" onclick="aplicarPlanoConversaoReceita(${r.id})" title="Aplicar Plano de Contas da Regra de Conversão"> APLICAR</button><input type="hidden" class="plano-hidden" value="${r.plano}" data-id="${r.id}"></div></div></td>`;
+        html += `<td>
+            <div class="plano-cell">
+                <button class="btn-plano-lancamento" 
+                    data-id="${r.id}" 
+                    style="${corPlano} ${!temRegra ? 'border: 2px solid #ef4444;' : ''}"
+                    ${tituloPlano}
+                    onclick="abrirModalPlano(this.parentElement.querySelector('.plano-hidden'), (plano) => { 
+                        this.innerHTML = plano; 
+                        this.parentElement.querySelector('.plano-hidden').value = plano; 
+                        this.style.color = '#E6A017';
+                        this.style.border = '1px solid rgba(230,160,23,0.3)';
+                        this.style.fontWeight = 'normal';
+                    })">
+                    ${r.plano}
+                </button>
+                <button class="btn-aplicar-plano-conversao" onclick="aplicarPlanoConversaoReceita(${r.id})" title="Aplicar Plano de Contas da Regra de Conversão"> APLICAR</button>
+                <input type="hidden" class="plano-hidden" value="${r.plano}" data-id="${r.id}">
+            </div>
+        </td>`;
         html += '</tr>';
     }
     
@@ -3278,15 +3365,12 @@ function renderizarTabelaReceitas() {
 
 function renderizarTabelaDespesas() {
     console.log('🎨 renderizarTabelaDespesas - INICIANDO');
-    console.log('📊 despesasDataReais.length:', despesasDataReais.length);
     
     let filtradas = [...despesasDataReais];
     const busca = document.getElementById('buscaDespesas')?.value.toLowerCase() || '';
     const dataInicio = document.getElementById('dataInicioDespesas')?.value;
     const dataFim = document.getElementById('dataFimDespesas')?.value;
     const statusFiltro = document.getElementById('statusDespesas')?.value || 'TODOS';
-    
-    console.log('🔍 Filtros:', { busca, dataInicio, dataFim, statusFiltro });
     
     if(busca) filtradas = filtradas.filter(d => 
         d.operacao?.toLowerCase().includes(busca) || 
@@ -3298,29 +3382,11 @@ function renderizarTabelaDespesas() {
     if(statusFiltro === 'SELECIONADAS') filtradas = filtradas.filter(d => despesasSelecionadas.has(d.id));
     if(statusFiltro === 'NAO_SELECIONADAS') filtradas = filtradas.filter(d => !despesasSelecionadas.has(d.id));
     
-    console.log('📋 filtradas.length:', filtradas.length);
-    
-    const mesAtual = new Date().getMonth();
-    filtradas.sort((a,b) => {
-        const mesA = getMesFromData(a.data), mesB = getMesFromData(b.data);
-        const aEhAtual = mesA === mesAtual, bEhAtual = mesB === mesAtual;
-        if(aEhAtual && !bEhAtual) return -1;
-        if(!aEhAtual && bEhAtual) return 1;
-        const dateA = parseDataBr(a.data), dateB = parseDataBr(b.data);
-        if(!dateA && !dateB) return 0;
-        if(!dateA) return 1;
-        if(!dateB) return -1;
-        return dateB - dateA;
-    });
-    
     const tbody = document.getElementById('tabelaDespesasBody');
-    if(!tbody) {
-        console.error('❌ tbody tabelaDespesasBody não encontrado!');
-        return;
-    }
+    if(!tbody) return;
     
     if(filtradas.length === 0) { 
-        tbody.innerHTML='<tr><td colspan="6" style="text-align:center; padding:40px;">Nenhum registro encontrado</div></td>'; 
+        tbody.innerHTML='<tr><td colspan="6" style="text-align:center; padding:40px;">Nenhum registro encontrado</td></tr>'; 
         document.getElementById('totalDespesas').innerText='0'; 
         document.getElementById('selecionadasDespesas').innerText=despesasSelecionadas.size; 
         return; 
@@ -3330,24 +3396,44 @@ function renderizarTabelaDespesas() {
     for (let i = 0; i < filtradas.length; i++) {
         const d = filtradas[i];
         const isChecked = despesasSelecionadas.has(d.id);
-        const planoInicial = d.plano || encontrarPlanoPorSemelhanca(d.operacao);
+        const planoInicial = d.plano || "DESPESAS ADMINISTRATIVAS";
         
-        console.log(`✅ Gerando linha ${i+1}: ID=${d.id}, Fornecedor=${d.fornecedor}, Valor=${d.valor}`);
+        // ========== VERIFICA SE TEM REGRA ==========
+        const temRegra = d.temRegra === true;
+        const corPlano = temRegra ? 'color: #E6A017;' : 'color: #ef4444; font-weight: 700;';
+        const tituloPlano = temRegra ? '' : 'title="⚠️ SEM REGRA DE CONVERSÃO! Clique em APLICAR ou configure na tela CONVERSÃO"';
         
-        html += '<tr>';
-        html += '<td style="text-align:center;"><input type="checkbox" class="despesa-checkbox" data-id="' + d.id + '" ' + (isChecked ? 'checked' : '') + ' onchange="toggleDespesaSelecionada(' + d.id + ', this)"></td>';
-        html += '<td>' + formatarDataExibicao(d.data) + '</td>';
-        html += '<td style="color:#EF4444; font-weight:600;"><div class="valor-cell">R$ ' + formatMoneySimple(d.valor) + '<span class="info-consulta" title="Consultar regras de classificação financeira" onclick="mostrarConsultaConversaoDespesa(\'' + (d.operacao || '').replace(/'/g, "\\'") + '\', \'' + (d.plano || '').replace(/'/g, "\\'") + '\')">ⓘ</span></div></td>';
-        html += '<td>' + (d.fornecedor || 'NÃO INFORMADO') + '</td>';
-        html += '<td>' + (d.operacao || 'DESPESA') + '</td>';
-        html += '<td><div class="plano-cell"><button class="btn-plano-lancamento" data-id="' + d.id + '" onclick="abrirModalPlano(this.parentElement.querySelector(\'.plano-hidden\'), (plano) => { this.innerHTML = plano; this.parentElement.querySelector(\'.plano-hidden\').value = plano; })">' + planoInicial + '</button><button class="btn-aplicar-plano-conversao" onclick="aplicarPlanoConversaoDespesa(' + d.id + ')" title="Aplicar Plano de Contas da Regra de Conversão"> APLICAR</button><input type="hidden" class="plano-hidden" value="' + planoInicial + '" data-id="' + d.id + '"></div></td>';
+        html += `<tr>`;
+        html += `<td style="text-align:center;"><input type="checkbox" class="despesa-checkbox" data-id="${d.id}" ${isChecked ? 'checked' : ''} onchange="toggleDespesaSelecionada(${d.id}, this)"></td>`;
+        html += `<td>${formatarDataExibicao(d.data)}</td>`;
+        html += `<td style="color:#EF4444; font-weight:600;">R$ ${formatMoneySimple(d.valor)}</td>`;
+        html += `<td>${d.fornecedor || 'NÃO INFORMADO'}</td>`;
+        html += `<td>${d.operacao || 'DESPESA'}</td>`;
+        html += `<td>
+            <div class="plano-cell">
+                <button class="btn-plano-lancamento" 
+                    data-id="${d.id}" 
+                    style="${corPlano} ${!temRegra ? 'border: 2px solid #ef4444;' : ''}"
+                    ${tituloPlano}
+                    onclick="abrirModalPlano(this.parentElement.querySelector('.plano-hidden'), (plano) => { 
+                        this.innerHTML = plano; 
+                        this.parentElement.querySelector('.plano-hidden').value = plano; 
+                        this.style.color = '#E6A017';
+                        this.style.border = '1px solid rgba(230,160,23,0.3)';
+                        this.style.fontWeight = 'normal';
+                    })">
+                    ${planoInicial}
+                </button>
+                <button class="btn-aplicar-plano-conversao" onclick="aplicarPlanoConversaoDespesa(${d.id})" title="Aplicar Plano de Contas da Regra de Conversão"> APLICAR</button>
+                <input type="hidden" class="plano-hidden" value="${planoInicial}" data-id="${d.id}">
+            </div>
+        </td>`;
         html += '</tr>';
     }
     
     tbody.innerHTML = html;
     document.getElementById('totalDespesas').innerText = filtradas.length;
     document.getElementById('selecionadasDespesas').innerText = despesasSelecionadas.size;
-    console.log('✅ renderizarTabelaDespesas - FINALIZADO, ' + filtradas.length + ' linhas geradas');
     
     const selectAll = document.getElementById('selectAllDespesas');
     if(selectAll) selectAll.checked = filtradas.length > 0 && filtradas.every(d => despesasSelecionadas.has(d.id));
