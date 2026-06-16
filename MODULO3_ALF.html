@@ -6773,15 +6773,23 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     // ========== RECEITAS ==========
     document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
         const operacao = select.getAttribute('data-plano-cond');
-        const codigoPlano = select.value;
         const textoSelecionado = select.options[select.selectedIndex]?.text;
+        const codigoSelecionado = select.value;
         
-        if (operacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
+        if (operacao && codigoSelecionado && codigoSelecionado !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
+            const tituloSelect = select.closest('tr')?.querySelector('.conversao-select');
+            const tituloCaixa = tituloSelect ? tituloSelect.value : 'VNF';
+            
             receitasRegras.push({
-                operacao: operacao,
                 tipo: 'RECEITA',
-                plano_contas_codigo: codigoPlano,
-                plano_contas_dre: textoSelecionado
+                codigo: codigoSelecionado,
+                nome: operacao,
+                origem: operacao,
+                destino_caixa: tituloCaixa,
+                destino_plano: textoSelecionado,
+                ativo: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
             });
         }
     });
@@ -6789,15 +6797,19 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     // ========== DESPESAS ==========
     document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
         const operacao = select.getAttribute('data-operacao');
-        const codigoPlano = select.value;
         const textoSelecionado = select.options[select.selectedIndex]?.text;
+        const codigoSelecionado = select.value;
         
-        if (operacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
+        if (operacao && codigoSelecionado && codigoSelecionado !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
             despesasRegras.push({
-                operacao: operacao,
-                tipo: 'DESPESA',
-                plano_contas_codigo: codigoPlano,
-                plano_contas_dre: textoSelecionado
+                tipo: 'DESPESA_VARIAVEL',
+                codigo: codigoSelecionado,
+                nome: operacao,
+                origem: operacao,
+                destino_plano: textoSelecionado,
+                ativo: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
             });
         }
     });
@@ -6814,7 +6826,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     // ========== DELETAR REGRAS ANTIGAS ==========
     console.log('🗑️ Removendo regras antigas...');
     const { error: deleteError } = await supabaseClient
-        .from('conversao_operacoes')
+        .from('regras_conversao')
         .delete()
         .neq('id', 0);
     
@@ -6831,13 +6843,12 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     let inseridos = 0;
     let erros = 0;
     
-    // Inserir em lotes de 100 para evitar timeout
     const batchSize = 100;
     for (let i = 0; i < todasRegras.length; i += batchSize) {
         const batch = todasRegras.slice(i, i + batchSize);
         
         const { error: insertError } = await supabaseClient
-            .from('conversao_operacoes')
+            .from('regras_conversao')
             .insert(batch);
         
         if (insertError) {
@@ -6850,14 +6861,22 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     }
     
     // ========== ATUALIZAR MAPS LOCAIS ==========
+    window.condToPlanoMap = {};
+    window.operacaoToPlanoMap = {};
+    window.condToTituloMap = {};
+    
     for (const regra of receitasRegras) {
-        window.condToPlanoMap[regra.operacao] = regra.plano_contas_dre;
+        window.condToPlanoMap[regra.origem] = regra.destino_plano;
+        if (regra.destino_caixa) {
+            window.condToTituloMap[regra.origem] = regra.destino_caixa;
+        }
     }
     for (const regra of despesasRegras) {
-        window.operacaoToPlanoMap[regra.operacao] = regra.plano_contas_dre;
+        window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
     }
     
     localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
+    localStorage.setItem('condToTituloMap', JSON.stringify(window.condToTituloMap));
     localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
     
     // ========== MENSAGEM FINAL ==========
@@ -6867,13 +6886,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
         alert(`⚠️ ${inseridos} regras salvas, ${erros} erros. Verifique o console.`);
     }
     
-    // ========== ATUALIZAR TELA DE CAIXA ==========
-    const modalCaixa = document.getElementById('modalFechamentoCaixa');
-    if (modalCaixa && modalCaixa.classList.contains('active')) {
-        atualizarTitulosColunasCaixa();
-        renderizarCaixaPopup();
-    }
-    
+    // ========== FECHAR MODAL ==========
     fecharModalConversao();
 }async function abrirModalConversaoSupabase() {
     console.log('🔧 Abrindo CONVERSÃO e carregando regras...');
