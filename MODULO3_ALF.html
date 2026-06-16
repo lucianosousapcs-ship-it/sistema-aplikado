@@ -7307,20 +7307,29 @@ async function limparEConverterContasExtras() {
     const confirmar = confirm('ATENÇÃO: Isso irá LIMPAR os planos de contas e REAPLICAR conforme as regras de conversão para os itens SELECIONADOS.\n\nDeseja continuar?');
     if (!confirmar) return;
     
+    // CARREGAR REGRAS DIRETAMENTE DO SUPABASE (garantir dados frescos)
+    await carregarRegrasConversaoSupabase();
+    
     const operacaoPlanoMap = operacaoToPlanoMap;
     
     let atualizados = 0;
     let ignorados = 0;
+    let resetados = 0;
     
     for (const reg of contasExtrasData) {
         if (!contasExtrasSelecionadas.has(reg.id)) continue;
         
         const operacao = reg.operacao || '';
-        const plano = operacaoPlanoMap[operacao];
+        const planoDaRegra = operacaoPlanoMap[operacao];
         
-        if (plano) {
-            reg.plano = plano;
-            planosContasExtrasSalvos[reg.id] = plano;
+        // 🔹 PASSO 1: SEMPRE RESETA O PLANO (LIMPAR)
+        reg.plano = "DESPESAS ADMINISTRATIVAS";
+        resetados++;
+        
+        // 🔹 PASSO 2: APLICA A REGRA SE EXISTIR
+        if (planoDaRegra && planoDaRegra !== '') {
+            reg.plano = planoDaRegra;
+            planosContasExtrasSalvos[reg.id] = planoDaRegra;
             atualizados++;
         } else {
             ignorados++;
@@ -7330,9 +7339,8 @@ async function limparEConverterContasExtras() {
     localStorage.setItem('planos_contas_extras', JSON.stringify(planosContasExtrasSalvos));
     renderizarTabelaContasExtras();
     
-    alert(`✅ APLICAÇÃO CONCLUÍDA!\n\nPlanos atualizados: ${atualizados}\nIgnorados (sem regra): ${ignorados}`);
+    alert(`✅ LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n📋 Registros resetados: ${resetados}\n✅ Atualizados com regra: ${atualizados}\n⚠️ Ignorados (sem regra): ${ignorados}`);
 }
-
 // ============================================================
 // FUNÇÕES DE FILTRO PARA PDF DA SANGRIA
 // ============================================================
