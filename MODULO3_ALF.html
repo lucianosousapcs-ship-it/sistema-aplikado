@@ -6771,121 +6771,269 @@ async function salvarRegrasConversaoSupabase() {
 }
 
 async function salvarMapeamentoConversaoCompletoSupabase() {
-    console.log('💾 SALVANDO REGRAS DE CONVERSÃO...');
+    console.log('💾 Salvando mapeamento de conversão na tabela conversao_operacoes...');
+    
+    const receitasRegras = [];
+    const despesasRegras = [];
+    const agora = new Date().toISOString();
+    
+    // ========== RECEITAS ==========
+    document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
+        const nomeOperacao = select.getAttribute('data-plano-cond');
+        const codigoPlano = select.value;
+        const textoSelecionado = select.options[select.selectedIndex]?.text;
+        
+        if (nomeOperacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
+            receitasRegras.push({
+                operacao: nomeOperacao,
+                tipo: 'RECEITA',
+                plano_contas_codigo: codigoPlano,
+                plano_contas_dre: textoSelecionado,
+                grupo_dre: '1 RECEITAS DE VENDAS',
+                created_at: agora,
+                updated_at: agora
+            });
+        }
+    });
+    
+    // ========== DESPESAS - CORRIGIDO ==========
+    document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
+        const nomeOperacao = select.getAttribute('data-operacao');
+        const codigoPlano = select.value;
+        const textoSelecionado = select.options[select.selectedIndex]?.text;
+        
+        // EXTRAIR APENAS O NOME (sem o código)
+        // Ex: "200-DESP. TELEFONIA E INTERNET" → "DESP. TELEFONIA E INTERNET"
+        let nomeApenas = nomeOperacao;
+        if (nomeOperacao && nomeOperacao.includes('-')) {
+            nomeApenas = nomeOperacao.substring(nomeOperacao.indexOf('-') + 1);
+        }
+        
+        if (nomeOperacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
+            despesasRegras.push({
+                operacao: nomeApenas,  // ← SALVA APENAS O NOME
+                tipo: 'DESPESA',
+                plano_contas_codigo: codigoPlano,
+                plano_contas_dre: textoSelecionado,
+                grupo_dre: '4 DESPESAS ADMINISTRATIVAS',
+                created_at: agora,
+                updated_at: agora
+            });
+        }
+    });
+    
+    const todasRegras = [...receitasRegras, ...despesasRegras];
+    
+    if (todasRegras.length === 0) {
+        alert('⚠️ Nenhuma regra para salvar!');
+        return;
+    }
+    
+    console.log(`📋 ${todasRegras.length} regras para salvar`);
+    console.log('📊 Amostra despesa:', despesasRegras[0]);
+    
+    // ========== DELETAR REGRAS ANTIGAS ==========
+    console.log('🗑️ Removendo regras antigas da tabela conversao_operacoes...');
+    const { error: deleteError } = await supabaseClient
+        .from('conversao_operacoes')
+        .delete()
+        .neq('id', 0);
+    
+    if (deleteError) {
+        console.error('❌ Erro ao deletar regras antigas:', deleteError);
+        alert('Erro ao deletar regras antigas: ' + deleteError.message);
+        return;
+    }
+    console.log('✅ Regras antigas removidas');
+    
+    // ========== INSERIR NOVAS REGRAS ==========
+    console.log('📝 Inserindo novas regras na tabela conversao_operacoes...');
+    let inseridos = 0;
+    const batchSize = 50;
+    
+    for (let i = 0; i < todasRegras.length; i += batchSize) {
+        const batch = todasRegras.slice(i, i + batchSize);
+        
+        const { error: insertError } = await supabaseClient
+            .from('conversao_operacoes')
+            .insert(batch);
+        
+        if (insertError) {
+            console.error('❌ Erro ao inserir lote:', insertError);
+            alert('Erro ao inserir regras: ' + insertError.message);
+            return;
+        }
+        inseridos += batch.length;
+        console.log(`✅ Lote ${Math.floor(i / batchSize) + 1}: ${batch.length} inseridos`);
+    }
+    
+    // ========== ATUALIZAR MAPAS LOCAIS ==========
+    // Receitas
+    for (const regra of receitasRegras) {
+        window.condToPlanoMap[regra.operacao] = regra.plano_contas_dre;
+    }
+    
+    // Despesas - usar o nome completo para busca
+    document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
+        const nomeCompleto = select.getAttribute('data-operacao');
+        let nomeApenas = nomeCompleto;
+        if (nomeCompleto && nomeCompleto.includes('-')) {
+            nomeApenas = nomeCompleto.substring(nomeCompleto.indexOf('-') + 1);
+        }
+        const codigoPlano = select.value;
+        const textoSelecionado = select.options[select.selectedIndex]?.text;
+        
+        if (nomeApenas && textoSelecionado && textoSelecionado !== 'Selecione...') {
+            window.operacaoToPlanoMap[nomeApenas] = textoSelecionado;
+        }
+    });
+    
+    localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
+    localStorage.setItem('operacao_to_plano_map', JSON.stringify(window.operacaoToPlanoMap));
+    
+    // ========== MENSAGEM FINAL ==========
+    alert(`✅ ${inseridos} regras salvas com sucesso!`);
+    
+    // ========== FECHAR MODAL ==========
+    const modalConversao = document.getElementById('modalConversao');
+    if (modalConversao) modalConversao.classList.remove('active');
+    
+    // ========== RECARREGAR REGRAS ==========
+    await carregarRegrasConversaoSupabase();
+    
+    console.log('✅ Processo concluído!');
+}async function abrirModalConversaoSupabase() {
+    console.log('🔧 Abrindo CONVERSÃO e carregando regras...');
     
     try {
-        const receitasRegras = [];
-        const despesasRegras = [];
-        const agora = new Date().toISOString();
-        
-        // COLETAR RECEITAS
-        document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
-            const operacao = select.getAttribute('data-plano-cond');
-            const codigoPlano = select.value;
-            const textoSelecionado = select.options[select.selectedIndex]?.text;
-            
-            if (operacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
-                receitasRegras.push({
-                    operacao: operacao,
-                    tipo: 'RECEITA',
-                    plano_contas_codigo: codigoPlano,
-                    plano_contas_dre: textoSelecionado,
-                    grupo_dre: '1 RECEITAS DE VENDAS',
-                    created_at: agora,
-                    updated_at: agora
-                });
-            }
-        });
-        
-        // COLETAR DESPESAS
-        document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
-            const operacao = select.getAttribute('data-operacao');
-            const codigoPlano = select.value;
-            const textoSelecionado = select.options[select.selectedIndex]?.text;
-            
-            if (operacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
-                despesasRegras.push({
-                    operacao: operacao,
-                    tipo: 'DESPESA',
-                    plano_contas_codigo: codigoPlano,
-                    plano_contas_dre: textoSelecionado,
-                    grupo_dre: '4 DESPESAS ADMINISTRATIVAS',
-                    created_at: agora,
-                    updated_at: agora
-                });
-            }
-        });
-        
-        const todasRegras = [...receitasRegras, ...despesasRegras];
-        
-        if (todasRegras.length === 0) {
-            alert('⚠️ Nenhuma regra selecionada!');
-            return;
-        }
-        
-        console.log(`📋 ${todasRegras.length} regras para salvar`);
-        
-        // DELETAR REGRAS ANTIGAS
-        const { error: deleteError } = await supabaseClient
-            .from('conversao_operacoes')
-            .delete()
-            .neq('id', 0);
-        
-        if (deleteError) {
-            console.error('❌ Erro ao deletar:', deleteError);
-            alert('Erro ao deletar regras: ' + deleteError.message);
-            return;
-        }
-        console.log('✅ Regras antigas removidas');
-        
-        // INSERIR NOVAS REGRAS
-        let inseridos = 0;
-        const batchSize = 50;
-        
-        for (let i = 0; i < todasRegras.length; i += batchSize) {
-            const batch = todasRegras.slice(i, i + batchSize);
-            const { error: insertError } = await supabaseClient
-                .from('conversao_operacoes')
-                .insert(batch);
-            
-            if (insertError) {
-                console.error('❌ Erro ao inserir:', insertError);
-                alert('Erro ao inserir regras: ' + insertError.message);
-                return;
-            }
-            inseridos += batch.length;
-            console.log(`✅ Lote ${Math.floor(i / batchSize) + 1}: ${batch.length} inseridos`);
-        }
-        
-        // ATUALIZAR MAPAS LOCAIS
-        for (const regra of receitasRegras) {
-            window.condToPlanoMap[regra.operacao] = regra.plano_contas_dre;
-        }
-        for (const regra of despesasRegras) {
-            window.operacaoToPlanoMap[regra.operacao] = regra.plano_contas_dre;
-        }
-        
-        localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
-        localStorage.setItem('operacao_to_plano_map', JSON.stringify(window.operacaoToPlanoMap));
-        
-        alert(`✅ ${inseridos} regras salvas com sucesso!`);
-        
-        // FECHAR MODAL
-        document.getElementById('modalConversao').classList.remove('active');
-        
-        // RECARREGAR E ABRIR NOVAMENTE
+        await carregarPlanoContasSupabase();
         await carregarRegrasConversaoSupabase();
         
-        // ESPERAR 500ms E ABRIR COM DADOS ATUALIZADOS
-        setTimeout(async () => {
-            await abrirModalConversaoSupabase();
-        }, 500);
+        // ========== RECEITAS ==========
+        const todasReceitas = estruturaDRE.receitas || [];
+        console.log(`📊 Receitas: ${todasReceitas.length}`);
         
-        console.log('✅ Processo concluído!');
+        const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
+        if (tbodyReceitas) {
+            let html = '';
+            for (const receita of todasReceitas) {
+                const codigo = receita.cod;
+                const nome = receita.nome;
+                const grupoDre = receita.grupo_dre || '1 RECEITAS DE VENDAS';
+                const tipoClass = receita.tipo_classificacao || 'RECEITAS';
+                const nomeOperacao = `${codigo}-${nome}`;
+                const codigoSalvo = window.condToPlanoMap?.[nome] || '';
+                
+                html += `<tr>
+                    <td style="white-space: nowrap;">${grupoDre}</td>
+                    <td>${nomeOperacao}</td>
+                    <td>${tipoClass}</td>
+                    <td>
+                        <select class="conversao-select" data-cond="${nome}">
+                            <option value="DINHEIRO">DINHEIRO</option>
+                            <option value="DEBITO">DEBITO</option>
+                            <option value="CREDITO">CREDITO</option>
+                            <option value="CREDITO PARCELADO">CREDITO PARCELADO</option>
+                            <option value="AG">AG</option>
+                            <option value="PIX">PIX</option>
+                            <option value="VNF" selected>VNF</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="conversao-select-plano-receita" data-plano-cond="${nome}">
+                            <option value="">Selecione...</option>`;
+                
+                for (const p of todasReceitas) {
+                    const selected = (codigoSalvo === p.cod) ? 'selected' : '';
+                    html += `<option value="${p.cod}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                }
+                
+                html += `     </select>
+                    </td>
+                </tr>`;
+            }
+            tbodyReceitas.innerHTML = html;
+            console.log(`✅ Receitas: ${todasReceitas.length} itens`);
+        }
+        
+        // ========== DESPESAS ==========
+        const todasDespesas = [...(estruturaDRE.custosVariaveis || []), ...(estruturaDRE.custosFixos || [])];
+        console.log(`📊 Despesas: ${todasDespesas.length}`);
+        
+        const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
+        if (tbodyDespesas) {
+            let html = '';
+            for (const despesa of todasDespesas) {
+                const codigo = despesa.cod;
+                const nome = despesa.nome;
+                const grupoDre = despesa.grupo_dre || '4 DESPESAS ADMINISTRATIVAS';
+                const tipoClass = despesa.tipo_classificacao || 'DESPESAS VARIAVEIS';
+                const nomeOperacao = `${codigo}-${nome}`;
+                const codigoSalvo = window.operacaoToPlanoMap?.[nome] || '';
+                
+                html += `<tr>
+                    <td style="white-space: nowrap;">${grupoDre}</td>
+                    <td>${nomeOperacao}</td>
+                    <td>${tipoClass}</td>
+                    <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></td>
+                    <td>
+                        <select class="conversao-select-plano-despesa" data-operacao="${nome}">
+                            <option value="">Selecione...</option>`;
+                
+                for (const p of todasDespesas) {
+                    const selected = (codigoSalvo === p.cod) ? 'selected' : '';
+                    html += `<option value="${p.cod}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                }
+                
+                html += `     </select>
+                    </td>
+                </tr>`;
+            }
+            tbodyDespesas.innerHTML = html;
+            console.log(`✅ Despesas: ${todasDespesas.length} itens`);
+        }
+        
+        // ========== ABRIR MODAL ==========
+        document.getElementById('modalConversao').classList.add('active');
+        console.log(`🎯 TOTAL: ${todasReceitas.length + todasDespesas.length} itens`);
+        
+        // ========== AUTO PREENCHER OS SELECTS PELO TEXTO ==========
+        setTimeout(() => {
+            let preenchidos = 0;
+            
+            // RECEITAS
+            document.querySelectorAll('.conversao-select-plano-receita').forEach(select => {
+                const operacao = select.getAttribute('data-plano-cond');
+                if (operacao) {
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].text.includes(operacao)) {
+                            select.selectedIndex = i;
+                            preenchidos++;
+                            break;
+                        }
+                    }
+                }
+            });
+            
+            // DESPESAS
+            document.querySelectorAll('.conversao-select-plano-despesa').forEach(select => {
+                const operacao = select.getAttribute('data-operacao');
+                if (operacao) {
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].text.includes(operacao)) {
+                            select.selectedIndex = i;
+                            preenchidos++;
+                            break;
+                        }
+                    }
+                }
+            });
+            
+            console.log(`✅ ${preenchidos} selects preenchidos automaticamente!`);
+        }, 300);
         
     } catch (error) {
         console.error('❌ Erro:', error);
-        alert('Erro ao salvar: ' + error.message);
     }
 }function abrirModalComparativos() {
     console.log('🔘 Botão COMPARATIVOS clicado!');
