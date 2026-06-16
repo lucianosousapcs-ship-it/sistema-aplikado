@@ -6779,13 +6779,13 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     
     // ========== RECEITAS ==========
     document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
-        const operacao = select.getAttribute('data-plano-cond');
+        const nomeOperacao = select.getAttribute('data-plano-cond');
         const codigoPlano = select.value;
         const textoSelecionado = select.options[select.selectedIndex]?.text;
         
-        if (operacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
+        if (nomeOperacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
             receitasRegras.push({
-                operacao: operacao,
+                operacao: nomeOperacao,
                 tipo: 'RECEITA',
                 plano_contas_codigo: codigoPlano,
                 plano_contas_dre: textoSelecionado,
@@ -6796,15 +6796,22 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
         }
     });
     
-    // ========== DESPESAS ==========
+    // ========== DESPESAS - CORRIGIDO ==========
     document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
-        const operacao = select.getAttribute('data-operacao');
+        const nomeOperacao = select.getAttribute('data-operacao');
         const codigoPlano = select.value;
         const textoSelecionado = select.options[select.selectedIndex]?.text;
         
-        if (operacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
+        // EXTRAIR APENAS O NOME (sem o código)
+        // Ex: "200-DESP. TELEFONIA E INTERNET" → "DESP. TELEFONIA E INTERNET"
+        let nomeApenas = nomeOperacao;
+        if (nomeOperacao && nomeOperacao.includes('-')) {
+            nomeApenas = nomeOperacao.substring(nomeOperacao.indexOf('-') + 1);
+        }
+        
+        if (nomeOperacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
             despesasRegras.push({
-                operacao: operacao,
+                operacao: nomeApenas,  // ← SALVA APENAS O NOME
                 tipo: 'DESPESA',
                 plano_contas_codigo: codigoPlano,
                 plano_contas_dre: textoSelecionado,
@@ -6823,7 +6830,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     }
     
     console.log(`📋 ${todasRegras.length} regras para salvar`);
-    console.log('📊 Amostra:', JSON.stringify(todasRegras[0], null, 2));
+    console.log('📊 Amostra despesa:', despesasRegras[0]);
     
     // ========== DELETAR REGRAS ANTIGAS ==========
     console.log('🗑️ Removendo regras antigas da tabela conversao_operacoes...');
@@ -6842,9 +6849,8 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     // ========== INSERIR NOVAS REGRAS ==========
     console.log('📝 Inserindo novas regras na tabela conversao_operacoes...');
     let inseridos = 0;
-    let erros = 0;
-    
     const batchSize = 50;
+    
     for (let i = 0; i < todasRegras.length; i += batchSize) {
         const batch = todasRegras.slice(i, i + batchSize);
         
@@ -6854,31 +6860,39 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
         
         if (insertError) {
             console.error('❌ Erro ao inserir lote:', insertError);
-            console.error('❌ Dados do lote:', JSON.stringify(batch[0], null, 2));
-            erros += batch.length;
-        } else {
-            inseridos += batch.length;
-            console.log(`✅ Lote ${Math.floor(i / batchSize) + 1}: ${batch.length} inseridos`);
+            alert('Erro ao inserir regras: ' + insertError.message);
+            return;
         }
+        inseridos += batch.length;
+        console.log(`✅ Lote ${Math.floor(i / batchSize) + 1}: ${batch.length} inseridos`);
     }
     
-    // ========== ATUALIZAR MAPS LOCAIS ==========
+    // ========== ATUALIZAR MAPAS LOCAIS ==========
+    // Receitas
     for (const regra of receitasRegras) {
         window.condToPlanoMap[regra.operacao] = regra.plano_contas_dre;
     }
-    for (const regra of despesasRegras) {
-        window.operacaoToPlanoMap[regra.operacao] = regra.plano_contas_dre;
-    }
+    
+    // Despesas - usar o nome completo para busca
+    document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
+        const nomeCompleto = select.getAttribute('data-operacao');
+        let nomeApenas = nomeCompleto;
+        if (nomeCompleto && nomeCompleto.includes('-')) {
+            nomeApenas = nomeCompleto.substring(nomeCompleto.indexOf('-') + 1);
+        }
+        const codigoPlano = select.value;
+        const textoSelecionado = select.options[select.selectedIndex]?.text;
+        
+        if (nomeApenas && textoSelecionado && textoSelecionado !== 'Selecione...') {
+            window.operacaoToPlanoMap[nomeApenas] = textoSelecionado;
+        }
+    });
     
     localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
-    localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
+    localStorage.setItem('operacao_to_plano_map', JSON.stringify(window.operacaoToPlanoMap));
     
     // ========== MENSAGEM FINAL ==========
-    if (erros === 0) {
-        alert(`✅ ${inseridos} regras salvas com sucesso na tabela conversao_operacoes!`);
-    } else {
-        alert(`⚠️ ${inseridos} regras salvas, ${erros} erros. Verifique o console.`);
-    }
+    alert(`✅ ${inseridos} regras salvas com sucesso!`);
     
     // ========== FECHAR MODAL ==========
     const modalConversao = document.getElementById('modalConversao');
@@ -6886,13 +6900,6 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     
     // ========== RECARREGAR REGRAS ==========
     await carregarRegrasConversaoSupabase();
-    
-    // ========== ATUALIZAR TELA DE CAIXA ==========
-    const modalCaixa = document.getElementById('modalFechamentoCaixa');
-    if (modalCaixa && modalCaixa.classList.contains('active')) {
-        if (typeof atualizarTitulosColunasCaixa === 'function') atualizarTitulosColunasCaixa();
-        if (typeof renderizarCaixaPopup === 'function') renderizarCaixaPopup();
-    }
     
     console.log('✅ Processo concluído!');
 }async function abrirModalConversaoSupabase() {
