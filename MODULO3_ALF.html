@@ -2328,6 +2328,65 @@ function aplicarPlanoConversaoReceita(id) {
         const planosMap = planosSalvos ? JSON.parse(planosSalvos) : {};
         planosMap[id] = planoConfigurado;
         localStorage.setItem(STORAGE_KEY_PLANOS_RECEITAS, JSON.stringify(planosMap));
+        function marcarSeIncluido(data, valor, desc) {
+    for(let m = 0; m < 12; m++) {
+        const dados = JSON.parse(localStorage.getItem(`dadosModuloIII_mes_${m}`) || '[]');
+        if(dados.some(l => l.data === data && Math.abs(parseMoeda(l.valor) - valor) < 0.01 && l.desc === desc))
+            return " ★";
+    }
+    return "";
+}
+     async function carregarCoresDoSupabase() {
+    console.log('🔄 Carregando cores salvas...');
+    try {
+        const { data, error } = await supabaseClient
+            .from('cores_linhas_caixa')
+            .select('*');
+        
+        if (error) {
+            console.error('❌ Erro ao carregar cores:', error);
+            return;
+        }
+        
+        if (data && data.length > 0) {
+            linhaCorSelecionada = {};
+            data.forEach(item => {
+                linhaCorSelecionada[item.data] = item.cor;
+            });
+        }
+        
+        console.log(`✅ ${data?.length || 0} cores carregadas`);
+    } catch (err) {
+        console.error('❌ Erro:', err);
+    }
+}
+
+async function salvarCoresNoSupabase() {
+    console.log('💾 Salvando cores...');
+    try {
+        const registros = Object.entries(linhaCorSelecionada).map(([data, cor]) => ({
+            data: data,
+            cor: cor
+        }));
+        
+        for (const registro of registros) {
+            const { error } = await supabaseClient
+                .from('cores_linhas_caixa')
+                .upsert(registro, { onConflict: 'data' });
+            
+            if (error) {
+                console.error(`❌ Erro ao salvar cor para ${registro.data}:`, error);
+            }
+        }
+        
+        console.log(`✅ ${registros.length} cores salvas`);
+    } catch (err) {
+        console.error('❌ Erro:', err);
+    }
+}
+        
+        
+        
         
         renderizarTabelaReceitas();
         
