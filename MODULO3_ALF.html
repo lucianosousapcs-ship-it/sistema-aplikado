@@ -3167,30 +3167,25 @@ async function carregarDadosReaisLancamentos() {
             console.error('❌ Erro ao carregar regras:', erroRegras);
         }
         
-        // ========== 4. CRIAR MAPAS DE REGRAS ==========
-        const mapaDespesas = {};
-        const mapaReceitas = {};
+        // ========== 4. CRIAR MAPA DE REGRAS ==========
+        const mapaRegras = {};
         
         if (regras && regras.length > 0) {
             regras.forEach(r => {
+                // Para DESPESAS: usa a origem como chave
                 if (r.tipo === 'DESPESA' || r.tipo === 'DESPESA_VARIAVEL') {
                     if (r.origem && r.destino_identificador) {
-                        mapaDespesas[r.origem] = r.destino_identificador;
-                    }
-                } else if (r.tipo === 'RECEITA') {
-                    if (r.origem && r.destino_identificador) {
-                        mapaReceitas[r.origem] = r.destino_identificador;
+                        mapaRegras[r.origem] = r.destino_identificador;
                     }
                 }
             });
         }
         
-        console.log(`📚 Regras: Despesas: ${Object.keys(mapaDespesas).length}, Receitas: ${Object.keys(mapaReceitas).length}`);
+        console.log(`📚 Regras de despesas carregadas: ${Object.keys(mapaRegras).length}`);
 
         // ========== 5. CRIAR MAPA DE PLANOS POR IDENTIFICADOR ==========
         const mapaPlanos = {};
         const todosPlanos = [
-            ...estruturaDRE.receitas,
             ...estruturaDRE.custosVariaveis,
             ...estruturaDRE.custosFixos
         ];
@@ -3199,37 +3194,13 @@ async function carregarDadosReaisLancamentos() {
             const id = p.identificador || p.cod;
             mapaPlanos[id] = `${p.cod} - ${p.nome}`;
         });
+        
+        console.log(`📚 Planos de despesas mapeados: ${Object.keys(mapaPlanos).length}`);
 
-        // ========== 6. PROCESSAR RECEITAS ==========
-        receitasDataReais = todasVendas.map(v => {
-            const condPag = v['COND.PAG'] || v.cond_pag || '';
-            const identificador = mapaReceitas[condPag];
-            
-            let plano = "RECEITA DE SERVICOS";
-            let temRegra = false;
-            
-            if (identificador && mapaPlanos[identificador]) {
-                plano = mapaPlanos[identificador];
-                temRegra = true;
-            }
-            
-            return {
-                id: v.id,
-                data: v.data || '01/01/2000',
-                valor: Number(v['TOTAL NOTA'] || v.total || 0),
-                cliente: v['CLIENTE/FORNECEDOR'] || v.cliente || 'NAO INFORMADO',
-                classificacao: obterClassificacaoDoTipo(v),
-                plano: plano,
-                cond_pag: condPag,
-                identificador: identificador || null,
-                temRegra: temRegra  // ← NOVO: indica se tem regra
-            };
-        });
-
-        // ========== 7. PROCESSAR DESPESAS ==========
+        // ========== 6. PROCESSAR DESPESAS ==========
         despesasDataReais = todasCompras.map(c => {
             const operacao = c.operacao || c.documento || 'DESPESA';
-            const identificador = mapaDespesas[operacao];
+            const identificador = mapaRegras[operacao];
             
             let plano = "DESPESAS ADMINISTRATIVAS";
             let temRegra = false;
@@ -3237,6 +3208,13 @@ async function carregarDadosReaisLancamentos() {
             if (identificador && mapaPlanos[identificador]) {
                 plano = mapaPlanos[identificador];
                 temRegra = true;
+            } else {
+                // DEBUG: mostra quais operações não encontraram regra
+                if (!identificador) {
+                    console.log(`⚠️ Sem regra para: "${operacao}"`);
+                } else if (!mapaPlanos[identificador]) {
+                    console.log(`⚠️ Identificador não encontrado: "${identificador}" para operação "${operacao}"`);
+                }
             }
             
             return {
@@ -3247,14 +3225,14 @@ async function carregarDadosReaisLancamentos() {
                 operacao: operacao,
                 plano: plano,
                 identificador: identificador || null,
-                temRegra: temRegra  // ← NOVO: indica se tem regra
+                temRegra: temRegra
             };
         });
 
-        console.log(`📊 Receitas: ${receitasDataReais.length}, Despesas: ${despesasDataReais.length}`);
+        console.log(`📊 Despesas processadas: ${despesasDataReais.length}`);
+        console.log(`📊 Com regra: ${despesasDataReais.filter(d => d.temRegra).length}`);
 
-        // ========== 8. RENDERIZAR ==========
-        renderizarTabelaReceitas();
+        // ========== 7. RENDERIZAR ==========
         renderizarTabelaDespesas();
         buscarUltimaAtualizacao();
         
@@ -3262,7 +3240,6 @@ async function carregarDadosReaisLancamentos() {
         console.error('❌ Erro ao carregar dados reais:', e); 
     }
 }
-
 function salvarPlanosReceitas() {
     const botoesPlano = document.querySelectorAll('#tabelaReceitasBody .btn-plano-lancamento');
     const planosSalvos = {};
