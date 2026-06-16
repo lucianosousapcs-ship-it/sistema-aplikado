@@ -6772,7 +6772,8 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     const agora = new Date().toISOString();
     
     // ========== RECEITAS ==========
-    document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
+    // 🔥 CORREÇÃO: Removeu o #conversaoTabReceitas
+    document.querySelectorAll('.conversao-select-plano-receita').forEach(select => {
         const nomeOperacao = select.getAttribute('data-plano-cond');
         const codigoPlano = select.value;
         const textoSelecionado = select.options[select.selectedIndex]?.text;
@@ -6790,14 +6791,14 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
         }
     });
     
-    // ========== DESPESAS - CORRIGIDO ==========
-    document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
+    // ========== DESPESAS ==========
+    // 🔥 CORREÇÃO: Removeu o #conversaoTabDespesas
+    document.querySelectorAll('.conversao-select-plano-despesa').forEach(select => {
         const nomeOperacao = select.getAttribute('data-operacao');
         const codigoPlano = select.value;
         const textoSelecionado = select.options[select.selectedIndex]?.text;
         
         // EXTRAIR APENAS O NOME (sem o código)
-        // Ex: "200-DESP. TELEFONIA E INTERNET" → "DESP. TELEFONIA E INTERNET"
         let nomeApenas = nomeOperacao;
         if (nomeOperacao && nomeOperacao.includes('-')) {
             nomeApenas = nomeOperacao.substring(nomeOperacao.indexOf('-') + 1);
@@ -6805,7 +6806,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
         
         if (nomeOperacao && codigoPlano && codigoPlano !== '' && textoSelecionado && textoSelecionado !== 'Selecione...') {
             despesasRegras.push({
-                operacao: nomeApenas,  // ← SALVA APENAS O NOME
+                operacao: nomeApenas,
                 tipo: 'DESPESA',
                 plano_contas_codigo: codigoPlano,
                 plano_contas_dre: textoSelecionado,
@@ -6868,7 +6869,8 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     }
     
     // Despesas - usar o nome completo para busca
-    document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
+    // 🔥 CORREÇÃO: Removeu o #conversaoTabDespesas
+    document.querySelectorAll('.conversao-select-plano-despesa').forEach(select => {
         const nomeCompleto = select.getAttribute('data-operacao');
         let nomeApenas = nomeCompleto;
         if (nomeCompleto && nomeCompleto.includes('-')) {
@@ -6896,186 +6898,6 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     await carregarRegrasConversaoSupabase();
     
     console.log('✅ Processo concluído!');
-}async function abrirModalConversaoSupabase() {
-    console.log('🔧 Abrindo CONVERSÃO com IDENTIFICADOR...');
-    
-    try {
-        // 1. Carregar plano de contas com IDENTIFICADOR
-        const { data: planos, error: erroPlanos } = await supabaseClient
-            .from('plano_contas')
-            .select('codigo, nome, identificador, tipo, grupo_dre, tipo_classificacao')
-            .order('codigo', { ascending: true });
-        
-        if (erroPlanos) {
-            console.error('❌ Erro ao carregar plano_contas:', erroPlanos);
-            alert('Erro ao carregar plano de contas: ' + erroPlanos.message);
-            return;
-        }
-        
-        console.log(`✅ ${planos?.length || 0} planos carregados com IDENTIFICADOR`);
-        
-        // 2. Carregar regras de conversão
-        await carregarRegrasConversaoSupabase();
-        
-        // 3. Carregar mapeamentos salvos
-        const savedPlanoMap = localStorage.getItem('condToPlanoMap');
-        const condToPlanoMap = savedPlanoMap ? JSON.parse(savedPlanoMap) : {};
-        
-        const savedOperacaoMap = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
-        const operacaoToPlanoMap = savedOperacaoMap ? JSON.parse(savedOperacaoMap) : {};
-        
-        // 4. Separar receitas e despesas
-        const receitas = (planos || []).filter(p => p.tipo === 'RECEITA');
-        const despesas = (planos || []).filter(p => p.tipo === 'DESPESA');
-        
-        console.log(`📊 Receitas: ${receitas.length}, Despesas: ${despesas.length}`);
-        console.log('📚 condToPlanoMap:', Object.keys(condToPlanoMap).length, 'regras');
-        console.log('📚 operacaoToPlanoMap:', Object.keys(operacaoToPlanoMap).length, 'regras');
-        
-        // ============================================================
-        // 5. MONTAR TABELA DE RECEITAS - COM IDENTIFICADOR
-        // ============================================================
-        const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
-        if (tbodyReceitas) {
-            // Pega as condições de pagamento REAIS das vendas
-            const condicoesReais = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
-            console.log('📊 Condições reais para RECEITAS:', condicoesReais.length);
-            
-            let html = '';
-            for (const cond of condicoesReais) {
-                const tituloAtual = window.condToTituloMap?.[cond] || 'VNF';
-                const codigoSalvo = condToPlanoMap?.[cond] || '';
-                
-                html += `<tr>
-                    <td style="white-space: nowrap;">1 RECEITAS DE VENDAS</td>
-                    <td><strong>${cond}</strong></td>
-                    <td>RECEITAS</td>
-                    <td>
-                        <select class="conversao-select" data-cond="${cond}">
-                            <option value="DINHEIRO" ${tituloAtual === 'DINHEIRO' ? 'selected' : ''}>DINHEIRO</option>
-                            <option value="DEBITO" ${tituloAtual === 'DEBITO' ? 'selected' : ''}>DEBITO</option>
-                            <option value="CREDITO" ${tituloAtual === 'CREDITO' ? 'selected' : ''}>CREDITO</option>
-                            <option value="CREDITO PARCELADO" ${tituloAtual === 'CREDITO PARCELADO' ? 'selected' : ''}>CREDITO PARCELADO</option>
-                            <option value="AG" ${tituloAtual === 'AG' ? 'selected' : ''}>AG</option>
-                            <option value="PIX" ${tituloAtual === 'PIX' ? 'selected' : ''}>PIX</option>
-                            <option value="VNF" ${tituloAtual === 'VNF' ? 'selected' : ''}>VNF</option>
-                        </select>
-                    </td>
-                    <td>
-                        <select class="conversao-select-plano-receita" data-plano-cond="${cond}">
-                            <option value="">Selecione...</option>`;
-                
-                // 🔥 PREENCHE COM IDENTIFICADOR (em vez de codigo - nome)
-                for (const p of receitas) {
-                    const ident = p.identificador || `${p.codigo} - ${p.nome}`;
-                    const selected = (codigoSalvo === p.codigo) ? 'selected' : '';
-                    // O VALUE continua sendo o código, mas o TEXTO é o IDENTIFICADOR
-                    html += `<option value="${p.codigo}" ${selected}>${ident}</option>`;
-                }
-                
-                html += `     </select>
-                    </td>
-                </tr>`;
-            }
-            tbodyReceitas.innerHTML = html;
-            console.log(`✅ RECEITAS: ${condicoesReais.length} linhas com IDENTIFICADOR`);
-        }
-        
-        // ============================================================
-        // 6. MONTAR TABELA DE DESPESAS - COM IDENTIFICADOR
-        // ============================================================
-        const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
-        if (tbodyDespesas) {
-            // Pega as operações REAIS das despesas
-            const operacoesReais = [...new Set(despesasDataReais.map(d => d.operacao).filter(op => op && op !== '-'))];
-            console.log('📊 Operações reais para DESPESAS:', operacoesReais.length);
-            
-            let html = '';
-            for (const operacao of operacoesReais) {
-                const codigoSalvo = operacaoToPlanoMap?.[operacao] || '';
-                
-                html += `<tr>
-                    <td style="white-space: nowrap;">4 DESPESAS ADMINISTRATIVAS</td>
-                    <td><strong>${operacao}</strong></td>
-                    <td>DESPESAS VARIAVEIS</td>
-                    <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></td>
-                    <td>
-                        <select class="conversao-select-plano-despesa" data-operacao="${operacao}">
-                            <option value="">Selecione...</option>`;
-                
-                // 🔥 PREENCHE COM IDENTIFICADOR (em vez de codigo - nome)
-                for (const p of despesas) {
-                    const ident = p.identificador || `${p.codigo} - ${p.nome}`;
-                    const selected = (codigoSalvo === p.codigo) ? 'selected' : '';
-                    html += `<option value="${p.codigo}" ${selected}>${ident}</option>`;
-                }
-                
-                html += `     </select>
-                    </td>
-                </tr>`;
-            }
-            tbodyDespesas.innerHTML = html;
-            console.log(`✅ DESPESAS: ${operacoesReais.length} linhas com IDENTIFICADOR`);
-        }
-        
-        // ============================================================
-        // 7. RESTAURAR TÍTULOS DE CAIXA
-        // ============================================================
-        document.querySelectorAll('#conversaoTabReceitas .conversao-select').forEach(select => {
-            const cond = select.getAttribute('data-cond');
-            if (cond && window.condToTituloMap?.[cond]) {
-                select.value = window.condToTituloMap[cond];
-            }
-        });
-        
-        // ============================================================
-        // 8. ABRIR MODAL
-        // ============================================================
-        document.getElementById('modalConversao').classList.add('active');
-        
-        const totalLinhas = document.querySelectorAll('#conversaoTabReceitas tr').length + document.querySelectorAll('#conversaoTabDespesas tr').length;
-        console.log(`🎯 TOTAL: ${totalLinhas} itens`);
-        
-        // ============================================================
-        // 9. AUTO PREENCHER SELECTS (MANTIDO COMO SEMPRE FUNCIONOU)
-        // ============================================================
-        let preenchidos = 0;
-        setTimeout(() => {
-            document.querySelectorAll('.conversao-select-plano-receita').forEach(select => {
-                const cond = select.getAttribute('data-plano-cond');
-                if (cond && condToPlanoMap[cond]) {
-                    const valorSalvo = condToPlanoMap[cond];
-                    for (let i = 0; i < select.options.length; i++) {
-                        if (select.options[i].value === valorSalvo) {
-                            select.selectedIndex = i;
-                            preenchidos++;
-                            break;
-                        }
-                    }
-                }
-            });
-            
-            document.querySelectorAll('.conversao-select-plano-despesa').forEach(select => {
-                const operacao = select.getAttribute('data-operacao');
-                if (operacao && operacaoToPlanoMap[operacao]) {
-                    const valorSalvo = operacaoToPlanoMap[operacao];
-                    for (let i = 0; i < select.options.length; i++) {
-                        if (select.options[i].value === valorSalvo) {
-                            select.selectedIndex = i;
-                            preenchidos++;
-                            break;
-                        }
-                    }
-                }
-            });
-            
-            console.log(`✅ ${preenchidos} selects preenchidos automaticamente!`);
-        }, 500);
-        
-    } catch (error) {
-        console.error('❌ Erro ao abrir conversão:', error);
-        alert('Erro ao abrir conversão: ' + error.message);
-    }
 }
 function fecharModalComparativos() {
     console.log('🔘 Fechando modal COMPARATIVOS');
