@@ -3181,46 +3181,61 @@ async function carregarDadosReaisLancamentos() {
         console.log(`📚 Planos de despesas mapeados: ${Object.keys(mapaPlanos).length}`);
 
         // ========== 5. PROCESSAR DESPESAS ==========
-        let comRegra = 0;
-        let semRegra = 0;
-        
-        despesasDataReais = todasCompras.map(c => {
-            const operacao = c.operacao || c.documento || 'DESPESA';
-            
-            // Busca o identificador pelo mapa operacaoToPlanoMap
-            const identificador = operacaoToPlanoMap[operacao];
-            
-            let plano = "DESPESAS ADMINISTRATIVAS";
-            let temRegra = false;
-            
-            if (identificador && mapaPlanos[identificador]) {
-                plano = mapaPlanos[identificador];
-                temRegra = true;
-                comRegra++;
-            } else {
-                semRegra++;
-                // Mostra as primeiras 10 operações sem regra para debug
-                if (semRegra <= 10) {
-                    console.log(`⚠️ Sem regra para: "${operacao}"`);
-                }
-            }
-            
-            return {
-                id: c.id,
-                data: c.vencimento || '01/01/2000',
-                valor: Number(c.valor || 0),
-                fornecedor: c.fornecedor || 'NAO INFORMADO',
-                operacao: operacao,
-                plano: plano,
-                identificador: identificador || null,
-                temRegra: temRegra
-            };
-        });
+       let comRegra = 0;
+let semRegra = 0;
+let regrasEncontradas = [];
 
-        console.log(`📊 Despesas processadas: ${despesasDataReais.length}`);
-        console.log(`   ✅ Com regra: ${comRegra}`);
-        console.log(`   ⚠️ Sem regra: ${semRegra}`);
+despesasDataReais = todasCompras.map(c => {
+    const operacao = c.operacao || c.documento || 'DESPESA';
+    
+    // ========== DEBUG ==========
+    // Verifica se a operação existe no mapa
+    const identificador = operacaoToPlanoMap[operacao];
+    
+    // Log das primeiras 10 operações para debug
+    if (regrasEncontradas.length < 10) {
+        console.log(`🔍 Buscando: "${operacao}" → ${identificador || 'NÃO ENCONTRADO'}`);
+        regrasEncontradas.push(operacao);
+    }
+    
+    let plano = "DESPESAS ADMINISTRATIVAS";
+    let temRegra = false;
+    
+    if (identificador && mapaPlanos[identificador]) {
+        plano = mapaPlanos[identificador];
+        temRegra = true;
+        comRegra++;
+    } else {
+        semRegra++;
+        // Mostra APENAS as 10 primeiras sem regra
+        if (semRegra <= 10) {
+            console.log(`⚠️ Sem regra para: "${operacao}"`);
+        }
+    }
+    
+    return {
+        id: c.id,
+        data: c.vencimento || '01/01/2000',
+        valor: Number(c.valor || 0),
+        fornecedor: c.fornecedor || 'NAO INFORMADO',
+        operacao: operacao,
+        plano: plano,
+        identificador: identificador || null,
+        temRegra: temRegra
+    };
+});
 
+console.log(`📊 Despesas processadas: ${despesasDataReais.length}`);
+console.log(`   ✅ Com regra: ${comRegra}`);
+console.log(`   ⚠️ Sem regra: ${semRegra}`);
+
+// ========== DEBUG EXTRA ==========
+// Verificar se as regras estão sendo carregadas corretamente
+console.log('🔍 Mapa de regras de despesas (amostra):');
+const amostraRegras = Object.keys(operacaoToPlanoMap).slice(0, 10);
+amostraRegras.forEach(key => {
+    console.log(`   "${key}" → "${operacaoToPlanoMap[key]}"`);
+});
         // ========== 6. PROCESSAR RECEITAS ==========
         // Similar para receitas...
         if (Object.keys(condToPlanoMap).length === 0) {
@@ -3233,26 +3248,43 @@ async function carregarDadosReaisLancamentos() {
             mapaPlanosReceitas[id] = `${p.cod} - ${p.nome}`;
         });
         
-        let comRegraRec = 0;
-        let semRegraRec = 0;
-        
-        receitasDataReais = todasVendas.map(v => {
-            const condPag = v['COND.PAG'] || v.cond_pag || '';
-            const identificador = condToPlanoMap[condPag];
-            
-            let plano = "RECEITA DE SERVICOS";
-            let temRegra = false;
-            
-            if (identificador && mapaPlanosReceitas[identificador]) {
-                plano = mapaPlanosReceitas[identificador];
-                temRegra = true;
-                comRegraRec++;
-            } else {
-                semRegraRec++;
-                if (semRegraRec <= 10) {
-                    console.log(`⚠️ Sem regra para condição: "${condPag}"`);
-                }
-            }
+let comRegraRec = 0;
+let semRegraRec = 0;
+
+receitasDataReais = todasVendas.map(v => {
+    const condPag = v['COND.PAG'] || v.cond_pag || '';
+    const identificador = condToPlanoMap[condPag];
+    
+    let plano = "RECEITA DE SERVICOS";
+    let temRegra = false;
+    
+    if (identificador && mapaPlanosReceitas[identificador]) {
+        plano = mapaPlanosReceitas[identificador];
+        temRegra = true;
+        comRegraRec++;
+    } else {
+        semRegraRec++;
+        if (semRegraRec <= 10) {
+            console.log(`⚠️ Sem regra para condição: "${condPag}"`);
+        }
+    }
+    
+    return {
+        id: v.id,
+        data: v.data || '01/01/2000',
+        valor: Number(v['TOTAL NOTA'] || v.total || 0),
+        cliente: v['CLIENTE/FORNECEDOR'] || v.cliente || 'NAO INFORMADO',
+        classificacao: obterClassificacaoDoTipo(v),
+        plano: plano,
+        cond_pag: condPag,
+        identificador: identificador || null,
+        temRegra: temRegra
+    };
+});
+
+console.log(`📊 Receitas processadas: ${receitasDataReais.length}`);
+console.log(`   ✅ Com regra: ${comRegraRec}`);
+console.log(`   ⚠️ Sem regra: ${semRegraRec}`);
             
             return {
                 id: v.id,
@@ -3417,7 +3449,8 @@ function renderizarTabelaDespesas() {
         
         // ========== VERIFICA SE TEM REGRA ==========
         const temRegra = d.temRegra === true;
-        const corPlano = temRegra ? 'color: #E6A017;' : 'color: #ef4444; font-weight: 700;';
+const corPlano = temRegra ? 'color: #10b981; font-weight: 700;' : 'color: #ef4444; font-weight: 700;';
+
         const tituloPlano = temRegra ? '' : 'title="⚠️ SEM REGRA DE CONVERSÃO! Clique em APLICAR ou configure na tela CONVERSÃO"';
         
         html += `<tr>`;
@@ -5573,25 +5606,31 @@ async function carregarRegrasConversaoSupabase() {
         
         if (data && data.length > 0) {
             data.forEach(regra => {
+                // ========== RECEITAS ==========
                 if (regra.tipo === 'RECEITA') {
                     if (regra.destino_caixa) {
                         condToTituloMap[regra.origem] = regra.destino_caixa;
                     }
-                    if (regra.destino_identificador) {  // ← USANDO destino_identificador
+                    // USAR destino_identificador (se existir) OU destino_plano
+                    if (regra.destino_identificador) {
                         condToPlanoMap[regra.origem] = regra.destino_identificador;
+                    } else if (regra.destino_plano) {
+                        condToPlanoMap[regra.origem] = regra.destino_plano;
                     }
-                } else if (regra.tipo === 'DESPESA' || regra.tipo === 'DESPESA_VARIAVEL') {
-                    if (regra.destino_identificador) {  // ← USANDO destino_identificador
+                }
+                
+                // ========== DESPESAS ==========
+                // ACEITAR TANTO 'DESPESA' QUANTO 'DESPESA_VARIAVEL'
+                if (regra.tipo === 'DESPESA' || regra.tipo === 'DESPESA_VARIAVEL') {
+                    // USAR destino_identificador (se existir) OU destino_plano
+                    if (regra.destino_identificador) {
                         operacaoToPlanoMap[regra.origem] = regra.destino_identificador;
+                    } else if (regra.destino_plano) {
+                        operacaoToPlanoMap[regra.origem] = regra.destino_plano;
                     }
                 }
             });
         }
-        
-        // SALVAR NO LOCALSTORAGE PARA COMPATIBILIDADE
-        localStorage.setItem('condToTituloMap', JSON.stringify(condToTituloMap));
-        localStorage.setItem('condToPlanoMap', JSON.stringify(condToPlanoMap));
-        localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(operacaoToPlanoMap));
         
         console.log('✅ Regras carregadas:', {
             titulos: Object.keys(condToTituloMap).length,
@@ -5599,9 +5638,9 @@ async function carregarRegrasConversaoSupabase() {
             planosDespesas: Object.keys(operacaoToPlanoMap).length
         });
         
-        // ATUALIZAR A TELA DE LANÇAMENTOS
-        if (typeof renderizarTabelaReceitas === 'function') renderizarTabelaReceitas();
-        if (typeof renderizarTabelaDespesas === 'function') renderizarTabelaDespesas();
+        // Mostrar as primeiras regras de despesas para debug
+        const primeirasDespesas = Object.keys(operacaoToPlanoMap).slice(0, 5);
+        console.log('📋 Primeiras regras de despesas:', primeirasDespesas);
         
     } catch(e) {
         console.error('❌ Erro ao carregar regras:', e);
