@@ -3571,7 +3571,7 @@ function renderizarTabelaContasExtras() {
     }
     
     if (filtradas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:40px;">Nenhum registro encontrado</div></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:40px;">Nenhum registro encontrado</td></tr>';
         document.getElementById('totalContasExtras').innerText = '0';
         document.getElementById('selecionadasContasExtras').innerText = contasExtrasSelecionadas.size;
         document.getElementById('valorTotalSelecionadoContasExtras').innerHTML = 'R$ 0,00';
@@ -3588,6 +3588,12 @@ function renderizarTabelaContasExtras() {
         
         const planoInicial = r.plano || encontrarPlanoPorOperacaoExtras(r.operacao);
         
+        // 🔹 USA O CAMPO temRegra (IGUAL ÀS RECEITAS/DESPESAS)
+        const temRegra = r.temRegra === true;
+        const corPlano = temRegra ? 'color: #10b981; font-weight: 700;' : 'color: #ef4444; font-weight: 700;';
+        const tituloPlano = temRegra ? '' : 'title="⚠️ SEM REGRA DE CONVERSÃO!"';
+        const bordaPlano = !temRegra ? 'border: 2px solid #ef4444;' : 'border: 1px solid rgba(16, 185, 129, 0.5); background: rgba(16, 185, 129, 0.08);';
+        
         html += `<tr>
             <td style="text-align:center;"><input type="checkbox" class="contas-extras-checkbox" data-id="${r.id}" ${isChecked ? 'checked' : ''} onchange="toggleContaExtraSelecionada(${r.id}, this)"></td>
             <td style="text-align:center;">${r.id}</td>
@@ -3597,7 +3603,14 @@ function renderizarTabelaContasExtras() {
             <td>${escapeHtml(r.fornecedor)}</td>
             <td>${escapeHtml(r.operacao)}</td>
             <td style="color: ${r.valor >= 0 ? '#2ECC71' : '#EF4444'}; font-weight:600;">R$ ${formatMoneySimple(r.valor)}</td>
-            <td><div class="plano-cell"><button class="btn-plano-lancamento" onclick="abrirModalPlanoContasExtras(this, ${r.id})">${planoInicial}</button><input type="hidden" class="plano-hidden" value="${planoInicial}" data-id="${r.id}"></div></td>
+            <td>
+                <div class="plano-cell">
+                    <button class="btn-plano-lancamento" data-id="${r.id}" style="${corPlano} ${bordaPlano}" ${tituloPlano} onclick="abrirModalPlanoContasExtras(this, ${r.id})">
+                        ${planoInicial}
+                    </button>
+                    <input type="hidden" class="plano-hidden" value="${planoInicial}" data-id="${r.id}">
+                </div>
+            </td>
         </tr>`;
     }
     
@@ -7226,6 +7239,9 @@ async function carregarCoresDoSupabase() {
 async function carregarContasExtras() {
     console.log('🔄 Carregando contas_extras do Supabase...');
     try {
+        // Primeiro carregar as regras
+        await carregarRegrasConversaoSupabase();
+        
         let todasContasExtras = [];
         let page = 0;
         
@@ -7253,18 +7269,26 @@ async function carregarContasExtras() {
             planosContasExtrasSalvos = JSON.parse(planosSalvos);
         }
         
-        contasExtrasData = todasContasExtras.map(ce => ({
-            id: ce.id,
-            dt_pagto: ce.dt_pagto || '01/01/2000',
-            codigo: ce.codigo || '',
-            numero: ce.numero || '',
-            fornecedor: ce.fornecedor || 'NAO INFORMADO',
-            operacao: ce.operacao || '',
-            valor: Number(ce.valor) || 0,
-            plano: planosContasExtrasSalvos[ce.id] || (ce.plano || "DESPESAS ADMINISTRATIVAS"),
-            conta_dre: planosContasExtrasSalvos[ce.id + '_dre'] || ce.conta_dre || '',
-            classificacao: planosContasExtrasSalvos[ce.id + '_class'] || ce.classificacao || ''
-        }));
+        // 🔹 ADICIONA O CAMPO temRegra
+        contasExtrasData = todasContasExtras.map(ce => {
+            const operacao = ce.operacao || '';
+            // Verifica se existe regra para esta operação
+            const temRegra = operacaoToPlanoMap[operacao] !== undefined;
+            
+            return {
+                id: ce.id,
+                dt_pagto: ce.dt_pagto || '01/01/2000',
+                codigo: ce.codigo || '',
+                numero: ce.numero || '',
+                fornecedor: ce.fornecedor || 'NAO INFORMADO',
+                operacao: operacao,
+                valor: Number(ce.valor) || 0,
+                plano: planosContasExtrasSalvos[ce.id] || (ce.plano || "DESPESAS ADMINISTRATIVAS"),
+                conta_dre: planosContasExtrasSalvos[ce.id + '_dre'] || ce.conta_dre || '',
+                classificacao: planosContasExtrasSalvos[ce.id + '_class'] || ce.classificacao || '',
+                temRegra: temRegra  // 🔹 ADICIONADO
+            };
+        });
         
         renderizarTabelaContasExtras();
         
@@ -7274,7 +7298,6 @@ async function carregarContasExtras() {
         renderizarTabelaContasExtras();
     }
 }
-
 function abrirModalContasExtras() {
     console.log("🚀 Abrindo modal CONTAS EXTRAS");
     const modal = document.getElementById('modalContasExtras');
@@ -7299,7 +7322,6 @@ function fecharModalContasExtras() {
 // FUNÇÃO LIMPAR E APLICAR TODOS PARA CONTAS EXTRAS
 // ============================================================
 async function limparEConverterContasExtras() {
-    // Verifica se há registros
     if (contasExtrasData.length === 0) {
         alert('⚠️ Nenhum registro para processar.');
         return;
@@ -7330,7 +7352,7 @@ async function limparEConverterContasExtras() {
     let ignorados = 0;
     let resetados = 0;
     
-    // 🔹 PASSO 1: LIMPAR E APLICAR EM TODOS OS REGISTROS
+    // LIMPAR E APLICAR EM TODOS OS REGISTROS
     for (const reg of contasExtrasData) {
         const operacao = reg.operacao || '';
         
@@ -7343,49 +7365,20 @@ async function limparEConverterContasExtras() {
         if (planoNome && planoNome !== '') {
             reg.plano = planoNome;
             planosContasExtrasSalvos[reg.id] = planoNome;
+            // 🔹 ATUALIZA O temRegra
+            reg.temRegra = true;
             atualizados++;
         } else {
+            // 🔹 ATUALIZA O temRegra
+            reg.temRegra = false;
             ignorados++;
         }
     }
     
     localStorage.setItem('planos_contas_extras', JSON.stringify(planosContasExtrasSalvos));
     
-    // 🔹 PASSO 2: RENDERIZAR A TABELA
+    // RENDERIZAR A TABELA (já aplica as cores corretamente)
     renderizarTabelaContasExtras();
-    
-    // 🔹 PASSO 3: APLICAR AS CORES (IGUAL ÀS RECEITAS/DESPESAS)
-    setTimeout(() => {
-        document.querySelectorAll('#tabelaContasExtrasBody .btn-plano-lancamento').forEach(btn => {
-            const id = parseInt(btn.getAttribute('data-id'));
-            const reg = contasExtrasData.find(r => r.id === id);
-            
-            if (reg) {
-                // Verifica se tem regra (plano diferente do padrão)
-                const temRegra = reg.plano !== "DESPESAS ADMINISTRATIVAS";
-                
-                if (temRegra) {
-                    // ✅ ESTILO VERDE (igual às RECEITAS/DESPESAS com regra)
-                    btn.style.color = '#10b981';
-                    btn.style.fontWeight = '700';
-                    btn.style.border = '1px solid rgba(16, 185, 129, 0.5)';
-                    btn.style.background = 'rgba(16, 185, 129, 0.08)';
-                    btn.style.boxShadow = '0 0 8px rgba(16, 185, 129, 0.15)';
-                    btn.removeAttribute('title');
-                } else {
-                    // ⚠️ ESTILO VERMELHO (sem regra - igual às RECEITAS/DESPESAS)
-                    btn.style.color = '#ef4444';
-                    btn.style.fontWeight = '700';
-                    btn.style.border = '2px solid #ef4444';
-                    btn.style.background = 'rgba(239, 68, 68, 0.08)';
-                    btn.style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.1)';
-                    btn.setAttribute('title', '⚠️ SEM REGRA DE CONVERSÃO!');
-                }
-            }
-        });
-        
-        console.log(`✅ Aplicação concluída: ${atualizados} atualizados, ${ignorados} ignorados, ${resetados} resetados`);
-    }, 100);
     
     alert(`✅ LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n📋 Registros resetados: ${resetados}\n✅ Atualizados com regra: ${atualizados}\n⚠️ Ignorados (sem regra): ${ignorados}`);
 }
