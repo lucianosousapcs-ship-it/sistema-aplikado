@@ -6896,34 +6896,56 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     await carregarRegrasConversaoSupabase();
     
     console.log('✅ Processo concluído!');
-}async function abrirModalConversaoSupabase() {
-    console.log('🔧 Abrindo CONVERSÃO e carregando regras...');
+}
+// ============================================================
+// FUNÇÃO CORRIGIDA: AGORA USA O IDENTIFICADOR DA TABELA plano_contas
+// ============================================================
+async function abrirModalConversaoSupabase() {
+    console.log('🔧 Abrindo CONVERSÃO com IDENTIFICADOR...');
     
     try {
-        await carregarPlanoContasSupabase();
+        // 1. Carregar plano de contas com IDENTIFICADOR
+        const { data: planos, error: erroPlanos } = await supabaseClient
+            .from('plano_contas')
+            .select('codigo, nome, identificador, tipo, grupo_dre, tipo_classificacao')
+            .order('codigo', { ascending: true });
+        
+        if (erroPlanos) {
+            console.error('❌ Erro ao carregar plano_contas:', erroPlanos);
+            alert('Erro ao carregar plano de contas: ' + erroPlanos.message);
+            return;
+        }
+        
+        console.log(`✅ ${planos?.length || 0} planos carregados com IDENTIFICADOR`);
+        
+        // 2. Carregar regras de conversão (com identificador)
         await carregarRegrasConversaoSupabase();
         
-        // ========== RECEITAS ==========
-        const todasReceitas = estruturaDRE.receitas || [];
-        console.log(`📊 Receitas: ${todasReceitas.length}`);
+        // 3. Separar receitas e despesas
+        const receitas = (planos || []).filter(p => p.tipo === 'RECEITA');
+        const despesas = (planos || []).filter(p => p.tipo === 'DESPESA');
         
+        console.log(`📊 Receitas: ${receitas.length}, Despesas: ${despesas.length}`);
+        
+        // 4. ========== MONTAR TABELA DE RECEITAS ==========
         const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
         if (tbodyReceitas) {
             let html = '';
-            for (const receita of todasReceitas) {
-                const codigo = receita.cod;
-                const nome = receita.nome;
-                const grupoDre = receita.grupo_dre || '1 RECEITAS DE VENDAS';
-                const tipoClass = receita.tipo_classificacao || 'RECEITAS';
-                const nomeOperacao = `${codigo}-${nome}`;
-                const codigoSalvo = window.condToPlanoMap?.[nome] || '';
+            for (const plano of receitas) {
+                // 🔑 USANDO O IDENTIFICADOR em vez de concatenar
+                const identificador = plano.identificador || `${plano.codigo} - ${plano.nome}`;
+                const grupoDre = plano.grupo_dre || '1 RECEITAS DE VENDAS';
+                const tipoClass = plano.tipo_classificacao || 'RECEITAS';
+                
+                // Buscar regra salva para este plano
+                const codigoSalvo = window.condToPlanoMap?.[plano.nome] || '';
                 
                 html += `<tr>
                     <td style="white-space: nowrap;">${grupoDre}</td>
-                    <td>${nomeOperacao}</td>
+                    <td><strong>${identificador}</strong></td>  <!-- ← USA O IDENTIFICADOR -->
                     <td>${tipoClass}</td>
                     <td>
-                        <select class="conversao-select" data-cond="${nome}">
+                        <select class="conversao-select" data-cond="${plano.nome}">
                             <option value="DINHEIRO">DINHEIRO</option>
                             <option value="DEBITO">DEBITO</option>
                             <option value="CREDITO">CREDITO</option>
@@ -6934,12 +6956,14 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                         </select>
                     </td>
                     <td>
-                        <select class="conversao-select-plano-receita" data-plano-cond="${nome}">
+                        <select class="conversao-select-plano-receita" data-plano-cond="${plano.nome}">
                             <option value="">Selecione...</option>`;
                 
-                for (const p of todasReceitas) {
-                    const selected = (codigoSalvo === p.cod) ? 'selected' : '';
-                    html += `<option value="${p.cod}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                // PREENCHER OS SELECTS COM OS IDENTIFICADORES
+                for (const p of receitas) {
+                    const ident = p.identificador || `${p.codigo} - ${p.nome}`;
+                    const selected = (codigoSalvo === p.codigo) ? 'selected' : '';
+                    html += `<option value="${p.codigo}" ${selected}>${ident}</option>`;
                 }
                 
                 html += `     </select>
@@ -6947,36 +6971,36 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                 </tr>`;
             }
             tbodyReceitas.innerHTML = html;
-            console.log(`✅ Receitas: ${todasReceitas.length} itens`);
+            console.log(`✅ Tabela RECEITAS: ${receitas.length} linhas com IDENTIFICADOR`);
         }
         
-        // ========== DESPESAS ==========
-        const todasDespesas = [...(estruturaDRE.custosVariaveis || []), ...(estruturaDRE.custosFixos || [])];
-        console.log(`📊 Despesas: ${todasDespesas.length}`);
-        
+        // 5. ========== MONTAR TABELA DE DESPESAS ==========
         const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
         if (tbodyDespesas) {
             let html = '';
-            for (const despesa of todasDespesas) {
-                const codigo = despesa.cod;
-                const nome = despesa.nome;
-                const grupoDre = despesa.grupo_dre || '4 DESPESAS ADMINISTRATIVAS';
-                const tipoClass = despesa.tipo_classificacao || 'DESPESAS VARIAVEIS';
-                const nomeOperacao = `${codigo}-${nome}`;
-                const codigoSalvo = window.operacaoToPlanoMap?.[nome] || '';
+            for (const plano of despesas) {
+                // 🔑 USANDO O IDENTIFICADOR em vez de concatenar
+                const identificador = plano.identificador || `${plano.codigo} - ${plano.nome}`;
+                const grupoDre = plano.grupo_dre || '4 DESPESAS ADMINISTRATIVAS';
+                const tipoClass = plano.tipo_classificacao || 'DESPESAS VARIAVEIS';
+                
+                // Buscar regra salva para este plano
+                const codigoSalvo = window.operacaoToPlanoMap?.[plano.nome] || '';
                 
                 html += `<tr>
                     <td style="white-space: nowrap;">${grupoDre}</td>
-                    <td>${nomeOperacao}</td>
+                    <td><strong>${identificador}</strong></td>  <!-- ← USA O IDENTIFICADOR -->
                     <td>${tipoClass}</td>
                     <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></td>
                     <td>
-                        <select class="conversao-select-plano-despesa" data-operacao="${nome}">
+                        <select class="conversao-select-plano-despesa" data-operacao="${plano.nome}">
                             <option value="">Selecione...</option>`;
                 
-                for (const p of todasDespesas) {
-                    const selected = (codigoSalvo === p.cod) ? 'selected' : '';
-                    html += `<option value="${p.cod}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                // PREENCHER OS SELECTS COM OS IDENTIFICADORES
+                for (const p of despesas) {
+                    const ident = p.identificador || `${p.codigo} - ${p.nome}`;
+                    const selected = (codigoSalvo === p.codigo) ? 'selected' : '';
+                    html += `<option value="${p.codigo}" ${selected}>${ident}</option>`;
                 }
                 
                 html += `     </select>
@@ -6984,56 +7008,58 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                 </tr>`;
             }
             tbodyDespesas.innerHTML = html;
-            console.log(`✅ Despesas: ${todasDespesas.length} itens`);
+            console.log(`✅ Tabela DESPESAS: ${despesas.length} linhas com IDENTIFICADOR`);
         }
         
-        // ========== ABRIR MODAL ==========
+        // 6. ABRIR MODAL
         document.getElementById('modalConversao').classList.add('active');
-        console.log(`🎯 TOTAL: ${todasReceitas.length + todasDespesas.length} itens`);
+        console.log(`🎯 TOTAL: ${receitas.length + despesas.length} itens com IDENTIFICADOR`);
         
-        // ========== AUTO PREENCHER OS SELECTS PELO VALOR SALVO ==========
-setTimeout(() => {
-    let preenchidos = 0;
-    
-    // RECEITAS
-    document.querySelectorAll('.conversao-select-plano-receita').forEach(select => {
-        const operacao = select.getAttribute('data-plano-cond');
-        if (operacao) {
-            const valorSalvo = window.condToPlanoMap?.[operacao] || '';
-            if (!valorSalvo) return;
+        // 7. AUTO PREENCHER SELECTS PELO VALOR SALVO
+        setTimeout(() => {
+            let preenchidos = 0;
             
-            for (let i = 0; i < select.options.length; i++) {
-                if (select.options[i].text === valorSalvo) {
-                    select.selectedIndex = i;
-                    preenchidos++;
-                    break;
+            // RECEITAS
+            document.querySelectorAll('.conversao-select-plano-receita').forEach(select => {
+                const operacao = select.getAttribute('data-plano-cond');
+                if (operacao) {
+                    const valorSalvo = window.condToPlanoMap?.[operacao] || '';
+                    if (!valorSalvo) return;
+                    
+                    for (let i = 0; i < select.options.length; i++) {
+                        // Compara pelo value (código)
+                        if (select.options[i].value === valorSalvo) {
+                            select.selectedIndex = i;
+                            preenchidos++;
+                            break;
+                        }
+                    }
                 }
-            }
-        }
-    });
-    
-    // DESPESAS
-    document.querySelectorAll('.conversao-select-plano-despesa').forEach(select => {
-        const operacao = select.getAttribute('data-operacao');
-        if (operacao) {
-            const valorSalvo = window.operacaoToPlanoMap?.[operacao] || '';
-            if (!valorSalvo) return;
+            });
             
-            for (let i = 0; i < select.options.length; i++) {
-                if (select.options[i].text === valorSalvo) {
-                    select.selectedIndex = i;
-                    preenchidos++;
-                    break;
+            // DESPESAS
+            document.querySelectorAll('.conversao-select-plano-despesa').forEach(select => {
+                const operacao = select.getAttribute('data-operacao');
+                if (operacao) {
+                    const valorSalvo = window.operacaoToPlanoMap?.[operacao] || '';
+                    if (!valorSalvo) return;
+                    
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].value === valorSalvo) {
+                            select.selectedIndex = i;
+                            preenchidos++;
+                            break;
+                        }
+                    }
                 }
-            }
-        }
-    });
-    
-    console.log(`✅ ${preenchidos} selects preenchidos automaticamente!`);
-}, 300);
+            });
+            
+            console.log(`✅ ${preenchidos} selects preenchidos automaticamente!`);
+        }, 300);
         
     } catch (error) {
-        console.error('❌ Erro:', error);
+        console.error('❌ Erro ao abrir conversão:', error);
+        alert('Erro ao abrir conversão: ' + error.message);
     }
 }function abrirModalComparativos() {
     console.log('🔘 Botão COMPARATIVOS clicado!');
