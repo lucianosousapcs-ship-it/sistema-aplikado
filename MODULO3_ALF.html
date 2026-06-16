@@ -5569,41 +5569,47 @@ async function loadMapeamentos() {
 // FUNÇÃO MODIFICADA: Carregar regras do Supabase
 // FUNÇÃO: Carregar regras do Supabase
 async function carregarRegrasConversaoSupabase() {
-    console.log('🔄 Carregando regras da tabela regras_conversao...');
+    console.log('🔄 Carregando regras da tabela conversao_operacoes...');
     
-    const { data, error } = await supabaseClient
-        .from('regras_conversao')
-        .select('*');
-    
-    if (error) {
-        console.error('❌ Erro ao carregar regras:', error);
-        return;
-    }
-    
-    window.condToTituloMap = {};
-    window.condToPlanoMap = {};
-    window.operacaoToPlanoMap = {};
-    
-    data.forEach(regra => {
-        if (regra.tipo === 'RECEITA') {
-            if (regra.destino_caixa) {
-                window.condToTituloMap[regra.origem] = regra.destino_caixa;
-            }
-            if (regra.destino_plano) {
-                window.condToPlanoMap[regra.origem] = regra.destino_plano;
-            }
-        } else if (regra.tipo === 'DESPESA_VARIAVEL') {
-            if (regra.destino_plano) {
-                window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
-            }
+    try {
+        const { data, error } = await supabaseClient
+            .from('conversao_operacoes')
+            .select('*');
+        
+        if (error) {
+            console.error('❌ Erro ao carregar regras:', error);
+            return;
         }
-    });
-    
-    console.log('✅ Regras carregadas:', {
-        titulos: Object.keys(window.condToTituloMap).length,
-        planosReceitas: Object.keys(window.condToPlanoMap).length,
-        planosDespesas: Object.keys(window.operacaoToPlanoMap).length
-    });
+        
+        console.log(`📊 ${data?.length || 0} regras carregadas da tabela conversao_operacoes`);
+        
+        window.condToTituloMap = {};
+        window.condToPlanoMap = {};
+        window.operacaoToPlanoMap = {};
+        
+        if (data && data.length > 0) {
+            data.forEach(regra => {
+                if (regra.tipo === 'RECEITA' && regra.operacao) {
+                    window.condToPlanoMap[regra.operacao] = regra.plano_contas_dre;
+                    console.log(`   RECEITA: ${regra.operacao} → ${regra.plano_contas_dre}`);
+                } else if (regra.tipo === 'DESPESA' && regra.operacao) {
+                    window.operacaoToPlanoMap[regra.operacao] = regra.plano_contas_dre;
+                    console.log(`   DESPESA: ${regra.operacao} → ${regra.plano_contas_dre}`);
+                }
+            });
+            
+            localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
+            localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
+        }
+        
+        console.log('✅ Regras carregadas:', {
+            planosReceitas: Object.keys(window.condToPlanoMap).length,
+            planosDespesas: Object.keys(window.operacaoToPlanoMap).length
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar regras:', error);
+    }
 }
 function mostrarConsultaConversaoDespesa(operacao, planoContasAtual) {
     const savedOperacaoPlano = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
@@ -6765,7 +6771,7 @@ async function salvarRegrasConversaoSupabase() {
 }
 
 async function salvarMapeamentoConversaoCompletoSupabase() {
-    console.log('💾 Salvando mapeamento de conversão...');
+    console.log('💾 Salvando mapeamento de conversão na tabela conversao_operacoes...');
     
     const receitasRegras = [];
     const despesasRegras = [];
@@ -6817,10 +6823,10 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     }
     
     console.log(`📋 ${todasRegras.length} regras para salvar`);
-    console.log('📊 Amostra:', todasRegras[0]);
+    console.log('📊 Amostra:', JSON.stringify(todasRegras[0], null, 2));
     
     // ========== DELETAR REGRAS ANTIGAS ==========
-    console.log('🗑️ Removendo regras antigas...');
+    console.log('🗑️ Removendo regras antigas da tabela conversao_operacoes...');
     const { error: deleteError } = await supabaseClient
         .from('conversao_operacoes')
         .delete()
@@ -6834,11 +6840,11 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     console.log('✅ Regras antigas removidas');
     
     // ========== INSERIR NOVAS REGRAS ==========
-    console.log('📝 Inserindo novas regras...');
+    console.log('📝 Inserindo novas regras na tabela conversao_operacoes...');
     let inseridos = 0;
     let erros = 0;
     
-    const batchSize = 100;
+    const batchSize = 50;
     for (let i = 0; i < todasRegras.length; i += batchSize) {
         const batch = todasRegras.slice(i, i + batchSize);
         
@@ -6848,7 +6854,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
         
         if (insertError) {
             console.error('❌ Erro ao inserir lote:', insertError);
-            console.error('❌ Dados do lote:', batch);
+            console.error('❌ Dados do lote:', JSON.stringify(batch[0], null, 2));
             erros += batch.length;
         } else {
             inseridos += batch.length;
@@ -6869,7 +6875,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     
     // ========== MENSAGEM FINAL ==========
     if (erros === 0) {
-        alert(`✅ ${inseridos} regras salvas com sucesso!`);
+        alert(`✅ ${inseridos} regras salvas com sucesso na tabela conversao_operacoes!`);
     } else {
         alert(`⚠️ ${inseridos} regras salvas, ${erros} erros. Verifique o console.`);
     }
