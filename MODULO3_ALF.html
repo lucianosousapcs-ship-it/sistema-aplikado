@@ -3119,7 +3119,16 @@ function carregarPlanosSalvosLocalmente() {
 
 async function carregarDadosReaisLancamentos() {
     try {
-        // ========== 1. CARREGAR VENDAS (RECEITAS) ==========
+        console.log('🚀 INICIANDO CARREGAMENTO DE DADOS...');
+
+        // ========== 1. CARREGAR REGRAS PRIMEIRO ==========
+        console.log('📚 Carregando regras de conversão...');
+        await carregarRegrasConversaoSupabase();
+        
+        console.log(`📚 operacaoToPlanoMap tem ${Object.keys(operacaoToPlanoMap).length} regras`);
+        console.log(`📚 condToPlanoMap tem ${Object.keys(condToPlanoMap).length} regras`);
+
+        // ========== 2. CARREGAR VENDAS (RECEITAS) ==========
         let todasVendas = [];
         let page = 0;
         
@@ -3135,10 +3144,9 @@ async function carregarDadosReaisLancamentos() {
             todasVendas.push(...data);
             page++;
         }
-        
         console.log(`✅ Vendas: ${todasVendas.length} registros`);
 
-        // ========== 2. CARREGAR COMPRAS (DESPESAS) ==========
+        // ========== 3. CARREGAR COMPRAS (DESPESAS) ==========
         let todasCompras = [];
         page = 0;
         
@@ -3154,17 +3162,7 @@ async function carregarDadosReaisLancamentos() {
             todasCompras.push(...data);
             page++;
         }
-        
         console.log(`✅ Compras: ${todasCompras.length} registros`);
-
-        // ========== 3. GARANTIR QUE AS REGRAS ESTÃO CARREGADAS ==========
-        // Se o mapa estiver vazio, carregar as regras
-        if (Object.keys(operacaoToPlanoMap).length === 0) {
-            console.log('🔄 Carregando regras de conversão...');
-            await carregarRegrasConversaoSupabase();
-        }
-        
-        console.log(`📚 Regras de despesas carregadas: ${Object.keys(operacaoToPlanoMap).length}`);
 
         // ========== 4. CRIAR MAPA DE PLANOS POR IDENTIFICADOR ==========
         const mapaPlanos = {};
@@ -3178,113 +3176,71 @@ async function carregarDadosReaisLancamentos() {
             mapaPlanos[id] = `${p.cod} - ${p.nome}`;
         });
         
-        console.log(`📚 Planos de despesas mapeados: ${Object.keys(mapaPlanos).length}`);
-
-        // ========== 5. PROCESSAR DESPESAS ==========
-       let comRegra = 0;
-let semRegra = 0;
-let regrasEncontradas = [];
-
-despesasDataReais = todasCompras.map(c => {
-    const operacao = c.operacao || c.documento || 'DESPESA';
-    
-    // ========== DEBUG ==========
-    // Verifica se a operação existe no mapa
-    const identificador = operacaoToPlanoMap[operacao];
-    
-    // Log das primeiras 10 operações para debug
-    if (regrasEncontradas.length < 10) {
-        console.log(`🔍 Buscando: "${operacao}" → ${identificador || 'NÃO ENCONTRADO'}`);
-        regrasEncontradas.push(operacao);
-    }
-    
-    let plano = "DESPESAS ADMINISTRATIVAS";
-    let temRegra = false;
-    
-    if (identificador && mapaPlanos[identificador]) {
-        plano = mapaPlanos[identificador];
-        temRegra = true;
-        comRegra++;
-    } else {
-        semRegra++;
-        // Mostra APENAS as 10 primeiras sem regra
-        if (semRegra <= 10) {
-            console.log(`⚠️ Sem regra para: "${operacao}"`);
-        }
-    }
-    
-    return {
-        id: c.id,
-        data: c.vencimento || '01/01/2000',
-        valor: Number(c.valor || 0),
-        fornecedor: c.fornecedor || 'NAO INFORMADO',
-        operacao: operacao,
-        plano: plano,
-        identificador: identificador || null,
-        temRegra: temRegra
-    };
-});
-
-console.log(`📊 Despesas processadas: ${despesasDataReais.length}`);
-console.log(`   ✅ Com regra: ${comRegra}`);
-console.log(`   ⚠️ Sem regra: ${semRegra}`);
-
-// ========== DEBUG EXTRA ==========
-// Verificar se as regras estão sendo carregadas corretamente
-console.log('🔍 Mapa de regras de despesas (amostra):');
-const amostraRegras = Object.keys(operacaoToPlanoMap).slice(0, 10);
-amostraRegras.forEach(key => {
-    console.log(`   "${key}" → "${operacaoToPlanoMap[key]}"`);
-});
-        // ========== 6. PROCESSAR RECEITAS ==========
-        // Similar para receitas...
-        if (Object.keys(condToPlanoMap).length === 0) {
-            await carregarRegrasConversaoSupabase();
-        }
-        
         const mapaPlanosReceitas = {};
         estruturaDRE.receitas.forEach(p => {
             const id = p.identificador || p.cod;
             mapaPlanosReceitas[id] = `${p.cod} - ${p.nome}`;
         });
         
-let comRegraRec = 0;
-let semRegraRec = 0;
+        console.log(`📚 Planos mapeados: Despesas=${Object.keys(mapaPlanos).length}, Receitas=${Object.keys(mapaPlanosReceitas).length}`);
 
-receitasDataReais = todasVendas.map(v => {
-    const condPag = v['COND.PAG'] || v.cond_pag || '';
-    const identificador = condToPlanoMap[condPag];
-    
-    let plano = "RECEITA DE SERVICOS";
-    let temRegra = false;
-    
-    if (identificador && mapaPlanosReceitas[identificador]) {
-        plano = mapaPlanosReceitas[identificador];
-        temRegra = true;
-        comRegraRec++;
-    } else {
-        semRegraRec++;
-        if (semRegraRec <= 10) {
-            console.log(`⚠️ Sem regra para condição: "${condPag}"`);
-        }
-    }
-    
-    return {
-        id: v.id,
-        data: v.data || '01/01/2000',
-        valor: Number(v['TOTAL NOTA'] || v.total || 0),
-        cliente: v['CLIENTE/FORNECEDOR'] || v.cliente || 'NAO INFORMADO',
-        classificacao: obterClassificacaoDoTipo(v),
-        plano: plano,
-        cond_pag: condPag,
-        identificador: identificador || null,
-        temRegra: temRegra
-    };
-});
+        // ========== 5. PROCESSAR DESPESAS ==========
+        let comRegra = 0;
+        let semRegra = 0;
+        
+        despesasDataReais = todasCompras.map(c => {
+            const operacao = c.operacao || c.documento || 'DESPESA';
+            const identificador = operacaoToPlanoMap[operacao];
+            
+            let plano = "DESPESAS ADMINISTRATIVAS";
+            let temRegra = false;
+            
+            if (identificador && mapaPlanos[identificador]) {
+                plano = mapaPlanos[identificador];
+                temRegra = true;
+                comRegra++;
+            } else {
+                semRegra++;
+                if (semRegra <= 5) {
+                    console.log(`⚠️ Sem regra: "${operacao}" → ID: "${identificador}"`);
+                }
+            }
+            
+            return {
+                id: c.id,
+                data: c.vencimento || '01/01/2000',
+                valor: Number(c.valor || 0),
+                fornecedor: c.fornecedor || 'NAO INFORMADO',
+                operacao: operacao,
+                plano: plano,
+                identificador: identificador || null,
+                temRegra: temRegra
+            };
+        });
 
-console.log(`📊 Receitas processadas: ${receitasDataReais.length}`);
-console.log(`   ✅ Com regra: ${comRegraRec}`);
-console.log(`   ⚠️ Sem regra: ${semRegraRec}`);
+        console.log(`📊 Despesas: ${despesasDataReais.length} | ✅ Com regra: ${comRegra} | ⚠️ Sem regra: ${semRegra}`);
+
+        // ========== 6. PROCESSAR RECEITAS ==========
+        let comRegraRec = 0;
+        let semRegraRec = 0;
+        
+        receitasDataReais = todasVendas.map(v => {
+            const condPag = v['COND.PAG'] || v.cond_pag || '';
+            const identificador = condToPlanoMap[condPag];
+            
+            let plano = "RECEITA DE SERVICOS";
+            let temRegra = false;
+            
+            if (identificador && mapaPlanosReceitas[identificador]) {
+                plano = mapaPlanosReceitas[identificador];
+                temRegra = true;
+                comRegraRec++;
+            } else {
+                semRegraRec++;
+                if (semRegraRec <= 5) {
+                    console.log(`⚠️ Sem regra para condição: "${condPag}" → ID: "${identificador}"`);
+                }
+            }
             
             return {
                 id: v.id,
@@ -3299,14 +3255,14 @@ console.log(`   ⚠️ Sem regra: ${semRegraRec}`);
             };
         });
 
-        console.log(`📊 Receitas processadas: ${receitasDataReais.length}`);
-        console.log(`   ✅ Com regra: ${comRegraRec}`);
-        console.log(`   ⚠️ Sem regra: ${semRegraRec}`);
+        console.log(`📊 Receitas: ${receitasDataReais.length} | ✅ Com regra: ${comRegraRec} | ⚠️ Sem regra: ${semRegraRec}`);
 
         // ========== 7. RENDERIZAR ==========
         renderizarTabelaReceitas();
         renderizarTabelaDespesas();
         buscarUltimaAtualizacao();
+        
+        console.log('✅ CARREGAMENTO CONCLUÍDO!');
         
     } catch(e) { 
         console.error('❌ Erro ao carregar dados reais:', e); 
@@ -3450,7 +3406,6 @@ function renderizarTabelaDespesas() {
         // ========== VERIFICA SE TEM REGRA ==========
         const temRegra = d.temRegra === true;
 const corPlano = temRegra ? 'color: #10b981; font-weight: 700;' : 'color: #ef4444; font-weight: 700;';
-
         const tituloPlano = temRegra ? '' : 'title="⚠️ SEM REGRA DE CONVERSÃO! Clique em APLICAR ou configure na tela CONVERSÃO"';
         
         html += `<tr>`;
@@ -5606,12 +5561,12 @@ async function carregarRegrasConversaoSupabase() {
         
         if (data && data.length > 0) {
             data.forEach(regra => {
-                // ========== RECEITAS ==========
+                // RECEITAS
                 if (regra.tipo === 'RECEITA') {
                     if (regra.destino_caixa) {
                         condToTituloMap[regra.origem] = regra.destino_caixa;
                     }
-                    // USAR destino_identificador (se existir) OU destino_plano
+                    // PRIORIDADE: destino_identificador (fallback para destino_plano)
                     if (regra.destino_identificador) {
                         condToPlanoMap[regra.origem] = regra.destino_identificador;
                     } else if (regra.destino_plano) {
@@ -5619,10 +5574,9 @@ async function carregarRegrasConversaoSupabase() {
                     }
                 }
                 
-                // ========== DESPESAS ==========
-                // ACEITAR TANTO 'DESPESA' QUANTO 'DESPESA_VARIAVEL'
+                // DESPESAS (ACEITA 'DESPESA' E 'DESPESA_VARIAVEL')
                 if (regra.tipo === 'DESPESA' || regra.tipo === 'DESPESA_VARIAVEL') {
-                    // USAR destino_identificador (se existir) OU destino_plano
+                    // PRIORIDADE: destino_identificador (fallback para destino_plano)
                     if (regra.destino_identificador) {
                         operacaoToPlanoMap[regra.origem] = regra.destino_identificador;
                     } else if (regra.destino_plano) {
@@ -5638,7 +5592,7 @@ async function carregarRegrasConversaoSupabase() {
             planosDespesas: Object.keys(operacaoToPlanoMap).length
         });
         
-        // Mostrar as primeiras regras de despesas para debug
+        // MOSTRA AS PRIMEIRAS REGRAS PARA DEBUG
         const primeirasDespesas = Object.keys(operacaoToPlanoMap).slice(0, 5);
         console.log('📋 Primeiras regras de despesas:', primeirasDespesas);
         
