@@ -7299,12 +7299,17 @@ function fecharModalContasExtras() {
 // FUNÇÃO LIMPAR E APLICAR TODOS PARA CONTAS EXTRAS
 // ============================================================
 async function limparEConverterContasExtras() {
-    if (contasExtrasSelecionadas.size === 0) {
-        alert('⚠️ Selecione pelo menos um registro para aplicar a regra.');
+    // Verifica se há registros
+    if (contasExtrasData.length === 0) {
+        alert('⚠️ Nenhum registro para processar.');
         return;
     }
     
-    const confirmar = confirm('ATENÇÃO: Isso irá LIMPAR os planos de contas e REAPLICAR conforme as regras de conversão para os itens SELECIONADOS.\n\nDeseja continuar?');
+    const confirmar = confirm(
+        'ATENÇÃO: Isso irá LIMPAR os planos de contas e REAPLICAR ' +
+        'conforme as regras de conversão para TODOS os registros.\n\n' +
+        'Deseja continuar?'
+    );
     if (!confirmar) return;
     
     // CARREGAR REGRAS DO SUPABASE
@@ -7312,37 +7317,29 @@ async function limparEConverterContasExtras() {
     
     // Criar mapa: operação → nome do plano (sem o código)
     const operacaoParaPlanoNome = {};
-    
     for (const [operacao, identificador] of Object.entries(operacaoToPlanoMap)) {
         let nomePlano = identificador;
-        
-        // Se tiver " - ", extrai só a parte depois do traço
         if (identificador && identificador.includes(' - ')) {
             const partes = identificador.split(' - ');
-            nomePlano = partes.slice(1).join(' - '); // Pega tudo depois do primeiro " - "
+            nomePlano = partes.slice(1).join(' - ');
         }
-        
         operacaoParaPlanoNome[operacao] = nomePlano;
     }
-    
-    console.log('📚 Mapeamento simplificado:', operacaoParaPlanoNome);
     
     let atualizados = 0;
     let ignorados = 0;
     let resetados = 0;
     
+    // 🔹 PASSO 1: LIMPAR E APLICAR EM TODOS OS REGISTROS
     for (const reg of contasExtrasData) {
-        if (!contasExtrasSelecionadas.has(reg.id)) continue;
-        
         const operacao = reg.operacao || '';
         
-        // 🔹 PASSO 1: RESETA O PLANO
+        // RESETA O PLANO
         reg.plano = "DESPESAS ADMINISTRATIVAS";
         resetados++;
         
-        // 🔹 PASSO 2: APLICA A REGRA
+        // APLICA A REGRA SE EXISTIR
         const planoNome = operacaoParaPlanoNome[operacao];
-        
         if (planoNome && planoNome !== '') {
             reg.plano = planoNome;
             planosContasExtrasSalvos[reg.id] = planoNome;
@@ -7354,37 +7351,41 @@ async function limparEConverterContasExtras() {
     
     localStorage.setItem('planos_contas_extras', JSON.stringify(planosContasExtrasSalvos));
     
-    // 🔹 PASSO 3: RENDERIZAR A TABELA (isso vai recriar todos os botões)
+    // 🔹 PASSO 2: RENDERIZAR A TABELA
     renderizarTabelaContasExtras();
     
-    // 🔹 PASSO 4: APLICAR AS CORES NOS BOTÕES (igual às RECEITAS/DESPESAS)
-    document.querySelectorAll('#tabelaContasExtrasBody .btn-plano-lancamento').forEach(btn => {
-        const id = parseInt(btn.getAttribute('data-id'));
-        const reg = contasExtrasData.find(r => r.id === id);
-        
-        if (reg) {
-            // Verifica se tem regra (se o plano é diferente do padrão "DESPESAS ADMINISTRATIVAS")
-            const temRegra = reg.plano !== "DESPESAS ADMINISTRATIVAS";
+    // 🔹 PASSO 3: APLICAR AS CORES (IGUAL ÀS RECEITAS/DESPESAS)
+    setTimeout(() => {
+        document.querySelectorAll('#tabelaContasExtrasBody .btn-plano-lancamento').forEach(btn => {
+            const id = parseInt(btn.getAttribute('data-id'));
+            const reg = contasExtrasData.find(r => r.id === id);
             
-            if (temRegra) {
-                // ✅ ESTILO VERDE (igual às RECEITAS/DESPESAS com regra)
-                btn.style.color = '#10b981';
-                btn.style.fontWeight = '700';
-                btn.style.border = '1px solid rgba(16, 185, 129, 0.5)';
-                btn.style.background = 'rgba(16, 185, 129, 0.08)';
-                btn.removeAttribute('title');
-            } else {
-                // ⚠️ ESTILO VERMELHO (sem regra - igual às RECEITAS/DESPESAS)
-                btn.style.color = '#ef4444';
-                btn.style.fontWeight = '700';
-                btn.style.border = '2px solid #ef4444';
-                btn.style.background = 'rgba(239, 68, 68, 0.08)';
-                btn.setAttribute('title', '⚠️ SEM REGRA DE CONVERSÃO!');
+            if (reg) {
+                // Verifica se tem regra (plano diferente do padrão)
+                const temRegra = reg.plano !== "DESPESAS ADMINISTRATIVAS";
+                
+                if (temRegra) {
+                    // ✅ ESTILO VERDE (igual às RECEITAS/DESPESAS com regra)
+                    btn.style.color = '#10b981';
+                    btn.style.fontWeight = '700';
+                    btn.style.border = '1px solid rgba(16, 185, 129, 0.5)';
+                    btn.style.background = 'rgba(16, 185, 129, 0.08)';
+                    btn.style.boxShadow = '0 0 8px rgba(16, 185, 129, 0.15)';
+                    btn.removeAttribute('title');
+                } else {
+                    // ⚠️ ESTILO VERMELHO (sem regra - igual às RECEITAS/DESPESAS)
+                    btn.style.color = '#ef4444';
+                    btn.style.fontWeight = '700';
+                    btn.style.border = '2px solid #ef4444';
+                    btn.style.background = 'rgba(239, 68, 68, 0.08)';
+                    btn.style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.1)';
+                    btn.setAttribute('title', '⚠️ SEM REGRA DE CONVERSÃO!');
+                }
             }
-        }
-    });
-    
-    console.log(`✅ Aplicação concluída: ${atualizados} atualizados, ${ignorados} ignorados, ${resetados} resetados`);
+        });
+        
+        console.log(`✅ Aplicação concluída: ${atualizados} atualizados, ${ignorados} ignorados, ${resetados} resetados`);
+    }, 100);
     
     alert(`✅ LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n📋 Registros resetados: ${resetados}\n✅ Atualizados com regra: ${atualizados}\n⚠️ Ignorados (sem regra): ${ignorados}`);
 }
