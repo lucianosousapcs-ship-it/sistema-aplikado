@@ -6922,30 +6922,33 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                 const grupoDre = receita.grupo_dre || '1 RECEITAS DE VENDAS';
                 const tipoClass = receita.tipo_classificacao || 'RECEITAS';
                 const nomeOperacao = `${codigo}-${nome}`;
-                const codigoSalvo = window.condToPlanoMap?.[nome] || '';
+                
+                const planoSalvo = window.condToPlanoMap ? window.condToPlanoMap[nome] : null;
+                const codigoSalvo = planoSalvo ? 
+                    Object.entries(window.condToPlanoMap).find(([key, value]) => value === nome)?.[0] : '';
                 
                 html += `<tr>
-                    <td style="white-space: nowrap;">${grupoDre}</td>
-                    <td>${nomeOperacao}</td>
-                    <td>${tipoClass}</td>
+                    <td style="white-space: nowrap;">${escapeHtml(grupoDre)}</td>
+                    <td>${escapeHtml(nomeOperacao)}</td>
+                    <td>${escapeHtml(tipoClass)}</td>
                     <td>
-                        <select class="conversao-select" data-cond="${nome}">
-                            <option value="DINHEIRO">DINHEIRO</option>
-                            <option value="DEBITO">DEBITO</option>
-                            <option value="CREDITO">CREDITO</option>
-                            <option value="CREDITO PARCELADO">CREDITO PARCELADO</option>
-                            <option value="AG">AG</option>
-                            <option value="PIX">PIX</option>
-                            <option value="VNF" selected>VNF</option>
+                        <select class="conversao-select" data-cond="${escapeHtml(nome)}">
+                            <option value="DINHEIRO" ${codigoSalvo === 'DINHEIRO' ? 'selected' : ''}>DINHEIRO</option>
+                            <option value="DEBITO" ${codigoSalvo === 'DEBITO' ? 'selected' : ''}>DEBITO</option>
+                            <option value="CREDITO" ${codigoSalvo === 'CREDITO' ? 'selected' : ''}>CREDITO</option>
+                            <option value="CREDITO PARCELADO" ${codigoSalvo === 'CREDITO PARCELADO' ? 'selected' : ''}>CREDITO PARCELADO</option>
+                            <option value="AG" ${codigoSalvo === 'AG' ? 'selected' : ''}>AG</option>
+                            <option value="PIX" ${codigoSalvo === 'PIX' ? 'selected' : ''}>PIX</option>
+                            <option value="VNF" ${!codigoSalvo || codigoSalvo === 'VNF' ? 'selected' : ''}>VNF</option>
                         </select>
                     </td>
                     <td>
-                        <select class="conversao-select-plano-receita" data-plano-cond="${nome}">
+                        <select class="conversao-select-plano-receita" data-plano-cond="${escapeHtml(nome)}">
                             <option value="">Selecione...</option>`;
                 
                 for (const p of todasReceitas) {
-                    const selected = (codigoSalvo === p.cod) ? 'selected' : '';
-                    html += `<option value="${p.cod}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                    const selected = (window.condToPlanoMap && window.condToPlanoMap[nome] === p.nome) ? 'selected' : '';
+                    html += `<option value="${escapeHtml(p.cod)}" ${selected}>${escapeHtml(p.cod)} - ${escapeHtml(p.nome)}</option>`;
                 }
                 
                 html += `     </select>
@@ -6956,7 +6959,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
             console.log(`✅ Receitas: ${todasReceitas.length} itens`);
         }
         
-        // ========== DESPESAS ==========
+        // ========== DESPESAS - BUSCA CORRIGIDA ==========
         const todasDespesas = [...(estruturaDRE.custosVariaveis || []), ...(estruturaDRE.custosFixos || [])];
         console.log(`📊 Despesas: ${todasDespesas.length}`);
         
@@ -6969,20 +6972,23 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                 const grupoDre = despesa.grupo_dre || '4 DESPESAS ADMINISTRATIVAS';
                 const tipoClass = despesa.tipo_classificacao || 'DESPESAS VARIAVEIS';
                 const nomeOperacao = `${codigo}-${nome}`;
-                const codigoSalvo = window.operacaoToPlanoMap?.[nome] || '';
+                
+                // 🔑 BUSCA CORRETA: usa o nome SEM o código
+                const planoSalvo = window.operacaoToPlanoMap ? window.operacaoToPlanoMap[nome] : null;
                 
                 html += `<tr>
-                    <td style="white-space: nowrap;">${grupoDre}</td>
-                    <td>${nomeOperacao}</td>
-                    <td>${tipoClass}</td>
+                    <td style="white-space: nowrap;">${escapeHtml(grupoDre)}</td>
+                    <td>${escapeHtml(nomeOperacao)}</td>
+                    <td>${escapeHtml(tipoClass)}</td>
                     <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></td>
                     <td>
-                        <select class="conversao-select-plano-despesa" data-operacao="${nome}">
+                        <select class="conversao-select-plano-despesa" data-operacao="${escapeHtml(nome)}">
                             <option value="">Selecione...</option>`;
                 
                 for (const p of todasDespesas) {
-                    const selected = (codigoSalvo === p.cod) ? 'selected' : '';
-                    html += `<option value="${p.cod}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                    // 🔑 COMPARAÇÃO CORRETA: usa o nome da despesa para verificar se está salvo
+                    const selected = (planoSalvo === p.nome) ? 'selected' : '';
+                    html += `<option value="${escapeHtml(p.cod)}" ${selected}>${escapeHtml(p.cod)} - ${escapeHtml(p.nome)}</option>`;
                 }
                 
                 html += `     </select>
@@ -6993,47 +6999,12 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
             console.log(`✅ Despesas: ${todasDespesas.length} itens`);
         }
         
-        // ========== ABRIR MODAL ==========
         document.getElementById('modalConversao').classList.add('active');
         console.log(`🎯 TOTAL: ${todasReceitas.length + todasDespesas.length} itens`);
         
-        // ========== AUTO PREENCHER OS SELECTS PELO TEXTO ==========
-        setTimeout(() => {
-            let preenchidos = 0;
-            
-            // RECEITAS
-            document.querySelectorAll('.conversao-select-plano-receita').forEach(select => {
-                const operacao = select.getAttribute('data-plano-cond');
-                if (operacao) {
-                    for (let i = 0; i < select.options.length; i++) {
-                        if (select.options[i].text.includes(operacao)) {
-                            select.selectedIndex = i;
-                            preenchidos++;
-                            break;
-                        }
-                    }
-                }
-            });
-            
-            // DESPESAS
-            document.querySelectorAll('.conversao-select-plano-despesa').forEach(select => {
-                const operacao = select.getAttribute('data-operacao');
-                if (operacao) {
-                    for (let i = 0; i < select.options.length; i++) {
-                        if (select.options[i].text.includes(operacao)) {
-                            select.selectedIndex = i;
-                            preenchidos++;
-                            break;
-                        }
-                    }
-                }
-            });
-            
-            console.log(`✅ ${preenchidos} selects preenchidos automaticamente!`);
-        }, 300);
-        
     } catch (error) {
-        console.error('❌ Erro:', error);
+        console.error('❌ Erro ao abrir conversão:', error);
+        alert('Erro ao carregar dados: ' + error.message);
     }
 }function abrirModalComparativos() {
     console.log('🔘 Botão COMPARATIVOS clicado!');
