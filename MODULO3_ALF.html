@@ -5489,7 +5489,7 @@ async function carregarPlanoContasSupabase() {
         
         const { data, error } = await supabaseClient
             .from('plano_contas')
-            .select('codigo, nome, tipo, grupo_dre, tipo_classificacao')
+            .select('codigo, nome, tipo, grupo_dre, tipo_classificacao, identificador')  // ← ADICIONOU identificador
             .order('codigo', { ascending: true });
         
         if (error) {
@@ -5510,13 +5510,15 @@ async function carregarPlanoContasSupabase() {
                     cod: p.codigo, 
                     nome: p.nome,
                     grupo_dre: p.grupo_dre || '1 RECEITAS DE VENDAS',
-                    tipo_classificacao: p.tipo_classificacao || 'RECEITAS'
+                    tipo_classificacao: p.tipo_classificacao || 'RECEITAS',
+                    identificador: p.identificador || `${p.codigo} - ${p.nome}`  // ← ADICIONOU
                 })),
                 custosVariaveis: planosDespesa.map(p => ({ 
                     cod: p.codigo, 
                     nome: p.nome,
                     grupo_dre: p.grupo_dre || '4 DESPESAS ADMINISTRATIVAS',
-                    tipo_classificacao: p.tipo_classificacao || 'DESPESAS VARIAVEIS'
+                    tipo_classificacao: p.tipo_classificacao || 'DESPESAS VARIAVEIS',
+                    identificador: p.identificador || `${p.codigo} - ${p.nome}`  // ← ADICIONOU
                 })),
                 custosFixos: []
             };
@@ -5525,6 +5527,7 @@ async function carregarPlanoContasSupabase() {
             
             console.log('✅ estruturaDRE atualizada com sucesso!');
             console.log('📋 Primeiras receitas:', estruturaDRE.receitas.slice(0, 3));
+            console.log('📋 Primeiras despesas:', estruturaDRE.custosVariaveis.slice(0, 3));
             
             return estruturaDRE;
         }
