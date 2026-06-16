@@ -7112,91 +7112,139 @@ async function limparEConverterTodosLancamentos() {
     const confirmar = confirm('ATENÇÃO: Isso irá LIMPAR TODOS os planos de contas e REAPLICAR as regras de conversão para todos os registros visíveis.\n\nDeseja continuar?');
     if (!confirmar) return;
     
-    // CARREGAR REGRAS DIRETAMENTE DO SUPABASE
-    await carregarRegrasConversaoSupabase();
-    
-    const planoMapReceitas = window.condToPlanoMap || {};
-    const operacaoPlanoMap = window.operacaoToPlanoMap || {};
-    
-    let registrosAtualizados = 0;
-    let ignoradosSemRegra = 0;
-    
-    if (abaAtivaReceitas) {
-        // Resetar planos
-        for (const receita of receitasDataReais) {
-            receita.plano = "RECEITA DE SERVICOS";
-        }
+    try {
+        // 1. BUSCAR REGRAS E PLANOS DIRETAMENTE DO SUPABASE
+        console.log('🔄 Buscando regras e planos do Supabase...');
         
-        // Aplicar regras
-        for (const receita of receitasDataReais) {
-            const condPag = receita.cond_pag || '';
-            
-            if (!condPag || !planoMapReceitas[condPag]) {
-                ignoradosSemRegra++;
-                continue;
+        const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmaXB5Z3doYndqdGRrcWRtbXRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgxMDE4MDQsImV4cCI6MjA1MzY3NzgwNH0.7QrJW1kRWxwIjHK1pAtYkFzNf9c8r6UyIA8RoMPFg-U';
+        
+        // Buscar REGRAS DE CONVERSÃO
+        const responseRegras = await fetch(`${SUPABASE_URL}/rest/v1/conversao_operacoes`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const regras = await responseRegras.json();
+        console.log(`📚 Regras carregadas: ${regras.length}`);
+        
+        // Buscar PLANO DE CONTAS
+        const responsePlanos = await fetch(`${SUPABASE_URL}/rest/v1/plano_contas?select=codigo,nome`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const planos = await responsePlanos.json();
+        console.log(`📚 Planos carregados: ${planos.length}`);
+        
+        // Criar mapa: codigo -> nome completo (ex: "1.1 - Receita de Vendas")
+        const mapaPlanos = {};
+        planos.forEach(p => {
+            mapaPlanos[p.codigo] = `${p.codigo} - ${p.nome}`;
+        });
+        
+        // Criar mapa: operacao -> codigo do plano
+        const mapaOperacaoPlano = {};
+        regras.forEach(r => {
+            if (r.plano_contas_codigo && mapaPlanos[r.plano_contas_codigo]) {
+                mapaOperacaoPlano[r.operacao] = r.plano_contas_codigo;
+            }
+        });
+        console.log(`📚 Mapa operacao->plano criado com ${Object.keys(mapaOperacaoPlano).length} itens`);
+        
+        let registrosAtualizados = 0;
+        let ignoradosSemRegra = 0;
+        let resetados = 0;
+        
+        // 2. PROCESSAR RECEITAS
+        if (abaAtivaReceitas) {
+            // Resetar planos para o padrão
+            for (const receita of receitasDataReais) {
+                receita.plano = "RECEITA DE SERVICOS";
+                resetados++;
             }
             
-            const planoConfigurado = planoMapReceitas[condPag];
-            if (!planoConfigurado || planoConfigurado === '') {
-                ignoradosSemRegra++;
-                continue;
+            // Aplicar regras
+            for (const receita of receitasDataReais) {
+                const condPag = receita.cond_pag || '';
+                
+                if (!condPag || !mapaOperacaoPlano[condPag]) {
+                    ignoradosSemRegra++;
+                    continue;
+                }
+                
+                const codigoPlano = mapaOperacaoPlano[condPag];
+                const planoCompleto = mapaPlanos[codigoPlano];
+                
+                if (!planoCompleto) {
+                    ignoradosSemRegra++;
+                    continue;
+                }
+                
+                receita.plano = planoCompleto;
+                registrosAtualizados++;
             }
             
-            receita.plano = planoConfigurado;
-            registrosAtualizados++;
-        }
-        
-        // Salvar no localStorage
-        const planosSalvos = {};
-        for (const receita of receitasDataReais) {
-            planosSalvos[receita.id] = receita.plano;
-        }
-        localStorage.setItem(STORAGE_KEY_PLANOS_RECEITAS, JSON.stringify(planosSalvos));
-        
-        renderizarTabelaReceitas();
-        
-    } else if (abaAtivaDespesas) {
-        // Resetar planos
-        for (const despesa of despesasDataReais) {
-            despesa.plano = "DESPESAS ADMINISTRATIVAS";
-        }
-        
-        // Aplicar regras
-        for (const despesa of despesasDataReais) {
-            const operacao = despesa.operacao || '';
+            // Salvar no localStorage
+            const planosSalvos = {};
+            for (const receita of receitasDataReais) {
+                planosSalvos[receita.id] = receita.plano;
+            }
+            localStorage.setItem(STORAGE_KEY_PLANOS_RECEITAS, JSON.stringify(planosSalvos));
             
-            if (!operacao || !operacaoPlanoMap[operacao]) {
-                ignoradosSemRegra++;
-                continue;
+            renderizarTabelaReceitas();
+            
+        // 3. PROCESSAR DESPESAS
+        } else if (abaAtivaDespesas) {
+            // Resetar planos para o padrão
+            for (const despesa of despesasDataReais) {
+                despesa.plano = "DESPESAS ADMINISTRATIVAS";
+                resetados++;
             }
             
-            const planoConfigurado = operacaoPlanoMap[operacao];
-            if (!planoConfigurado || planoConfigurado === '') {
-                ignoradosSemRegra++;
-                continue;
+            // Aplicar regras
+            for (const despesa of despesasDataReais) {
+                const operacao = despesa.operacao || '';
+                
+                if (!operacao || !mapaOperacaoPlano[operacao]) {
+                    ignoradosSemRegra++;
+                    continue;
+                }
+                
+                const codigoPlano = mapaOperacaoPlano[operacao];
+                const planoCompleto = mapaPlanos[codigoPlano];
+                
+                if (!planoCompleto) {
+                    ignoradosSemRegra++;
+                    continue;
+                }
+                
+                despesa.plano = planoCompleto;
+                registrosAtualizados++;
             }
             
-            despesa.plano = planoConfigurado;
-            registrosAtualizados++;
+            // Salvar no localStorage
+            const planosSalvos = {};
+            for (const despesa of despesasDataReais) {
+                planosSalvos[despesa.id] = despesa.plano;
+            }
+            localStorage.setItem(STORAGE_KEY_PLANOS_DESPESAS, JSON.stringify(planosSalvos));
+            
+            renderizarTabelaDespesas();
         }
         
-        // Salvar no localStorage
-        const planosSalvos = {};
-        for (const despesa of despesasDataReais) {
-            planosSalvos[despesa.id] = despesa.plano;
-        }
-        localStorage.setItem(STORAGE_KEY_PLANOS_DESPESAS, JSON.stringify(planosSalvos));
+        // 4. MENSAGEM FINAL
+        let mensagem = `✅ LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n`;
+        mensagem += `🔄 Planos resetados (padrão): ${resetados}\n`;
+        mensagem += `✅ Registros atualizados com regra: ${registrosAtualizados}\n`;
+        mensagem += `⚠️ Ignorados (sem regra): ${ignoradosSemRegra}\n\n`;
+        mensagem += `Foram aplicados os Planos de Contas configurados nas Regras de Conversão do Supabase.`;
         
-        renderizarTabelaDespesas();
+        alert(mensagem);
+        console.log(`✅ FINALIZADO: ${registrosAtualizados} atualizados, ${ignoradosSemRegra} ignorados`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao processar:', error);
+        alert('Erro ao aplicar regras: ' + error.message);
     }
-    
-    let mensagem = `✅ LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n`;
-    mensagem += `📋 Registros atualizados: ${registrosAtualizados}\n`;
-    mensagem += `⚠️ Ignorados (sem regra): ${ignoradosSemRegra}\n\n`;
-    mensagem += `Foram aplicados os Planos de Contas configurados nas Regras de Conversão.`;
-    
-    alert(mensagem);
 }
+
 // ============================================================
 // EVENTOS E INICIALIZAÇÃO
 // ============================================================
