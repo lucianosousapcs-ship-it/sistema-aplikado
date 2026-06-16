@@ -7323,7 +7323,6 @@ async function limparEConverterContasExtras() {
         }
         
         operacaoParaPlanoNome[operacao] = nomePlano;
-        console.log(`📌 ${operacao} → ${nomePlano}`);
     }
     
     console.log('📚 Mapeamento simplificado:', operacaoParaPlanoNome);
@@ -7331,7 +7330,6 @@ async function limparEConverterContasExtras() {
     let atualizados = 0;
     let ignorados = 0;
     let resetados = 0;
-    let detalhes = [];
     
     for (const reg of contasExtrasData) {
         if (!contasExtrasSelecionadas.has(reg.id)) continue;
@@ -7349,22 +7347,44 @@ async function limparEConverterContasExtras() {
             reg.plano = planoNome;
             planosContasExtrasSalvos[reg.id] = planoNome;
             atualizados++;
-            detalhes.push(`✅ ${operacao} → ${planoNome}`);
         } else {
             ignorados++;
-            detalhes.push(`❌ ${operacao} → SEM REGRA`);
         }
     }
     
     localStorage.setItem('planos_contas_extras', JSON.stringify(planosContasExtrasSalvos));
+    
+    // 🔹 PASSO 3: RENDERIZAR A TABELA (isso vai recriar todos os botões)
     renderizarTabelaContasExtras();
     
-    // Log detalhado no console
-    console.log('📋 Detalhes da aplicação:');
-    detalhes.slice(0, 30).forEach(d => console.log(d));
-    if (detalhes.length > 30) {
-        console.log(`... e mais ${detalhes.length - 30} registros`);
-    }
+    // 🔹 PASSO 4: APLICAR AS CORES NOS BOTÕES (igual às RECEITAS/DESPESAS)
+    document.querySelectorAll('#tabelaContasExtrasBody .btn-plano-lancamento').forEach(btn => {
+        const id = parseInt(btn.getAttribute('data-id'));
+        const reg = contasExtrasData.find(r => r.id === id);
+        
+        if (reg) {
+            // Verifica se tem regra (se o plano é diferente do padrão "DESPESAS ADMINISTRATIVAS")
+            const temRegra = reg.plano !== "DESPESAS ADMINISTRATIVAS";
+            
+            if (temRegra) {
+                // ✅ ESTILO VERDE (igual às RECEITAS/DESPESAS com regra)
+                btn.style.color = '#10b981';
+                btn.style.fontWeight = '700';
+                btn.style.border = '1px solid rgba(16, 185, 129, 0.5)';
+                btn.style.background = 'rgba(16, 185, 129, 0.08)';
+                btn.removeAttribute('title');
+            } else {
+                // ⚠️ ESTILO VERMELHO (sem regra - igual às RECEITAS/DESPESAS)
+                btn.style.color = '#ef4444';
+                btn.style.fontWeight = '700';
+                btn.style.border = '2px solid #ef4444';
+                btn.style.background = 'rgba(239, 68, 68, 0.08)';
+                btn.setAttribute('title', '⚠️ SEM REGRA DE CONVERSÃO!');
+            }
+        }
+    });
+    
+    console.log(`✅ Aplicação concluída: ${atualizados} atualizados, ${ignorados} ignorados, ${resetados} resetados`);
     
     alert(`✅ LIMPEZA E APLICAÇÃO CONCLUÍDA!\n\n📋 Registros resetados: ${resetados}\n✅ Atualizados com regra: ${atualizados}\n⚠️ Ignorados (sem regra): ${ignorados}`);
 }
