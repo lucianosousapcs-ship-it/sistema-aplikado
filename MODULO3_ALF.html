@@ -8634,117 +8634,83 @@ async function atualizarRegrasConversao() {
 async function aplicarRegrasConversaoEmTodosLancamentos() {
     console.log('🚀 APLICANDO REGRAS DE CONVERSÃO EM TODOS OS LANÇAMENTOS...');
     
-    const confirmar = confirm(
-        '⚠️ ATENÇÃO!\n\n' +
-        'Isso irá APLICAR as regras de conversão atuais em TODOS os lançamentos:\n\n' +
-        '📋 RECEITAS: Serão classificadas com base na Condição de Pagamento\n' +
-        '📋 DESPESAS: Serão classificadas com base na Operação\n\n' +
-        'Os planos de contas existentes serão SUBSTITUÍDOS.\n\n' +
-        'A tela de LANÇAMENTOS passará a usar estas regras automaticamente.\n\n' +
-        'Deseja continuar?'
-    );
+    // Garantir que as regras estão carregadas
+    if (!window.operacaoToPlanoMap || Object.keys(window.operacaoToPlanoMap).length === 0) {
+        console.log('⚠️ Regras não carregadas, carregando agora...');
+        await carregarRegrasConversaoSupabase();
+    }
     
-    if (!confirmar) return;
-    
-    // Carregar as regras mais recentes do Supabase
-    await carregarRegrasConversaoSupabase();
-    
-    const planoMapReceitas = window.condToPlanoMap || {};
-    const operacaoPlanoMap = window.operacaoToPlanoMap || {};
-    
-    console.log('📚 Regras de Receitas:', planoMapReceitas);
-    console.log('📚 Regras de Despesas:', operacaoPlanoMap);
+    console.log('📚 Regras de Despesas:', window.operacaoToPlanoMap);
+    console.log('📊 Total de regras de despesa:', Object.keys(window.operacaoToPlanoMap || {}).length);
     
     let receitasAtualizadas = 0;
     let receitasIgnoradas = 0;
     let despesasAtualizadas = 0;
     let despesasIgnoradas = 0;
     
-    // ============================================================
     // APLICAR NAS RECEITAS
-    // ============================================================
     console.log('📊 Processando RECEITAS (' + receitasDataReais.length + ' registros)...');
-    
     for (const receita of receitasDataReais) {
         const condPag = receita.cond_pag || '';
+        const plano = window.condToPlanoMap?.[condPag];
         
-        if (!condPag || !planoMapReceitas[condPag]) {
+        if (plano) {
+            receita.plano = plano;
+            receitasAtualizadas++;
+        } else {
             receitasIgnoradas++;
-            continue;
         }
-        
-        const planoConfigurado = planoMapReceitas[condPag];
-        if (!planoConfigurado || planoConfigurado === '') {
-            receitasIgnoradas++;
-            continue;
-        }
-        
-        receita.plano = planoConfigurado;
-        receitasAtualizadas++;
     }
     
-    // Salvar receitas no localStorage
+    // Salvar receitas
     const planosReceitasSalvos = {};
-    for (const receita of receitasDataReais) {
-        planosReceitasSalvos[receita.id] = receita.plano;
+    for (const r of receitasDataReais) {
+        planosReceitasSalvos[r.id] = r.plano;
     }
     localStorage.setItem(STORAGE_KEY_PLANOS_RECEITAS, JSON.stringify(planosReceitasSalvos));
     
-    // ============================================================
     // APLICAR NAS DESPESAS
-    // ============================================================
     console.log('📊 Processando DESPESAS (' + despesasDataReais.length + ' registros)...');
-    
     for (const despesa of despesasDataReais) {
         const operacao = despesa.operacao || '';
+        const plano = window.operacaoToPlanoMap?.[operacao];
         
-        if (!operacao || !operacaoPlanoMap[operacao]) {
+        if (plano) {
+            despesa.plano = plano;
+            despesasAtualizadas++;
+        } else {
             despesasIgnoradas++;
-            continue;
+            if (despesasIgnoradas <= 10) {
+                console.log(`⚠️ Sem regra: "${operacao}"`);
+            }
         }
-        
-        const planoConfigurado = operacaoPlanoMap[operacao];
-        if (!planoConfigurado || planoConfigurado === '') {
-            despesasIgnoradas++;
-            continue;
-        }
-        
-        despesa.plano = planoConfigurado;
-        despesasAtualizadas++;
     }
     
-    // Salvar despesas no localStorage
+    // Salvar despesas
     const planosDespesasSalvos = {};
-    for (const despesa of despesasDataReais) {
-        planosDespesasSalvos[despesa.id] = despesa.plano;
+    for (const d of despesasDataReais) {
+        planosDespesasSalvos[d.id] = d.plano;
     }
     localStorage.setItem(STORAGE_KEY_PLANOS_DESPESAS, JSON.stringify(planosDespesasSalvos));
     
-    // ============================================================
-    // ATUALIZAR AS TABELAS DA TELA DE LANÇAMENTOS
-    // ============================================================
+    // Recarregar tabelas
     renderizarTabelaReceitas();
     renderizarTabelaDespesas();
     
-    // ============================================================
-    // MENSAGEM FINAL
-    // ============================================================
+    // Mensagem final
     const totalAtualizados = receitasAtualizadas + despesasAtualizadas;
     const totalIgnorados = receitasIgnoradas + despesasIgnoradas;
     
     let mensagem = `✅ REGRAS APLICADAS COM SUCESSO!\n\n`;
     mensagem += `📊 RECEITAS:\n`;
     mensagem += `   ✅ Atualizadas: ${receitasAtualizadas}\n`;
-    mensagem += `   ⚠️ Ignoradas (sem regra): ${receitasIgnoradas}\n\n`;
+    mensagem += `   ⚠️ Ignoradas: ${receitasIgnoradas}\n\n`;
     mensagem += `📊 DESPESAS:\n`;
     mensagem += `   ✅ Atualizadas: ${despesasAtualizadas}\n`;
-    mensagem += `   ⚠️ Ignoradas (sem regra): ${despesasIgnoradas}\n\n`;
+    mensagem += `   ⚠️ Ignoradas: ${despesasIgnoradas}\n\n`;
     mensagem += `📦 TOTAL: ${totalAtualizados} lançamentos atualizados\n`;
-    mensagem += `⚠️ TOTAL ignorados: ${totalIgnorados}\n\n`;
-    mensagem += `✨ A tela de LANÇAMENTOS agora usa as regras do Supabase!`;
     
     alert(mensagem);
-    
     console.log(`✅ FINALIZADO: ${receitasAtualizadas} receitas, ${despesasAtualizadas} despesas atualizadas`);
 }
 // Função para carregar regras de conversão do Supabase
