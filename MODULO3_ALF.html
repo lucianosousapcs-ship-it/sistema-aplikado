@@ -6681,39 +6681,41 @@ async function incluirSelecionadosNoDRESupabase() {
 }
 
 async function carregarRegrasConversaoSupabase() {
+    console.log('🔄 Carregando regras da tabela regras_conversao...');
+    
     const { data, error } = await supabaseClient
         .from('regras_conversao')
         .select('*');
     
     if (error) {
-        console.error('Erro ao carregar regras de conversão:', error);
+        console.error('❌ Erro ao carregar regras:', error);
         return;
     }
     
-    if (data) {
-        window.condToTituloMap = {};
-        window.condToPlanoMap = {};
-        window.operacaoToPlanoMap = {};
-        
-        data.forEach(regra => {
-            if (regra.tipo === 'RECEITA') {
-                if (regra.destino_caixa) {
-                    window.condToTituloMap[regra.origem] = regra.destino_caixa;
-                }
-                if (regra.destino_plano) {
-                    window.condToPlanoMap[regra.origem] = regra.destino_plano;
-                }
-            } else if (regra.tipo === 'DESPESA') {
-                if (regra.destino_plano) {
-                    window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
-                }
+    window.condToTituloMap = {};
+    window.condToPlanoMap = {};
+    window.operacaoToPlanoMap = {};
+    
+    data.forEach(regra => {
+        if (regra.tipo === 'RECEITA') {
+            if (regra.destino_caixa) {
+                window.condToTituloMap[regra.origem] = regra.destino_caixa;
             }
-        });
-        
-        localStorage.setItem('condToTituloMap', JSON.stringify(window.condToTituloMap));
-        localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
-        localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
-    }
+            if (regra.destino_plano) {
+                window.condToPlanoMap[regra.origem] = regra.destino_plano;
+            }
+        } else if (regra.tipo === 'DESPESA_VARIAVEL') {
+            if (regra.destino_plano) {
+                window.operacaoToPlanoMap[regra.origem] = regra.destino_plano;
+            }
+        }
+    });
+    
+    console.log('✅ Regras carregadas:', {
+        titulos: Object.keys(window.condToTituloMap).length,
+        planosReceitas: Object.keys(window.condToPlanoMap).length,
+        planosDespesas: Object.keys(window.operacaoToPlanoMap).length
+    });
 }
 
 async function salvarRegrasConversaoSupabase() {
@@ -6765,7 +6767,7 @@ async function salvarRegrasConversaoSupabase() {
 }
 
 async function salvarMapeamentoConversaoCompletoSupabase() {
-    console.log('💾 Salvando mapeamento de conversão...');
+    console.log('💾 Salvando mapeamento de conversão na tabela regras_conversao...');
     
     const receitasRegras = [];
     const despesasRegras = [];
@@ -6843,7 +6845,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     let inseridos = 0;
     let erros = 0;
     
-    const batchSize = 100;
+    const batchSize = 50;
     for (let i = 0; i < todasRegras.length; i += batchSize) {
         const batch = todasRegras.slice(i, i + batchSize);
         
@@ -6856,7 +6858,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
             erros += batch.length;
         } else {
             inseridos += batch.length;
-            console.log(`✅ Lote ${i / batchSize + 1}: ${batch.length} inseridos`);
+            console.log(`✅ Lote ${Math.floor(i/batchSize) + 1}: ${batch.length} inseridos`);
         }
     }
     
@@ -8767,9 +8769,6 @@ async function aplicarRegrasConversaoEmTodosLancamentos() {
             despesasAtualizadas++;
         } else {
             despesasIgnoradas++;
-            if (despesasIgnoradas <= 10) {
-                console.log(`⚠️ Sem regra: "${operacao}"`);
-            }
         }
     }
     
