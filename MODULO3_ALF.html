@@ -6918,31 +6918,40 @@ async function abrirModalConversaoSupabase() {
         
         console.log(`✅ ${planos?.length || 0} planos carregados com IDENTIFICADOR`);
         
-        // 2. Carregar regras de conversão (com identificador)
+        // 2. Carregar regras de conversão
         await carregarRegrasConversaoSupabase();
         
-        // 3. Separar receitas e despesas
+        // 3. Carregar mapeamentos salvos
+        const savedPlanoMap = localStorage.getItem('condToPlanoMap');
+        const condToPlanoMap = savedPlanoMap ? JSON.parse(savedPlanoMap) : {};
+        
+        const savedOperacaoMap = localStorage.getItem(STORAGE_KEY_OPERACAO_PLANO);
+        const operacaoToPlanoMap = savedOperacaoMap ? JSON.parse(savedOperacaoMap) : {};
+        
+        // 4. Separar receitas e despesas
         const receitas = (planos || []).filter(p => p.tipo === 'RECEITA');
         const despesas = (planos || []).filter(p => p.tipo === 'DESPESA');
         
         console.log(`📊 Receitas: ${receitas.length}, Despesas: ${despesas.length}`);
         
-        // 4. ========== MONTAR TABELA DE RECEITAS ==========
+        // ============================================================
+        // 5. MONTAR TABELA DE RECEITAS - COM IDENTIFICADOR
+        // ============================================================
         const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
         if (tbodyReceitas) {
             let html = '';
             for (const plano of receitas) {
-                // 🔑 USANDO O IDENTIFICADOR em vez de concatenar
+                // 🔑 USA O IDENTIFICADOR DA TABELA
                 const identificador = plano.identificador || `${plano.codigo} - ${plano.nome}`;
                 const grupoDre = plano.grupo_dre || '1 RECEITAS DE VENDAS';
                 const tipoClass = plano.tipo_classificacao || 'RECEITAS';
                 
-                // Buscar regra salva para este plano
-                const codigoSalvo = window.condToPlanoMap?.[plano.nome] || '';
+                // Buscar regra salva para este plano (pelo NOME)
+                const codigoSalvo = condToPlanoMap?.[plano.nome] || '';
                 
                 html += `<tr>
                     <td style="white-space: nowrap;">${grupoDre}</td>
-                    <td><strong>${identificador}</strong></td>  <!-- ← USA O IDENTIFICADOR -->
+                    <td><strong>${identificador}</strong></td>
                     <td>${tipoClass}</td>
                     <td>
                         <select class="conversao-select" data-cond="${plano.nome}">
@@ -6959,9 +6968,10 @@ async function abrirModalConversaoSupabase() {
                         <select class="conversao-select-plano-receita" data-plano-cond="${plano.nome}">
                             <option value="">Selecione...</option>`;
                 
-                // PREENCHER OS SELECTS COM OS IDENTIFICADORES
+                // PREENCHER SELECT COM IDENTIFICADORES
                 for (const p of receitas) {
                     const ident = p.identificador || `${p.codigo} - ${p.nome}`;
+                    // SALVA O VALOR COMO CÓDIGO (para compatibilidade com o banco)
                     const selected = (codigoSalvo === p.codigo) ? 'selected' : '';
                     html += `<option value="${p.codigo}" ${selected}>${ident}</option>`;
                 }
@@ -6971,34 +6981,37 @@ async function abrirModalConversaoSupabase() {
                 </tr>`;
             }
             tbodyReceitas.innerHTML = html;
-            console.log(`✅ Tabela RECEITAS: ${receitas.length} linhas com IDENTIFICADOR`);
+            console.log(`✅ RECEITAS: ${receitas.length} linhas com IDENTIFICADOR`);
         }
         
-        // 5. ========== MONTAR TABELA DE DESPESAS ==========
+        // ============================================================
+        // 6. MONTAR TABELA DE DESPESAS - COM IDENTIFICADOR
+        // ============================================================
         const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
         if (tbodyDespesas) {
             let html = '';
             for (const plano of despesas) {
-                // 🔑 USANDO O IDENTIFICADOR em vez de concatenar
+                // 🔑 USA O IDENTIFICADOR DA TABELA
                 const identificador = plano.identificador || `${plano.codigo} - ${plano.nome}`;
                 const grupoDre = plano.grupo_dre || '4 DESPESAS ADMINISTRATIVAS';
                 const tipoClass = plano.tipo_classificacao || 'DESPESAS VARIAVEIS';
                 
-                // Buscar regra salva para este plano
-                const codigoSalvo = window.operacaoToPlanoMap?.[plano.nome] || '';
+                // Buscar regra salva para este plano (pelo NOME)
+                const codigoSalvo = operacaoToPlanoMap?.[plano.nome] || '';
                 
                 html += `<tr>
                     <td style="white-space: nowrap;">${grupoDre}</td>
-                    <td><strong>${identificador}</strong></td>  <!-- ← USA O IDENTIFICADOR -->
+                    <td><strong>${identificador}</strong></td>
                     <td>${tipoClass}</td>
                     <td><span style="color: var(--soft-light);">N/A (saída de caixa)</span></td>
                     <td>
                         <select class="conversao-select-plano-despesa" data-operacao="${plano.nome}">
                             <option value="">Selecione...</option>`;
                 
-                // PREENCHER OS SELECTS COM OS IDENTIFICADORES
+                // PREENCHER SELECT COM IDENTIFICADORES
                 for (const p of despesas) {
                     const ident = p.identificador || `${p.codigo} - ${p.nome}`;
+                    // SALVA O VALOR COMO CÓDIGO (para compatibilidade com o banco)
                     const selected = (codigoSalvo === p.codigo) ? 'selected' : '';
                     html += `<option value="${p.codigo}" ${selected}>${ident}</option>`;
                 }
@@ -7008,59 +7021,269 @@ async function abrirModalConversaoSupabase() {
                 </tr>`;
             }
             tbodyDespesas.innerHTML = html;
-            console.log(`✅ Tabela DESPESAS: ${despesas.length} linhas com IDENTIFICADOR`);
+            console.log(`✅ DESPESAS: ${despesas.length} linhas com IDENTIFICADOR`);
         }
         
-        // 6. ABRIR MODAL
-        document.getElementById('modalConversao').classList.add('active');
-        console.log(`🎯 TOTAL: ${receitas.length + despesas.length} itens com IDENTIFICADOR`);
+        // ============================================================
+        // 7. RESTAURAR TÍTULOS DE CAIXA (DINHEIRO, DEBITO, etc)
+        // ============================================================
+        document.querySelectorAll('#conversaoTabReceitas .conversao-select').forEach(select => {
+            const cond = select.getAttribute('data-cond');
+            if (cond && window.condToTituloMap?.[cond]) {
+                select.value = window.condToTituloMap[cond];
+            }
+        });
         
-        // 7. AUTO PREENCHER SELECTS PELO VALOR SALVO
-        setTimeout(() => {
-            let preenchidos = 0;
-            
-            // RECEITAS
-            document.querySelectorAll('.conversao-select-plano-receita').forEach(select => {
-                const operacao = select.getAttribute('data-plano-cond');
-                if (operacao) {
-                    const valorSalvo = window.condToPlanoMap?.[operacao] || '';
-                    if (!valorSalvo) return;
-                    
-                    for (let i = 0; i < select.options.length; i++) {
-                        // Compara pelo value (código)
-                        if (select.options[i].value === valorSalvo) {
-                            select.selectedIndex = i;
-                            preenchidos++;
-                            break;
-                        }
-                    }
-                }
-            });
-            
-            // DESPESAS
-            document.querySelectorAll('.conversao-select-plano-despesa').forEach(select => {
-                const operacao = select.getAttribute('data-operacao');
-                if (operacao) {
-                    const valorSalvo = window.operacaoToPlanoMap?.[operacao] || '';
-                    if (!valorSalvo) return;
-                    
-                    for (let i = 0; i < select.options.length; i++) {
-                        if (select.options[i].value === valorSalvo) {
-                            select.selectedIndex = i;
-                            preenchidos++;
-                            break;
-                        }
-                    }
-                }
-            });
-            
-            console.log(`✅ ${preenchidos} selects preenchidos automaticamente!`);
-        }, 300);
+        // ============================================================
+        // 8. ABRIR MODAL
+        // ============================================================
+        document.getElementById('modalConversao').classList.add('active');
+        console.log(`🎯 TOTAL: ${receitas.length + despesas.length} itens`);
         
     } catch (error) {
         console.error('❌ Erro ao abrir conversão:', error);
         alert('Erro ao abrir conversão: ' + error.message);
     }
+}
+
+// ============================================================
+// FUNÇÃO CORRIGIDA: SALVAR MAPEAMENTO - COM IDENTIFICADOR
+// ============================================================
+async function salvarMapeamentoConversaoCompletoSupabase() {
+    console.log('💾 Salvando mapeamento de conversão...');
+    
+    try {
+        // ========== COLETAR RECEITAS ==========
+        const receitasRegras = [];
+        document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
+            const nomeOperacao = select.getAttribute('data-plano-cond');
+            const codigoPlano = select.value;
+            
+            // Buscar o identificador do plano selecionado
+            let identificador = '';
+            if (codigoPlano && codigoPlano !== '') {
+                const option = select.options[select.selectedIndex];
+                identificador = option ? option.text : '';
+            }
+            
+            if (nomeOperacao && codigoPlano && codigoPlano !== '') {
+                receitasRegras.push({
+                    operacao: nomeOperacao,
+                    tipo: 'RECEITA',
+                    plano_contas_codigo: codigoPlano,
+                    plano_contas_dre: identificador,  // ← SALVA O IDENTIFICADOR COMPLETO
+                    grupo_dre: '1 RECEITAS DE VENDAS',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                });
+            }
+        });
+        
+        // ========== COLETAR DESPESAS ==========
+        const despesasRegras = [];
+        document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
+            const nomeOperacao = select.getAttribute('data-operacao');
+            const codigoPlano = select.value;
+            
+            // Buscar o identificador do plano selecionado
+            let identificador = '';
+            if (codigoPlano && codigoPlano !== '') {
+                const option = select.options[select.selectedIndex];
+                identificador = option ? option.text : '';
+            }
+            
+            if (nomeOperacao && codigoPlano && codigoPlano !== '') {
+                despesasRegras.push({
+                    operacao: nomeOperacao,
+                    tipo: 'DESPESA',
+                    plano_contas_codigo: codigoPlano,
+                    plano_contas_dre: identificador,  // ← SALVA O IDENTIFICADOR COMPLETO
+                    grupo_dre: '4 DESPESAS ADMINISTRATIVAS',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                });
+            }
+        });
+        
+        const todasRegras = [...receitasRegras, ...despesasRegras];
+        
+        if (todasRegras.length === 0) {
+            alert('⚠️ Nenhuma regra para salvar!');
+            return;
+        }
+        
+        console.log(`📋 ${todasRegras.length} regras para salvar`);
+        console.log('📊 Amostra:', todasRegras[0]);
+        
+        // ========== DELETAR REGRAS ANTIGAS ==========
+        const { error: deleteError } = await supabaseClient
+            .from('conversao_operacoes')
+            .delete()
+            .neq('id', 0);
+        
+        if (deleteError) {
+            console.error('❌ Erro ao deletar:', deleteError);
+            alert('Erro ao deletar regras antigas: ' + deleteError.message);
+            return;
+        }
+        console.log('✅ Regras antigas removidas');
+        
+        // ========== INSERIR NOVAS REGRAS ==========
+        let inseridos = 0;
+        const batchSize = 50;
+        
+        for (let i = 0; i < todasRegras.length; i += batchSize) {
+            const batch = todasRegras.slice(i, i + batchSize);
+            
+            const { error: insertError } = await supabaseClient
+                .from('conversao_operacoes')
+                .insert(batch);
+            
+            if (insertError) {
+                console.error('❌ Erro ao inserir lote:', insertError);
+                alert('Erro ao inserir regras: ' + insertError.message);
+                return;
+            }
+            inseridos += batch.length;
+            console.log(`✅ Lote ${Math.floor(i / batchSize) + 1}: ${batch.length} inseridos`);
+        }
+        
+        // ========== ATUALIZAR MAPAS LOCAIS ==========
+        // Receitas
+        window.condToPlanoMap = {};
+        for (const regra of receitasRegras) {
+            window.condToPlanoMap[regra.operacao] = regra.plano_contas_codigo;
+        }
+        localStorage.setItem('condToPlanoMap', JSON.stringify(window.condToPlanoMap));
+        
+        // Despesas
+        window.operacaoToPlanoMap = {};
+        for (const regra of despesasRegras) {
+            window.operacaoToPlanoMap[regra.operacao] = regra.plano_contas_codigo;
+        }
+        localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(window.operacaoToPlanoMap));
+        
+        // ========== SALVAR TÍTULOS DE CAIXA ==========
+        document.querySelectorAll('#conversaoTabReceitas .conversao-select').forEach(select => {
+            const cond = select.getAttribute('data-cond');
+            if (cond && select.value) {
+                window.condToTituloMap[cond] = select.value;
+            }
+        });
+        localStorage.setItem('condToTituloMap', JSON.stringify(window.condToTituloMap));
+        
+        // ========== MENSAGEM FINAL ==========
+        alert(`✅ ${inseridos} regras salvas com sucesso!\n\nReceitas: ${receitasRegras.length}\nDespesas: ${despesasRegras.length}`);
+        
+        // ========== FECHAR MODAL ==========
+        document.getElementById('modalConversao').classList.remove('active');
+        
+        // ========== RECARREGAR REGRAS ==========
+        await carregarRegrasConversaoSupabase();
+        
+        console.log('✅ Processo concluído!');
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar:', error);
+        alert('Erro ao salvar: ' + error.message);
+    }
+}
+
+// ============================================================
+// FUNÇÃO CORRIGIDA: APLICAR REGRAS A TODOS OS LANÇAMENTOS
+// ============================================================
+async function aplicarRegrasConversaoEmTodosLancamentos() {
+    console.log('🚀 APLICANDO REGRAS DE CONVERSÃO EM TODOS OS LANÇAMENTOS...');
+    
+    // Garantir que as regras estão carregadas
+    if (!window.operacaoToPlanoMap || Object.keys(window.operacaoToPlanoMap).length === 0) {
+        await carregarRegrasConversaoSupabase();
+    }
+    
+    // CARREGAR OS PLANOS DO BANCO PARA OBTER OS IDENTIFICADORES
+    const { data: planos } = await supabaseClient
+        .from('plano_contas')
+        .select('codigo, nome, identificador');
+    
+    const mapaPlanos = {};
+    (planos || []).forEach(p => {
+        mapaPlanos[p.codigo] = {
+            nome: p.nome,
+            identificador: p.identificador || `${p.codigo} - ${p.nome}`
+        };
+    });
+    
+    let receitasAtualizadas = 0;
+    let receitasIgnoradas = 0;
+    let despesasAtualizadas = 0;
+    let despesasIgnoradas = 0;
+    
+    // APLICAR NAS RECEITAS
+    console.log('📊 Processando RECEITAS (' + receitasDataReais.length + ' registros)...');
+    for (const receita of receitasDataReais) {
+        const condPag = receita.cond_pag || '';
+        const codigoPlano = window.condToPlanoMap?.[condPag];
+        
+        if (codigoPlano && mapaPlanos[codigoPlano]) {
+            // Usar o IDENTIFICADOR completo
+            receita.plano = mapaPlanos[codigoPlano].identificador;
+            receitasAtualizadas++;
+        } else {
+            receitasIgnoradas++;
+        }
+    }
+    
+    // Salvar receitas
+    const planosReceitasSalvos = {};
+    for (const r of receitasDataReais) {
+        planosReceitasSalvos[r.id] = r.plano;
+    }
+    localStorage.setItem(STORAGE_KEY_PLANOS_RECEITAS, JSON.stringify(planosReceitasSalvos));
+    
+    // APLICAR NAS DESPESAS
+    console.log('📊 Processando DESPESAS (' + despesasDataReais.length + ' registros)...');
+    for (const despesa of despesasDataReais) {
+        const operacao = despesa.operacao || '';
+        const codigoPlano = window.operacaoToPlanoMap?.[operacao];
+        
+        if (codigoPlano && mapaPlanos[codigoPlano]) {
+            // Usar o IDENTIFICADOR completo
+            despesa.plano = mapaPlanos[codigoPlano].identificador;
+            despesasAtualizadas++;
+        } else {
+            despesasIgnoradas++;
+            if (despesasIgnoradas <= 10) {
+                console.log(`⚠️ Sem regra: "${operacao}"`);
+            }
+        }
+    }
+    
+    // Salvar despesas
+    const planosDespesasSalvos = {};
+    for (const d of despesasDataReais) {
+        planosDespesasSalvos[d.id] = d.plano;
+    }
+    localStorage.setItem(STORAGE_KEY_PLANOS_DESPESAS, JSON.stringify(planosDespesasSalvos));
+    
+    // Recarregar tabelas
+    renderizarTabelaReceitas();
+    renderizarTabelaDespesas();
+    
+    // Mensagem final
+    const totalAtualizados = receitasAtualizadas + despesasAtualizadas;
+    const totalIgnorados = receitasIgnoradas + despesasIgnoradas;
+    
+    let mensagem = `✅ REGRAS APLICADAS COM SUCESSO!\n\n`;
+    mensagem += `📊 RECEITAS:\n`;
+    mensagem += `   ✅ Atualizadas: ${receitasAtualizadas}\n`;
+    mensagem += `   ⚠️ Ignoradas: ${receitasIgnoradas}\n\n`;
+    mensagem += `📊 DESPESAS:\n`;
+    mensagem += `   ✅ Atualizadas: ${despesasAtualizadas}\n`;
+    mensagem += `   ⚠️ Ignoradas: ${despesasIgnoradas}\n\n`;
+    mensagem += `📦 TOTAL: ${totalAtualizados} lançamentos atualizados\n`;
+    
+    alert(mensagem);
+    console.log(`✅ FINALIZADO: ${receitasAtualizadas} receitas, ${despesasAtualizadas} despesas atualizadas`);
 }function abrirModalComparativos() {
     console.log('🔘 Botão COMPARATIVOS clicado!');
     const modal = document.getElementById('modalComparativos');
