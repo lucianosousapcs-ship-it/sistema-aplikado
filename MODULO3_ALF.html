@@ -1279,20 +1279,21 @@ function carregarPreferenciaTema() {
         <a href="javascript:void(0);" class="logo" onclick="window.location.href='CLIENT_ALF.html'">Apli<span>kado</span></a>
         <div class="topbar-actions">
             <button class="btn btn-outline" onclick="window.location.href='CLIENT_ALF.html'">Voltar</button>
-            <button class="btn btn-yellow" onclick="abrirConfirm()"> Salvar DRE</button>
+           
         </div>
     </div>
     
     <div class="container">
-        <div class="toolbar">
-            <div class="title-section"><h1>Demonstrativo de Resultados</h1><p>Plano de contas completo</p></div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-padrao btn-padrao-gerar-pdf" onclick="gerarPDFDRE()"> GERAR PDF</button>
-                <button class="btn-padrao btn-padrao-limpar" onclick="limparDREComSupabase()">LIMPAR DRE</button>
-<button class="btn-padrao" id="btnFiltrarMovimento" onclick="toggleFiltroMovimento()">FILTRAR MOVIMENTO</button>
-                <button class="btn-padrao" id="btnToggleTema" onclick="toggleTema()">TEMA ESCURO</button>
-            </div>
-        </div>
+       <div class="toolbar">
+    <div class="title-section"><h1>Demonstrativo de Resultados</h1><p>Plano de contas completo</p></div>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-padrao btn-padrao-gerar-pdf" onclick="gerarPDFDRE()"> GERAR PDF</button>
+        
+        <button class="btn-padrao" id="btnFiltrarMovimento" onclick="toggleFiltroMovimento()">FILTRAR MOVIMENTO</button>
+        <button class="btn-padrao" id="btnToggleTema" onclick="toggleTema()">TEMA ESCURO</button>
+        
+    </div>
+</div>
         
         <div class="last-update-info">
             <span>Última atualização: <span id="ultimaAtualizacaoData">Carregando...</span></span>
@@ -1324,7 +1325,7 @@ function carregarPreferenciaTema() {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h2 style="color:#E6A017;">LANCAMENTOS</h2>
             <div class="header-actions">
-                <button class="btn-incluir-dre" onclick="incluirSelecionadosNoDRESupabase()">INCLUIR NO DRE</button>               
+                            
                 <button class="btn-aplicar-todos" onclick="limparEConverterTodosLancamentos()" style="background: linear-gradient(135deg, #ef4444, #dc2626); margin-left: 5px;"> LIMPAR E APLICAR</button>
                 <button class="close-modal-btn" onclick="fecharModalLancamentos()">X</button>
             </div>
@@ -1432,7 +1433,7 @@ function carregarPreferenciaTema() {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h2 style="color:#E6A017;">LANÇAMENTOS (SANGRIA)</h2>
             <div class="header-actions">
-                <button class="btn-incluir-dre" onclick="incluirContasExtrasSelecionadasNoDRE()">INCLUIR NO DRE</button>
+                
                 <button class="close-modal-btn" onclick="fecharModalContasExtras()">X</button>
                 <button class="btn-aplicar-todos" onclick="limparEConverterContasExtras()" style="background: linear-gradient(135deg, #ef4444, #dc2626); margin-left: 5px;"> LIMPAR E APLICAR TODOS</button>
                 <button class="btn-padrao btn-padrao-gerar-pdf" onclick="abrirModalPeriodoSangriaPDF()">GERAR PDF</button>
@@ -7303,153 +7304,173 @@ async function salvarDRESupabase(mes, lancamentos) {
 }
 
 async function gerarDREComSupabase() {
-    const dadosPorMes = await carregarDRESupabase();
-    if (!dadosPorMes) return;
+    console.log('🔄 GERANDO DRE A PARTIR DOS DADOS DAS TELAS...');
     
-    const corpo = document.getElementById('corpoDRE');
-    if(!corpo) return;
-    corpo.innerHTML = '';
-    
-    function getTotalGrupo(grupo, mes) {
-        let total = 0;
-        if (estruturaDRE[grupo]) {
-            estruturaDRE[grupo].forEach(item => {
-                dadosPorMes[mes].forEach(lanc => {
-                    if(lanc.plano === item.nome) {
-                        total += parseFloat(lanc.valor) || 0;
+    try {
+        const corpo = document.getElementById('corpoDRE');
+        if (!corpo) {
+            console.error('❌ corpoDRE não encontrado');
+            return;
+        }
+        
+        corpo.innerHTML = '';
+        
+        function getTotalPorPlano(planoNome, mes) {
+            let total = 0;
+            
+            // BUSCA NAS RECEITAS
+            if (typeof receitasDataReais !== 'undefined') {
+                receitasDataReais.forEach(r => {
+                    const mesReceita = extrairMes(r.data);
+                    if (mesReceita === mes && r.plano && r.plano.includes(planoNome)) {
+                        total += Number(r.valor) || 0;
                     }
                 });
-            });
+            }
+            
+            // BUSCA NAS DESPESAS
+            if (typeof despesasDataReais !== 'undefined') {
+                despesasDataReais.forEach(d => {
+                    const mesDespesa = extrairMes(d.data);
+                    if (mesDespesa === mes && d.plano && d.plano.includes(planoNome)) {
+                        total += Number(d.valor) || 0;
+                    }
+                });
+            }
+            
+            // BUSCA NAS SANGRIA
+           if (typeof contasExtrasData !== 'undefined' && contasExtrasData.length > 0) {
+    contasExtrasData.forEach(s => {
+        const mesSangria = extrairMes(s.dt_pagto);
+        if (mesSangria === mes && s.plano && s.plano.includes(planoNome)) {
+            let valor = Number(s.valor) || 0;
+            // Sangria é sempre despesa (negativa)
+           total += valor;  // ← CORRIGIDO: soma o valor (que já é positivo)
         }
-        return total;
-    }
-    
-    const receitas = [], custosVar = [], custosFix = [];
-    for(let m = 0; m < 12; m++) {
-        receitas[m] = getTotalGrupo('receitas', m);
-        custosVar[m] = getTotalGrupo('custosVariaveis', m);
-        custosFix[m] = getTotalGrupo('custosFixos', m);
-    }
-    
-    const custosVarExibir = custosVar.map(v => -Math.abs(v));
-    const custosFixExibir = custosFix.map(v => -Math.abs(v));
-    const lucroBruto = receitas.map((r, i) => r + custosVar[i]);
-    const resultadoOp = lucroBruto.map((lb, i) => lb + custosFix[i]);
-    
-    function addLinha(cod, nome, valores, classe, exibirPositivoNegativo = true, linhaTipo = 'item') {
-        const tr = document.createElement('tr');
-        tr.className = classe;
-        let totalAnual = 0;
-        let temMovimentacao = false;
-        for (let i = 0; i < 12; i++) {
-            const v = valores[i];
-            totalAnual += v;
-            if (v !== 0) temMovimentacao = true;
-        }
-        if (temMovimentacao || totalAnual !== 0) {
-            tr.classList.add('linha-com-movimentacao');
-        }
-        let html = `<td>${cod ? cod + ' - ' + nome : nome}</td>`;
-        for (let i = 0; i < 12; i++) {
-            const v = valores[i];
-            const className = exibirPositivoNegativo ? (v >= 0 ? 'valor-positivo' : 'valor-negativo') : '';
-            html += `<td class="${className}" data-mes="${i}" data-valor="${v}" data-nome-conta="${nome}" data-cod-conta="${cod || ''}" data-tipo-conta="${linhaTipo}">${formatarMoeda(v)}</td>`;
-        }
-        const classNameTotal = exibirPositivoNegativo ? (totalAnual >= 0 ? 'valor-positivo' : 'valor-negativo') : '';
-        html += `<td class="${classNameTotal}" data-total="${totalAnual}" data-nome-conta="${nome}" data-cod-conta="${cod || ''}" data-tipo-conta="${linhaTipo}">${formatarMoeda(totalAnual)}</td>`;
-        tr.innerHTML = html;
-        
-        const valorCells = tr.querySelectorAll('td:not(:first-child)');
-        valorCells.forEach(cell => {
-            cell.addEventListener('click', (event) => {
-                event.stopPropagation();
-                const valor = parseFloat(cell.getAttribute('data-valor') || cell.getAttribute('data-total') || '0');
-                const mes = cell.getAttribute('data-mes');
-                const nomeConta = cell.getAttribute('data-nome-conta');
-                const codConta = cell.getAttribute('data-cod-conta');
-                const tipoConta = cell.getAttribute('data-tipo-conta');
-                const isTotal = cell.hasAttribute('data-total');
-                
-                if (valor === 0) {
-                    alert('Não há registros para este valor.');
-                    return;
-                }
-                
-                let grupoTipo = null;
-                if (estruturaDRE.receitas.some(r => r.nome === nomeConta) || nomeConta === 'RECEITAS TOTAIS') {
-                    grupoTipo = 'receitas';
-                } else if (estruturaDRE.custosVariaveis.some(c => c.nome === nomeConta) ||
-                           estruturaDRE.custosFixos.some(c => c.nome === nomeConta) ||
-                           nomeConta === 'CUSTOS VARIAVEIS' || nomeConta === 'CUSTOS FIXOS') {
-                    grupoTipo = 'despesas';
-                }
-                
-                abrirDetalhamentoValor(valor, mes, nomeConta, codConta, grupoTipo, isTotal);
-            });
-        });
-        
-        corpo.appendChild(tr);
-    }
-    
-    // ============================================
-    // RECEITAS - TODAS (SEM LIMITE)
-    // ============================================
-    addLinha('', 'RECEITAS TOTAIS', receitas, 'dre-group-title', true, 'grupo');
-    estruturaDRE.receitas.forEach(r => {
-        const vals = [];
-        for (let m = 0; m < 12; m++) {
-            let total = 0;
-            dadosPorMes[m].forEach(lanc => {
-                if (lanc.plano === r.nome) total += parseFloat(lanc.valor) || 0;
-            });
-            vals[m] = total;
-        }
-        addLinha(r.cod, r.nome, vals, 'dre-subgroup', true, 'item');
     });
-    
-    // ============================================
-    // DESPESAS VARIAVEIS - TODAS (SEM LIMITE)
-    // ============================================
-    addLinha('', 'CUSTOS VARIAVEIS', custosVarExibir, 'dre-group-title', false, 'grupo');
-    estruturaDRE.custosVariaveis.forEach(c => {
-        const vals = [];
-        for (let m = 0; m < 12; m++) {
-            let total = 0;
-            dadosPorMes[m].forEach(lanc => {
-                if (lanc.plano === c.nome) total += parseFloat(lanc.valor) || 0;
-            });
-            vals[m] = -Math.abs(total);
-        }
-        addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item');
-    });
-    
-    // ============================================
-    // LUCRO BRUTO
-    // ============================================
-    addLinha('', 'LUCRO BRUTO', lucroBruto, 'dre-total-row', true, 'total');
-    
-    // ============================================
-    // DESPESAS FIXAS - TODAS
-    // ============================================
-    addLinha('', 'CUSTOS FIXOS', custosFixExibir, 'dre-group-title', false, 'grupo');
-    estruturaDRE.custosFixos.forEach(c => {
-        const vals = [];
-        for (let m = 0; m < 12; m++) {
-            let total = 0;
-            dadosPorMes[m].forEach(lanc => {
-                if (lanc.plano === c.nome) total += parseFloat(lanc.valor) || 0;
-            });
-            vals[m] = -Math.abs(total);
-        }
-        addLinha(c.cod, c.nome, vals, 'dre-subgroup', false, 'item');
-    });
-    
-    // ============================================
-    // RESULTADO OPERACIONAL
-    // ============================================
-    addLinha('', 'RESULTADO OPERACIONAL', resultadoOp, 'dre-total-row', true, 'total');
 }
-async function limparDREComSupabase() {
+          
+            return total;
+        }
+        
+        // CALCULA RECEITAS
+        const receitasMensais = [];
+        for (let m = 0; m < 12; m++) {
+            let total = 0;
+            if (estruturaDRE && estruturaDRE.receitas) {
+                estruturaDRE.receitas.forEach(r => {
+                    total += getTotalPorPlano(r.nome, m);
+                });
+            }
+            receitasMensais[m] = total;
+        }
+        
+        // CALCULA DESPESAS VARIAVEIS
+        const despesasVarMensais = [];
+        for (let m = 0; m < 12; m++) {
+            let total = 0;
+            if (estruturaDRE && estruturaDRE.custosVariaveis) {
+                estruturaDRE.custosVariaveis.forEach(c => {
+                    total += getTotalPorPlano(c.nome, m);
+                });
+            }
+            despesasVarMensais[m] = -Math.abs(total);
+        }
+        
+        // CALCULA DESPESAS FIXAS
+        const despesasFixMensais = [];
+        for (let m = 0; m < 12; m++) {
+            let total = 0;
+            if (estruturaDRE && estruturaDRE.custosFixos) {
+                estruturaDRE.custosFixos.forEach(c => {
+                    total += getTotalPorPlano(c.nome, m);
+                });
+            }
+            despesasFixMensais[m] = -Math.abs(total);
+        }
+        
+        function addLinha(cod, nome, valores, classe) {
+            const tr = document.createElement('tr');
+            tr.className = classe || '';
+            
+            let totalAnual = 0;
+            let temMovimentacao = false;
+            
+            for (let i = 0; i < 12; i++) {
+                const v = valores[i] || 0;
+                totalAnual += v;
+                if (v !== 0) temMovimentacao = true;
+            }
+            
+            if (temMovimentacao || totalAnual !== 0) {
+                tr.classList.add('linha-com-movimentacao');
+            }
+            
+            let html = `<td style="text-align:left;">${cod ? cod + ' - ' + nome : nome}</td>`;
+            
+            for (let i = 0; i < 12; i++) {
+                const v = valores[i] || 0;
+                const className = v >= 0 ? 'valor-positivo' : 'valor-negativo';
+                html += `<td class="${className}">${formatarMoeda(v)}</td>`;
+            }
+            
+            const classNameTotal = totalAnual >= 0 ? 'valor-positivo' : 'valor-negativo';
+            html += `<td class="${classNameTotal}">${formatarMoeda(totalAnual)}</td>`;
+            
+            tr.innerHTML = html;
+            corpo.appendChild(tr);
+        }
+        
+        // MONTAR O DRE
+        addLinha('', 'RECEITAS TOTAIS', receitasMensais, 'dre-group-title');
+        if (estruturaDRE && estruturaDRE.receitas) {
+            estruturaDRE.receitas.forEach(r => {
+                const vals = [];
+                for (let m = 0; m < 12; m++) {
+                    vals[m] = getTotalPorPlano(r.nome, m);
+                }
+                addLinha(r.cod, r.nome, vals, 'dre-subgroup');
+            });
+        }
+        
+        const lucroBruto = receitasMensais.map((r, i) => r + despesasVarMensais[i]);
+        addLinha('', 'CUSTOS VARIAVEIS', despesasVarMensais, 'dre-group-title');
+        if (estruturaDRE && estruturaDRE.custosVariaveis) {
+            estruturaDRE.custosVariaveis.forEach(c => {
+                const vals = [];
+                for (let m = 0; m < 12; m++) {
+                    vals[m] = -Math.abs(getTotalPorPlano(c.nome, m));
+                }
+                addLinha(c.cod, c.nome, vals, 'dre-subgroup');
+            });
+        }
+        
+        addLinha('', 'LUCRO BRUTO', lucroBruto, 'dre-total-row');
+        
+        addLinha('', 'CUSTOS FIXOS', despesasFixMensais.map(v => -Math.abs(v)), 'dre-group-title');
+        if (estruturaDRE && estruturaDRE.custosFixos) {
+            estruturaDRE.custosFixos.forEach(c => {
+                const vals = [];
+                for (let m = 0; m < 12; m++) {
+                    vals[m] = -Math.abs(getTotalPorPlano(c.nome, m));
+                }
+                addLinha(c.cod, c.nome, vals, 'dre-subgroup');
+            });
+        }
+        
+        const resultadoOp = lucroBruto.map((lb, i) => lb + despesasFixMensais[i]);
+        addLinha('', 'RESULTADO OPERACIONAL', resultadoOp, 'dre-total-row');
+        
+        console.log('✅ DRE GERADO COM SUCESSO!');
+        
+    } catch (error) {
+        console.error('❌ Erro ao gerar DRE:', error);
+        const corpo = document.getElementById('corpoDRE');
+        if (corpo) {
+            corpo.innerHTML = `<tr><td colspan="14" style="text-align:center; padding:40px; color:#EF4444;">❌ Erro: ${error.message}</td></tr>`;
+        }
+    }
+}async function limparDREComSupabase() {
     if(confirm('ATENÇÃO: Isso irá zerar TODOS os valores mensais inseridos na DRE. A estrutura do plano de contas será mantida. Confirmar limpeza?')) {
         const { error } = await supabaseClient
             .from('dre_lancamentos')
@@ -8929,7 +8950,378 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('✅ Filtro de Movimento instalado (sem quebrar nada)');
+// ============================================================
+// FUNÇÃO: EXTRAIR MÊS DA DATA
+// ============================================================
+function extrairMes(dataStr) {
+    if (!dataStr) return new Date().getMonth();
+    
+    if (dataStr.includes('/')) {
+        const partes = dataStr.split('/');
+        if (partes.length >= 2) {
+            const mes = parseInt(partes[1]) - 1;
+            if (mes >= 0 && mes <= 11) return mes;
+        }
+    }
+    
+    if (dataStr.includes('-')) {
+        const partes = dataStr.split('-');
+        if (partes.length >= 2) {
+            const mes = parseInt(partes[1]) - 1;
+            if (mes >= 0 && mes <= 11) return mes;
+        }
+    }
+    
+    return new Date().getMonth();
+}
 
+// ============================================================
+// FUNÇÃO: INCLUIR TODOS OS LANÇAMENTOS NO DRE
+// ============================================================
+async function incluirTodosLancamentosNoDRE() {
+    console.log('🚀 INICIANDO INCLUSÃO DE TODOS OS LANÇAMENTOS...');
+    
+    try {
+        console.log('📊 Contando lançamentos...');
+        const totalReceitas = receitasDataReais.length;
+        const totalDespesas = despesasDataReais.length;
+        const totalSangrias = contasExtrasData.length;
+        const total = totalReceitas + totalDespesas + totalSangrias;
+        
+        console.log(`📊 Total: ${total} (Receitas: ${totalReceitas}, Despesas: ${totalDespesas}, Sangrias: ${totalSangrias})`);
+        
+        if (total === 0) {
+            alert('⚠️ Nenhum lançamento disponível.');
+            return;
+        }
+
+        console.log('📢 Mostrando confirmação...');
+        if (!confirm(`⚠️ Substituir DRE por ${total} lançamentos?\n\n📊 Receitas: ${totalReceitas}\n📊 Despesas: ${totalDespesas}\n📊 Sangrias: ${totalSangrias}`)) {
+            console.log('❌ Usuário cancelou');
+            return;
+        }
+
+        console.log('🗑️ Limpando DRE...');
+        const { error: deleteError } = await supabaseClient.from('dre_lancamentos').delete().neq('id', 0);
+        if (deleteError) {
+            console.error('❌ Erro ao limpar:', deleteError);
+            alert('Erro ao limpar DRE: ' + deleteError.message);
+            return;
+        }
+        console.log('✅ DRE limpo');
+
+        console.log('📝 Preparando registros...');
+        const registros = [];
+
+        // RECEITAS
+        console.log(`📊 Processando ${totalReceitas} receitas...`);
+        for (const r of receitasDataReais) {
+            try {
+                const mes = extrairMes(r.data);
+                registros.push({
+                    mes: mes,
+                    data: r.data || '2026-01-01',
+                    descricao: `RECEITA: ${r.cliente || 'Cliente'}`.substring(0, 200),
+                    plano: r.plano || 'RECEITA DE SERVICOS',
+                    valor: Number(r.valor) || 0,
+                    timestamp: new Date().toISOString()
+                });
+            } catch(e) {
+                console.warn('⚠️ Erro na receita:', r.id, e.message);
+            }
+        }
+
+        // DESPESAS
+        console.log(`📊 Processando ${totalDespesas} despesas...`);
+        for (const d of despesasDataReais) {
+            try {
+                const mes = extrairMes(d.data);
+                registros.push({
+                    mes: mes,
+                    data: d.data || '2026-01-01',
+                    descricao: `DESPESA: ${d.fornecedor || 'Fornecedor'}`.substring(0, 200),
+                    plano: d.plano || 'DESPESAS ADMINISTRATIVAS',
+                    valor: -Math.abs(Number(d.valor) || 0),
+                    timestamp: new Date().toISOString()
+                });
+            } catch(e) {
+                console.warn('⚠️ Erro na despesa:', d.id, e.message);
+            }
+        }
+
+        // SANGRIA
+        console.log(`📊 Processando ${totalSangrias} sangrias...`);
+        for (const s of contasExtrasData) {
+            try {
+                let valor = Math.abs(Number(s.valor) || 0);
+                if (s.classificacao !== 'Receita') {
+                    valor = -valor;
+                }
+                
+                const mes = extrairMes(s.dt_pagto);
+                registros.push({
+                    mes: mes,
+                    data: s.dt_pagto || '2026-01-01',
+                    descricao: `SANGRIA: ${s.fornecedor || 'Fornecedor'}`.substring(0, 200),
+                    plano: s.plano || 'DESPESAS ADMINISTRATIVAS',
+                    valor: valor,
+                    timestamp: new Date().toISOString()
+                });
+            } catch(e) {
+                console.warn('⚠️ Erro na sangria:', s.id, e.message);
+            }
+        }
+
+        console.log(`📦 Total de registros preparados: ${registros.length}`);
+
+        if (registros.length === 0) {
+            alert('Nenhum registro válido.');
+            return;
+        }
+
+        console.log('📤 Inserindo no Supabase...');
+        const { error: insertError } = await supabaseClient.from('dre_lancamentos').insert(registros);
+        if (insertError) {
+            console.error('❌ Erro ao inserir:', insertError);
+            alert('Erro ao inserir: ' + insertError.message);
+            return;
+        }
+        console.log('✅ Inserido com sucesso!');
+
+        console.log('🔄 Atualizando DRE...');
+        await gerarDREComSupabase();
+        console.log('✅ DRE atualizado!');
+
+        alert(`✅ ${registros.length} lançamentos inseridos!\n\n📊 Receitas: ${totalReceitas}\n📊 Despesas: ${totalDespesas}\n📊 Sangrias: ${totalSangrias}`);
+
+    } catch (error) {
+        console.error('❌ Erro geral:', error);
+        alert('❌ Erro: ' + error.message);
+    }
+}
+// ============================================================
+// FUNÇÃO PARA FORÇAR ATUALIZAÇÃO DO DRE
+// ============================================================
+async function forcarAtualizacaoDRE() {
+    console.log('🔄 FORÇANDO ATUALIZAÇÃO DO DRE...');
+    await gerarDREComSupabase();
+    alert('✅ DRE atualizado!');
+}
+
+// ============================================================
+// FUNÇÃO PARA FORÇAR ATUALIZAÇÃO DO DRE
+// ============================================================
+async function forcarAtualizacaoDRE() {
+    console.log('🔄 FORÇANDO ATUALIZAÇÃO DO DRE...');
+    await gerarDREComSupabase();
+    console.log('✅ DRE atualizado!');
+}
+
+// ============================================================
+// CORREÇÃO: GARANTIR QUE O DRE SEJA GERADO AO INICIAR
+// ============================================================
+(async function garantirDRE() {
+    console.log('🔄 GARANTINDO QUE O DRE SEJA GERADO...');
+    try {
+        // Aguarda um pouco para garantir que tudo foi carregado
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await gerarDREComSupabase();
+        console.log('✅ DRE GERADO NA INICIALIZAÇÃO!');
+    } catch (e) {
+        console.error('❌ Erro ao garantir DRE:', e);
+    }
+})();
+
+// FORÇA O DRE A APARECER
+setTimeout(async () => {
+    await gerarDREComSupabase();
+}, 500);
+// ============================================================
+// SOLUÇÃO FINAL: FORÇA O DRE A APARECER
+// ============================================================
+(async function() {
+    console.log('🔄 FORÇANDO DRE NA TELA...');
+    
+    // Aguarda o carregamento completo
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Chama a função que já existe
+    await gerarDREComSupabase();
+    
+    console.log('✅ DRE FORÇADO NA TELA!');
+})();
+
+// ============================================================
+// FUNÇÃO: CORRIGIR PLANOS DE CONTAS FALTANTES
+// ============================================================
+async function corrigirPlanosFaltantes() {
+    console.log('🔧 CORRIGINDO PLANOS DE CONTAS FALTANTES...');
+    
+    let corrigidos = 0;
+    
+    // 1. CORRIGIR DESPESAS SEM PLANO
+    for (const d of despesasDataReais) {
+        if (!d.plano || d.plano === 'DESPESAS ADMINISTRATIVAS' || d.plano === '') {
+            // Tenta encontrar um plano pela operação
+            const operacao = d.operacao || '';
+            let planoEncontrado = null;
+            
+            // Procura nas regras de conversão
+            if (operacaoToPlanoMap[operacao]) {
+                planoEncontrado = operacaoToPlanoMap[operacao];
+            } else {
+                // Tenta encontrar por semelhança
+                const todosPlanos = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
+                for (const p of todosPlanos) {
+                    if (operacao.toLowerCase().includes(p.nome.toLowerCase()) || 
+                        p.nome.toLowerCase().includes(operacao.toLowerCase())) {
+                        planoEncontrado = p.nome;
+                        break;
+                    }
+                }
+            }
+            
+            if (planoEncontrado) {
+                d.plano = planoEncontrado;
+                corrigidos++;
+                console.log(`✅ Corrigido: ${operacao} → ${planoEncontrado}`);
+            }
+        }
+    }
+    
+    // 2. CORRIGIR SANGRIA SEM PLANO
+    for (const s of contasExtrasData) {
+        if (!s.plano || s.plano === 'DESPESAS ADMINISTRATIVAS' || s.plano === '') {
+            const operacao = s.operacao || '';
+            let planoEncontrado = null;
+            
+            if (operacaoToPlanoMap[operacao]) {
+                planoEncontrado = operacaoToPlanoMap[operacao];
+            } else {
+                const todosPlanos = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
+                for (const p of todosPlanos) {
+                    if (operacao.toLowerCase().includes(p.nome.toLowerCase()) || 
+                        p.nome.toLowerCase().includes(operacao.toLowerCase())) {
+                        planoEncontrado = p.nome;
+                        break;
+                    }
+                }
+            }
+            
+            if (planoEncontrado) {
+                s.plano = planoEncontrado;
+                corrigidos++;
+                console.log(`✅ Sangria corrigida: ${operacao} → ${planoEncontrado}`);
+            }
+        }
+    }
+    
+    // 3. SALVAR NO LOCALSTORAGE
+    const planosReceitas = {};
+    const planosDespesas = {};
+    const planosSangria = {};
+    
+    for (const r of receitasDataReais) {
+        planosReceitas[r.id] = r.plano;
+    }
+    localStorage.setItem(STORAGE_KEY_PLANOS_RECEITAS, JSON.stringify(planosReceitas));
+    
+    for (const d of despesasDataReais) {
+        planosDespesas[d.id] = d.plano;
+    }
+    localStorage.setItem(STORAGE_KEY_PLANOS_DESPESAS, JSON.stringify(planosDespesas));
+    
+    for (const s of contasExtrasData) {
+        planosSangria[s.id] = s.plano;
+    }
+    localStorage.setItem('planos_contas_extras', JSON.stringify(planosSangria));
+    
+    // 4. ATUALIZAR AS TABELAS E O DRE
+    renderizarTabelaDespesas();
+    renderizarTabelaContasExtras();
+    await gerarDREComSupabase();
+    
+    alert(`✅ ${corrigidos} lançamentos corrigidos com plano de contas!`);
+    console.log(`✅ Total corrigido: ${corrigidos}`);
+}
+
+// ============================================================
+// FUNÇÃO: DIAGNOSTICAR DESPESAS FORA DO DRE
+// ============================================================
+function diagnosticarDiferenca() {
+    console.log('🔍 DIAGNOSTICANDO DIFERENÇA...');
+    
+    let totalDespesas = 0;
+    let totalDRE = 0;
+    let semPlano = [];
+    
+    // TOTAL REAL
+    despesasDataReais.forEach(d => {
+        totalDespesas += Number(d.valor) || 0;
+        if (!d.plano || d.plano === 'DESPESAS ADMINISTRATIVAS' || d.plano === '') {
+            semPlano.push(d);
+        }
+    });
+    contasExtrasData.forEach(s => {
+        totalDespesas += Number(s.valor) || 0;
+        if (!s.plano || s.plano === 'DESPESAS ADMINISTRATIVAS' || s.plano === '') {
+            semPlano.push(s);
+        }
+    });
+    
+    // TOTAL DRE (soma manual)
+    for (let m = 0; m < 12; m++) {
+        estruturaDRE.custosVariaveis.forEach(c => {
+            let valor = 0;
+            despesasDataReais.forEach(d => {
+                if (extrairMes(d.data) === m && d.plano && d.plano.includes(c.nome)) {
+                    valor += Number(d.valor) || 0;
+                }
+            });
+            contasExtrasData.forEach(s => {
+                if (extrairMes(s.dt_pagto) === m && s.plano && s.plano.includes(c.nome)) {
+                    let v = Number(s.valor) || 0;
+                    if (s.classificacao !== 'Receita') v = -Math.abs(v);
+                    valor += v;
+                }
+            });
+            totalDRE += valor;
+        });
+        estruturaDRE.custosFixos.forEach(c => {
+            let valor = 0;
+            despesasDataReais.forEach(d => {
+                if (extrairMes(d.data) === m && d.plano && d.plano.includes(c.nome)) {
+                    valor += Number(d.valor) || 0;
+                }
+            });
+            contasExtrasData.forEach(s => {
+                if (extrairMes(s.dt_pagto) === m && s.plano && s.plano.includes(c.nome)) {
+                    let v = Number(s.valor) || 0;
+                    if (s.classificacao !== 'Receita') v = -Math.abs(v);
+                    valor += v;
+                }
+            });
+            totalDRE += valor;
+        });
+    }
+    
+    console.log('💰 TOTAL DESPESAS REAL:', totalDespesas);
+    console.log('💰 TOTAL DESPESAS DRE:', Math.abs(totalDRE));
+    console.log('📊 DIFERENÇA:', totalDespesas - Math.abs(totalDRE));
+    console.log('📋 ITENS SEM PLANO:', semPlano.length);
+    
+    if (semPlano.length > 0) {
+        console.log('🔴 PRIMEIROS ITENS SEM PLANO:');
+        semPlano.slice(0, 5).forEach(item => {
+            console.log(`  - ID: ${item.id} | Operação: ${item.operacao || '-'} | Valor: R$ ${item.valor}`);
+        });
+    }
+    
+    return { totalDespesas, totalDRE, semPlano };
+}
+
+// EXECUTA
+diagnosticarDiferenca();
 
 </script>
 </body>
