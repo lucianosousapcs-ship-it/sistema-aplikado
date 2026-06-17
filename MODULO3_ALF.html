@@ -1094,11 +1094,10 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
     <button class="cmd-btn" onclick="abrirModalVendasPopup()">RECEITAS</button>
     <button class="cmd-btn" onclick="abrirModalComprasPopup()">DESPESAS</button>
     <button class="cmd-btn" onclick="abrirModalCaixaPopup()">FECHAMENTOS</button>
-<button class="cmd-btn cmd-btn-primary" onclick="abrirModuloResultados()">RESULTADOS</button>
+    <button class="cmd-btn cmd-btn-primary" onclick="abrirModuloResultados()">RESULTADOS</button>
     <button class="cmd-btn cmd-btn-primary" onclick="abrirModalEstatisticas()">ESTATÍSTICAS</button>
     <div class="cmd-toggle" id="toggleCmdBar" title="Esconder Barra">▼</div>
 </div>
-
 <!-- POP-UP LANCAMENTOS -->
 <div id="modalLancamentos" class="modal-lancamentos">
     <div class="modal-content-inner" style="max-width: 1400px;">
@@ -1220,19 +1219,6 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
             </div>
         </div>
         
-        <!-- Bloco de Resumo por Operação -->
-        <div id="resumoContasExtras" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #11131E, #0E1018); border-radius: 12px; border: 1px solid rgba(155,89,182,0.2);">
-            <div class="resumo-card" style="background: rgba(155,89,182,0.1);">
-                <div class="resumo-card-label">TOTAL DE REGISTROS</div>
-                <div class="resumo-card-value" id="totalRegistrosContasExtras" style="color: #9b59b6;">0</div>
-            </div>
-            <div class="resumo-card" style="background: rgba(155,89,182,0.1);">
-                <div class="resumo-card-label">VALOR TOTAL GERAL</div>
-                <div class="resumo-card-value" id="totalGeralContasExtras" style="color: #9b59b6;">R$ 0,00</div>
-            </div>
-        </div>
-        <div id="resumoPorOperacaoContasExtras" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;"></div>
-        
         <!-- Filtros -->
         <div class="lancamentos-filters">
             <div class="filter-group">
@@ -1251,7 +1237,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
                 <span class="filter-label">FORNECEDOR</span>
                 <input type="text" id="filtroFornecedorContasExtras" class="filter-input" placeholder="Digite o fornecedor..." oninput="filtrarContasExtras()">
             </div>
-                       <div class="filter-group">
+            <div class="filter-group">
                 <span class="filter-label">PESQUISA GERAL</span>
                 <input type="text" id="buscaGeralContasExtras" class="filter-input" placeholder="Fornecedor, código, número, operação..." oninput="filtrarContasExtras()">
             </div>
@@ -1298,138 +1284,84 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
         </div>
     </div>
 </div>
-
-<!-- POP-UP RECEITAS (VENDAS) -->
-<div id="modalVendasPopup" class="modal-vendas-popup">
+<!-- POP-UP CONTAS EXTRAS -->
+<div id="modalContasExtras" class="modal-lancamentos">
     <div class="modal-content-inner" style="max-width:1400px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h2 style="color:#E6A017;">RECEITAS</h2>
+            <h2 style="color:#E6A017;">LANÇAMENTOS (SANGRIA)</h2>
             <div class="header-actions">
-                <div class="contador-lancamentos">REGISTROS: <span id="totalRegistrosVendas">0</span></div>
-                <button class="btn-atualizar" onclick="atualizarTelaVendas()">ATUALIZAR TELA</button>
-                <button class="close-modal-btn" onclick="fecharModalVendasPopup()">X</button>
+                <button class="btn-incluir-dre" onclick="incluirContasExtrasSelecionadasNoDRE()">INCLUIR NO DRE</button>
+                <button class="close-modal-btn" onclick="fecharModalContasExtras()">X</button>
+                <button class="btn-aplicar-todos" onclick="limparEConverterContasExtras()" style="background: linear-gradient(135deg, #ef4444, #dc2626); margin-left: 5px;"> LIMPAR E APLICAR TODOS</button>
+                <button class="btn-padrao btn-padrao-gerar-pdf" onclick="abrirModalPeriodoSangriaPDF()">GERAR PDF</button>
             </div>
         </div>
         
-        <div class="resumo-vendas">
-            <div class="resumo-card"><div class="resumo-card-label">LOJA FISICA</div><div class="resumo-card-value" id="totalLojaFisica">R$ 0,00</div></div>
-            <div class="resumo-card"><div class="resumo-card-label">CORPORATIVO</div><div class="resumo-card-value" id="totalCorporativo">R$ 0,00</div></div>
-            <div class="resumo-card"><div class="resumo-card-label">CLIENTES</div><div class="resumo-card-value" id="totalClientes">0</div></div>
-            <div class="resumo-card"><div class="resumo-card-label">TOTAL GERAL</div><div class="resumo-card-value" id="totalGeralVendas">R$ 0,00</div></div>
-        </div>
-        
-        <div class="filters-padrao">
+        <!-- Filtros -->
+        <div class="lancamentos-filters">
             <div class="filter-group">
-                <span class="filter-label">CLASSIFICACAO</span>
-                <div class="classif-buttons">
-                    <button class="classif-btn active" data-classif="TODAS" onclick="setFiltroClassificacao('TODAS')">TODOS</button>
-                    <button class="classif-btn" data-classif="Balcao" onclick="setFiltroClassificacao('Balcao')">LOJA FISICA</button>
-                    <button class="classif-btn" data-classif="Venda Corporativa" onclick="setFiltroClassificacao('Venda Corporativa')">CORPORATIVO</button>
-                </div>
+                <span class="filter-label">DT_PAGTO INICIO</span>
+                <input type="date" id="filtroDtPagtoInicio" class="filter-input" onchange="filtrarContasExtras()">
             </div>
             <div class="filter-group">
-                <span class="filter-label">MES</span>
-                <select id="filtroMes" class="filter-select" onchange="aplicarFiltrosVendas()"></select>
+                <span class="filter-label">DT_PAGTO FIM</span>
+                <input type="date" id="filtroDtPagtoFim" class="filter-input" onchange="filtrarContasExtras()">
             </div>
             <div class="filter-group">
-                <span class="filter-label">CONDICAO</span>
-                <select id="filtroCondicao" class="filter-select" onchange="aplicarFiltrosVendas()"></select>
-            </div>
-            <div class="filter-group">
-                <span class="filter-label">BUSCA</span>
-                <input type="text" id="buscaVendas" class="filter-input" placeholder="Cliente, pedido, NF..." oninput="aplicarBuscaVendas()">
-            </div>
-            <div class="filter-group">
-                <span class="filter-label"></span>
-                <button class="btn-limpar-filtros" onclick="limparTodosFiltrosVendas()">LIMPAR FILTROS</button>
-            </div>
-        </div>
-        
-        <div style="overflow-x:auto; max-height:500px; overflow-y:auto;">
-            <table class="vendas-table">
-                <thead>
-                    <tr>
-                        <th>NO</th>
-                        <th>DATA</th>
-                        <th>NF</th>
-                        <th>CLASSIFICACAO</th>
-                        <th>PEDIDO</th>
-                        <th>CLIENTE</th>
-                        <th>VALOR (R$)</th>
-                      </tr>
-                </thead>
-                <tbody id="tabelaVendasBody"></tbody>
-              </table>
-        </div>
-    </div>
-</div>
-
-<!-- POP-UP DESPESAS -->
-<div id="modalComprasPopup" class="modal-compras-popup">
-    <div class="modal-content-inner" style="max-width:1400px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h2 style="color:#E6A017;">DESPESAS</h2>
-            <div class="header-actions">
-                <div class="contador-lancamentos">REGISTROS: <span id="totalRegistrosCompras">0</span></div>
-                <button class="btn-atualizar" onclick="atualizarTelaCompras()">ATUALIZAR TELA</button>
-                <button class="btn-padrao btn-padrao-vermelho" onclick="abrirModalPeriodoPDF()">GERAR PDF</button>
-                <button class="close-modal-btn" onclick="fecharModalComprasPopup()">X</button>
-            </div>
-        </div>        
-        <div class="resumo-compras">
-            <div class="resumo-card">
-                <div class="resumo-card-label">QTD DE CONTAS DE FORNECEDORES</div>
-                <div class="resumo-card-value" id="qtdContasFornecedores">0</div>
-            </div>
-            <div class="resumo-card">
-                <div class="resumo-card-label">CONTAS VENCIDAS</div>
-                <div class="resumo-card-value" id="totalVencidasCompras">R$ 0,00</div>
-            </div>
-            <div class="resumo-card">
-                <div class="resumo-card-label">CONTAS EM DIA</div>
-                <div class="resumo-card-value" id="totalEmDiaCompras">R$ 0,00</div>
-            </div>
-            <div class="resumo-card">
-                <div class="resumo-card-label">TOTAL GERAL</div>
-                <div class="resumo-card-value" id="totalGeralCompras">R$ 0,00</div>
-            </div>
-        </div>
-        
-        <div class="filters-padrao">
-            <div class="filter-group">
-                <span class="filter-label">STATUS</span>
-                <div class="classif-buttons">
-                    <button class="classif-btn active" data-status="TODAS" onclick="setFiltroStatusCompras('TODAS')">TODAS</button>
-                    <button class="classif-btn" data-status="VENCIDA" onclick="setFiltroStatusCompras('VENCIDA')">CONTAS VENCIDAS</button>
-                    <button class="classif-btn" data-status="EM DIA" onclick="setFiltroStatusCompras('EM DIA')">CONTAS EM DIA</button>
-                </div>
+                <span class="filter-label">OPERAÇÃO</span>
+                <input type="text" id="filtroOperacaoContasExtras" class="filter-input" placeholder="Digite a operação..." oninput="filtrarContasExtras()">
             </div>
             <div class="filter-group">
                 <span class="filter-label">FORNECEDOR</span>
-                <select id="filtroFornecedor" class="filter-select" onchange="aplicarFiltrosCompras()"></select>
+                <input type="text" id="filtroFornecedorContasExtras" class="filter-input" placeholder="Digite o fornecedor..." oninput="filtrarContasExtras()">
             </div>
             <div class="filter-group">
-                <span class="filter-label">OPERACAO</span>
-                <select id="filtroOperacao" class="filter-select" onchange="aplicarFiltrosCompras()"></select>
+                <span class="filter-label">PESQUISA GERAL</span>
+                <input type="text" id="buscaGeralContasExtras" class="filter-input" placeholder="Fornecedor, código, número, operação..." oninput="filtrarContasExtras()">
             </div>
             <div class="filter-group">
-                <span class="filter-label">BUSCA</span>
-                <input type="text" id="buscaCompras" class="filter-input" placeholder="Documento, fornecedor..." oninput="aplicarBuscaCompras()">
+                <span class="filter-label">STATUS</span>
+                <select id="statusContasExtras" class="filter-select" onchange="filtrarContasExtras()">
+                    <option value="TODOS">TODOS</option>
+                    <option value="SELECIONADOS">SELECIONADOS</option>
+                    <option value="NAO_SELECIONADOS">NAO SELECIONADOS</option>
+                </select>
             </div>
             <div class="filter-group">
                 <span class="filter-label"></span>
-                <button class="btn-limpar-filtros" onclick="limparTodosFiltrosCompras()">LIMPAR FILTROS</button>
+                <button class="btn-limpar-filtros" onclick="limparFiltrosContasExtras()">LIMPAR FILTROS</button>
             </div>
         </div>
         
-        <div style="overflow-x:auto; max-height:500px; overflow-y:auto;">
-            <table class="compras-table"><thead><tr><th>DOCUMENTO</th><th>FORNECEDOR</th><th>PARCELA</th><th>OPERACAO</th><th>VENCIMENTO</th><th>DIAS</th><th>STATUS</th><th>VALOR (R$)</th> </thead>
-            <tbody id="tabelaComprasBody"></tbody>
-          </table>
+        <!-- Grade Principal - TABELA -->
+        <div style="overflow-x: auto; max-height: 450px; overflow-y: auto;">
+            <table class="lancamentos-table">
+                <thead>
+                    <tr>
+                        <th style="width:30px;"><input type="checkbox" id="selectAllContasExtras" onchange="toggleSelectAllContasExtras(this)"></th>
+                        <th>ID</th>
+                        <th>DATA</th>
+                        <th>CÓDIGO</th>
+                        <th>EMPRESA</th>
+                        <th>FORNECEDOR</th>
+                        <th>OPERAÇÃO</th>
+                        <th>VALOR (R$)</th>
+                        <th>PLANO DE CONTAS</th>                        
+                    </tr>
+                </thead>
+                <tbody id="tabelaContasExtrasBody"></tbody>
+            </table>
+        </div>
+        
+        <!-- Footer com contadores -->
+        <div class="footer" style="margin-top:12px; justify-content:space-between;">
+            <div class="contador-lancamentos">REGISTROS: <span id="totalContasExtras">0</span></div>
+            <div class="contador-lancamentos">SELECIONADOS: <span id="selecionadasContasExtras">0</span></div>
+            <div class="contador-lancamentos">VALOR TOTAL: <span id="valorTotalSelecionadoContasExtras">R$ 0,00</span></div>
+            <button class="btn-salvar-plano" onclick="salvarPlanosContasExtras()">SALVAR PLANOS</button>
         </div>
     </div>
 </div>
-
 <!-- POP-UP FILTRO PERÍODO PDF (DESPESAS) -->
 <div id="modalPeriodoPDF" class="modal-periodo-pdf">
     <div class="modal-periodo-content">
@@ -1773,7 +1705,148 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
         </div>
     </div>
 </div>
+<!-- POP-UP RECEITAS (VENDAS) -->
+<div id="modalVendasPopup" class="modal-vendas-popup">
+    <div class="modal-content-inner" style="max-width:1400px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="color:#E6A017;">RECEITAS</h2>
+            <div class="header-actions">
+                <div class="contador-lancamentos">REGISTROS: <span id="totalRegistrosVendas">0</span></div>
+                <button class="btn-atualizar" onclick="atualizarTelaVendas()">ATUALIZAR TELA</button>
+                <button class="close-modal-btn" onclick="fecharModalVendasPopup()">X</button>
+            </div>
+        </div>
+        
+        <div class="resumo-vendas">
+            <div class="resumo-card"><div class="resumo-card-label">LOJA FISICA</div><div class="resumo-card-value" id="totalLojaFisica">R$ 0,00</div></div>
+            <div class="resumo-card"><div class="resumo-card-label">CORPORATIVO</div><div class="resumo-card-value" id="totalCorporativo">R$ 0,00</div></div>
+            <div class="resumo-card"><div class="resumo-card-label">CLIENTES</div><div class="resumo-card-value" id="totalClientes">0</div></div>
+            <div class="resumo-card"><div class="resumo-card-label">TOTAL GERAL</div><div class="resumo-card-value" id="totalGeralVendas">R$ 0,00</div></div>
+        </div>
+        
+        <div class="filters-padrao">
+            <div class="filter-group">
+                <span class="filter-label">CLASSIFICACAO</span>
+                <div class="classif-buttons">
+                    <button class="classif-btn active" data-classif="TODAS" onclick="setFiltroClassificacao('TODAS')">TODOS</button>
+                    <button class="classif-btn" data-classif="Balcao" onclick="setFiltroClassificacao('Balcao')">LOJA FISICA</button>
+                    <button class="classif-btn" data-classif="Venda Corporativa" onclick="setFiltroClassificacao('Venda Corporativa')">CORPORATIVO</button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">MES</span>
+                <select id="filtroMes" class="filter-select" onchange="aplicarFiltrosVendas()"></select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">CONDICAO</span>
+                <select id="filtroCondicao" class="filter-select" onchange="aplicarFiltrosVendas()"></select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">BUSCA</span>
+                <input type="text" id="buscaVendas" class="filter-input" placeholder="Cliente, pedido, NF..." oninput="aplicarBuscaVendas()">
+            </div>
+            <div class="filter-group">
+                <span class="filter-label"></span>
+                <button class="btn-limpar-filtros" onclick="limparTodosFiltrosVendas()">LIMPAR FILTROS</button>
+            </div>
+        </div>
+        
+        <div style="overflow-x:auto; max-height:500px; overflow-y:auto;">
+            <table class="vendas-table">
+                <thead>
+                    <tr>
+                        <th>NO</th>
+                        <th>DATA</th>
+                        <th>NF</th>
+                        <th>CLASSIFICACAO</th>
+                        <th>PEDIDO</th>
+                        <th>CLIENTE</th>
+                        <th>VALOR (R$)</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaVendasBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
+<!-- POP-UP DESPESAS (COMPRAS) -->
+<div id="modalComprasPopup" class="modal-compras-popup">
+    <div class="modal-content-inner" style="max-width:1400px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="color:#E6A017;">DESPESAS</h2>
+            <div class="header-actions">
+                <div class="contador-lancamentos">REGISTROS: <span id="totalRegistrosCompras">0</span></div>
+                <button class="btn-atualizar" onclick="atualizarTelaCompras()">ATUALIZAR TELA</button>
+                <button class="btn-padrao btn-padrao-vermelho" onclick="abrirModalPeriodoPDF()">GERAR PDF</button>
+                <button class="close-modal-btn" onclick="fecharModalComprasPopup()">X</button>
+            </div>
+        </div>        
+        <div class="resumo-compras">
+            <div class="resumo-card">
+                <div class="resumo-card-label">QTD DE CONTAS DE FORNECEDORES</div>
+                <div class="resumo-card-value" id="qtdContasFornecedores">0</div>
+            </div>
+            <div class="resumo-card">
+                <div class="resumo-card-label">CONTAS VENCIDAS</div>
+                <div class="resumo-card-value" id="totalVencidasCompras">R$ 0,00</div>
+            </div>
+            <div class="resumo-card">
+                <div class="resumo-card-label">CONTAS EM DIA</div>
+                <div class="resumo-card-value" id="totalEmDiaCompras">R$ 0,00</div>
+            </div>
+            <div class="resumo-card">
+                <div class="resumo-card-label">TOTAL GERAL</div>
+                <div class="resumo-card-value" id="totalGeralCompras">R$ 0,00</div>
+            </div>
+        </div>
+        
+        <div class="filters-padrao">
+            <div class="filter-group">
+                <span class="filter-label">STATUS</span>
+                <div class="classif-buttons">
+                    <button class="classif-btn active" data-status="TODAS" onclick="setFiltroStatusCompras('TODAS')">TODAS</button>
+                    <button class="classif-btn" data-status="VENCIDA" onclick="setFiltroStatusCompras('VENCIDA')">CONTAS VENCIDAS</button>
+                    <button class="classif-btn" data-status="EM DIA" onclick="setFiltroStatusCompras('EM DIA')">CONTAS EM DIA</button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">FORNECEDOR</span>
+                <select id="filtroFornecedor" class="filter-select" onchange="aplicarFiltrosCompras()"></select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">OPERACAO</span>
+                <select id="filtroOperacao" class="filter-select" onchange="aplicarFiltrosCompras()"></select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">BUSCA</span>
+                <input type="text" id="buscaCompras" class="filter-input" placeholder="Documento, fornecedor..." oninput="aplicarBuscaCompras()">
+            </div>
+            <div class="filter-group">
+                <span class="filter-label"></span>
+                <button class="btn-limpar-filtros" onclick="limparTodosFiltrosCompras()">LIMPAR FILTROS</button>
+            </div>
+        </div>
+        
+        <div style="overflow-x:auto; max-height:500px; overflow-y:auto;">
+            <table class="compras-table">
+                <thead>
+                    <tr>
+                        <th>DOCUMENTO</th>
+                        <th>FORNECEDOR</th>
+                        <th>PARCELA</th>
+                        <th>OPERACAO</th>
+                        <th>VENCIMENTO</th>
+                        <th>DIAS</th>
+                        <th>STATUS</th>
+                        <th>VALOR (R$)</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaComprasBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
 <!-- MODAL DRILL-DOWN RECEITAS -->
 <div id="modalDrilldownReceitas" class="modal-drilldown">
     <div class="modal-drilldown-content">
@@ -3478,17 +3551,24 @@ function limparFiltrosDespesas() { document.getElementById('buscaDespesas').valu
 document.getElementById('statusDespesas').value = 'TODOS'; renderizarTabelaDespesas(); }
 
 // ============================================================
-// FUNÇÕES DE ABERTURA DE MODAIS COM FECHAMENTO AUTOMÁTICO
+// FUNÇÕES DE ABERTURA DE MODAIS
 // ============================================================
+
 function abrirModalLancamentos() {
-    abrirModalComFechamento('modalLancamentos', () => {
+    // Fecha outros modais
+    fecharTodosModais();
+    
+    const modal = document.getElementById('modalLancamentos');
+    if (modal) {
+        modal.classList.add('active');
+        
         if(receitasDataReais.length === 0) {
             carregarDadosReaisLancamentos();
         } else {
             renderizarTabelaReceitas();
             renderizarTabelaDespesas();
         }
-    });
+    }
 }
 
 function fecharModalLancamentos() { 
@@ -3496,11 +3576,62 @@ function fecharModalLancamentos() {
     if (modal) modal.classList.remove('active'); 
 }
 
-function switchPopupTab(tab, btn) { 
-    document.querySelectorAll('.popup-tab-btn').forEach(b => b.classList.remove('active')); 
-    document.querySelectorAll('.popup-tab-content').forEach(c => c.classList.remove('active')); 
-    btn.classList.add('active'); 
-    document.getElementById(`popup-tab-${tab}`).classList.add('active'); 
+function abrirModalVendasPopup() {
+    fecharTodosModais();
+    
+    const modal = document.getElementById('modalVendasPopup');
+    if (modal) {
+        modal.classList.add('active');
+        if(vendasData.length === 0) {
+            carregarVendas();
+        } else {
+            limparTodosFiltrosVendas();
+            atualizarTabelaVendas();
+        }
+    }
+}
+
+function fecharModalVendasPopup() { 
+    const modal = document.getElementById('modalVendasPopup');
+    if (modal) modal.classList.remove('active'); 
+}
+
+function abrirModalComprasPopup() {
+    fecharTodosModais();
+    
+    const modal = document.getElementById('modalComprasPopup');
+    if (modal) {
+        modal.classList.add('active');
+        if(comprasData.length === 0) {
+            carregarCompras();
+        } else {
+            atualizarTabelaCompras();
+        }
+    }
+}
+
+function fecharModalComprasPopup() { 
+    const modal = document.getElementById('modalComprasPopup');
+    if (modal) modal.classList.remove('active'); 
+}
+
+function abrirModalContasExtras() {
+    fecharTodosModais();
+    
+    const modal = document.getElementById('modalContasExtras');
+    if (modal) {
+        modal.classList.add('active');
+        if (contasExtrasData.length === 0) {
+            carregarContasExtras();
+        } else {
+            renderizarTabelaContasExtras();
+        }
+    }
+}
+
+function fecharModalContasExtras() { 
+    const modal = document.getElementById('modalContasExtras');
+    if (modal) modal.classList.remove('active'); 
 }
 
 // ============================================================
@@ -3522,14 +3653,11 @@ function escapeHtml(texto) {
 function renderizarTabelaContasExtras() {
     console.log('🎨 Renderizando contas extras, total:', contasExtrasData.length);
     
-    // 🔹 RECALCULA O temRegra PARA GARANTIR QUE ESTÁ CORRETO
+    // 🔹 RECALCULA O temRegra
     for (const reg of contasExtrasData) {
         const operacao = reg.operacao || '';
         reg.temRegra = operacaoToPlanoMap[operacao] !== undefined;
     }
-    
-    console.log('📊 Com regra:', contasExtrasData.filter(r => r.temRegra).length);
-    console.log('📊 Sem regra:', contasExtrasData.filter(r => !r.temRegra).length);
     
     let filtradas = [...contasExtrasData];
     
@@ -3591,8 +3719,6 @@ function renderizarTabelaContasExtras() {
         return dateB - dateA;
     });
     
-    atualizarResumoContasExtras(filtradas);
-    
     const tbody = document.getElementById('tabelaContasExtrasBody');
     if (!tbody) {
         console.error('tbody tabelaContasExtrasBody não encontrado');
@@ -3617,7 +3743,7 @@ function renderizarTabelaContasExtras() {
         
         const planoInicial = r.plano || encontrarPlanoPorOperacaoExtras(r.operacao);
         
-        // 🔹 USA O CAMPO temRegra COM !important para forçar a cor
+        // 🔹 USA O CAMPO temRegra
         const temRegra = r.temRegra === true;
         const corPlano = temRegra ? 'color: #10b981 !important; font-weight: 700 !important;' : 'color: #ef4444 !important; font-weight: 700 !important;';
         const tituloPlano = temRegra ? '' : 'title="⚠️ SEM REGRA DE CONVERSÃO!"';
@@ -3650,8 +3776,7 @@ function renderizarTabelaContasExtras() {
     
     const selectAll = document.getElementById('selectAllContasExtras');
     if (selectAll) selectAll.checked = filtradas.length > 0 && filtradas.every(r => contasExtrasSelecionadas.has(r.id));
-}
-function atualizarResumoContasExtras(registros) {
+}function atualizarResumoContasExtras(registros) {
     const grupos = new Map();
     let totalRegistros = 0;
     let totalGeral = 0;
@@ -7697,13 +7822,14 @@ function abrirModuloResultados() {
     if (modulo && mainContent) {
         modulo.style.display = 'block';
         mainContent.style.display = 'none';
-        if (commandBar) commandBar.classList.add('hidden');
+        // 🔹 REMOVA ESTA LINHA: if (commandBar) commandBar.classList.add('hidden');
+        // 🔹 ADICIONE ESTA LINHA: if (commandBar) commandBar.classList.remove('hidden');
+        if (commandBar) commandBar.classList.remove('hidden');
         carregarDadosResultados();
     } else {
         console.error('❌ Módulo Resultados não encontrado!');
     }
 }
-
 function fecharModuloResultados() {
     console.log('🔴 Fechando Módulo RESULTADOS');
     const modulo = document.getElementById('moduloResultadosContainer');
@@ -7713,11 +7839,11 @@ function fecharModuloResultados() {
     if (modulo && mainContent) {
         modulo.style.display = 'none';
         mainContent.style.display = 'block';
+        // 🔹 MANTENHA A BARRA VISÍVEL
         if (commandBar) commandBar.classList.remove('hidden');
         if (typeof gerarDREComSupabase === 'function') gerarDREComSupabase();
     }
 }
-
 function carregarRateiosFixosResultados() {
     const saved = localStorage.getItem('modulo_resultados_rateios_fixos');
     if (saved) { 
@@ -8363,6 +8489,39 @@ function filtrarMesAtualContasExtras() {
 console.log('✅ Sistema Aplikado Módulo III - Versão Final Corrigida');
 console.log('✅ Tela de Conversão e Lançamentos integradas com regras consistentes');
 console.log('✅ Salvamento no Supabase funcionando corretamente');
+// ============================================================
+// FUNÇÃO PARA TROCAR ABAS NO POP-UP LANÇAMENTOS
+// ============================================================
+function switchPopupTab(tab, btn) {
+    // Remove active de todos os botões
+    document.querySelectorAll('.popup-tab-btn').forEach(b => {
+        b.classList.remove('active');
+    });
+    
+    // Adiciona active no botão clicado
+    if (btn) {
+        btn.classList.add('active');
+    }
+    
+    // Remove active de todos os conteúdos
+    document.querySelectorAll('.popup-tab-content').forEach(c => {
+        c.classList.remove('active');
+    });
+    
+    // Ativa o conteúdo correto
+    const targetId = 'popup-tab-' + tab;
+    const targetContent = document.getElementById(targetId);
+    
+    if (targetContent) {
+        targetContent.classList.add('active');
+    }
+}
+
+
+
+
+
+
 </script>
 
 </body>
