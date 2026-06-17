@@ -2181,7 +2181,7 @@ const STORAGE_KEY_PLANOS_RECEITAS = 'planos_receitas_personalizados';
 const STORAGE_KEY_PLANOS_DESPESAS = 'planos_despesas_personalizados';
 const STORAGE_KEY_COMPARATIVOS = 'dados_comparativos_fechamento';
 const STORAGE_KEY_FLAGS = 'caixa_flags_pdf_sinais';
-const STORAGE_KEY_CORES_LINHAS = 'linhas_fechamento_cores';
+const STORAGE_KEY_CORES_LINHAS_CAIXA = 'linhas_fechamento_cores';
 const STORAGE_KEY_OPERACAO_PLANO = 'operacao_to_plano_map';  // <-- NOVO
 
 // ============================================================
@@ -6627,8 +6627,8 @@ function fecharModalEstatisticas() { document.getElementById('modalEstatisticas'
 function carregarFlags() { const saved = localStorage.getItem(STORAGE_KEY_FLAGS); if (saved) { try { flagsSalvas = JSON.parse(saved); } catch(e) { console.error("Erro ao carregar flags", e); flagsSalvas = {}; } } else { flagsSalvas = {}; } }
 function salvarFlags() { localStorage.setItem(STORAGE_KEY_FLAGS, JSON.stringify(flagsSalvas)); }
 function toggleFlag(data) { if (flagsSalvas[data]) delete flagsSalvas[data]; else flagsSalvas[data] = true; salvarFlags(); renderizarCaixaPopup(); }
-function carregarCoresSalvas() { const saved = localStorage.getItem(STORAGE_KEY_CORES_LINHAS); if (saved) { try { linhaCorSelecionada = JSON.parse(saved); } catch(e) { console.error("Erro ao carregar cores salvas", e); linhaCorSelecionada = {}; } } else { linhaCorSelecionada = {}; } }
-function salvarCores() { localStorage.setItem(STORAGE_KEY_CORES_LINHAS, JSON.stringify(linhaCorSelecionada)); }
+function carregarCoresSalvas() { const saved = localStorage.getItem(STORAGE_KEY_CORES_LINHAS_CAIXA); if (saved) { try { linhaCorSelecionada = JSON.parse(saved); } catch(e) { console.error("Erro ao carregar cores salvas", e); linhaCorSelecionada = {}; } } else { linhaCorSelecionada = {}; } }
+function salvarCores() { localStorage.setItem(STORAGE_KEY_CORES_LINHAS_CAIXA, JSON.stringify(linhaCorSelecionada)); }
 
 // ============================================================
 // FUNÇÃO DE CONSULTA CONVERSÃO
@@ -7380,7 +7380,7 @@ async function salvarCoresNoSupabase() {
         }
         
         const { error } = await supabaseClient
-            .from('cores_linhas')
+            .from('cores_linhas_Caixa')
             .upsert(registros, { onConflict: 'data' });
         
         if (error) {
@@ -7398,7 +7398,7 @@ async function carregarCoresDoSupabase() {
     
     try {
         const { data, error } = await supabaseClient
-            .from('cores_linhas')
+            .from('cores_linhas_caixa')
             .select('*');
         
         if (error) {
