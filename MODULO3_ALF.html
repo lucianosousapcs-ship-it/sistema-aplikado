@@ -1589,8 +1589,9 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
         
         <!-- BARRA DE FERRAMENTAS COM BOTÕES -->
         <div style="display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 20px;">
-            <button class="btn-atualizar" onclick="atualizarRegrasConversao()" style="background: linear-gradient(135deg, #2c3e50, #1a2632); border: 1px solid rgba(230,160,23,0.3); border-radius: 8px; padding: 8px 16px; font-weight: 600; font-size: 12px; cursor: pointer; color: var(--yellow); display: inline-flex; align-items: center; gap: 8px;">
-                 ATUALIZAR
+           <button class="btn-atualizar" onclick="atualizarRegrasConversao()" style="background: linear-gradient(135deg, #2c3e50, #1a2632); border: 1px solid rgba(230,160,23,0.3); border-radius: 8px; padding: 8px 16px; font-weight: 600; font-size: 12px; cursor: pointer; color: var(--yellow); display: inline-flex; align-items: center; gap: 8px;">
+     ATUALIZAR
+</button>
             </button>
             <button class="btn-aplicar-todos" onclick="aplicarRegrasConversaoEmTodosLancamentos()" style="background: linear-gradient(135deg, #10b981, #0d9668); border: none; color: white; padding: 8px 20px; border-radius: 40px; font-weight: 800; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
                  APLICAR A TODOS
@@ -5657,7 +5658,7 @@ async function carregarPlanoContasSupabase() {
         
         const { data, error } = await supabaseClient
             .from('plano_contas')
-            .select('codigo, nome, tipo, grupo_dre, tipo_classificacao, identificador')  // ← ADICIONOU identificador
+            .select('codigo, nome, tipo, grupo_dre, tipo_classificacao, identificador') // ← ADICIONOU identificador
             .order('codigo', { ascending: true });
         
         if (error) {
@@ -5694,9 +5695,6 @@ async function carregarPlanoContasSupabase() {
             localStorage.setItem('estruturaDREModuloIII', JSON.stringify(estruturaDRE));
             
             console.log('✅ estruturaDRE atualizada com sucesso!');
-            console.log('📋 Primeiras receitas:', estruturaDRE.receitas.slice(0, 3));
-            console.log('📋 Primeiras despesas:', estruturaDRE.custosVariaveis.slice(0, 3));
-            
             return estruturaDRE;
         }
         
@@ -5707,7 +5705,6 @@ async function carregarPlanoContasSupabase() {
         return null;
     }
 }
-
 // FUNÇÃO: Carregar regras do Supabase
 async function carregarRegrasConversaoSupabase() {
     console.log('🔄 Carregando regras da tabela regras_conversao...');
@@ -5761,15 +5758,10 @@ async function carregarRegrasConversaoSupabase() {
             planosDespesas: Object.keys(operacaoToPlanoMap).length
         });
         
-        // MOSTRA AS PRIMEIRAS REGRAS PARA DEBUG
-        const primeirasDespesas = Object.keys(operacaoToPlanoMap).slice(0, 5);
-        console.log('📋 Primeiras regras de despesas:', primeirasDespesas);
-        
     } catch(e) {
         console.error('❌ Erro ao carregar regras:', e);
     }
 }
-
 // ============================================================
 // FUNÇÃO: Abrir modal de conversão
 // ============================================================
@@ -5780,19 +5772,42 @@ async function abrirModalConversaoSupabase() {
         await carregarPlanoContasSupabase();
         await carregarRegrasConversaoSupabase();
         
+        // ====== RECEITAS - BUSCAR TODAS AS REGRAS DO BANCO ======
         const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
         if (tbodyReceitas) {
-            let html = '';
-            const condUnicas = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
+            // BUSCAR TODAS AS REGRAS DE RECEITA DO BANCO
+            const { data: regrasReceitas, error } = await supabaseClient
+                .from('regras_conversao')
+                .select('*')
+                .eq('tipo', 'RECEITA')
+                .eq('ativo', true);
             
-            for (const cond of condUnicas) {
-                const tituloAtual = condToTituloMap[cond] || 'VNF';
-                const planoAtual = condToPlanoMap[cond] || '';
+            if (error) {
+                console.error('❌ Erro ao buscar regras de receita:', error);
+            }
+            
+            // USAR AS REGRAS DO BANCO OU AS CONDIÇÕES DAS VENDAS
+            let origens = [];
+            if (regrasReceitas && regrasReceitas.length > 0) {
+                // Pega todas as origens únicas das regras do banco
+                origens = [...new Set(regrasReceitas.map(r => r.origem))];
+                console.log(`📋 ${origens.length} regras de receita no banco`);
+            } else {
+                // Fallback: usar as condições das vendas
+                origens = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
+                console.log(`📋 ${origens.length} condições de vendas`);
+            }
+            
+            let html = '';
+            for (const origem of origens) {
+                const tituloAtual = condToTituloMap[origem] || '';
+                const planoAtual = condToPlanoMap[origem] || '';
                 
                 html += `<tr>
-                    <td>${escapeHtml(cond)}</td>
+                    <td><strong>${escapeHtml(origem)}</strong></td>
                     <td>
-                        <select class="conversao-select" data-cond="${escapeHtml(cond)}">
+                        <select class="conversao-select" data-cond="${escapeHtml(origem)}">
+                            <option value="">Selecione...</option>
                             <option value="DINHEIRO" ${tituloAtual === 'DINHEIRO' ? 'selected' : ''}>DINHEIRO</option>
                             <option value="DEBITO" ${tituloAtual === 'DEBITO' ? 'selected' : ''}>DEBITO</option>
                             <option value="CREDITO" ${tituloAtual === 'CREDITO' ? 'selected' : ''}>CREDITO</option>
@@ -5803,38 +5818,67 @@ async function abrirModalConversaoSupabase() {
                         </select>
                     </td>
                     <td>
-                        <select class="conversao-select-plano-receita" data-plano-cond="${escapeHtml(cond)}">
+                        <select class="conversao-select-plano-receita" data-plano-cond="${escapeHtml(origem)}">
                             <option value="">Selecione...</option>
-                            ${estruturaDRE.receitas.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
+                            ${estruturaDRE.receitas.map(p => {
+                                const valorSelect = p.identificador || `${p.cod} - ${p.nome}`;
+                                const selected = (planoAtual === valorSelect || planoAtual === p.nome) ? 'selected' : '';
+                                return `<option value="${valorSelect}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                            }).join('')}
                         </select>
                     </td>
                 </tr>`;
             }
             tbodyReceitas.innerHTML = html;
-            console.log(`✅ Tabela de RECEITAS: ${condUnicas.length} condições`);
+            console.log(`✅ Tabela de RECEITAS: ${origens.length} regras`);
         }
         
+        // ====== DESPESAS - BUSCAR TODAS AS REGRAS DO BANCO ======
         const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
         if (tbodyDespesas) {
-            let html = '';
-            const todosPlanosDespesa = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
-            const operacoesUnicas = [...new Set(despesasDataReais.map(d => d.operacao).filter(op => op && op !== '-'))];
+            // BUSCAR TODAS AS REGRAS DE DESPESA DO BANCO
+            const { data: regrasDespesas, error } = await supabaseClient
+                .from('regras_conversao')
+                .select('*')
+                .in('tipo', ['DESPESA_FIXA', 'DESPESA_VARIAVEL'])
+                .eq('ativo', true);
             
-            for (const operacao of operacoesUnicas) {
+            if (error) {
+                console.error('❌ Erro ao buscar regras de despesa:', error);
+            }
+            
+            // USAR AS REGRAS DO BANCO OU AS OPERAÇÕES DAS COMPRAS
+            let origens = [];
+            if (regrasDespesas && regrasDespesas.length > 0) {
+                origens = [...new Set(regrasDespesas.map(r => r.origem))];
+                console.log(`📋 ${origens.length} regras de despesa no banco`);
+            } else {
+                origens = [...new Set(despesasDataReais.map(d => d.operacao).filter(op => op && op !== '-'))];
+                console.log(`📋 ${origens.length} operações de compras`);
+            }
+            
+            const todosPlanosDespesa = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
+            
+            let html = '';
+            for (const operacao of origens) {
                 const planoAtual = operacaoToPlanoMap[operacao] || '';
                 
                 html += `<tr>
-                    <td>${escapeHtml(operacao)}</td>
+                    <td><strong>${escapeHtml(operacao)}</strong></td>
                     <td>
                         <select class="conversao-select-plano-despesa" data-operacao="${escapeHtml(operacao)}">
                             <option value="">Selecione...</option>
-                            ${todosPlanosDespesa.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
+                            ${todosPlanosDespesa.map(p => {
+                                const valorSelect = p.identificador || `${p.cod} - ${p.nome}`;
+                                const selected = (planoAtual === valorSelect || planoAtual === p.nome) ? 'selected' : '';
+                                return `<option value="${valorSelect}" ${selected}>${p.cod} - ${p.nome}</option>`;
+                            }).join('')}
                         </select>
                     </td>
                 </tr>`;
             }
             tbodyDespesas.innerHTML = html;
-            console.log(`✅ Tabela de DESPESAS: ${operacoesUnicas.length} operações`);
+            console.log(`✅ Tabela de DESPESAS: ${origens.length} regras`);
         }
         
         document.getElementById('modalConversao').classList.add('active');
@@ -5843,15 +5887,12 @@ async function abrirModalConversaoSupabase() {
         console.error('❌ Erro ao abrir conversão:', error);
         alert('Erro ao carregar dados: ' + error.message);
     }
-}
-
-// ============================================================
+}// ============================================================
 // FUNÇÃO: Fechar modal de conversão
 // ============================================================
 function fecharModalConversao() {
     document.getElementById('modalConversao').classList.remove('active');
 }
-
 // ============================================================
 // FUNÇÃO: Trocar aba na conversão
 // ============================================================
@@ -5861,7 +5902,6 @@ function switchConversaoTab(tab, btn) {
     btn.classList.add('active');
     document.getElementById(`conversaoTab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
 }
-
 // ============================================================
 // FUNÇÃO: Salvar mapeamento de conversão
 // ============================================================
@@ -5871,6 +5911,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     const receitasRegras = [];
     const despesasRegras = [];
     
+    // ====== RECEITAS ======
     document.querySelectorAll('#conversaoTabReceitas .conversao-select').forEach(select => {
         const cond = select.getAttribute('data-cond');
         if (cond && select.value) {
@@ -5887,11 +5928,13 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                 tipo: 'RECEITA',
                 origem: cond,
                 destino_caixa: condToTituloMap[cond] || 'VNF',
-                destino_plano: planoSelecionado
+                destino_identificador: planoSelecionado,
+                ativo: true
             });
         }
     });
     
+    // ====== DESPESAS ======
     document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
         const operacao = select.getAttribute('data-operacao');
         const planoSelecionado = select.value;
@@ -5901,7 +5944,8 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
                 tipo: 'DESPESA',
                 origem: operacao,
                 destino_caixa: null,
-                destino_plano: planoSelecionado
+                destino_identificador: planoSelecionado,
+                ativo: true
             });
         }
     });
@@ -5916,6 +5960,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
     console.log(`📋 ${todasRegras.length} regras para salvar`);
     
     try {
+        // DELETAR REGRAS ANTIGAS
         const { error: deleteError } = await supabaseClient
             .from('regras_conversao')
             .delete()
@@ -5927,6 +5972,7 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
             return;
         }
         
+        // INSERIR NOVAS REGRAS EM LOTE
         const batchSize = 50;
         let inseridos = 0;
         
@@ -5945,21 +5991,14 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
             console.log(`✅ Lote ${Math.floor(i/batchSize) + 1}: ${batch.length} inseridos`);
         }
         
+        // SALVAR NO LOCALSTORAGE TAMBÉM
         localStorage.setItem('condToTituloMap', JSON.stringify(condToTituloMap));
         localStorage.setItem('condToPlanoMap', JSON.stringify(condToPlanoMap));
         localStorage.setItem(STORAGE_KEY_OPERACAO_PLANO, JSON.stringify(operacaoToPlanoMap));
         
         alert(`✅ ${inseridos} regras salvas com sucesso!`);
         
-        if (typeof renderizarTabelaReceitas === 'function') renderizarTabelaReceitas();
-        if (typeof renderizarTabelaDespesas === 'function') renderizarTabelaDespesas();
-        
-        const modalCaixa = document.getElementById('modalFechamentoCaixa');
-        if (modalCaixa && modalCaixa.classList.contains('active')) {
-            atualizarTitulosColunasCaixa();
-            renderizarCaixaPopup();
-        }
-        
+        // FECHAR MODAL
         fecharModalConversao();
         
     } catch (err) {
@@ -5967,7 +6006,6 @@ async function salvarMapeamentoConversaoCompletoSupabase() {
         alert('Erro ao salvar: ' + err.message);
     }
 }
-
 // ============================================================
 // FUNÇÃO: Atualizar regras de conversão
 // ============================================================
@@ -5978,6 +6016,7 @@ async function atualizarRegrasConversao() {
         await carregarRegrasConversaoSupabase();
         await carregarPlanoContasSupabase();
         
+        // RECARREGAR A TABELA DE RECEITAS
         const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
         if (tbodyReceitas) {
             const condUnicas = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
@@ -5986,7 +6025,7 @@ async function atualizarRegrasConversao() {
                 const tituloAtual = condToTituloMap[cond] || 'VNF';
                 const planoAtual = condToPlanoMap[cond] || '';
                 html += `<tr>
-                    <td>${escapeHtml(cond)}</td>
+                    <td><strong>${escapeHtml(cond)}</strong></td>
                     <td>
                         <select class="conversao-select" data-cond="${escapeHtml(cond)}">
                             <option value="DINHEIRO" ${tituloAtual === 'DINHEIRO' ? 'selected' : ''}>DINHEIRO</option>
@@ -6001,7 +6040,7 @@ async function atualizarRegrasConversao() {
                     <td>
                         <select class="conversao-select-plano-receita" data-plano-cond="${escapeHtml(cond)}">
                             <option value="">Selecione...</option>
-                            ${estruturaDRE.receitas.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
+                            ${estruturaDRE.receitas.map(p => `<option value="${p.identificador || p.nome}" ${(planoAtual === p.identificador || planoAtual === p.nome) ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
                         </select>
                     </td>
                 </tr>`;
@@ -6009,6 +6048,7 @@ async function atualizarRegrasConversao() {
             tbodyReceitas.innerHTML = html;
         }
         
+        // RECARREGAR A TABELA DE DESPESAS
         const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
         if (tbodyDespesas) {
             const todosPlanosDespesa = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
@@ -6017,11 +6057,11 @@ async function atualizarRegrasConversao() {
             for (const operacao of operacoesUnicas) {
                 const planoAtual = operacaoToPlanoMap[operacao] || '';
                 html += `<tr>
-                    <td>${escapeHtml(operacao)}</td>
+                    <td><strong>${escapeHtml(operacao)}</strong></td>
                     <td>
                         <select class="conversao-select-plano-despesa" data-operacao="${escapeHtml(operacao)}">
                             <option value="">Selecione...</option>
-                            ${todosPlanosDespesa.map(p => `<option value="${p.nome}" ${planoAtual === p.nome ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
+                            ${todosPlanosDespesa.map(p => `<option value="${p.identificador || p.nome}" ${(planoAtual === p.identificador || planoAtual === p.nome) ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
                         </select>
                     </td>
                 </tr>`;
@@ -6036,7 +6076,6 @@ async function atualizarRegrasConversao() {
         alert('Erro ao atualizar regras: ' + error.message);
     }
 }
-
 // ============================================================
 // FUNÇÃO: Aplicar regras a todos os lançamentos
 // ============================================================
