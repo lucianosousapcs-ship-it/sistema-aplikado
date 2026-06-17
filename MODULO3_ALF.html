@@ -2587,16 +2587,22 @@ function aplicarCoresPadraoConversao() {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
+    // ============================================
+    // 1. CARREGAR REGRAS E DADOS PRIMEIRO
+    // ============================================
+    carregarCoresSalvas();
+    carregarFlags();
     await carregarRegrasConversaoSupabase();
-    await gerarDREComSupabase();
-    await carregarCoresDoSupabase();
+    
+    // ============================================
+    // 2. CARREGAR DADOS REAIS (VENDAS, COMPRAS, CONTAS)
+    // ============================================
     carregarVendas();
     carregarCompras();
-    carregarDadosReaisLancamentos();
-   await carregarDadosComparativos();
-     // ===== CARREGAR PREFERÊNCIA DE TEMA =====
-    carregarPreferenciaTema();;
+    await carregarDadosReaisLancamentos();  // ← CARREGA AS 200 CONTAS
     await carregarContasExtras();
+    await carregarCoresDoSupabase();
+    await carregarDadosComparativos();
     
     const { data } = await supabaseClient.from('comparativos_caixa').select('*');
     if (data) {
@@ -2616,6 +2622,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
     
+    // ============================================
+    // 3. CARREGAR ESTATÍSTICAS (DEPOIS DOS DADOS)
+    // ============================================
+    carregarDadosEstatisticas();
+    
+    // ============================================
+    // 4. GERAR O DRE (AGORA COM AS 200 CONTAS!)
+    // ============================================
+    await gerarDREComSupabase();  // ← AGORA COM AS 200 CONTAS
+    
+    // ============================================
+    // 5. RENDERIZAR INTERFACES
+    // ============================================
+    carregarPreferenciaTema();
+    
+    const btnFiltroMovimento = document.getElementById('btnFiltrarMovimento');
+    if (btnFiltroMovimento) {
+        btnFiltroMovimento.innerText = filtroMovimentoAtivo ? 'MOSTRAR TODAS' : 'FILTRAR MOVIMENTO';
+    }
+    
     renderizarCaixaPopup();
     renderizarTabelaComparativos();
     
@@ -2623,8 +2649,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (modalContasExtras) {
         console.log('Modal Contas Extras encontrado e corrigido');
     }
+    
+    console.log('✅ Sistema Aplikado Módulo III inicializado com sucesso!');
 });
-
 // ============================================================
 // FUNÇÃO LIMPAR DRE (CORRIGIDA PARA SUPABASE)
 // ============================================================
