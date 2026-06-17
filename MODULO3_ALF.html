@@ -5839,7 +5839,7 @@ async function carregarPlanoContasSupabase() {
         
         const { data, error } = await supabaseClient
             .from('plano_contas')
-            .select('codigo, nome, tipo, grupo_dre, tipo_classificacao, identificador') // ← ADICIONOU identificador
+            .select('codigo, nome, tipo, grupo_dre, tipo_classificacao, identificador')
             .order('codigo', { ascending: true });
         
         if (error) {
@@ -5850,32 +5850,60 @@ async function carregarPlanoContasSupabase() {
         console.log(`✅ Total de registros no banco: ${data?.length || 0}`);
         
         if (data && data.length > 0) {
-            const planosReceita = data.filter(p => p.tipo === 'RECEITA');
-            const planosDespesa = data.filter(p => p.tipo === 'DESPESA');
+            // ============================================
+            // CORREÇÃO: Usar tipo_classificacao
+            // ============================================
             
-            console.log(`📊 Receitas: ${planosReceita.length}, Despesas: ${planosDespesa.length}`);
+            // RECEITAS
+            const receitas = data.filter(p => 
+                p.tipo_classificacao === 'RECEITAS' || 
+                p.tipo_classificacao === 'RECEITA DE SERVIÇOS' || 
+                p.tipo_classificacao === 'RECEITAS FINANCEIRAS'
+            );
+            
+            // DESPESAS VARIAVEIS
+            const despesasVariaveis = data.filter(p => 
+                p.tipo_classificacao === 'DESPESAS VARIAVEIS' || 
+                p.tipo_classificacao === 'DESPESAS FINANCEIRAS' || 
+                p.tipo_classificacao === 'IMPOSTOS'
+            );
+            
+            // DESPESAS FIXAS
+            const despesasFixas = data.filter(p => 
+                p.tipo_classificacao === 'DESPESAS FIXAS'
+            );
+            
+            console.log(`📊 Receitas: ${receitas.length}`);
+            console.log(`📊 Despesas Variáveis: ${despesasVariaveis.length}`);
+            console.log(`📊 Despesas Fixas: ${despesasFixas.length}`);
             
             estruturaDRE = {
-                receitas: planosReceita.map(p => ({ 
+                receitas: receitas.map(p => ({ 
                     cod: p.codigo, 
                     nome: p.nome,
                     grupo_dre: p.grupo_dre || '1 RECEITAS DE VENDAS',
                     tipo_classificacao: p.tipo_classificacao || 'RECEITAS',
-                    identificador: p.identificador || `${p.codigo} - ${p.nome}`  // ← ADICIONOU
+                    identificador: p.identificador || `${p.codigo} - ${p.nome}`
                 })),
-                custosVariaveis: planosDespesa.map(p => ({ 
+                custosVariaveis: despesasVariaveis.map(p => ({ 
                     cod: p.codigo, 
                     nome: p.nome,
                     grupo_dre: p.grupo_dre || '4 DESPESAS ADMINISTRATIVAS',
                     tipo_classificacao: p.tipo_classificacao || 'DESPESAS VARIAVEIS',
-                    identificador: p.identificador || `${p.codigo} - ${p.nome}`  // ← ADICIONOU
+                    identificador: p.identificador || `${p.codigo} - ${p.nome}`
                 })),
-                custosFixos: []
+                custosFixos: despesasFixas.map(p => ({ 
+                    cod: p.codigo, 
+                    nome: p.nome,
+                    grupo_dre: p.grupo_dre || '5 CUSTOS FIXOS',
+                    tipo_classificacao: p.tipo_classificacao || 'CUSTOS FIXOS',
+                    identificador: p.identificador || `${p.codigo} - ${p.nome}`
+                }))
             };
             
             localStorage.setItem('estruturaDREModuloIII', JSON.stringify(estruturaDRE));
             
-            console.log('✅ estruturaDRE atualizada com sucesso!');
+            console.log(`✅ estruturaDRE atualizada: Receitas=${estruturaDRE.receitas.length}, Variáveis=${estruturaDRE.custosVariaveis.length}, Fixas=${estruturaDRE.custosFixos.length}`);
             return estruturaDRE;
         }
         
