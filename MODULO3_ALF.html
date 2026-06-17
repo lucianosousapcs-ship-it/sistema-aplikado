@@ -8040,28 +8040,28 @@ document.getElementById('toggleCmdBar')?.addEventListener('click', toggleCommand
 // INICIALIZAÇÃO
 // ============================================================
 document.addEventListener('DOMContentLoaded', async function() {
-    carregarPlanoContas();
+    // ============================================
+    // 1. CARREGAR REGRAS E DADOS PRIMEIRO
+    // ============================================
     carregarCoresSalvas();
     carregarFlags();
     await carregarRegrasConversaoSupabase();
-    await gerarDREComSupabase();
-    await carregarCoresDoSupabase();
+    
+    // ============================================
+    // 2. CARREGAR DADOS REAIS (VENDAS, COMPRAS, CONTAS)
+    // ============================================
     carregarVendas();
     carregarCompras();
-    carregarDadosReaisLancamentos();
+    await carregarDadosReaisLancamentos();  // ← CARREGA AS 200 CONTAS
     carregarDadosEstatisticas();
-    
     await carregarContasExtras();
     
-    // ===== CARREGAR PREFERÊNCIA DE TEMA (CORRIGIDO) =====
-    carregarPreferenciaTema();
+    // ============================================
+    // 3. CARREGAR COMPARATIVOS E CORES
+    // ============================================
+    await carregarCoresDoSupabase();
+    await carregarDadosComparativos();
     
-    // Inicializa o texto do botão de filtro de movimento
-    const btnFiltroMovimento = document.getElementById('btnFiltrarMovimento');
-    if (btnFiltroMovimento) {
-        btnFiltroMovimento.innerText = filtroMovimentoAtivo ? 'MOSTRAR TODAS' : 'FILTRAR MOVIMENTO';
-    }
-
     const { data } = await supabaseClient.from('comparativos_caixa').select('*');
     if (data) {
         dadosComparativos = {};
@@ -8078,6 +8078,22 @@ document.addEventListener('DOMContentLoaded', async function() {
                 TOTAL_DIA: item.total_dia || 0
             };
         });
+    }
+    
+    // ============================================
+    // 4. GERAR O DRE (AGORA COM AS 200 CONTAS)
+    // ============================================
+    await gerarDREComSupabase();  // ← AGORA COM AS 200 CONTAS!
+    
+    // ============================================
+    // 5. RENDERIZAR INTERFACES
+    // ============================================
+    carregarPreferenciaTema();
+    
+    // Inicializa o texto do botão de filtro de movimento
+    const btnFiltroMovimento = document.getElementById('btnFiltrarMovimento');
+    if (btnFiltroMovimento) {
+        btnFiltroMovimento.innerText = filtroMovimentoAtivo ? 'MOSTRAR TODAS' : 'FILTRAR MOVIMENTO';
     }
     
     renderizarCaixaPopup();
