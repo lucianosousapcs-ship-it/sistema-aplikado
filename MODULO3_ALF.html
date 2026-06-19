@@ -2964,158 +2964,53 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
     const ano = new Date().getFullYear();
     const periodo = (mesNumero >= 0 && mesNumero <= 11) ? mesesNomes[mesNumero] + '/' + ano : 'Ano Completo';
     
-    console.log('🔍 Buscando registros para:', nomeConta, 'Cod:', codConta, 'Mês:', mesNumero);
+    console.log(`🔍 Buscando registros para: ${nomeConta} (${codConta}) - Mês: ${mesNumero}`);
     
     const infoConta = document.getElementById('infoConta');
     const infoPeriodo = document.getElementById('infoPeriodo');
     const infoValorTotal = document.getElementById('infoValorTotal');
+    const tableBody = document.getElementById('drilldownValorTableBody');
+    const tableHead = document.getElementById('drilldownValorTableHead');
+    const footer = document.getElementById('drilldownValorFooter');
     
     if (infoConta) infoConta.innerHTML = (codConta ? codConta + ' - ' : '') + nomeConta;
     if (infoPeriodo) infoPeriodo.innerHTML = periodo;
     if (infoValorTotal) infoValorTotal.innerHTML = formatarMoeda(Math.abs(valorClicado));
     
-    const tableBody = document.getElementById('drilldownValorTableBody');
     if (tableBody) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="4" style="text-align:center; padding:60px;">
-                    <div class="loading-spinner"></div>
-                    <p style="margin-top:16px;">Carregando registros detalhados...</p>
-                </td>
-            </tr>
-        `;
+        tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:60px;"><div class="loading-spinner"></div><p style="margin-top:16px;">Carregando registros detalhados...</p></td></tr>`;
     }
     
     const dataInicio = `${ano}-${String(mesNumero + 1).padStart(2, '0')}-01`;
     const ultimoDia = new Date(ano, mesNumero + 1, 0).getDate();
     const dataFim = `${ano}-${String(mesNumero + 1).padStart(2, '0')}-${ultimoDia}`;
     
-    let registrosDetalhados = [];
+    const isReceita = (grupoTipo === 'receitas' || nomeConta.toUpperCase().includes('REC'));
     
     try {
-        // ==========================================
-        // PASSO 1: IDENTIFICAR A CONDIÇÃO DE PAGAMENTO
-        // ==========================================
-        let condicaoFiltro = null;
-        let operacaoFiltro = null;
-        let isReceita = (grupoTipo === 'receitas' || nomeConta.toUpperCase().includes('REC'));
+        let registrosDetalhados = [];
+        let totalEncontrado = 0;
         
-        // Se for receita, buscar a condição de pagamento correta
-        if (isReceita) {
-            // Primeiro, tentar encontrar pelo nome da conta no mapa de regras
-            for (const [condicao, identificador] of Object.entries(condToPlanoMap)) {
-                let identNome = identificador;
-                if (identificador && identificador.includes(' - ')) {
-                    identNome = identificador.split(' - ')[1];
-                }
-                // Verificar se o identificador corresponde à conta clicada
-                if (identNome === nomeConta || identNome.includes(nomeConta)) {
-                    condicaoFiltro = condicao;
-                    console.log(`✅ Condição encontrada para ${nomeConta}: "${condicao}"`);
-                    break;
-                }
-            }
-            
-            // Fallback: buscar por código
-            if (!condicaoFiltro && codConta) {
-                for (const [condicao, identificador] of Object.entries(condToPlanoMap)) {
-                    if (identificador && identificador.includes(codConta)) {
-                        condicaoFiltro = condicao;
-                        console.log(`✅ Condição encontrada pelo código ${codConta}: "${condicao}"`);
-                        break;
-                    }
-                }
-            }
-            
-            // Fallback 2: buscar por palavras-chave
-            if (!condicaoFiltro) {
-                const palavrasChave = nomeConta.split(' ');
-                for (const [condicao, identificador] of Object.entries(condToPlanoMap)) {
-                    let identNome = identificador;
-                    if (identificador && identificador.includes(' - ')) {
-                        identNome = identificador.split(' - ')[1];
-                    }
-                    if (palavrasChave.some(palavra => identNome.toUpperCase().includes(palavra.toUpperCase()))) {
-                        condicaoFiltro = condicao;
-                        console.log(`✅ Condição encontrada por palavra-chave: "${condicao}"`);
-                        break;
-                    }
-                }
-            }
-        } else {
-            // Despesas - buscar a operação correta
-            for (const [operacao, identificador] of Object.entries(operacaoToPlanoMap)) {
-                let identNome = identificador;
-                if (identificador && identificador.includes(' - ')) {
-                    identNome = identificador.split(' - ')[1];
-                }
-                if (identNome === nomeConta || identNome.includes(nomeConta)) {
-                    operacaoFiltro = operacao;
-                    console.log(`✅ Operação encontrada para ${nomeConta}: "${operacao}"`);
-                    break;
-                }
-            }
-            
-            if (!operacaoFiltro && codConta) {
-                for (const [operacao, identificador] of Object.entries(operacaoToPlanoMap)) {
-                    if (identificador && identificador.includes(codConta)) {
-                        operacaoFiltro = operacao;
-                        console.log(`✅ Operação encontrada pelo código ${codConta}: "${operacao}"`);
-                        break;
-                    }
-                }
+        // IDENTIFICAR O IDENTIFICADOR CORRETO DA CONTA
+        let identificadorConta = null;
+        const todosPlanos = [
+            ...(estruturaDRE.receitas || []),
+            ...(estruturaDRE.custosVariaveis || []),
+            ...(estruturaDRE.custosFixos || [])
+        ];
+        
+        for (const plano of todosPlanos) {
+            if (plano.nome === nomeConta || plano.cod === codConta) {
+                identificadorConta = plano.identificador || `${plano.cod} - ${plano.nome}`;
+                console.log(`✅ Identificador da conta: "${identificadorConta}"`);
+                break;
             }
         }
         
-        // ==========================================
-        // PASSO 2: BUSCAR REGISTROS COM FILTRO
-        // ==========================================
-        
-        if (isReceita && condicaoFiltro) {
-            // BUSCAR RECEITAS FILTRADAS POR CONDIÇÃO
-            console.log(`📊 Buscando receitas com condição: "${condicaoFiltro}"`);
-            
-            let todasVendas = [];
-            let page = 0;
-            
-            while (true) {
-                const { data, error } = await supabaseClient
-                    .from('vendas_alf')
-                    .select('*')
-                    .gte('data', dataInicio)
-                    .lte('data', dataFim)
-                    .range(page * 1000, (page + 1) * 1000 - 1);
-                
-                if (error) throw error;
-                if (!data || data.length === 0) break;
-                todasVendas.push(...data);
-                page++;
-            }
-            
-            // Filtrar APENAS pela condição de pagamento específica
-            const vendasFiltradas = todasVendas.filter(v => {
-                const condPag = v['COND.PAG'] || v.cond_pag || '';
-                return condPag === condicaoFiltro;
-            });
-            
-            console.log(`📊 Vendas com condição "${condicaoFiltro}": ${vendasFiltradas.length} registros`);
-            
-            registrosDetalhados = vendasFiltradas.map(v => ({
-                data: v.data || '01/01/2000',
-                tipo: 'RECEITA',
-                descricao: `${v['CLIENTE/FORNECEDOR'] || v.cliente || 'Cliente'} - ${v['COND.PAG'] || v.cond_pag || 'Venda'}`,
-                valor: Number(v['TOTAL NOTA'] || v.total || 0),
-                condicao: v['COND.PAG'] || v.cond_pag || '',
-                cor: '#2ECC71'
-            }));
-            
-        } else if (!isReceita && operacaoFiltro) {
-            // BUSCAR DESPESAS FILTRADAS POR OPERAÇÃO
-            console.log(`📊 Buscando despesas com operação: "${operacaoFiltro}"`);
-            
+        // 1. DESPESAS (dados_m2)
+        if (!isReceita) {
             let todasDespesas = [];
             let page = 0;
-            
             while (true) {
                 const { data, error } = await supabaseClient
                     .from('dados_m2')
@@ -3130,36 +3025,226 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
                 page++;
             }
             
-            const despesasFiltradas = todasDespesas.filter(d => {
-                const operacao = d.operacao || '';
-                return operacao === operacaoFiltro;
+            let despesasFiltradas = [];
+            for (const [operacao, identificador] of Object.entries(operacaoToPlanoMap)) {
+                if (identificador === identificadorConta || identificador === nomeConta) {
+                    const filtradas = todasDespesas.filter(d => (d.operacao || '') === operacao);
+                    despesasFiltradas.push(...filtradas);
+                }
+            }
+            
+            despesasFiltradas.forEach(d => {
+                registrosDetalhados.push({
+                    data: d.vencimento || '01/01/2000',
+                    tipo: 'DESPESA',
+                    descricao: `${d.fornecedor || 'Fornecedor'} - ${d.operacao || d.documento || 'Despesa'}`,
+                    valor: Number(d.valor || 0),
+                    cor: '#EF4444',
+                    fonte: 'dados_m2'
+                });
             });
-            
-            console.log(`📊 Despesas com operação "${operacaoFiltro}": ${despesasFiltradas.length} registros`);
-            
-            registrosDetalhados = despesasFiltradas.map(d => ({
-                data: d.vencimento || '01/01/2000',
-                tipo: 'DESPESA',
-                descricao: `${d.fornecedor || 'Fornecedor'} - ${d.operacao || d.documento || 'Despesa'}`,
-                valor: Number(d.valor || 0),
-                operacao: d.operacao || '',
-                cor: '#EF4444'
-            }));
-            
-        } else {
-            // FALLBACK: Nenhum filtro encontrado - mostrar mensagem
-            console.warn(`⚠️ Nenhum filtro encontrado para ${nomeConta}`);
-            registrosDetalhados = [];
         }
         
-        // Ordenar por data (mais recente primeiro)
+        // 2. SANGRIA (contas_extras)
+        if (!isReceita && typeof contasExtrasData !== 'undefined') {
+            const sangriasFiltradas = contasExtrasData.filter(s => {
+                if (!s.dt_pagto) return false;
+                const dataSangria = new Date(s.dt_pagto);
+                const dataInicioObj = new Date(dataInicio);
+                const dataFimObj = new Date(dataFim);
+                return dataSangria >= dataInicioObj && dataSangria <= dataFimObj;
+            });
+            
+            let sangriasFiltradasPorIdentificador = sangriasFiltradas.filter(s => {
+                const plano = s.plano || '';
+                return plano === identificadorConta || plano === nomeConta || plano.includes(codConta);
+            });
+            
+            if (sangriasFiltradasPorIdentificador.length === 0) {
+                sangriasFiltradasPorIdentificador = sangriasFiltradas.filter(s => {
+                    const plano = s.plano || '';
+                    return plano.includes(codConta) || plano.includes(nomeConta);
+                });
+            }
+            
+            sangriasFiltradasPorIdentificador.forEach(s => {
+                registrosDetalhados.push({
+                    data: s.dt_pagto || '01/01/2000',
+                    tipo: 'SANGRIA',
+                    descricao: `${s.fornecedor || 'Fornecedor'} - ${s.operacao || 'Sangria'}`,
+                    valor: Number(s.valor || 0),
+                    cor: '#F59E0B',
+                    fonte: 'contas_extras'
+                });
+            });
+        }
+        
+        // 3. RECEITAS (vendas_alf)
+        if (isReceita) {
+            let todasVendas = [];
+            let page = 0;
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('vendas_alf')
+                    .select('*')
+                    .gte('data', dataInicio)
+                    .lte('data', dataFim)
+                    .range(page * 1000, (page + 1) * 1000 - 1);
+                
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+                todasVendas.push(...data);
+                page++;
+            }
+            
+            let vendasFiltradas = [];
+            for (const [cond, identificador] of Object.entries(condToPlanoMap)) {
+                if (identificador === identificadorConta || identificador === nomeConta) {
+                    const filtradas = todasVendas.filter(v => {
+                        const condPag = v['COND.PAG'] || v.cond_pag || '';
+                        return condPag === cond;
+                    });
+                    vendasFiltradas.push(...filtradas);
+                }
+            }
+            
+            vendasFiltradas.forEach(v => {
+                registrosDetalhados.push({
+                    data: v.data || '01/01/2000',
+                    tipo: 'RECEITA',
+                    descricao: `${v['CLIENTE/FORNECEDOR'] || v.cliente || 'Cliente'} - ${v['COND.PAG'] || v.cond_pag || 'Venda'}`,
+                    valor: Number(v['TOTAL NOTA'] || v.total || 0),
+                    cor: '#2ECC71',
+                    fonte: 'vendas_alf'
+                });
+            });
+        }
+        
+        // 4. LANÇAMENTOS MANUAIS (dre_lancamentos)
+        try {
+            const { data: dreLancamentos, error: errDre } = await supabaseClient
+                .from('dre_lancamentos')
+                .select('*')
+                .eq('mes', mesNumero + 1)
+                .eq('ano', ano);
+            
+            if (!errDre && dreLancamentos) {
+                dreLancamentos.forEach(d => {
+                    if (d.conta && (d.conta.includes(nomeConta) || d.conta.includes(codConta))) {
+                        registrosDetalhados.push({
+                            data: `${String(mesNumero + 1).padStart(2, '0')}/01/${ano}`,
+                            tipo: 'LANÇAMENTO DRE',
+                            descricao: d.descricao || 'Lançamento manual',
+                            valor: Number(d.valor || 0),
+                            cor: '#8B5CF6',
+                            fonte: 'dre_lancamentos'
+                        });
+                    }
+                });
+            }
+        } catch (e) {}
+        
+        // Ordenar e calcular
         registrosDetalhados.sort((a, b) => {
             const dateA = parseDataBr(a.data);
             const dateB = parseDataBr(b.data);
             return dateB - dateA;
         });
         
-        console.log(`${registrosDetalhados.length} registros encontrados para ${nomeConta}`);
+        registrosDetalhados.forEach(r => totalEncontrado += Math.abs(r.valor));
+        
+        console.log(`📊 TOTAL: ${registrosDetalhados.length} registros, R$ ${totalEncontrado.toFixed(2)}`);
+        
+        // Renderizar
+        if (tableHead) {
+            tableHead.innerHTML = `
+                <tr style="background: #1A1E2A; border-bottom: 2px solid #E6A017;">
+                    <th style="width:15%; padding:14px 12px; text-align:center; color:#E6A017; font-size:14px;">DATA</th>
+                    <th style="width:15%; padding:14px 12px; text-align:center; color:#E6A017; font-size:14px;">TIPO</th>
+                    <th style="width:55%; padding:14px 12px; text-align:left; color:#E6A017; font-size:14px;">DESCRICAO / DETALHE</th>
+                    <th style="width:15%; padding:14px 12px; text-align:right; color:#E6A017; font-size:14px;">VALOR (R$)</th>
+                </tr>
+            `;
+        }
+        
+        if (!tableBody) return;
+        
+        let tbodyHtml = '<tbody>';
+        
+        if (registrosDetalhados.length === 0) {
+            tbodyHtml += `
+                <tr>
+                    <td colspan="4" style="text-align:center; padding:60px;">
+                        Nenhum registro encontrado para ${nomeConta} em ${periodo}<br>
+                        <small style="color:var(--soft-light);">Verifique as regras de conversão.</small>
+                    </td>
+                </tr>
+            `;
+        } else {
+            for (let i = 0; i < registrosDetalhados.length; i++) {
+                const reg = registrosDetalhados[i];
+                const rowBg = (i % 2 === 0) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)';
+                
+                tbodyHtml += `
+                    <tr style="background:${rowBg}; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:14px 12px; text-align:center; font-size:14px; white-space: nowrap;">
+                            ${formatarDataExibicao(reg.data)}
+                        </td>
+                        <td style="padding:14px 12px; text-align:center;">
+                            <span style="color:${reg.cor}; font-weight:700; background:${reg.cor}15; padding:5px 12px; border-radius:20px; font-size:12px;">
+                                ${reg.tipo}
+                            </span>
+                        </td>
+                        <td style="padding:14px 12px; text-align:left; font-size:13px; line-height:1.4;">
+                            ${escapeHtml(reg.descricao)}
+                        </td>
+                        <td style="padding:14px 12px; text-align:right; color:${reg.cor}; font-weight:700; font-size:15px;">
+                            ${formatarMoeda(Math.abs(reg.valor))}
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            tbodyHtml += `
+                <tr style="background: rgba(230,160,23,0.12); border-top: 2px solid #E6A017;">
+                    <td colspan="3" style="padding:14px 16px; text-align:right; font-weight:800; font-size:16px;">
+                        TOTAL GERAL (${registrosDetalhados.length} registros):
+                    </td>
+                    <td style="padding:14px 16px; text-align:right; font-weight:900; font-size:20px; color: #E6A017;">
+                        ${formatarMoeda(totalEncontrado)}
+                    </td>
+                </tr>
+            `;
+        }
+        
+        tbodyHtml += '</tbody>';
+        tableBody.innerHTML = tbodyHtml;
+        
+        if (footer) {
+            footer.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; padding:8px 0;">
+                    <div style="background: rgba(16,185,129,0.1); padding:8px 20px; border-radius:12px;">
+                        <span>REGISTROS ENCONTRADOS:</span>
+                        <strong style="color: #2ECC71; font-size:20px; margin-left:10px;">${registrosDetalhados.length}</strong>
+                    </div>
+                    <div style="background: rgba(245,158,11,0.1); padding:8px 20px; border-radius:12px;">
+                        <span>VALOR NO DRE:</span>
+                        <strong style="color: #F59E0B; font-size:20px; margin-left:10px;">${formatarMoeda(Math.abs(valorClicado))}</strong>
+                    </div>
+                    ${totalEncontrado !== Math.abs(valorClicado) ? `
+                    <div style="background: rgba(239,68,68,0.1); padding:8px 20px; border-radius:12px; border-left: 3px solid #ef4444;">
+                        <span>⚠️ DIVERGÊNCIA:</span>
+                        <strong style="color: #ef4444; font-size:16px; margin-left:10px;">R$ ${(totalEncontrado - Math.abs(valorClicado)).toFixed(2)}</strong>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+        
+        const modal = document.getElementById('modalDrilldownValor');
+        if (modal) {
+            modal.classList.add('active');
+        }
         
     } catch (error) {
         console.error('Erro ao buscar registros:', error);
@@ -3168,117 +3253,8 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
         }
         const modal = document.getElementById('modalDrilldownValor');
         if (modal) modal.classList.add('active');
-        return;
-    }
-    
-    // ==========================================
-    // PASSO 3: RENDERIZAR A TABELA
-    // ==========================================
-    
-    const tableHead = document.getElementById('drilldownValorTableHead');
-    if (tableHead) {
-        tableHead.innerHTML = `
-            <thead>
-                <tr style="background: #1A1E2A; border-bottom: 2px solid #E6A017;">
-                    <th style="width:15%; padding:14px 12px; text-align:center; color:#E6A017; font-size:14px;">DATA</th>
-                    <th style="width:12%; padding:14px 12px; text-align:center; color:#E6A017; font-size:14px;">TIPO</th>
-                    <th style="width:58%; padding:14px 12px; text-align:left; color:#E6A017; font-size:14px;">DESCRICAO / DETALHE</th>
-                    <th style="width:15%; padding:14px 12px; text-align:right; color:#E6A017; font-size:14px;">VALOR (R$)</th>
-                </tr>
-            </thead>
-        `;
-    }
-    
-    if (!tableBody) return;
-    
-    let tbodyHtml = '<tbody>';
-    let totalEncontrado = 0;
-    
-    if (registrosDetalhados.length === 0) {
-        // Verificar se há algum registro no mês (para mostrar mensagem mais informativa)
-        const temRegistrosNoMes = await verificarSeHaRegistrosNoMes(dataInicio, dataFim);
-        
-        let mensagem = `Nenhum registro encontrado para ${nomeConta} em ${periodo}`;
-        if (temRegistrosNoMes) {
-            mensagem += `<br><small style="color:var(--soft-light);">Existem outros registros no período, mas nenhum com a condição de pagamento específica.</small>`;
-        } else {
-            mensagem += `<br><small style="color:var(--soft-light);">Nenhum registro encontrado neste período.</small>`;
-        }
-        
-        tbodyHtml += `
-            <tr>
-                <td colspan="4" style="text-align:center; padding:60px;">
-                    ${mensagem}
-                </td>
-            </tr>
-        `;
-    } else {
-        for (let i = 0; i < registrosDetalhados.length; i++) {
-            const reg = registrosDetalhados[i];
-            totalEncontrado += Math.abs(reg.valor);
-            const rowBg = (i % 2 === 0) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)';
-            
-            tbodyHtml += `
-                <tr style="background:${rowBg}; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <td style="padding:14px 12px; text-align:center; font-size:14px; white-space: nowrap;">
-                        ${formatarDataExibicao(reg.data)}
-                    </td>
-                    <td style="padding:14px 12px; text-align:center;">
-                        <span style="color:${reg.cor}; font-weight:700; background:${reg.cor}15; padding:5px 12px; border-radius:20px; font-size:12px;">
-                            ${reg.tipo}
-                        </span>
-                    </td>
-                    <td style="padding:14px 12px; text-align:left; font-size:13px; line-height:1.4;">
-                        ${escapeHtml(reg.descricao)}
-                    </td>
-                    <td style="padding:14px 12px; text-align:right; color:${reg.cor}; font-weight:700; font-size:15px;">
-                        ${formatarMoeda(Math.abs(reg.valor))}
-                    </td>
-                </tr>
-            `;
-        }
-        
-        // Informação da condição de pagamento no rodapé
-        const infoAdicional = isReceita ? `Condição: ${condicaoFiltro || 'N/A'}` : `Operação: ${operacaoFiltro || 'N/A'}`;
-        
-        tbodyHtml += `
-            <tr style="background: rgba(230,160,23,0.12); border-top: 2px solid #E6A017;">
-                <td colspan="3" style="padding:14px 16px; text-align:right; font-weight:800; font-size:16px;">
-                    TOTAL GERAL (${registrosDetalhados.length} registros) - ${infoAdicional}:
-                </td>
-                <td style="padding:14px 16px; text-align:right; font-weight:900; font-size:20px; color: #E6A017;">
-                    ${formatarMoeda(totalEncontrado)}
-                </td>
-            </tr>
-        `;
-    }
-    
-    tbodyHtml += '</tbody>';
-    tableBody.innerHTML = tbodyHtml;
-    
-    const footer = document.getElementById('drilldownValorFooter');
-    if (footer) {
-        footer.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; padding:8px 0;">
-                <div style="background: rgba(16,185,129,0.1); padding:8px 20px; border-radius:12px;">
-                    <span>REGISTROS ENCONTRADOS:</span>
-                    <strong style="color: #2ECC71; font-size:20px; margin-left:10px;">${registrosDetalhados.length}</strong>
-                </div>
-                <div style="background: rgba(245,158,11,0.1); padding:8px 20px; border-radius:12px;">
-                    <span>VALOR NO DRE:</span>
-                    <strong style="color: #F59E0B; font-size:20px; margin-left:10px;">${formatarMoeda(Math.abs(valorClicado))}</strong>
-                </div>
-            </div>
-        `;
-    }
-    
-    const modal = document.getElementById('modalDrilldownValor');
-    if (modal) {
-        modal.classList.add('active');
-        console.log('✅ Modal aberto com', registrosDetalhados.length, 'registros');
     }
 }
-
 // ============================================================
 // FUNÇÃO AUXILIAR: VERIFICAR SE HÁ REGISTROS NO MÊS
 // ============================================================
