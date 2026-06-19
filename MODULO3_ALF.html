@@ -2993,73 +2993,87 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
     let registrosDetalhados = [];
     
     try {
-        // PASSO 1: Criar mapa reverso conta → operações (já deve estar preenchido)
-        // PASSO 2: Substituir a lógica de filtro do detalhamento
+        // ==========================================
+        // PASSO 1: IDENTIFICAR A CONDIÇÃO DE PAGAMENTO
+        // ==========================================
+        let condicaoFiltro = null;
+        let operacaoFiltro = null;
+        let isReceita = (grupoTipo === 'receitas' || nomeConta.toUpperCase().includes('REC'));
         
-        // USAR O MAPA REVERSO criado no carregamento das regras
-        // contaParaOperacoes já está disponível como variável global
-        
-        // Buscar operações que mapeiam para esta conta usando o mapa reverso
-        let operacoesDestaConta = contaParaOperacoes[nomeConta] || [];
-        
-        // Fallback: se não encontrou pelo nome exato, tenta pelo código
-        if (operacoesDestaConta.length === 0 && codConta) {
-            const nomeCompleto = `${codConta} - ${nomeConta}`;
-            for (const [operacao, identificador] of Object.entries(operacaoToPlanoMap)) {
-                if (identificador === nomeCompleto || identificador.includes(nomeConta)) {
-                    operacoesDestaConta.push(operacao);
-                }
-            }
-        }
-        
-        // Fallback: busca por palavras-chave do nome da conta
-        if (operacoesDestaConta.length === 0) {
-            const palavrasChave = nomeConta.split(' ');
-            // Buscar nas regras de despesa
-            for (const [operacao, identificador] of Object.entries(operacaoToPlanoMap)) {
-                const identNome = identificador.includes(' - ') ? identificador.split(' - ')[1] : identificador;
-                if (palavrasChave.some(palavra => identNome.toUpperCase().includes(palavra.toUpperCase()))) {
-                    operacoesDestaConta.push(operacao);
-                }
-            }
-            // Buscar nas regras de receita
+        // Se for receita, buscar a condição de pagamento correta
+        if (isReceita) {
+            // Primeiro, tentar encontrar pelo nome da conta no mapa de regras
             for (const [condicao, identificador] of Object.entries(condToPlanoMap)) {
-                const identNome = identificador.includes(' - ') ? identificador.split(' - ')[1] : identificador;
-                if (palavrasChave.some(palavra => identNome.toUpperCase().includes(palavra.toUpperCase()))) {
-                    operacoesDestaConta.push(condicao);
+                let identNome = identificador;
+                if (identificador && identificador.includes(' - ')) {
+                    identNome = identificador.split(' - ')[1];
+                }
+                // Verificar se o identificador corresponde à conta clicada
+                if (identNome === nomeConta || identNome.includes(nomeConta)) {
+                    condicaoFiltro = condicao;
+                    console.log(`✅ Condição encontrada para ${nomeConta}: "${condicao}"`);
+                    break;
+                }
+            }
+            
+            // Fallback: buscar por código
+            if (!condicaoFiltro && codConta) {
+                for (const [condicao, identificador] of Object.entries(condToPlanoMap)) {
+                    if (identificador && identificador.includes(codConta)) {
+                        condicaoFiltro = condicao;
+                        console.log(`✅ Condição encontrada pelo código ${codConta}: "${condicao}"`);
+                        break;
+                    }
+                }
+            }
+            
+            // Fallback 2: buscar por palavras-chave
+            if (!condicaoFiltro) {
+                const palavrasChave = nomeConta.split(' ');
+                for (const [condicao, identificador] of Object.entries(condToPlanoMap)) {
+                    let identNome = identificador;
+                    if (identificador && identificador.includes(' - ')) {
+                        identNome = identificador.split(' - ')[1];
+                    }
+                    if (palavrasChave.some(palavra => identNome.toUpperCase().includes(palavra.toUpperCase()))) {
+                        condicaoFiltro = condicao;
+                        console.log(`✅ Condição encontrada por palavra-chave: "${condicao}"`);
+                        break;
+                    }
+                }
+            }
+        } else {
+            // Despesas - buscar a operação correta
+            for (const [operacao, identificador] of Object.entries(operacaoToPlanoMap)) {
+                let identNome = identificador;
+                if (identificador && identificador.includes(' - ')) {
+                    identNome = identificador.split(' - ')[1];
+                }
+                if (identNome === nomeConta || identNome.includes(nomeConta)) {
+                    operacaoFiltro = operacao;
+                    console.log(`✅ Operação encontrada para ${nomeConta}: "${operacao}"`);
+                    break;
+                }
+            }
+            
+            if (!operacaoFiltro && codConta) {
+                for (const [operacao, identificador] of Object.entries(operacaoToPlanoMap)) {
+                    if (identificador && identificador.includes(codConta)) {
+                        operacaoFiltro = operacao;
+                        console.log(`✅ Operação encontrada pelo código ${codConta}: "${operacao}"`);
+                        break;
+                    }
                 }
             }
         }
         
-        console.log(`🔍 Operações encontradas para ${nomeConta}:`, operacoesDestaConta);
+        // ==========================================
+        // PASSO 2: BUSCAR REGISTROS COM FILTRO
+        // ==========================================
         
-        // Buscar registros de receitas OU despesas
-        if (grupoTipo === 'receitas' || nomeConta.toUpperCase().includes('REC')) {
-            // RECEITAS - usar condições de pagamento
-            let condicoesDestaConta = Object.keys(condToPlanoMap).filter(
-                cond => {
-                    let nomeContaRegra = condToPlanoMap[cond];
-                    if (nomeContaRegra.includes(' - ')) {
-                        nomeContaRegra = nomeContaRegra.split(' - ')[1];
-                    }
-                    return nomeContaRegra === nomeConta || 
-                           nomeContaRegra.includes(nomeConta) ||
-                           operacoesDestaConta.includes(cond);
-                }
-            );
-            
-            // Fallback por palavras-chave
-            if (condicoesDestaConta.length === 0) {
-                const palavrasChave = nomeConta.split(' ');
-                for (const [cond, identificador] of Object.entries(condToPlanoMap)) {
-                    const identNome = identificador.includes(' - ') ? identificador.split(' - ')[1] : identificador;
-                    if (palavrasChave.some(palavra => identNome.toUpperCase().includes(palavra.toUpperCase()))) {
-                        condicoesDestaConta.push(cond);
-                    }
-                }
-            }
-            
-            console.log(`Condições para ${nomeConta}:`, condicoesDestaConta);
+        if (isReceita && condicaoFiltro) {
+            // BUSCAR RECEITAS FILTRADAS POR CONDIÇÃO
+            console.log(`📊 Buscando receitas com condição: "${condicaoFiltro}"`);
             
             let todasVendas = [];
             let page = 0;
@@ -3078,17 +3092,13 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
                 page++;
             }
             
-            console.log(`Total de vendas em ${periodo}:`, todasVendas.length);
+            // Filtrar APENAS pela condição de pagamento específica
+            const vendasFiltradas = todasVendas.filter(v => {
+                const condPag = v['COND.PAG'] || v.cond_pag || '';
+                return condPag === condicaoFiltro;
+            });
             
-            let vendasFiltradas = todasVendas;
-            if (condicoesDestaConta.length > 0) {
-                vendasFiltradas = todasVendas.filter(v => {
-                    const condPag = v['COND.PAG'] || v.cond_pag || '';
-                    return condicoesDestaConta.includes(condPag);
-                });
-            }
-            
-            console.log(`Vendas filtradas para ${nomeConta}:`, vendasFiltradas.length);
+            console.log(`📊 Vendas com condição "${condicaoFiltro}": ${vendasFiltradas.length} registros`);
             
             registrosDetalhados = vendasFiltradas.map(v => ({
                 data: v.data || '01/01/2000',
@@ -3099,13 +3109,10 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
                 cor: '#2ECC71'
             }));
             
-        } else {
-            // DESPESAS - usar operações
-            // PASSO 3: Corrigir o filtro das despesas usando o mapa reverso
+        } else if (!isReceita && operacaoFiltro) {
+            // BUSCAR DESPESAS FILTRADAS POR OPERAÇÃO
+            console.log(`📊 Buscando despesas com operação: "${operacaoFiltro}"`);
             
-            let despesasFiltradas = [];
-            
-            // Buscar todas as despesas do período
             let todasDespesas = [];
             let page = 0;
             
@@ -3123,26 +3130,12 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
                 page++;
             }
             
-            console.log(`Total de despesas em ${periodo}:`, todasDespesas.length);
+            const despesasFiltradas = todasDespesas.filter(d => {
+                const operacao = d.operacao || '';
+                return operacao === operacaoFiltro;
+            });
             
-            // Filtrar usando o mapa reverso
-            if (operacoesDestaConta.length > 0) {
-                despesasFiltradas = todasDespesas.filter(d => {
-                    const operacao = d.operacao || '';
-                    return operacoesDestaConta.includes(operacao);
-                });
-            } else {
-                // Fallback: busca por palavras-chave do nome da conta
-                const palavrasChave = nomeConta.split(' ');
-                despesasFiltradas = todasDespesas.filter(d => {
-                    const operacao = d.operacao || '';
-                    return palavrasChave.some(palavra =>
-                        operacao.toUpperCase().includes(palavra.toUpperCase())
-                    );
-                });
-            }
-            
-            console.log(`📊 ${despesasFiltradas.length} despesas filtradas para ${nomeConta}`);
+            console.log(`📊 Despesas com operação "${operacaoFiltro}": ${despesasFiltradas.length} registros`);
             
             registrosDetalhados = despesasFiltradas.map(d => ({
                 data: d.vencimento || '01/01/2000',
@@ -3152,8 +3145,14 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
                 operacao: d.operacao || '',
                 cor: '#EF4444'
             }));
+            
+        } else {
+            // FALLBACK: Nenhum filtro encontrado - mostrar mensagem
+            console.warn(`⚠️ Nenhum filtro encontrado para ${nomeConta}`);
+            registrosDetalhados = [];
         }
         
+        // Ordenar por data (mais recente primeiro)
         registrosDetalhados.sort((a, b) => {
             const dateA = parseDataBr(a.data);
             const dateB = parseDataBr(b.data);
@@ -3171,6 +3170,10 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
         if (modal) modal.classList.add('active');
         return;
     }
+    
+    // ==========================================
+    // PASSO 3: RENDERIZAR A TABELA
+    // ==========================================
     
     const tableHead = document.getElementById('drilldownValorTableHead');
     if (tableHead) {
@@ -3192,11 +3195,20 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
     let totalEncontrado = 0;
     
     if (registrosDetalhados.length === 0) {
+        // Verificar se há algum registro no mês (para mostrar mensagem mais informativa)
+        const temRegistrosNoMes = await verificarSeHaRegistrosNoMes(dataInicio, dataFim);
+        
+        let mensagem = `Nenhum registro encontrado para ${nomeConta} em ${periodo}`;
+        if (temRegistrosNoMes) {
+            mensagem += `<br><small style="color:var(--soft-light);">Existem outros registros no período, mas nenhum com a condição de pagamento específica.</small>`;
+        } else {
+            mensagem += `<br><small style="color:var(--soft-light);">Nenhum registro encontrado neste período.</small>`;
+        }
+        
         tbodyHtml += `
             <tr>
                 <td colspan="4" style="text-align:center; padding:60px;">
-                    Nenhum registro encontrado para ${nomeConta} em ${periodo}<br>
-                    <small>Verifique as regras de conversão para esta conta.</small>
+                    ${mensagem}
                 </td>
             </tr>
         `;
@@ -3226,10 +3238,13 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
             `;
         }
         
+        // Informação da condição de pagamento no rodapé
+        const infoAdicional = isReceita ? `Condição: ${condicaoFiltro || 'N/A'}` : `Operação: ${operacaoFiltro || 'N/A'}`;
+        
         tbodyHtml += `
             <tr style="background: rgba(230,160,23,0.12); border-top: 2px solid #E6A017;">
                 <td colspan="3" style="padding:14px 16px; text-align:right; font-weight:800; font-size:16px;">
-                    TOTAL GERAL (${registrosDetalhados.length} registros):
+                    TOTAL GERAL (${registrosDetalhados.length} registros) - ${infoAdicional}:
                 </td>
                 <td style="padding:14px 16px; text-align:right; font-weight:900; font-size:20px; color: #E6A017;">
                     ${formatarMoeda(totalEncontrado)}
@@ -3261,6 +3276,25 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
     if (modal) {
         modal.classList.add('active');
         console.log('✅ Modal aberto com', registrosDetalhados.length, 'registros');
+    }
+}
+
+// ============================================================
+// FUNÇÃO AUXILIAR: VERIFICAR SE HÁ REGISTROS NO MÊS
+// ============================================================
+async function verificarSeHaRegistrosNoMes(dataInicio, dataFim) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('vendas_alf')
+            .select('id')
+            .gte('data', dataInicio)
+            .lte('data', dataFim)
+            .limit(1);
+        
+        if (error) return false;
+        return data && data.length > 0;
+    } catch (e) {
+        return false;
     }
 }
 
