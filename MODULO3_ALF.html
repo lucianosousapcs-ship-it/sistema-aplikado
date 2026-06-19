@@ -7318,7 +7318,7 @@ async function gerarDREComSupabase() {
         function getTotalPorPlano(planoNome, mes) {
             let total = 0;
             
-            // BUSCA NAS RECEITAS
+            // 1. RECEITAS
             if (typeof receitasDataReais !== 'undefined') {
                 receitasDataReais.forEach(r => {
                     const mesReceita = extrairMes(r.data);
@@ -7328,94 +7328,28 @@ async function gerarDREComSupabase() {
                 });
             }
             
-            // BUSCA NAS DESPESAS
+            // 2. DESPESAS (dados_m2)
             if (typeof despesasDataReais !== 'undefined') {
-    despesasDataReais.forEach(d => {
-        const mesDespesa = extrairMes(d.data);
-        if (mesDespesa === mes && d.plano && d.plano.includes(planoNome)) {
-            total += Number(d.valor) || 0;
-        }
-    });
-}
-
-// ✅ ADICIONAR SANCRIAS EM DESPESAS ADMINISTRATIVAS
-if (planoNome === 'DESPESAS ADMINISTRATIVAS' || planoNome === '4.1 - DESPESAS ADMINISTRATIVAS') {
-    if (typeof contasExtrasData !== 'undefined' && contasExtrasData.length > 0) {
-        contasExtrasData.forEach(s => {
-            const mesSangria = extrairMes(s.dt_pagto);
-            if (mesSangria === mes) {
-                total += Number(s.valor) || 0;
+                despesasDataReais.forEach(d => {
+                    const mesDespesa = extrairMes(d.data);
+                    if (mesDespesa === mes && d.plano && d.plano.includes(planoNome)) {
+                        total += Number(d.valor) || 0;
+                    }
+                });
             }
-        });
-    }
-}
-📋 CÓDIGO COMPLETO DA FUNÇÃO getTotalPorPlano() CORRIGIDA
-javascript
-function getTotalPorPlano(planoNome, mes) {
-    let total = 0;
-    
-    // Soma receitas
-    if (typeof receitasDataReais !== 'undefined') {
-        receitasDataReais.forEach(r => {
-            const mesReceita = extrairMes(r.data);
-            if (mesReceita === mes && r.plano && r.plano.includes(planoNome)) {
-                total += Number(r.valor) || 0;
-            }
-        });
-    }
-    
-    // Soma despesas (dados_m2)
-    if (typeof despesasDataReais !== 'undefined') {
-        despesasDataReais.forEach(d => {
-            const mesDespesa = extrairMes(d.data);
-            if (mesDespesa === mes && d.plano && d.plano.includes(planoNome)) {
-                total += Number(d.valor) || 0;
-            }
-        });
-    }
-    
-    // ✅ SANCRIAS: somar apenas na conta DESPESAS ADMINISTRATIVAS
-    if (planoNome === 'DESPESAS ADMINISTRATIVAS' || planoNome === '4.1 - DESPESAS ADMINISTRATIVAS') {
-        if (typeof contasExtrasData !== 'undefined' && contasExtrasData.length > 0) {
-            contasExtrasData.forEach(s => {
-                const mesSangria = extrairMes(s.dt_pagto);
-                if (mesSangria === mes) {
-                    total += Number(s.valor) || 0;
-                }
-            });
-        }
-    }
-    
-    return total;
-}
-📊 RESULTADO ESPERADO
-Item	Antes	Depois
-4.1 - DESPESAS ADMINISTRATIVAS	R$ 0,00	-R$ 9.863,32
-CUSTOS VARIAVEIS	-R$ 368.314,47	-R$ 378.177,79
-RESULTADO OPERACIONAL	R$ 37.993,08	R$ 28.129,76
-✅ COMO TESTAR
-Altere o código no arquivo HTML
-
-Recarregue a página (F5)
-
-Verifique o DRE — a conta 4.1 - DESPESAS ADMINISTRATIVAS deve aparecer com -R$ 9.863,32
-
-Quer que eu te mostre a alteração completa no arquivo? 🚀
-
-
             
-            // BUSCA NAS SANGRIA
-           if (typeof contasExtrasData !== 'undefined' && contasExtrasData.length > 0) {
-    contasExtrasData.forEach(s => {
-        const mesSangria = extrairMes(s.dt_pagto);
-        if (mesSangria === mes && s.plano && s.plano.includes(planoNome)) {
-            let valor = Number(s.valor) || 0;
-            // Sangria é sempre despesa (negativa)
-           total += valor;  // ← CORRIGIDO: soma o valor (que já é positivo)
-        }
-    });
-}
-          
+            // 3. ✅ SANCRIAS - SOMAR EM DESPESAS ADMINISTRATIVAS
+            if (planoNome === 'DESPESAS ADMINISTRATIVAS' || planoNome === '4.1 - DESPESAS ADMINISTRATIVAS') {
+                if (typeof contasExtrasData !== 'undefined' && contasExtrasData.length > 0) {
+                    contasExtrasData.forEach(s => {
+                        const mesSangria = extrairMes(s.dt_pagto);
+                        if (mesSangria === mes) {
+                            total += Number(s.valor) || 0;
+                        }
+                    });
+                }
+            }
+            
             return total;
         }
         
