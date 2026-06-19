@@ -4489,9 +4489,12 @@ function abrirModalPlanoContasExtras(btnElement, idRegistro) {
     };
 }
 
-function salvarPlanosContasExtras() {
+async function salvarPlanosContasExtras() {
+    console.log('💾 SALVANDO PLANOS DAS SANGRIA...');
+    
     const botoesPlano = document.querySelectorAll('#tabelaContasExtrasBody .btn-plano-lancamento');
     let alterados = 0;
+    let atualizadosBanco = 0;
     
     for (const btn of botoesPlano) {
         const hiddenInput = btn.parentElement.querySelector('.plano-hidden');
@@ -4500,80 +4503,114 @@ function salvarPlanosContasExtras() {
         const registroOriginal = contasExtrasData.find(r => r.id === id);
         
         if (registroOriginal && registroOriginal.plano !== novoPlano) {
+            // Atualizar no array local
             registroOriginal.plano = novoPlano;
             planosContasExtrasSalvos[id] = novoPlano;
             alterados++;
+            
+            // 🔧 CORREÇÃO AUTOMÁTICA: Salvar diretamente no Supabase
+            try {
+                const { error } = await supabaseClient
+                    .from('contas_extras')
+                    .update({ plano: novoPlano })
+                    .eq('id', id);
+                
+                if (error) {
+                    console.error(`❌ Erro ao salvar plano da sangria ${id}:`, error);
+                } else {
+                    atualizadosBanco++;
+                    console.log(`✅ Sangria ${id} atualizada com plano: "${novoPlano}"`);
+                }
+            } catch (e) {
+                console.error(`❌ Erro ao atualizar sangria ${id}:`, e);
+            }
         }
     }
     
+    // Salvar no localStorage como backup
     localStorage.setItem('planos_contas_extras', JSON.stringify(planosContasExtrasSalvos));
     
-    if (alterados > 0) alert(`${alterados} registro(s) de contas extras atualizado(s) com sucesso!`);
-    else alert('Nenhuma alteração para salvar.');
+    // Recarregar os dados para refletir as mudanças
+    await carregarContasExtras();
+    renderizarTabelaContasExtras();
+    await gerarDREComSupabase();
+    
+    if (alterados > 0) {
+        alert(`✅ ${alterados} registro(s) de contas extras atualizado(s) com sucesso!\n📊 ${atualizadosBanco} registros salvos no banco de dados.`);
+    } else {
+        alert('ℹ️ Nenhuma alteração para salvar.');
+    }
 }
 
 async function carregarContasExtras() {
     console.log('🔄 Carregando contas_extras do Supabase...');
+    
     try {
-        await carregarRegrasConversaoSupabase();
+        // Buscar dados
+        const { data, error } = await supabaseClient
+            .from('contas_extras')
+            .select('*')
+            .order('dt_pagto', { ascending: false });
         
-        let todasContasExtras = [];
-        let page = 0;
+        if (error) throw error;
         
-        while (true) {
-            const { data, error } = await supabaseClient
-                .from('contas_extras')
-                .select('*')
-                .order('dt_pagto', { ascending: false })
-                .range(page * 1000, (page + 1) * 1000 - 1);
-            
-            if (error) {
-                console.error('❌ Erro ao carregar contas_extras:', error);
-                break;
+        // 🔧 CORREÇÃO AUTOMÁTICA: Garantir plano para todas
+        let corrigidos = 0;
+        const dadosCorrigidos = data.map(item => {
+            // Se não tem plano, calcular automaticamente
+            if (!item.plano || item.plano === '' || item.plano === 'DESPESAS ADMINISTRATIVAS') {
+                const planoCalculado = window.encontrarPlanoPorOperacao(item.operacao || '');
+                
+                if (planoCalculado && planoCalculado !== item.plano) {
+                    corrigidos++;
+                    // Atualizar no banco em background
+                    supabaseClient
+                        .from('contas_extras')
+                        .update({ plano: planoCalculado })
+                        .eq('id', item.id)
+                        .then(({ error }) => {
+                            if (error) console.error('❌ Erro ao atualizar plano:', error);
+                        });
+                    item.plano = planoCalculado;
+                }
             }
-            if (!data || data.length === 0) break;
-            
-            todasContasExtras.push(...data);
-            page++;
-        }
-        
-        console.log(`✅ Contas Extras carregadas: ${todasContasExtras.length} registros`);
-        
-        const planosSalvos = localStorage.getItem('planos_contas_extras');
-        if (planosSalvos) {
-            planosContasExtrasSalvos = JSON.parse(planosSalvos);
-        }
-        
-        contasExtrasData = todasContasExtras.map(ce => {
-            const operacao = ce.operacao || '';
-            const temRegra = operacaoToPlanoMap[operacao] !== undefined;
-            
-            return {
-                id: ce.id,
-                dt_pagto: ce.dt_pagto || '01/01/2000',
-                codigo: ce.codigo || '',
-                numero: ce.numero || '',
-                fornecedor: ce.fornecedor || 'NAO INFORMADO',
-                operacao: operacao,
-                valor: Number(ce.valor) || 0,
-                plano: planosContasExtrasSalvos[ce.id] || (ce.plano || "DESPESAS ADMINISTRATIVAS"),
-                conta_dre: planosContasExtrasSalvos[ce.id + '_dre'] || ce.conta_dre || '',
-                classificacao: planosContasExtrasSalvos[ce.id + '_class'] || ce.classificacao || '',
-                temRegra: temRegra
-            };
+            return item;
         });
         
-        console.log(`📊 Contas Extras: ${contasExtrasData.filter(r => r.temRegra).length} com regra, ${contasExtrasData.filter(r => !r.temRegra).length} sem regra`);
+        if (corrigidos > 0) {
+            console.log(`✅ ${corrigidos} sangrias corrigidas automaticamente!`);
+        }
         
+        // Armazenar no array global
+        contasExtrasData = dadosCorrigidos.map(item => ({
+            id: item.id,
+            dt_pagto: item.dt_pagto || '01/01/2000',
+            codigo: item.codigo || '',
+            numero: item.numero || '',
+            fornecedor: item.fornecedor || 'NAO INFORMADO',
+            operacao: item.operacao || '',
+            valor: Number(item.valor || 0),
+            plano: item.plano || window.encontrarPlanoPorOperacao(item.operacao || '')
+        }));
+        
+        console.log(`✅ Contas Extras carregadas: ${contasExtrasData.length} registros`);
+        
+        // Contar estatísticas
+        const comPlano = contasExtrasData.filter(item => item.plano && item.plano !== '');
+        const semPlano = contasExtrasData.filter(item => !item.plano || item.plano === '');
+        console.log(`📊 Contas Extras: ${comPlano.length} com plano, ${semPlano.length} sem plano`);
+        
+        // Renderizar tabela
         renderizarTabelaContasExtras();
         
-    } catch(e) { 
-        console.error('❌ Erro ao carregar contas_extras:', e); 
-        contasExtrasData = [];
-        renderizarTabelaContasExtras();
+        return contasExtrasData;
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar contas_extras:', error);
+        alert('Erro ao carregar dados: ' + error.message);
+        return [];
     }
 }
-
 async function limparEConverterContasExtras() {
     if (contasExtrasData.length === 0) {
         alert('⚠️ Nenhum registro para processar.');
@@ -8333,6 +8370,101 @@ console.log('✅ Pop-up de detalhamento corrigido');
 console.log('✅ Botão de auditoria implementado');
 console.log('✅ Pop-up de conferência com receitas, despesas e sangrias');
 console.log('✅ Identificação de divergências com detalhamento completo');
+// ============================================================
+// 🔧 FUNÇÃO DE MAPEAMENTO DE PLANOS - CORREÇÃO DEFINITIVA
+// ============================================================
+function encontrarPlanoPorOperacao(operacao) {
+    if (!operacao) return '4 - DESPESAS ADMINISTRATIVAS';
+    
+    const op = operacao.toUpperCase().trim();
+    
+    // MAPEAMENTO COMPLETO
+    const MAPEAMENTO = {
+        'ANTECIPACAO DE LUCRO': '1 - DISTRIBUIÇÃO DE LUCROS',
+        'DESP. COMPRA DINHEIRO': '1.1 - CAIXA',
+        'DESP. VALE TRANSPORTE': '3.2 - BENEFÍCIOS',
+        'DESP. MAT ESC LIMP COPA E': '3.3 - MATERIAIS DE LIMPEZA',
+        'DESP. FRETE (TRANS.)': '3.4 - FRETES E TRANSPORTES',
+        'DESP. LANCHE': '3.5 - ALIMENTAÇÃO',
+        'DESP. CORREIO': '3.6 - CORREIOS',
+        'DESP. ESTACIONAMENTO': '3.7 - ESTACIONAMENTO',
+        'LANCHE': '3.5 - ALIMENTAÇÃO',
+        'DESP. TELEFONE': '3.8 - TELEFONE',
+        'DESP. ENERGIA': '3.9 - ENERGIA',
+        'DESP. AGUA': '3.10 - ÁGUA',
+        'DESP. ALUGUEL': '3.11 - ALUGUEL',
+        'DESP. MANUTENCAO': '3.12 - MANUTENÇÃO',
+        'DESP. SEGURANCA': '3.13 - SEGURANÇA',
+        'DESP. LIMPEZA': '3.3 - MATERIAIS DE LIMPEZA'
+    };
+    
+    // Busca exata
+    if (MAPEAMENTO[op]) return MAPEAMENTO[op];
+    
+    // Busca parcial
+    for (const [key, value] of Object.entries(MAPEAMENTO)) {
+        if (op.includes(key) || key.includes(op)) {
+            return value;
+        }
+    }
+    
+    // Valor padrão
+    return '4 - DESPESAS ADMINISTRATIVAS';
+}
+
+// Exportar para uso global
+window.encontrarPlanoPorOperacao = encontrarPlanoPorOperacao;
+    // ============================================================
+// 🔧 FUNÇÃO DE MANUTENÇÃO - CORRIGE SANGRIA PERIODICAMENTE
+// ============================================================
+
+async function manterPlanosSangrias() {
+    console.log('🔧 Verificando sangrias sem plano...');
+    
+    try {
+        // Buscar sangrias sem plano válido
+        const { data, error } = await supabaseClient
+            .from('contas_extras')
+            .select('*')
+            .or('plano.is.null', 'plano.eq.', 'plano.eq. ');
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+            console.log(`⚠️ ${data.length} sangrias sem plano encontradas`);
+            
+            let corrigidos = 0;
+            for (const item of data) {
+                const plano = window.encontrarPlanoPorOperacao(item.operacao);
+                if (plano) {
+                    const { error: updateError } = await supabaseClient
+                        .from('contas_extras')
+                        .update({ plano })
+                        .eq('id', item.id);
+                    
+                    if (!updateError) corrigidos++;
+                }
+            }
+            
+            if (corrigidos > 0) {
+                console.log(`✅ ${corrigidos} sangrias corrigidas!`);
+                await carregarContasExtras();
+                renderizarTabelaContasExtras();
+            }
+        }
+        
+        return { total: data?.length || 0, corrigidos };
+        
+    } catch (error) {
+        console.error('❌ Erro na manutenção:', error);
+        return { erro: error.message };
+    }
+}
+
+// ⏰ Executar manutenção a cada 5 minutos (opcional)
+// setInterval(manterPlanosSangrias, 5 * 60 * 1000);
+
+console.log('✅ Função de manutenção registrada!');
 </script>
 </body>
 </html>
