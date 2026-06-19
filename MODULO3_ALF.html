@@ -2991,8 +2991,12 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
         let registrosDetalhados = [];
         let totalEncontrado = 0;
         
+        // ==========================================
         // IDENTIFICAR O IDENTIFICADOR CORRETO DA CONTA
+        // ==========================================
         let identificadorConta = null;
+        
+        // Buscar no plano de contas
         const todosPlanos = [
             ...(estruturaDRE.receitas || []),
             ...(estruturaDRE.custosVariaveis || []),
@@ -3007,7 +3011,9 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
             }
         }
         
-        // 1. DESPESAS (dados_m2)
+        // ==========================================
+        // 1. BUSCAR DESPESAS (dados_m2) - APENAS AS MAPEADAS PARA A CONTA
+        // ==========================================
         if (!isReceita) {
             let todasDespesas = [];
             let page = 0;
@@ -3025,11 +3031,13 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
                 page++;
             }
             
+            // Filtrar APENAS as operações que mapeiam para esta conta
             let despesasFiltradas = [];
             for (const [operacao, identificador] of Object.entries(operacaoToPlanoMap)) {
                 if (identificador === identificadorConta || identificador === nomeConta) {
                     const filtradas = todasDespesas.filter(d => (d.operacao || '') === operacao);
                     despesasFiltradas.push(...filtradas);
+                    console.log(`📊 ${filtradas.length} despesas encontradas para operação "${operacao}" → "${identificador}"`);
                 }
             }
             
@@ -3045,7 +3053,9 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
             });
         }
         
-        // 2. SANGRIA (contas_extras)
+        // ==========================================
+        // 2. BUSCAR SANGRIA (contas_extras) - APENAS AS MAPEADAS PARA A CONTA
+        // ==========================================
         if (!isReceita && typeof contasExtrasData !== 'undefined') {
             const sangriasFiltradas = contasExtrasData.filter(s => {
                 if (!s.dt_pagto) return false;
@@ -3055,17 +3065,21 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
                 return dataSangria >= dataInicioObj && dataSangria <= dataFimObj;
             });
             
+            // Filtrar APENAS as sangrias que têm o identificador correto
             let sangriasFiltradasPorIdentificador = sangriasFiltradas.filter(s => {
                 const plano = s.plano || '';
                 return plano === identificadorConta || plano === nomeConta || plano.includes(codConta);
             });
             
+            // Se não encontrou pelo identificador, tentar pelo código
             if (sangriasFiltradasPorIdentificador.length === 0) {
                 sangriasFiltradasPorIdentificador = sangriasFiltradas.filter(s => {
                     const plano = s.plano || '';
                     return plano.includes(codConta) || plano.includes(nomeConta);
                 });
             }
+            
+            console.log(`📊 ${sangriasFiltradasPorIdentificador.length} sangrias encontradas para a conta`);
             
             sangriasFiltradasPorIdentificador.forEach(s => {
                 registrosDetalhados.push({
@@ -3079,7 +3093,9 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
             });
         }
         
-        // 3. RECEITAS (vendas_alf)
+        // ==========================================
+        // 3. BUSCAR RECEITAS (vendas_alf) - APENAS AS MAPEADAS PARA A CONTA
+        // ==========================================
         if (isReceita) {
             let todasVendas = [];
             let page = 0;
@@ -3097,6 +3113,7 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
                 page++;
             }
             
+            // Filtrar APENAS as condições que mapeiam para esta conta
             let vendasFiltradas = [];
             for (const [cond, identificador] of Object.entries(condToPlanoMap)) {
                 if (identificador === identificadorConta || identificador === nomeConta) {
@@ -3105,6 +3122,7 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
                         return condPag === cond;
                     });
                     vendasFiltradas.push(...filtradas);
+                    console.log(`📊 ${filtradas.length} vendas encontradas para condição "${cond}" → "${identificador}"`);
                 }
             }
             
@@ -3120,7 +3138,9 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
             });
         }
         
-        // 4. LANÇAMENTOS MANUAIS (dre_lancamentos)
+        // ==========================================
+        // 4. BUSCAR LANÇAMENTOS MANUAIS (dre_lancamentos)
+        // ==========================================
         try {
             const { data: dreLancamentos, error: errDre } = await supabaseClient
                 .from('dre_lancamentos')
@@ -3142,18 +3162,22 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
                     }
                 });
             }
-        } catch (e) {}
+        } catch (e) {
+            console.log('⚠️ Erro ao buscar dre_lancamentos:', e.message);
+        }
         
-        // Ordenar e calcular
+        // Ordenar por data
         registrosDetalhados.sort((a, b) => {
             const dateA = parseDataBr(a.data);
             const dateB = parseDataBr(b.data);
             return dateB - dateA;
         });
         
+        // Calcular total
         registrosDetalhados.forEach(r => totalEncontrado += Math.abs(r.valor));
         
-        console.log(`📊 TOTAL: ${registrosDetalhados.length} registros, R$ ${totalEncontrado.toFixed(2)}`);
+        console.log(`📊 TOTAL: ${registrosDetalhados.length} registros encontrados, R$ ${totalEncontrado.toFixed(2)}`);
+        console.log(`📊 VALOR NO DRE: R$ ${Math.abs(valorClicado).toFixed(2)}`);
         
         // Renderizar
         if (tableHead) {
@@ -3176,7 +3200,7 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
                 <tr>
                     <td colspan="4" style="text-align:center; padding:60px;">
                         Nenhum registro encontrado para ${nomeConta} em ${periodo}<br>
-                        <small style="color:var(--soft-light);">Verifique as regras de conversão.</small>
+                        <small style="color:var(--soft-light);">Verifique as regras de conversão para esta conta.</small>
                     </td>
                 </tr>
             `;
@@ -3244,6 +3268,7 @@ async function abrirDetalhamentoValor(valorClicado, mesIndex, nomeConta, codCont
         const modal = document.getElementById('modalDrilldownValor');
         if (modal) {
             modal.classList.add('active');
+            console.log('✅ Modal aberto com', registrosDetalhados.length, 'registros');
         }
         
     } catch (error) {
