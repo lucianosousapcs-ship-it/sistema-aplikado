@@ -9172,33 +9172,42 @@ console.log('✅ Função de manutenção registrada!');
 </script>
 <script>
 // ============================================================
-// CORREÇÃO DEFINITIVA - EXECUTA AUTOMATICAMENTE AO CARREGAR
+// CORREÇÃO DEFINITIVA - ESPERA OS DADOS CARREGAREM
 // ============================================================
 
-(async function correcaoDefinitivaAuto() {
-    console.log('🔧 EXECUTANDO CORREÇÃO DEFINITIVA AUTOMÁTICA...');
+(async function correcaoDefinitivaGarantida() {
+    console.log('🔧 AGUARDANDO DADOS PARA CORREÇÃO DEFINITIVA...');
     
-    // Aguardar os dados serem carregados
-    let tentativas = 0;
-    const maxTentativas = 30;
-    
-    while (tentativas < maxTentativas) {
-        if (typeof despesasDataReais !== 'undefined' && 
-            despesasDataReais.length > 0 && 
-            typeof contasExtrasData !== 'undefined' && 
-            contasExtrasData.length > 0) {
-            break;
-        }
-        await new Promise(r => setTimeout(r, 500));
-        tentativas++;
+    // Função para verificar se os dados estão carregados
+    function dadosCarregados() {
+        return typeof despesasDataReais !== 'undefined' && 
+               despesasDataReais.length > 0 &&
+               typeof contasExtrasData !== 'undefined' && 
+               contasExtrasData.length > 0 &&
+               typeof receitasDataReais !== 'undefined' && 
+               receitasDataReais.length > 0;
     }
     
-    if (tentativas >= maxTentativas) {
-        console.log('⚠️ Timeout aguardando dados. Execute manualmente: correcaoManual()');
+    // Aguardar os dados serem carregados (até 60 tentativas = 30 segundos)
+    let tentativas = 0;
+    while (!dadosCarregados() && tentativas < 60) {
+        await new Promise(r => setTimeout(r, 500));
+        tentativas++;
+        if (tentativas % 10 === 0) {
+            console.log(`⏳ Aguardando dados... (${tentativas * 0.5}s)`);
+        }
+    }
+    
+    if (!dadosCarregados()) {
+        console.log('❌ Dados não carregados após 30 segundos. Execute manualmente:');
+        console.log('   await correcaoManualGarantida()');
         return;
     }
     
-    console.log('✅ Dados carregados! Aplicando correções...');
+    console.log(`✅ Dados carregados em ${tentativas * 0.5}s! Aplicando correções...`);
+    console.log(`   Despesas: ${despesasDataReais.length}`);
+    console.log(`   Sangrias: ${contasExtrasData.length}`);
+    console.log(`   Receitas: ${receitasDataReais.length}`);
     
     // 1. MAPEAMENTO COMPLETO
     const mapeamento = {
@@ -9259,10 +9268,10 @@ console.log('✅ Função de manutenção registrada!');
         }
     }
     
-    // Salvar planos das despesas
     const planosDespesas = {};
     for (const d of despesasDataReais) planosDespesas[d.id] = d.plano;
     localStorage.setItem(STORAGE_KEY_PLANOS_DESPESAS, JSON.stringify(planosDespesas));
+    console.log(`✅ ${despesasCorrigidas} despesas corrigidas`);
     
     // 3. CORRIGIR SANGRIA
     let sangriasCorrigidas = 0;
@@ -9294,8 +9303,9 @@ console.log('✅ Função de manutenção registrada!');
             } catch (e) {}
         }
     }
+    console.log(`✅ ${sangriasCorrigidas} sangrias corrigidas`);
     
-    // 4. CORRIGIR RECEITAS (se necessário)
+    // 4. CORRIGIR RECEITAS
     let receitasCorrigidas = 0;
     for (const receita of receitasDataReais) {
         const planoAtual = receita.plano || '';
@@ -9312,133 +9322,38 @@ console.log('✅ Função de manutenção registrada!');
             }
         }
     }
-    
     const planosReceitas = {};
     for (const r of receitasDataReais) planosReceitas[r.id] = r.plano;
     localStorage.setItem(STORAGE_KEY_PLANOS_RECEITAS, JSON.stringify(planosReceitas));
+    console.log(`✅ ${receitasCorrigidas} receitas corrigidas`);
     
-    // 5. ATUALIZAR A FUNÇÃO DO DRE
-    window.gerarDREComSupabase = async function() {
-        console.log('🔄 GERANDO DRE (VERSÃO DEFINITIVA)...');
-        const corpo = document.getElementById('corpoDRE');
-        if (!corpo) return;
-        corpo.innerHTML = '';
-        
-        function extrairNomeSemCodigo(nome) {
-            if (!nome) return '';
-            const partes = nome.split(' - ');
-            return partes.length > 1 ? partes.slice(1).join(' - ').trim() : nome.trim();
-        }
-        
-        function nomeCorresponde(nome1, nome2) {
-            if (!nome1 || !nome2) return false;
-            return extrairNomeSemCodigo(nome1).toUpperCase() === extrairNomeSemCodigo(nome2).toUpperCase();
-        }
-        
-        function getTotalPorPlano(planoNome, mes) {
-            let total = 0;
-            [receitasDataReais, despesasDataReais, contasExtrasData].forEach(dados => {
-                if (!dados) return;
-                dados.forEach(item => {
-                    const data = item.data || item.dt_pagto;
-                    const mesItem = extrairMes(data);
-                    if (mesItem === mes && nomeCorresponde(item.plano, planoNome)) {
-                        total += Number(item.valor || 0);
-                    }
-                });
-            });
-            return total;
-        }
-        
-        // Resto da função...
-        const receitasMensais = [];
-        for (let m = 0; m < 12; m++) {
-            let total = 0;
-            estruturaDRE.receitas.forEach(r => total += getTotalPorPlano(r.nome, m));
-            receitasMensais[m] = total;
-        }
-        
-        const despesasVarMensais = [];
-        for (let m = 0; m < 12; m++) {
-            let total = 0;
-            estruturaDRE.custosVariaveis.forEach(c => total += getTotalPorPlano(c.nome, m));
-            despesasVarMensais[m] = -Math.abs(total);
-        }
-        
-        const despesasFixMensais = [];
-        for (let m = 0; m < 12; m++) {
-            let total = 0;
-            estruturaDRE.custosFixos.forEach(c => total += getTotalPorPlano(c.nome, m));
-            despesasFixMensais[m] = -Math.abs(total);
-        }
-        
-        function addLinha(cod, nome, valores, classe) {
-            const tr = document.createElement('tr');
-            tr.className = classe || '';
-            let totalAnual = 0, temMov = false;
-            valores.forEach(v => { totalAnual += v || 0; if (v !== 0) temMov = true; });
-            if (temMov || totalAnual !== 0) tr.classList.add('linha-com-movimentacao');
-            
-            let html = `<td style="text-align:left;">${cod ? cod + ' - ' + nome : nome}</td>`;
-            valores.forEach(v => {
-                const cls = v >= 0 ? 'valor-positivo' : 'valor-negativo';
-                html += `<td class="${cls}">${formatarMoeda(v)}</td>`;
-            });
-            html += `<td class="${totalAnual >= 0 ? 'valor-positivo' : 'valor-negativo'}">${formatarMoeda(totalAnual)}</td>`;
-            tr.innerHTML = html;
-            corpo.appendChild(tr);
-        }
-        
-        addLinha('', 'RECEITAS TOTAIS', receitasMensais, 'dre-group-title');
-        estruturaDRE.receitas.forEach(r => {
-            const vals = [];
-            for (let m = 0; m < 12; m++) vals[m] = getTotalPorPlano(r.nome, m);
-            addLinha(r.cod, r.nome, vals, 'dre-subgroup');
-        });
-        
-        const lucroBruto = receitasMensais.map((r, i) => r + despesasVarMensais[i]);
-        addLinha('', 'CUSTOS VARIAVEIS', despesasVarMensais, 'dre-group-title');
-        estruturaDRE.custosVariaveis.forEach(c => {
-            const vals = [];
-            for (let m = 0; m < 12; m++) vals[m] = -Math.abs(getTotalPorPlano(c.nome, m));
-            addLinha(c.cod, c.nome, vals, 'dre-subgroup');
-        });
-        
-        addLinha('', 'LUCRO BRUTO', lucroBruto, 'dre-total-row');
-        
-        addLinha('', 'CUSTOS FIXOS', despesasFixMensais.map(v => -Math.abs(v)), 'dre-group-title');
-        estruturaDRE.custosFixos.forEach(c => {
-            const vals = [];
-            for (let m = 0; m < 12; m++) vals[m] = -Math.abs(getTotalPorPlano(c.nome, m));
-            addLinha(c.cod, c.nome, vals, 'dre-subgroup');
-        });
-        
-        const resultadoOp = lucroBruto.map((lb, i) => lb + despesasFixMensais[i]);
-        addLinha('', 'RESULTADO OPERACIONAL', resultadoOp, 'dre-total-row');
-        
-        adicionarEventosCliqueDRE();
-        console.log('✅ DRE GERADO (VERSÃO DEFINITIVA)!');
-    };
+    // 5. FORÇAR A RE-RENDERIZAÇÃO
+    if (typeof renderizarTabelaDespesas === 'function') renderizarTabelaDespesas();
+    if (typeof renderizarTabelaContasExtras === 'function') renderizarTabelaContasExtras();
+    if (typeof renderizarTabelaReceitas === 'function') renderizarTabelaReceitas();
     
-    // 6. RECARREGAR TUDO
-    renderizarTabelaDespesas();
-    renderizarTabelaContasExtras();
-    renderizarTabelaReceitas();
-    await window.gerarDREComSupabase();
-    executarAuditoria();
+    // 6. RECARREGAR DRE
+    if (typeof gerarDREComSupabase === 'function') {
+        await gerarDREComSupabase();
+    }
     
-    console.log(`🎉 CORREÇÃO DEFINITIVA CONCLUÍDA!`);
+    // 7. EXECUTAR AUDITORIA
+    if (typeof executarAuditoria === 'function') {
+        setTimeout(() => executarAuditoria(), 500);
+    }
+    
+    const total = despesasCorrigidas + sangriasCorrigidas + receitasCorrigidas;
+    
+    console.log('\n🎉 CORREÇÃO DEFINITIVA CONCLUÍDA!');
     console.log(`✅ Despesas corrigidas: ${despesasCorrigidas}`);
     console.log(`✅ Sangrias corrigidas: ${sangriasCorrigidas}`);
     console.log(`✅ Receitas corrigidas: ${receitasCorrigidas}`);
-    console.log(`✅ TOTAL: ${despesasCorrigidas + sangriasCorrigidas + receitasCorrigidas}`);
+    console.log(`✅ TOTAL: ${total}`);
     
     // Marcar como executado
     localStorage.setItem('correcao_definitiva_executada', 'true');
-    localStorage.setItem('versao_correcao', '3.0');
+    localStorage.setItem('versao_correcao', '4.0');
     
-    // Mostrar alerta apenas se houve correções
-    const total = despesasCorrigidas + sangriasCorrigidas + receitasCorrigidas;
     if (total > 0) {
         alert(`🎉 CORREÇÃO DEFINITIVA CONCLUÍDA!\n\n` +
               `📊 Despesas corrigidas: ${despesasCorrigidas}\n` +
@@ -9446,15 +9361,36 @@ console.log('✅ Função de manutenção registrada!');
               `📊 Receitas corrigidas: ${receitasCorrigidas}\n` +
               `📊 TOTAL: ${total}\n\n` +
               `✅ DRE 100% integrado com as telas!`);
+    } else {
+        console.log('ℹ️ Nenhuma correção necessária - tudo já está certo!');
     }
 })();
 
-// Função manual para executar no console se necessário
-window.correcaoManual = async function() {
+// Função para executar manualmente se necessário
+window.correcaoManualGarantida = async function() {
     console.log('🔧 Executando correção manual...');
-    // Recarregar a página para executar a correção novamente
+    // Limpar a flag para forçar a execução
+    localStorage.removeItem('correcao_definitiva_executada');
     location.reload();
 };
+
+// Função para forçar a correção agora
+window.forcarCorrecaoAgora = async function() {
+    console.log('🔧 FORÇANDO CORREÇÃO AGORA...');
+    
+    // Verificar se os dados existem
+    if (typeof despesasDataReais === 'undefined' || despesasDataReais.length === 0) {
+        console.log('⚠️ Dados não carregados! Aguardando...');
+        await new Promise(r => setTimeout(r, 3000));
+    }
+    
+    // Recarregar a página e forçar a correção
+    localStorage.removeItem('correcao_definitiva_executada');
+    location.reload();
+};
+
+console.log('✅ Correção definitiva instalada!');
+console.log('📌 Para forçar a correção agora, execute: forcarCorrecaoAgora()');
 </script>
 </body>
 </html>
