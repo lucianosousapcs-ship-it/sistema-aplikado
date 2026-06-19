@@ -7812,8 +7812,10 @@ async function limparEConverterContasExtras() {
     );
     if (!confirmar) return;
     
+    // Recarregar as regras do Supabase
     await carregarRegrasConversaoSupabase();
     
+    // Mapear operação → nome do plano (sem o código)
     const operacaoParaPlanoNome = {};
     for (const [operacao, identificador] of Object.entries(operacaoToPlanoMap)) {
         let nomePlano = identificador;
@@ -7830,7 +7832,7 @@ async function limparEConverterContasExtras() {
     for (const reg of contasExtrasData) {
         const operacao = reg.operacao || '';
         
-        // ✅ NÃO RESETA - APENAS APLICA SE TIVER REGRA
+        // ✅ NÃO RESETA O PLANO - APENAS APLICA SE TIVER REGRA
         const planoNome = operacaoParaPlanoNome[operacao];
         if (planoNome && planoNome !== '') {
             reg.plano = planoNome;
@@ -7838,13 +7840,20 @@ async function limparEConverterContasExtras() {
             reg.temRegra = true;
             atualizados++;
         } else {
+            // ✅ MANTÉM O PLANO EXISTENTE (não força nada)
             reg.temRegra = false;
             ignorados++;
         }
     }
     
+    // Salvar no localStorage
     localStorage.setItem('planos_contas_extras', JSON.stringify(planosContasExtrasSalvos));
+    
+    // Re-renderizar a tabela
     renderizarTabelaContasExtras();
+    
+    // ✅ RECARREGAR O DRE PARA ATUALIZAR OS VALORES
+    await gerarDREComSupabase();
     
     alert(`✅ APLICAÇÃO CONCLUÍDA!\n\n✅ Atualizados com regra: ${atualizados}\n⚠️ Mantidos (sem regra): ${ignorados}`);
 }
