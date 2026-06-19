@@ -7315,6 +7315,9 @@ async function gerarDREComSupabase() {
         
         corpo.innerHTML = '';
         
+        // ============================================
+        // FUNÇÃO getTotalPorPlano - CORRIGIDA
+        // ============================================
         function getTotalPorPlano(planoNome, mes) {
             let total = 0;
             
@@ -7338,22 +7341,26 @@ async function gerarDREComSupabase() {
                 });
             }
             
-            // 3. ✅ SANCRIAS - SOMAR EM DESPESAS ADMINISTRATIVAS
-            if (planoNome === 'DESPESAS ADMINISTRATIVAS' || planoNome === '4.1 - DESPESAS ADMINISTRATIVAS') {
-                if (typeof contasExtrasData !== 'undefined' && contasExtrasData.length > 0) {
-                    contasExtrasData.forEach(s => {
-                        const mesSangria = extrairMes(s.dt_pagto);
-                        if (mesSangria === mes) {
-                            total += Number(s.valor) || 0;
-                        }
-                    });
-                }
+            // 3. SANCRIAS - SOMAR INDEPENDENTEMENTE DA CONTA
+            // ✅ AS SANCRIAS DEVEM REDUZIR O RESULTADO
+            if (typeof contasExtrasData !== 'undefined' && contasExtrasData.length > 0) {
+                contasExtrasData.forEach(s => {
+                    const mesSangria = extrairMes(s.dt_pagto);
+                    if (mesSangria === mes) {
+                        // ✅ SOMA SEMPRE, INDEPENDENTEMENTE DO PLANO
+                        total += Number(s.valor) || 0;
+                    }
+                });
             }
             
             return total;
         }
         
-        // CALCULA RECEITAS
+        // ============================================
+        // CALCULAR RECEITAS, DESPESAS E RESULTADOS
+        // ============================================
+        
+        // RECEITAS
         const receitasMensais = [];
         for (let m = 0; m < 12; m++) {
             let total = 0;
@@ -7365,7 +7372,7 @@ async function gerarDREComSupabase() {
             receitasMensais[m] = total;
         }
         
-        // CALCULA DESPESAS VARIAVEIS
+        // DESPESAS VARIAVEIS
         const despesasVarMensais = [];
         for (let m = 0; m < 12; m++) {
             let total = 0;
@@ -7377,7 +7384,7 @@ async function gerarDREComSupabase() {
             despesasVarMensais[m] = -Math.abs(total);
         }
         
-        // CALCULA DESPESAS FIXAS
+        // DESPESAS FIXAS
         const despesasFixMensais = [];
         for (let m = 0; m < 12; m++) {
             let total = 0;
@@ -7388,6 +7395,10 @@ async function gerarDREComSupabase() {
             }
             despesasFixMensais[m] = -Math.abs(total);
         }
+        
+        // ============================================
+        // MONTAR O DRE
+        // ============================================
         
         function addLinha(cod, nome, valores, classe) {
             const tr = document.createElement('tr');
@@ -7421,7 +7432,7 @@ async function gerarDREComSupabase() {
             corpo.appendChild(tr);
         }
         
-        // MONTAR O DRE
+        // RECEITAS
         addLinha('', 'RECEITAS TOTAIS', receitasMensais, 'dre-group-title');
         if (estruturaDRE && estruturaDRE.receitas) {
             estruturaDRE.receitas.forEach(r => {
@@ -7433,6 +7444,7 @@ async function gerarDREComSupabase() {
             });
         }
         
+        // CUSTOS VARIAVEIS
         const lucroBruto = receitasMensais.map((r, i) => r + despesasVarMensais[i]);
         addLinha('', 'CUSTOS VARIAVEIS', despesasVarMensais, 'dre-group-title');
         if (estruturaDRE && estruturaDRE.custosVariaveis) {
@@ -7447,6 +7459,7 @@ async function gerarDREComSupabase() {
         
         addLinha('', 'LUCRO BRUTO', lucroBruto, 'dre-total-row');
         
+        // CUSTOS FIXOS
         addLinha('', 'CUSTOS FIXOS', despesasFixMensais.map(v => -Math.abs(v)), 'dre-group-title');
         if (estruturaDRE && estruturaDRE.custosFixos) {
             estruturaDRE.custosFixos.forEach(c => {
@@ -7458,6 +7471,7 @@ async function gerarDREComSupabase() {
             });
         }
         
+        // RESULTADO OPERACIONAL
         const resultadoOp = lucroBruto.map((lb, i) => lb + despesasFixMensais[i]);
         addLinha('', 'RESULTADO OPERACIONAL', resultadoOp, 'dre-total-row');
         
