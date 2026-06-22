@@ -4343,16 +4343,13 @@ function executarAuditoria() {
     let totalReceitasDRE = 0;
     let totalReceitasCadastradas = 0;
     
-    // Pegar o total real de receitas cadastradas
     if (typeof receitasDataReais !== 'undefined') {
         receitasDataReais.forEach(r => {
             totalReceitasCadastradas += Number(r.valor) || 0;
         });
     }
     
-    // Calcular receitas no DRE - usar APENAS as contas principais (sem duplicatas)
     if (typeof receitasDataReais !== 'undefined' && typeof estruturaDRE !== 'undefined') {
-        // Criar lista de identificadores válidos (excluindo 116 e 118)
         const idsValidos = new Set();
         if (estruturaDRE.receitas) {
             estruturaDRE.receitas.forEach(c => {
@@ -4380,7 +4377,6 @@ function executarAuditoria() {
     if (typeof despesasDataReais !== 'undefined') {
         despesasDataReais.forEach(d => {
             totalDespesasCadastradas += Number(d.valor) || 0;
-            // Despesas no DRE - contas com código 200+
             const codigo = d.plano?.split(' - ')[0] || '';
             if (codigo && parseInt(codigo) >= 200 && parseInt(codigo) <= 999) {
                 totalDespesasDRE += Number(d.valor) || 0;
@@ -4388,6 +4384,7 @@ function executarAuditoria() {
         });
     }
     
+    // Sangrias (só para exibição, NÃO somar no DRE)
     if (typeof contasExtrasData !== 'undefined') {
         contasExtrasData.forEach(s => {
             totalSangrias += Number(s.valor) || 0;
@@ -4395,24 +4392,22 @@ function executarAuditoria() {
     }
     
     // ==========================================
-    // 3. ATUALIZAR OS ELEMENTOS DO POP-UP
+    // 3. CALCULAR DIFERENÇAS CORRETAMENTE
     // ==========================================
-    const elementos = {
-        'auditReceitasDRE': totalReceitasDRE,
-        'auditReceitasCadastradas': totalReceitasCadastradas,
-        'auditReceitasDiferenca': totalReceitasCadastradas - totalReceitasDRE,
-        'auditDespesasDRE': Math.abs(totalDespesasDRE),
-        'auditDespesasCadastradas': totalDespesasCadastradas,
-        'auditSangrias': totalSangrias,
-        'auditDespesasDiferenca': totalDespesasCadastradas + totalSangrias - Math.abs(totalDespesasDRE)
-    };
+    const diffReceitas = totalReceitasCadastradas - totalReceitasDRE;
+    const diffDespesas = totalDespesasCadastradas - Math.abs(totalDespesasDRE); // ← CORRIGIDO: sem sangrias!
     
-    for (const [id, valor] of Object.entries(elementos)) {
-        const el = document.getElementById(id);
-        if (el) {
-            el.innerHTML = `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-        }
-    }
+    // ==========================================
+    // 4. ATUALIZAR POP-UP
+    // ==========================================
+    document.getElementById('auditReceitasDRE').innerHTML = `R$ ${totalReceitasDRE.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    document.getElementById('auditReceitasCadastradas').innerHTML = `R$ ${totalReceitasCadastradas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    document.getElementById('auditReceitasDiferenca').innerHTML = `R$ ${diffReceitas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    
+    document.getElementById('auditDespesasDRE').innerHTML = `R$ ${Math.abs(totalDespesasDRE).toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    document.getElementById('auditDespesasCadastradas').innerHTML = `R$ ${totalDespesasCadastradas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    document.getElementById('auditSangrias').innerHTML = `R$ ${totalSangrias.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    document.getElementById('auditDespesasDiferenca').innerHTML = `R$ ${diffDespesas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
     
     // Sangrias
     const sangriasTotal = contasExtrasData?.length || 0;
@@ -4426,8 +4421,7 @@ function executarAuditoria() {
     // Container de divergências
     const container = document.querySelector('#auditDespesasDivergenciasLista');
     if (container) {
-        const diff = elementos.auditDespesasDiferenca;
-        if (Math.abs(diff) < 0.01) {
+        if (Math.abs(diffDespesas) < 0.01) {
             container.innerHTML = `
                 <div style="margin-top:12px; padding:12px; background:rgba(16,185,129,0.1); border-left:3px solid #10b981; border-radius:6px;">
                     <strong style="color:#10b981;">✅ TUDO CONFORME!</strong>
@@ -4436,14 +4430,22 @@ function executarAuditoria() {
                     </p>
                 </div>
             `;
+        } else {
+            container.innerHTML = `
+                <div style="margin-top:12px; padding:12px; background:rgba(245,158,11,0.1); border-left:3px solid #f59e0b; border-radius:6px;">
+                    <strong style="color:#f59e0b;">⚠️ DIVERGÊNCIA DETECTADA!</strong>
+                    <p style="margin-top:6px; font-size:12px; color:var(--soft);">
+                        Diferença de R$ ${Math.abs(diffDespesas).toLocaleString('pt-BR', {minimumFractionDigits:2})} nas despesas.
+                    </p>
+                </div>
+            `;
         }
     }
     
-    console.log('✅ AUDITORIA ATUALIZADA!');
-    console.log(`📊 Receitas: DRE R$ ${totalReceitasDRE.toFixed(2)} | Cadastrado R$ ${totalReceitasCadastradas.toFixed(2)}`);
-    console.log(`📊 Despesas: DRE R$ ${Math.abs(totalDespesasDRE).toFixed(2)} | Telas R$ ${(totalDespesasCadastradas + totalSangrias).toFixed(2)}`);
+    console.log('✅ AUDITORIA CORRIGIDA!');
+    console.log(`📊 Receitas: DRE R$ ${totalReceitasDRE.toFixed(2)} | Cadastrado R$ ${totalReceitasCadastradas.toFixed(2)} | Diff R$ ${diffReceitas.toFixed(2)}`);
+    console.log(`📊 Despesas: DRE R$ ${Math.abs(totalDespesasDRE).toFixed(2)} | Cadastrado R$ ${totalDespesasCadastradas.toFixed(2)} | Sangrias R$ ${totalSangrias.toFixed(2)} | Diff R$ ${diffDespesas.toFixed(2)}`);
 }
-
 // ============================================================
 // FUNÇÕES DE LANCAMENTOS E DADOS REAIS
 // ============================================================
