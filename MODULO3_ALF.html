@@ -1346,7 +1346,7 @@ body.tema-claro #btnAuditoriaIntegracao .audit-icon {
 
 <!-- BARRA DE COMANDOS -->
 <div class="command-bar" id="commandBar">
-    <button class="cmd-btn" onclick="abrirModalConversaoSupabase()">⚙</button>
+    <button class="cmd-btn" onclick="abrirModalConversaoPremium()">⚙</button>
     <button class="cmd-btn" onclick="abrirModalLancamentos()">LANÇAMENTOS</button>
     
     <button class="cmd-btn" onclick="abrirModalVendasPopup()">RECEITAS</button>
@@ -1355,6 +1355,144 @@ body.tema-claro #btnAuditoriaIntegracao .audit-icon {
     <button class="cmd-btn cmd-btn-primary" onclick="abrirModuloResultados()">RESULTADOS</button>
     <button class="cmd-btn cmd-btn-primary" onclick="abrirModalEstatisticas()">ESTATÍSTICAS</button>
     <div class="cmd-toggle" id="toggleCmdBar" title="Esconder Barra">▼</div>
+</div>
+
+<!-- ============================================
+     POP-UP PREMIUM REGRAS DE CONVERSÃO v3.0
+     ============================================ -->
+<div id="modalConversaoPremium" class="modal-conversao" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.94); backdrop-filter:blur(12px); z-index:5000; align-items:center; justify-content:center;">
+    <div class="modal-content-inner" style="max-width:1400px; background:#12161F; border-radius:28px; border:1px solid rgba(230,160,23,0.35); padding:24px; max-height:90vh; overflow-y:auto;">
+        <!-- CABEÇALHO -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <h2 style="color:#E6A017; font-family:'Poppins',sans-serif; font-size:20px;">⚙ Regras de Conversão <span style="font-size:14px; color:var(--soft-light); font-weight:400;">v3.0</span></h2>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <button class="btn-atualizar" onclick="exportarRegrasJSON()" style="padding:6px 14px; font-size:11px;">📤 Exportar</button>
+                <button class="btn-atualizar" onclick="document.getElementById('importJsonInput').click();" style="padding:6px 14px; font-size:11px;">📥 Importar</button>
+                <input type="file" id="importJsonInput" accept=".json" style="display:none;" onchange="importarRegrasJSON(event)">
+                <button class="btn-aplicar-todos" onclick="salvarMapeamentoConversaoUpsert()" style="background:linear-gradient(135deg,#10b981,#0d9668); border:none; color:white; padding:8px 20px; border-radius:40px; font-weight:800; font-size:12px; cursor:pointer;">💾 Salvar Tudo</button>
+                <button class="close-modal-btn" onclick="fecharModalConversaoPremium()" style="background:none; border:none; font-size:28px; color:#E6A017; cursor:pointer;">×</button>
+            </div>
+        </div>
+
+        <!-- CARDS DE RESUMO -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:12px; margin-bottom:20px;">
+            <div class="resumo-card" style="background:linear-gradient(135deg,#11131E,#0E1018); border-radius:12px; padding:12px; border:1px solid rgba(230,160,23,0.2); text-align:center;">
+                <div style="font-size:10px; color:var(--soft-light);">📋 Total</div>
+                <div style="font-size:20px; font-weight:700; color:var(--yellow);" id="cardTotalRegras">0</div>
+            </div>
+            <div class="resumo-card" style="background:linear-gradient(135deg,#11131E,#0E1018); border-radius:12px; padding:12px; border:1px solid rgba(16,185,129,0.3); text-align:center;">
+                <div style="font-size:10px; color:var(--soft-light);">✅ Corretas</div>
+                <div style="font-size:20px; font-weight:700; color:#10b981;" id="cardCorretas">0</div>
+            </div>
+            <div class="resumo-card" style="background:linear-gradient(135deg,#11131E,#0E1018); border-radius:12px; padding:12px; border:1px solid rgba(239,68,68,0.3); text-align:center;">
+                <div style="font-size:10px; color:var(--soft-light);">❌ Erradas</div>
+                <div style="font-size:20px; font-weight:700; color:#ef4444;" id="cardErradas">0</div>
+            </div>
+            <div class="resumo-card" style="background:linear-gradient(135deg,#11131E,#0E1018); border-radius:12px; padding:12px; border:1px solid rgba(245,158,11,0.3); text-align:center;">
+                <div style="font-size:10px; color:var(--soft-light);">⏳ Pendentes</div>
+                <div style="font-size:20px; font-weight:700; color:#f59e0b;" id="cardPendentes">0</div>
+            </div>
+            <div class="resumo-card" style="background:linear-gradient(135deg,#11131E,#0E1018); border-radius:12px; padding:12px; border:1px solid rgba(59,130,246,0.3); text-align:center;">
+                <div style="font-size:10px; color:var(--soft-light);">📌 Faltam</div>
+                <div style="font-size:20px; font-weight:700; color:#3b82f6;" id="cardFaltam">0</div>
+            </div>
+            <div class="resumo-card" style="background:linear-gradient(135deg,#11131E,#0E1018); border-radius:12px; padding:12px; border:1px solid rgba(139,92,246,0.3); text-align:center;">
+                <div style="font-size:10px; color:var(--soft-light);">📚 Plano</div>
+                <div style="font-size:20px; font-weight:700; color:#8b5cf6;" id="cardPlanoContas">0</div>
+            </div>
+        </div>
+
+        <!-- BARRA DE PROGRESSO -->
+        <div style="margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--soft-light);">
+                <span>📊 Progresso de Mapeamento</span>
+                <span id="progressoPercentual">0%</span>
+            </div>
+            <div style="width:100%; height:12px; background:var(--filter-bg); border-radius:20px; overflow:hidden; border:1px solid rgba(230,160,23,0.2);">
+                <div id="progressoBarra" style="height:100%; width:0%; background:linear-gradient(90deg,#10b981,#f59e0b,#3b82f6); border-radius:20px; transition:width 0.5s ease;"></div>
+            </div>
+            <div style="display:flex; gap:16px; margin-top:6px; font-size:10px; color:var(--soft-light); flex-wrap:wrap;">
+                <span>✅ Corretas: <span id="progressoCorretas">0</span></span>
+                <span>❌ Erradas: <span id="progressoErradas">0</span></span>
+                <span>⏳ Pendentes: <span id="progressoPendentes">0</span></span>
+                <span>📌 Faltam: <span id="progressoFaltam">0</span></span>
+            </div>
+        </div>
+
+        <!-- ÁREA DE CONTAS DO PLANO -->
+        <div style="background:var(--filter-bg); border-radius:12px; padding:12px 16px; margin-bottom:16px; border:1px solid rgba(230,160,23,0.15);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <span style="font-weight:600; color:var(--yellow);">📚 Contas do Plano</span>
+                <span style="font-size:12px; color:var(--soft-light);" id="contasPlanoResumo">0 Receitas / 0 Despesas</span>
+                <span style="font-size:12px; color:#10b981;" id="contasPlanoMapeadas">🟢 Mapeadas: 0</span>
+                <span style="font-size:12px; color:#ef4444;" id="contasPlanoNaoMapeadas">🔴 Não mapeadas: 0</span>
+            </div>
+            <div id="contasPlanoLista" style="max-height:120px; overflow-y:auto; margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;"></div>
+        </div>
+
+        <!-- FILTROS E AÇÕES -->
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; align-items:center;">
+            <input type="text" id="buscaRegrasPremium" class="filter-input" placeholder="🔍 Buscar..." style="min-width:180px; padding:6px 12px; font-size:12px;" oninput="renderizarTabelaConversaoPremium()">
+            <select id="filtroStatusPremium" class="filter-select" style="padding:6px 12px; font-size:12px; min-width:120px;" onchange="renderizarTabelaConversaoPremium()">
+                <option value="TODAS">📋 Todas</option>
+                <option value="CORRETA">✅ Corretas</option>
+                <option value="ERRADA">❌ Erradas</option>
+                <option value="PENDENTE">⏳ Pendentes</option>
+                <option value="FALTA">📌 Faltam Mapear</option>
+            </select>
+            <select id="filtroTipoPremium" class="filter-select" style="padding:6px 12px; font-size:12px; min-width:120px;" onchange="renderizarTabelaConversaoPremium()">
+                <option value="TODOS">Todos</option>
+                <option value="RECEITA">Receitas</option>
+                <option value="DESPESA">Despesas</option>
+            </select>
+            <button class="btn-aplicar-todos" onclick="corrigirRegrasAutomaticamente()" style="background:linear-gradient(135deg,#f59e0b,#d97706); border:none; color:white; padding:6px 16px; border-radius:40px; font-weight:700; font-size:11px; cursor:pointer;">🔧 Corrigir Todas</button>
+            <button class="btn-aplicar-todos" onclick="criarRegrasEmLote()" style="background:linear-gradient(135deg,#3b82f6,#2563eb); border:none; color:white; padding:6px 16px; border-radius:40px; font-weight:700; font-size:11px; cursor:pointer;">⚡ Criar em Lote</button>
+        </div>
+
+        <!-- ABAS -->
+        <div class="popup-tabs" style="margin-bottom:12px;">
+            <button class="popup-tab-btn active" data-tab="TODAS" onclick="switchAbaPremium('TODAS',this)">📋 Todas</button>
+            <button class="popup-tab-btn" data-tab="CORRETA" onclick="switchAbaPremium('CORRETA',this)">✅ Corretas</button>
+            <button class="popup-tab-btn" data-tab="ERRADA" onclick="switchAbaPremium('ERRADA',this)">❌ Erradas</button>
+            <button class="popup-tab-btn" data-tab="PENDENTE" onclick="switchAbaPremium('PENDENTE',this)">⏳ Pendentes</button>
+            <button class="popup-tab-btn" data-tab="FALTA" onclick="switchAbaPremium('FALTA',this)">📌 Faltam</button>
+        </div>
+
+        <!-- TABELA DE REGRAS -->
+        <div style="overflow-x:auto; max-height:400px; overflow-y:auto; border-radius:12px; border:1px solid rgba(230,160,23,0.15);">
+            <table class="conversao-table" style="width:100%; font-size:12px; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:linear-gradient(135deg,#1A1E2A,#151926); position:sticky; top:0; z-index:2;">
+                        <th style="padding:10px 8px; text-align:left;">#</th>
+                        <th style="padding:10px 8px; text-align:left;">Origem</th>
+                        <th style="padding:10px 8px; text-align:left;">Destino</th>
+                        <th style="padding:10px 8px; text-align:left;">Status</th>
+                        <th style="padding:10px 8px; text-align:center;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaConversaoPremiumBody"></tbody>
+            </table>
+        </div>
+
+        <!-- LEGENDA -->
+        <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:16px; padding:8px 12px; background:var(--filter-bg); border-radius:8px; border:1px solid rgba(230,160,23,0.1);">
+            <span style="font-size:11px; color:var(--soft-light);">✅ Correta - Mapeamento correto</span>
+            <span style="font-size:11px; color:var(--soft-light);">❌ Errada - Precisa corrigir</span>
+            <span style="font-size:11px; color:var(--soft-light);">⏳ Pendente - Dados incompletos</span>
+            <span style="font-size:11px; color:var(--soft-light);">📌 Falta Mapear - Sem regra</span>
+            <span style="font-size:11px; color:var(--soft-light);">🔴 Não mapeada - Só no plano</span>
+        </div>
+
+        <!-- RODAPÉ -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:10px;">
+            <div style="font-size:12px; color:var(--soft-light);" id="rodapeMensagem">✅ Sistema de regras de conversão v3.0</div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-salvar-conversao" onclick="salvarMapeamentoConversaoUpsert()" style="background:linear-gradient(135deg,#E6A017,#C17F0B); color:#0A0C10; border:none; padding:8px 24px; border-radius:40px; font-weight:800; cursor:pointer; font-size:12px;">💾 Salvar Tudo</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- ============================================
@@ -1797,8 +1935,8 @@ body.tema-claro #btnAuditoriaIntegracao .audit-icon {
     </div>
 </div>
 
-<!-- POP-UP CONVERSAO -->
-<div id="modalConversao" class="modal-conversao">
+<!-- POP-UP CONVERSAO ANTIGO (SUBSTITUÍDO PELO PREMIUM) -->
+<div id="modalConversao" class="modal-conversao" style="display:none;">
     <div class="modal-content-inner" style="max-width:1000px;">
         <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
             <h2 style="color:#E6A017;"> REGRAS DE CONVERSÃO</h2>
@@ -2298,6 +2436,190 @@ body.tema-claro #btnAuditoriaIntegracao .audit-icon {
      VARIÁVEIS NÃO UTILIZADAS E FUNÇÕES ÓRFÃS
      ============================================================ -->
 <script>
+// ============================================
+// CORREÇÃO DEFINITIVA - DRE COMPARAÇÃO EXATA
+// ============================================
+
+// Sobrescrever a função original assim que o script carregar
+(function() {
+    console.log('🔧 CORREÇÃO DEFINITIVA ATIVADA!');
+    
+    // Salvar a função original
+    const originalGerarDRE = window.gerarDREComSupabase;
+    
+    // Criar a nova função com comparação exata
+    window.gerarDREComSupabase = async function() {
+        console.log('🔄 DRE - COMPARAÇÃO EXATA (CORREÇÃO DEFINITIVA)');
+        try {
+            const corpo = document.getElementById('corpoDRE');
+            if (!corpo) return;
+            
+            function calc(id, mes) {
+                let total = 0;
+                if (typeof receitasDataReais !== 'undefined') {
+                    receitasDataReais.forEach(r => {
+                        if (extrairMes(r.data) === mes && r.plano === id) {
+                            total += Number(r.valor) || 0;
+                        }
+                    });
+                }
+                if (typeof despesasDataReais !== 'undefined') {
+                    despesasDataReais.forEach(d => {
+                        if (extrairMes(d.data) === mes && d.plano === id) {
+                            total += Number(d.valor) || 0;
+                        }
+                    });
+                }
+                if (typeof contasExtrasData !== 'undefined') {
+                    contasExtrasData.forEach(s => {
+                        if (extrairMes(s.dt_pagto) === mes && s.plano === id) {
+                            total += Number(s.valor) || 0;
+                        }
+                    });
+                }
+                return total;
+            }
+            
+            function add(cod, nome, vals, cls) {
+                const tr = document.createElement('tr');
+                tr.className = cls || '';
+                let total = 0;
+                let html = `<td>${cod ? cod + ' - ' + nome : nome}</td>`;
+                for (let i = 0; i < 12; i++) {
+                    const v = vals[i] || 0;
+                    total += v;
+                    if (v !== 0) tr.classList.add('linha-com-movimentacao');
+                    html += `<td class="${v >= 0 ? 'valor-positivo' : 'valor-negativo'}">${formatarMoeda(v)}</td>`;
+                }
+                html += `<td class="${total >= 0 ? 'valor-positivo' : 'valor-negativo'}">${formatarMoeda(total)}</td>`;
+                tr.innerHTML = html;
+                corpo.appendChild(tr);
+            }
+            
+            corpo.innerHTML = '';
+            
+            // RECEITAS
+            const recMensal = [];
+            for (let m = 0; m < 12; m++) {
+                let t = 0;
+                if (estruturaDRE && estruturaDRE.receitas) {
+                    estruturaDRE.receitas.forEach(r => {
+                        t += calc(r.identificador || `${r.cod} - ${r.nome}`, m);
+                    });
+                }
+                recMensal[m] = t;
+            }
+            add('', 'RECEITAS TOTAIS', recMensal, 'dre-group-title');
+            
+            if (estruturaDRE && estruturaDRE.receitas) {
+                estruturaDRE.receitas.forEach(r => {
+                    const vals = [];
+                    const id = r.identificador || `${r.cod} - ${r.nome}`;
+                    for (let m = 0; m < 12; m++) vals[m] = calc(id, m);
+                    add(r.cod, r.nome, vals, 'dre-subgroup');
+                });
+            }
+            
+            // CUSTOS VARIAVEIS
+            const dvMensal = [];
+            for (let m = 0; m < 12; m++) {
+                let t = 0;
+                if (estruturaDRE && estruturaDRE.custosVariaveis) {
+                    estruturaDRE.custosVariaveis.forEach(c => {
+                        t += calc(c.identificador || `${c.cod} - ${c.nome}`, m);
+                    });
+                }
+                dvMensal[m] = -Math.abs(t);
+            }
+            add('', 'CUSTOS VARIAVEIS', dvMensal, 'dre-group-title');
+            
+            if (estruturaDRE && estruturaDRE.custosVariaveis) {
+                estruturaDRE.custosVariaveis.forEach(c => {
+                    const vals = [];
+                    const id = c.identificador || `${c.cod} - ${c.nome}`;
+                    for (let m = 0; m < 12; m++) vals[m] = -Math.abs(calc(id, m));
+                    add(c.cod, c.nome, vals, 'dre-subgroup');
+                });
+            }
+            
+            const lb = recMensal.map((r, i) => r + dvMensal[i]);
+            add('', 'LUCRO BRUTO', lb, 'dre-total-row');
+            
+            // CUSTOS FIXOS
+            const dfMensal = [];
+            for (let m = 0; m < 12; m++) {
+                let t = 0;
+                if (estruturaDRE && estruturaDRE.custosFixos) {
+                    estruturaDRE.custosFixos.forEach(c => {
+                        t += calc(c.identificador || `${c.cod} - ${c.nome}`, m);
+                    });
+                }
+                dfMensal[m] = -Math.abs(t);
+            }
+            add('', 'CUSTOS FIXOS', dfMensal, 'dre-group-title');
+            
+            if (estruturaDRE && estruturaDRE.custosFixos) {
+                estruturaDRE.custosFixos.forEach(c => {
+                    const vals = [];
+                    const id = c.identificador || `${c.cod} - ${c.nome}`;
+                    for (let m = 0; m < 12; m++) vals[m] = -Math.abs(calc(id, m));
+                    add(c.cod, c.nome, vals, 'dre-subgroup');
+                });
+            }
+            
+            const ro = lb.map((l, i) => l + dfMensal[i]);
+            add('', 'RESULTADO OPERACIONAL', ro, 'dre-total-row');
+            
+            if (typeof adicionarEventosCliqueDRE === 'function') {
+                adicionarEventosCliqueDRE();
+            }
+            console.log('✅ DRE CORRIGIDO!');
+        } catch(e) { console.error('Erro no DRE:', e); }
+    };
+    
+    // Função para reaplicar planos
+    window.reaplicarPlanos = function() {
+        console.log('🔄 Reaplicando planos...');
+        if (typeof receitasDataReais !== 'undefined' && typeof condToPlanoMap !== 'undefined') {
+            receitasDataReais.forEach(r => {
+                const p = condToPlanoMap[r.cond_pag];
+                if (p) r.plano = p;
+            });
+            const pr = {};
+            receitasDataReais.forEach(r => pr[r.id] = r.plano);
+            localStorage.setItem('planos_receitas_personalizados', JSON.stringify(pr));
+        }
+        if (typeof despesasDataReais !== 'undefined' && typeof operacaoToPlanoMap !== 'undefined') {
+            despesasDataReais.forEach(d => {
+                const p = operacaoToPlanoMap[d.operacao];
+                if (p) d.plano = p;
+            });
+            const pd = {};
+            despesasDataReais.forEach(d => pd[d.id] = d.plano);
+            localStorage.setItem('planos_despesas_personalizados', JSON.stringify(pd));
+        }
+        console.log('✅ Planos reaplicados!');
+    };
+    
+    // Executar correção após carregar
+    const interval = setInterval(() => {
+        if (typeof estruturaDRE !== 'undefined' && estruturaDRE) {
+            clearInterval(interval);
+            console.log('📊 Estrutura DRE carregada. Aplicando correção...');
+            setTimeout(() => {
+                window.reaplicarPlanos();
+                window.gerarDREComSupabase();
+            }, 1000);
+        }
+    }, 500);
+    
+    console.log('✅ CORREÇÃO DEFINITIVA INSTALADA!');
+})();
+
+
+
+
+
 (function() {
     console.log('🧹 INICIANDO LIMPEZA DO SISTEMA...');
 
@@ -2787,7 +3109,7 @@ function fecharTodosModais() {
         'modalFechamentoCaixa', 'modalEstatisticas', 'modalConversao', 'modalComparativos',
         'modalPeriodoPDF', 'modalPeriodoCaixaPDF', 'modalPlano', 'modalEditConta',
         'modalDrilldownReceitas', 'modalDrilldownDespesas', 'modalConsultaConversao', 
-        'modalDrilldownValor', 'modalAuditoriaIntegracao'
+        'modalDrilldownValor', 'modalAuditoriaIntegracao', 'modalConversaoPremium'
     ];
     
     modais.forEach(id => {
@@ -5408,171 +5730,873 @@ async function aplicarRegrasConversaoEmTodosLancamentos() {
 }
 
 // ============================================================
-// FUNÇÕES DE CONVERSÃO - MODAL
+// FUNÇÕES DE CONVERSÃO - MODAL PREMIUM
 // ============================================================
-async function abrirModalConversaoSupabase() {
-    console.log('🔧 Abrindo CONVERSÃO com grupos organizados...');
+
+let dadosRegrasPremium = [];
+let dadosPlanoContasPremium = [];
+
+async function abrirModalConversaoPremium() {
+    console.log('🔧 Abrindo POP-UP PREMIUM REGRAS DE CONVERSÃO v3.0...');
     
     try {
         await carregarRegrasConversaoSupabase();
         await carregarPlanoContasSupabase();
         
-        const { data: regrasDespesas, error: errDesp } = await supabaseClient
-            .from('regras_conversao')
-            .select('*')
-            .in('tipo', ['DESPESA_FIXA', 'DESPESA_VARIAVEL'])
-            .eq('ativo', true)
-            .order('origem', { ascending: true });
-        
-        if (errDesp) throw errDesp;
-        
-        const { data: regrasReceitas, error: errRec } = await supabaseClient
-            .from('regras_conversao')
-            .select('*')
-            .eq('tipo', 'RECEITA')
-            .eq('ativo', true)
-            .order('origem', { ascending: true });
-        
-        if (errRec) throw errRec;
-        
-        const { data: planoContas } = await supabaseClient
-            .from('plano_contas')
-            .select('codigo, nome, tipo_classificacao')
-            .order('codigo', { ascending: true });
-        
-        let planosOptions = '<option value="">Selecione...</option>';
-        if (planoContas) {
-            planoContas.forEach(p => {
-                planosOptions += `<option value="${p.codigo} - ${p.nome}">${p.codigo} - ${p.nome}</option>`;
-            });
+        const modal = document.getElementById('modalConversaoPremium');
+        if (!modal) {
+            console.error('❌ Modal premium não encontrado!');
+            alert('Erro: Pop-up não encontrado.');
+            return;
         }
         
-        const MAPEAMENTO_GRUPOS_DESPESAS = window.MAPEAMENTO_GRUPOS_DESPESAS || {};
-        const MAPEAMENTO_GRUPOS_RECEITAS = window.MAPEAMENTO_GRUPOS_RECEITAS || {};
+        await carregarRegrasPremium();
+        await carregarPlanoContasPremium();
         
-        const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
-        if (tbodyDespesas) {
-            const grupos = {};
-            const semGrupo = [];
-            
-            for (const regra of regrasDespesas) {
-                const grupo = MAPEAMENTO_GRUPOS_DESPESAS[regra.origem];
-                if (grupo) {
-                    if (!grupos[grupo]) grupos[grupo] = [];
-                    grupos[grupo].push(regra);
-                } else {
-                    semGrupo.push(regra);
-                }
-            }
-            
-            let html = '';
-            const gruposOrdenados = Object.keys(grupos).sort();
-            
-            for (const grupo of gruposOrdenados) {
-                html += `<tr style="background: rgba(230, 160, 23, 0.15); border-top: 2px solid #E6A017;">
-                    <td colspan="2" style="padding: 10px 12px; font-weight: 700; color: #E6A017; font-size: 14px; letter-spacing: 0.5px;">
-                        📋 ${grupo}
-                    </td>
-                </tr>`;
-                
-                for (const regra of grupos[grupo]) {
-                    const origem = regra.origem;
-                    const valorSalvo = regra.destino_identificador || '';
-                    
-                    html += `<tr>
-                        <td style="padding-left: 30px;"><strong>${escapeHtml(origem)}</strong></td>
-                        <td>
-                            <select class="conversao-select-plano-despesa" data-operacao="${escapeHtml(origem)}">
-                                ${planosOptions}
-                            </select>
-                        </td>
-                    </tr>`;
-                }
-            }
-            
-            tbodyDespesas.innerHTML = html;
-            
-            document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
-                const operacao = select.getAttribute('data-operacao');
-                const regra = regrasDespesas.find(r => r.origem === operacao);
-                if (regra && regra.destino_identificador) {
-                    select.value = regra.destino_identificador;
-                }
-            });
-        }
+        atualizarCardsResumo();
+        atualizarBarraProgresso();
+        renderizarContasPlano();
+        renderizarTabelaConversaoPremium();
         
-        const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
-        if (tbodyReceitas && regrasReceitas) {
-            const grupos = {};
-            
-            for (const regra of regrasReceitas) {
-                const grupo = MAPEAMENTO_GRUPOS_RECEITAS[regra.origem] || 'RECEITAS FINANCEIRAS';
-                if (!grupos[grupo]) grupos[grupo] = [];
-                grupos[grupo].push(regra);
-            }
-            
-            const planosReceitas = planoContas?.filter(p => 
-                p.tipo_classificacao === 'RECEITAS' || 
-                p.tipo_classificacao === 'RECEITA DE SERVIÇOS' || 
-                p.tipo_classificacao === 'RECEITAS FINANCEIRAS'
-            ) || [];
-            
-            let html = '';
-            const gruposOrdenados = Object.keys(grupos).sort();
-            
-            for (const grupo of gruposOrdenados) {
-                html += `<tr style="background: rgba(230, 160, 23, 0.15); border-top: 2px solid #E6A017;">
-                    <td colspan="3" style="padding: 10px 12px; font-weight: 700; color: #E6A017; font-size: 14px; letter-spacing: 0.5px;">
-                        📋 ${grupo}
-                    </td>
-                </tr>`;
-                
-                for (const regra of grupos[grupo]) {
-                    const origem = regra.origem;
-                    const tituloSalvo = regra.destino_caixa || '';
-                    const planoSalvo = regra.destino_identificador || '';
-                    
-                    html += `<tr>
-                        <td style="padding-left: 30px;"><strong>${escapeHtml(origem)}</strong></td>
-                        <td>
-                            <select class="conversao-select" data-cond="${escapeHtml(origem)}">
-                                <option value="">Selecione...</option>
-                                <option value="DINHEIRO" ${tituloSalvo === 'DINHEIRO' ? 'selected' : ''}>DINHEIRO</option>
-                                <option value="DEBITO" ${tituloSalvo === 'DEBITO' ? 'selected' : ''}>DEBITO</option>
-                                <option value="CREDITO" ${tituloSalvo === 'CREDITO' ? 'selected' : ''}>CREDITO</option>
-                                <option value="CREDITO PARCELADO" ${tituloSalvo === 'CREDITO PARCELADO' ? 'selected' : ''}>CREDITO PARCELADO</option>
-                                <option value="AG" ${tituloSalvo === 'AG' ? 'selected' : ''}>AG</option>
-                                <option value="PIX" ${tituloSalvo === 'PIX' ? 'selected' : ''}>PIX</option>
-                                <option value="VNF" ${tituloSalvo === 'VNF' ? 'selected' : ''}>VNF</option>
-                            </select>
-                        </td>
-                        <td>
-                            <select class="conversao-select-plano-receita" data-plano-cond="${escapeHtml(origem)}">
-                                <option value="">Selecione...</option>
-                                ${planosReceitas.map(p => {
-                                    const valor = `${p.codigo} - ${p.nome}`;
-                                    const selected = (planoSalvo === valor || planoSalvo === p.nome) ? 'selected' : '';
-                                    return `<option value="${valor}" ${selected}>${valor}</option>`;
-                                }).join('')}
-                            </select>
-                        </td>
-                    </tr>`;
-                }
-            }
-            
-            tbodyReceitas.innerHTML = html;
-        }
-        
-        document.getElementById('modalConversao').classList.add('active');
-        console.log('✅ CONVERSÃO ORGANIZADA ABERTA!');
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+        console.log('✅ POP-UP PREMIUM ABERTO COM SUCESSO!');
         
     } catch (error) {
-        console.error('❌ Erro ao abrir conversão:', error);
+        console.error('❌ Erro ao abrir pop-up premium:', error);
         alert('Erro ao carregar dados: ' + error.message);
     }
 }
+
+function fecharModalConversaoPremium() {
+    const modal = document.getElementById('modalConversaoPremium');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+}
+
+async function carregarRegrasPremium() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('regras_conversao')
+            .select('*')
+            .order('origem', { ascending: true });
+        
+        if (error) throw error;
+        
+        dadosRegrasPremium = data || [];
+        console.log(`✅ ${dadosRegrasPremium.length} regras carregadas`);
+        
+        return dadosRegrasPremium;
+    } catch (error) {
+        console.error('❌ Erro ao carregar regras:', error);
+        dadosRegrasPremium = [];
+        return [];
+    }
+}
+
+async function carregarPlanoContasPremium() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('plano_contas')
+            .select('*')
+            .order('codigo', { ascending: true });
+        
+        if (error) throw error;
+        
+        dadosPlanoContasPremium = data || [];
+        console.log(`✅ ${dadosPlanoContasPremium.length} contas do plano carregadas`);
+        
+        return dadosPlanoContasPremium;
+    } catch (error) {
+        console.error('❌ Erro ao carregar plano de contas:', error);
+        dadosPlanoContasPremium = [];
+        return [];
+    }
+}
+
+function classificarRegra(regra) {
+    if (!regra) return { status: 'ERRADA', label: '❌ Errada', cor: '#ef4444' };
+    
+    if (regra.ativo === false) {
+        return { status: 'PENDENTE', label: '⏳ Pendente', cor: '#f59e0b' };
+    }
+    
+    if (!regra.destino_identificador || regra.destino_identificador === '') {
+        return { status: 'ERRADA', label: '❌ Errada', cor: '#ef4444' };
+    }
+    
+    const contaExiste = dadosPlanoContasPremium.some(p => 
+        p.identificador === regra.destino_identificador ||
+        (p.identificador && p.identificador.includes(regra.destino_identificador)) ||
+        (regra.destino_identificador.includes(p.identificador))
+    );
+    
+    if (!contaExiste) {
+        return { status: 'ERRADA', label: '❌ Errada', cor: '#ef4444' };
+    }
+    
+    const conta = dadosPlanoContasPremium.find(p => 
+        p.identificador === regra.destino_identificador ||
+        (p.identificador && p.identificador.includes(regra.destino_identificador)) ||
+        (regra.destino_identificador.includes(p.identificador))
+    );
+    
+    if (conta && conta.ativo === false) {
+        return { status: 'PENDENTE', label: '⏳ Pendente', cor: '#f59e0b' };
+    }
+    
+    if (regra.tipo === 'RECEITA' && conta && conta.tipo !== 'RECEITA') {
+        return { status: 'ERRADA', label: '❌ Errada', cor: '#ef4444' };
+    }
+    
+    if ((regra.tipo === 'DESPESA' || regra.tipo === 'DESPESA_VARIAVEL') && conta && conta.tipo !== 'DESPESA') {
+        return { status: 'ERRADA', label: '❌ Errada', cor: '#ef4444' };
+    }
+    
+    return { status: 'CORRETA', label: '✅ Correta', cor: '#10b981' };
+}
+
+function atualizarCardsResumo() {
+    const total = dadosRegrasPremium.length;
+    let corretas = 0, erradas = 0, pendentes = 0;
+    
+    for (const regra of dadosRegrasPremium) {
+        const classificacao = classificarRegra(regra);
+        if (classificacao.status === 'CORRETA') corretas++;
+        else if (classificacao.status === 'ERRADA') erradas++;
+        else if (classificacao.status === 'PENDENTE') pendentes++;
+    }
+    
+    const origensReceitas = new Set();
+    const origensDespesas = new Set();
+    
+    if (typeof receitasDataReais !== 'undefined') {
+        receitasDataReais.forEach(r => {
+            if (r.cond_pag && r.cond_pag !== '') origensReceitas.add(r.cond_pag);
+        });
+    }
+    
+    if (typeof despesasDataReais !== 'undefined') {
+        despesasDataReais.forEach(d => {
+            if (d.operacao && d.operacao !== '') origensDespesas.add(d.operacao);
+        });
+    }
+    
+    const totalOrigens = origensReceitas.size + origensDespesas.size;
+    const regrasExistentes = new Set(dadosRegrasPremium.map(r => r.origem));
+    const faltamMapear = totalOrigens - regrasExistentes.size;
+    
+    document.getElementById('cardTotalRegras').innerHTML = total;
+    document.getElementById('cardCorretas').innerHTML = corretas;
+    document.getElementById('cardErradas').innerHTML = erradas;
+    document.getElementById('cardPendentes').innerHTML = pendentes;
+    document.getElementById('cardFaltam').innerHTML = Math.max(0, faltamMapear);
+    document.getElementById('cardPlanoContas').innerHTML = dadosPlanoContasPremium.length;
+}
+
+function atualizarBarraProgresso() {
+    let corretas = 0;
+    let erradas = 0;
+    let pendentes = 0;
+    let faltam = 0;
+    
+    for (const regra of dadosRegrasPremium) {
+        const classificacao = classificarRegra(regra);
+        if (classificacao.status === 'CORRETA') corretas++;
+        else if (classificacao.status === 'ERRADA') erradas++;
+        else if (classificacao.status === 'PENDENTE') pendentes++;
+    }
+    
+    const origensReceitas = new Set();
+    const origensDespesas = new Set();
+    
+    if (typeof receitasDataReais !== 'undefined') {
+        receitasDataReais.forEach(r => {
+            if (r.cond_pag && r.cond_pag !== '') origensReceitas.add(r.cond_pag);
+        });
+    }
+    
+    if (typeof despesasDataReais !== 'undefined') {
+        despesasDataReais.forEach(d => {
+            if (d.operacao && d.operacao !== '') origensDespesas.add(d.operacao);
+        });
+    }
+    
+    const totalOrigens = origensReceitas.size + origensDespesas.size;
+    const regrasExistentes = new Set(dadosRegrasPremium.map(r => r.origem));
+    faltam = totalOrigens - regrasExistentes.size;
+    
+    const total = dadosRegrasPremium.length;
+    const corretasValidas = corretas;
+    const percentual = total > 0 ? Math.round((corretasValidas / (total + faltam)) * 100) : 0;
+    
+    document.getElementById('progressoPercentual').innerHTML = `${percentual}%`;
+    document.getElementById('progressoBarra').style.width = `${Math.min(100, percentual)}%`;
+    document.getElementById('progressoCorretas').innerHTML = corretas;
+    document.getElementById('progressoErradas').innerHTML = erradas;
+    document.getElementById('progressoPendentes').innerHTML = pendentes;
+    document.getElementById('progressoFaltam').innerHTML = Math.max(0, faltam);
+}
+
+function renderizarContasPlano() {
+    const container = document.getElementById('contasPlanoLista');
+    if (!container) return;
+    
+    const totalReceitas = dadosPlanoContasPremium.filter(p => p.tipo === 'RECEITA' || p.tipo_classificacao === 'RECEITAS').length;
+    const totalDespesas = dadosPlanoContasPremium.filter(p => p.tipo === 'DESPESA' || p.tipo_classificacao !== 'RECEITAS').length;
+    
+    document.getElementById('contasPlanoResumo').innerHTML = `${totalReceitas} Receitas / ${totalDespesas} Despesas`;
+    
+    const regrasExistentes = new Set(dadosRegrasPremium.map(r => r.destino_identificador).filter(id => id));
+    let mapeadas = 0;
+    let naoMapeadas = 0;
+    
+    let html = '';
+    for (const conta of dadosPlanoContasPremium) {
+        const identificador = conta.identificador || `${conta.codigo} - ${conta.nome}`;
+        const mapeada = regrasExistentes.has(identificador) || regrasExistentes.has(conta.nome);
+        
+        if (mapeada) mapeadas++;
+        else naoMapeadas++;
+        
+        const cor = mapeada ? '#10b981' : '#ef4444';
+        const icon = mapeada ? '🟢' : '🔴';
+        const titulo = mapeada ? 'Mapeada' : 'Não mapeada';
+        
+        html += `<span style="display:inline-block; background:var(--filter-bg); padding:2px 8px; border-radius:12px; font-size:10px; color:${cor}; border:1px solid ${cor}33; white-space:nowrap;" title="${conta.codigo} - ${conta.nome} - ${titulo}">
+            ${icon} ${conta.codigo}
+        </span>`;
+    }
+    
+    container.innerHTML = html;
+    document.getElementById('contasPlanoMapeadas').innerHTML = `🟢 Mapeadas: ${mapeadas}`;
+    document.getElementById('contasPlanoNaoMapeadas').innerHTML = `🔴 Não mapeadas: ${naoMapeadas}`;
+}
+
+function switchAbaPremium(aba, btn) {
+    document.querySelectorAll('#modalConversaoPremium .popup-tab-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    document.getElementById('filtroStatusPremium').value = aba;
+    renderizarTabelaConversaoPremium();
+}
+
+function renderizarTabelaConversaoPremium() {
+    const tbody = document.getElementById('tabelaConversaoPremiumBody');
+    if (!tbody) return;
+    
+    const busca = document.getElementById('buscaRegrasPremium')?.value.toLowerCase() || '';
+    const filtroStatus = document.getElementById('filtroStatusPremium')?.value || 'TODAS';
+    const filtroTipo = document.getElementById('filtroTipoPremium')?.value || 'TODOS';
+    
+    let regrasFiltradas = [...dadosRegrasPremium];
+    
+    if (filtroStatus !== 'TODAS') {
+        regrasFiltradas = regrasFiltradas.filter(r => {
+            const status = classificarRegra(r);
+            return status.status === filtroStatus;
+        });
+    }
+    
+    if (filtroTipo !== 'TODOS') {
+        regrasFiltradas = regrasFiltradas.filter(r => r.tipo === filtroTipo);
+    }
+    
+    if (busca) {
+        regrasFiltradas = regrasFiltradas.filter(r => 
+            r.origem.toLowerCase().includes(busca) ||
+            (r.destino_identificador && r.destino_identificador.toLowerCase().includes(busca))
+        );
+    }
+    
+    // Se não houver regras, exibir mensagem
+    if (regrasFiltradas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--soft-light);">Nenhuma regra encontrada</td></tr>`;
+        return;
+    }
+    
+    let html = '';
+    let contador = 1;
+    
+    for (const regra of regrasFiltradas) {
+        const status = classificarRegra(regra);
+        const destino = regra.destino_identificador || (regra.destino_plano || '');
+        const tipo = regra.tipo === 'RECEITA' ? '📈 Receita' : '📉 Despesa';
+        
+        const isReceita = regra.tipo === 'RECEITA';
+        
+        html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:8px 6px; text-align:center; color:var(--soft-light);">${contador++}</td>
+            <td style="padding:8px 6px; font-weight:500;">
+                ${escapeHtml(regra.origem)}
+                <span style="font-size:9px; color:var(--soft-light); display:block;">${tipo}</span>
+            </td>
+            <td style="padding:8px 6px;">
+                ${destino ? escapeHtml(destino) : '<span style="color:var(--soft-light);">(não definido)</span>'}
+            </td>
+            <td style="padding:8px 6px;">
+                <span style="display:inline-block; background:${status.cor}22; color:${status.cor}; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600; border:1px solid ${status.cor}44;">
+                    ${status.label}
+                </span>
+            </td>
+            <td style="padding:8px 6px; text-align:center;">
+                <button class="btn-aplicar-plano-conversao" onclick="visualizarRegraPremium('${regra.id}')" style="background:rgba(59,130,246,0.2); color:#3b82f6; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer; margin-right:4px;">👁️</button>
+                <button class="btn-aplicar-plano-conversao" onclick="corrigirRegraIndividual('${regra.id}')" style="background:rgba(245,158,11,0.2); color:#f59e0b; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer; margin-right:4px;">🔧</button>
+                <button class="btn-aplicar-plano-conversao" onclick="deletarRegraIndividual('${regra.id}')" style="background:rgba(239,68,68,0.2); color:#ef4444; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer;">🗑️</button>
+            </td>
+        </tr>`;
+    }
+    
+    tbody.innerHTML = html;
+}
+
+function visualizarRegraPremium(id) {
+    const regra = dadosRegrasPremium.find(r => r.id === id);
+    if (!regra) {
+        alert('Regra não encontrada.');
+        return;
+    }
+    
+    const status = classificarRegra(regra);
+    alert(
+        `📋 DETALHES DA REGRA\n\n` +
+        `ID: ${regra.id}\n` +
+        `Origem: ${regra.origem}\n` +
+        `Tipo: ${regra.tipo}\n` +
+        `Destino: ${regra.destino_identificador || regra.destino_plano || '(não definido)'}\n` +
+        `Destino Caixa: ${regra.destino_caixa || '(não definido)'}\n` +
+        `Ativo: ${regra.ativo ? '✅ Sim' : '❌ Não'}\n` +
+        `Status: ${status.label}\n` +
+        `Criado em: ${regra.created_at || 'N/A'}\n` +
+        `Atualizado em: ${regra.updated_at || 'N/A'}`
+    );
+}
+
+async function corrigirRegraIndividual(id) {
+    const regra = dadosRegrasPremium.find(r => r.id === id);
+    if (!regra) {
+        alert('Regra não encontrada.');
+        return;
+    }
+    
+    const status = classificarRegra(regra);
+    if (status.status === 'CORRETA') {
+        alert('✅ Esta regra já está correta.');
+        return;
+    }
+    
+    const contaCorreta = encontrarMelhorConta(regra.origem, regra.tipo);
+    if (!contaCorreta) {
+        alert('❌ Não foi possível encontrar uma conta correspondente para esta origem.');
+        return;
+    }
+    
+    const confirmar = confirm(
+        `🔧 Corrigir regra:\n\n` +
+        `Origem: ${regra.origem}\n` +
+        `Destino atual: ${regra.destino_identificador || '(vazio)'}\n` +
+        `Novo destino: ${contaCorreta.identificador}\n\n` +
+        `Deseja aplicar esta correção?`
+    );
+    
+    if (!confirmar) return;
+    
+    try {
+        const { error } = await supabaseClient
+            .from('regras_conversao')
+            .update({
+                destino_identificador: contaCorreta.identificador,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+        
+        if (error) throw error;
+        
+        regra.destino_identificador = contaCorreta.identificador;
+        await carregarRegrasPremium();
+        atualizarCardsResumo();
+        atualizarBarraProgresso();
+        renderizarContasPlano();
+        renderizarTabelaConversaoPremium();
+        
+        alert(`✅ Regra corrigida com sucesso!\n\nDestino atualizado para: ${contaCorreta.identificador}`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao corrigir regra:', error);
+        alert('Erro ao corrigir regra: ' + error.message);
+    }
+}
+
+function encontrarMelhorConta(origem, tipo) {
+    const isReceita = tipo === 'RECEITA';
+    const contasFiltradas = dadosPlanoContasPremium.filter(p => 
+        isReceita ? (p.tipo === 'RECEITA' || p.tipo_classificacao === 'RECEITAS') : (p.tipo === 'DESPESA' || p.tipo_classificacao !== 'RECEITAS')
+    );
+    
+    if (contasFiltradas.length === 0) return null;
+    
+    const origemLower = origem.toLowerCase();
+    let melhorScore = 0;
+    let melhorConta = null;
+    
+    for (const conta of contasFiltradas) {
+        const nomeLower = conta.nome.toLowerCase();
+        const codigoLower = conta.codigo.toLowerCase();
+        const identificadorLower = (conta.identificador || '').toLowerCase();
+        
+        let score = 0;
+        const palavrasOrigem = origemLower.split(/\s+/);
+        
+        for (const palavra of palavrasOrigem) {
+            if (palavra.length > 2) {
+                if (nomeLower.includes(palavra)) score += palavra.length * 2;
+                if (identificadorLower.includes(palavra)) score += palavra.length * 1.5;
+                if (codigoLower.includes(palavra)) score += palavra.length;
+            }
+        }
+        
+        if (nomeLower.includes(origemLower) || origemLower.includes(nomeLower)) {
+            score += Math.min(origemLower.length, nomeLower.length) * 3;
+        }
+        
+        if (score > melhorScore) {
+            melhorScore = score;
+            melhorConta = conta;
+        }
+    }
+    
+    return melhorConta;
+}
+
+async function deletarRegraIndividual(id) {
+    const confirmar = confirm(`⚠️ Tem certeza que deseja excluir a regra de conversão ID: ${id}?`);
+    if (!confirmar) return;
+    
+    try {
+        const { error } = await supabaseClient
+            .from('regras_conversao')
+            .delete()
+            .eq('id', id);
+        
+        if (error) throw error;
+        
+        dadosRegrasPremium = dadosRegrasPremium.filter(r => r.id !== id);
+        atualizarCardsResumo();
+        atualizarBarraProgresso();
+        renderizarContasPlano();
+        renderizarTabelaConversaoPremium();
+        
+        alert(`✅ Regra ID ${id} excluída com sucesso!`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao excluir regra:', error);
+        alert('Erro ao excluir regra: ' + error.message);
+    }
+}
+
+async function corrigirRegrasAutomaticamente() {
+    console.log('🔧 CORRIGIR TODAS AS REGRAS ERRADAS...');
+    
+    const regrasErradas = dadosRegrasPremium.filter(r => classificarRegra(r).status === 'ERRADA');
+    
+    if (regrasErradas.length === 0) {
+        alert('✅ Nenhuma regra errada encontrada!');
+        return;
+    }
+    
+    const confirmar = confirm(
+        `🔧 Corrigir ${regrasErradas.length} regras automaticamente?\n\n` +
+        `Isso irá tentar encontrar a melhor conta correspondente para cada regra.`
+    );
+    
+    if (!confirmar) return;
+    
+    let corrigidas = 0;
+    let erros = 0;
+    let preview = '';
+    
+    for (const regra of regrasErradas) {
+        const contaCorreta = encontrarMelhorConta(regra.origem, regra.tipo);
+        if (contaCorreta) {
+            preview += `\n✅ ${regra.origem} → ${contaCorreta.identificador}`;
+        } else {
+            preview += `\n❌ ${regra.origem} → (sem correspondência)`;
+        }
+    }
+    
+    const confirmarPreview = confirm(
+        `📋 Preview das correções:\n\n${preview}\n\n` +
+        `Deseja aplicar estas correções?`
+    );
+    
+    if (!confirmarPreview) return;
+    
+    for (const regra of regrasErradas) {
+        const contaCorreta = encontrarMelhorConta(regra.origem, regra.tipo);
+        if (contaCorreta) {
+            try {
+                const { error } = await supabaseClient
+                    .from('regras_conversao')
+                    .update({
+                        destino_identificador: contaCorreta.identificador,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', regra.id);
+                
+                if (error) throw error;
+                regra.destino_identificador = contaCorreta.identificador;
+                corrigidas++;
+            } catch (error) {
+                console.error(`❌ Erro ao corrigir regra ${regra.origem}:`, error);
+                erros++;
+            }
+        } else {
+            erros++;
+        }
+    }
+    
+    await carregarRegrasPremium();
+    atualizarCardsResumo();
+    atualizarBarraProgresso();
+    renderizarContasPlano();
+    renderizarTabelaConversaoPremium();
+    
+    alert(
+        `✅ CORREÇÃO CONCLUÍDA!\n\n` +
+        `✅ Corrigidas: ${corrigidas}\n` +
+        `❌ Erros: ${erros}\n` +
+        `📋 Total de regras erradas: ${regrasErradas.length}`
+    );
+}
+
+async function criarRegrasEmLote() {
+    console.log('⚡ CRIAR REGRAS EM LOTE PARA ORIGENS NÃO MAPEADAS...');
+    
+    const origensReceitas = new Set();
+    const origensDespesas = new Set();
+    
+    if (typeof receitasDataReais !== 'undefined') {
+        receitasDataReais.forEach(r => {
+            if (r.cond_pag && r.cond_pag !== '') origensReceitas.add(r.cond_pag);
+        });
+    }
+    
+    if (typeof despesasDataReais !== 'undefined') {
+        despesasDataReais.forEach(d => {
+            if (d.operacao && d.operacao !== '') origensDespesas.add(d.operacao);
+        });
+    }
+    
+    const regrasExistentes = new Set(dadosRegrasPremium.map(r => r.origem));
+    const origensFaltando = [];
+    
+    for (const origem of origensReceitas) {
+        if (!regrasExistentes.has(origem)) {
+            origensFaltando.push({ origem, tipo: 'RECEITA' });
+        }
+    }
+    
+    for (const origem of origensDespesas) {
+        if (!regrasExistentes.has(origem)) {
+            origensFaltando.push({ origem, tipo: 'DESPESA' });
+        }
+    }
+    
+    if (origensFaltando.length === 0) {
+        alert('✅ Todas as origens já possuem regras de conversão!');
+        return;
+    }
+    
+    const confirmar = confirm(
+        `⚡ Criar ${origensFaltando.length} regras em lote?\n\n` +
+        `Isso irá criar regras para todas as origens não mapeadas.`
+    );
+    
+    if (!confirmar) return;
+    
+    let criadas = 0;
+    let erros = 0;
+    let preview = '';
+    
+    for (const item of origensFaltando) {
+        const contaCorreta = encontrarMelhorConta(item.origem, item.tipo);
+        if (contaCorreta) {
+            preview += `\n✅ ${item.origem} (${item.tipo}) → ${contaCorreta.identificador}`;
+        } else {
+            preview += `\n⚠️ ${item.origem} (${item.tipo}) → (sem correspondência)`;
+        }
+    }
+    
+    const confirmarPreview = confirm(
+        `📋 Preview das regras a serem criadas:\n\n${preview}\n\n` +
+        `Deseja criar estas regras?`
+    );
+    
+    if (!confirmarPreview) return;
+    
+    for (const item of origensFaltando) {
+        const contaCorreta = encontrarMelhorConta(item.origem, item.tipo);
+        if (contaCorreta) {
+            try {
+                const novaRegra = {
+                    tipo: item.tipo,
+                    origem: item.origem,
+                    destino_identificador: contaCorreta.identificador,
+                    destino_caixa: item.tipo === 'RECEITA' ? getTituloFechamentoCaixa(item.origem) : null,
+                    ativo: true
+                };
+                
+                const { data, error } = await supabaseClient
+                    .from('regras_conversao')
+                    .insert(novaRegra)
+                    .select();
+                
+                if (error) throw error;
+                
+                if (data && data.length > 0) {
+                    dadosRegrasPremium.push(data[0]);
+                    criadas++;
+                }
+            } catch (error) {
+                console.error(`❌ Erro ao criar regra para ${item.origem}:`, error);
+                erros++;
+            }
+        } else {
+            erros++;
+        }
+    }
+    
+    await carregarRegrasPremium();
+    atualizarCardsResumo();
+    atualizarBarraProgresso();
+    renderizarContasPlano();
+    renderizarTabelaConversaoPremium();
+    
+    alert(
+        `⚡ CRIAÇÃO EM LOTE CONCLUÍDA!\n\n` +
+        `✅ Criadas: ${criadas}\n` +
+        `❌ Erros: ${erros}\n` +
+        `📋 Total de origens: ${origensFaltando.length}`
+    );
+}
+
+async function exportarRegrasJSON() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('regras_conversao')
+            .select('*');
+        
+        if (error) throw error;
+        
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `regras_conversao_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        alert(`✅ ${data.length} regras exportadas com sucesso!`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao exportar:', error);
+        alert('Erro ao exportar: ' + error.message);
+    }
+}
+
+async function importarRegrasJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    try {
+        const text = await file.text();
+        const dados = JSON.parse(text);
+        
+        if (!Array.isArray(dados) || dados.length === 0) {
+            alert('❌ Arquivo inválido ou vazio.');
+            return;
+        }
+        
+        const confirmar = confirm(
+            `📥 Importar ${dados.length} regras?\n\n` +
+            `Isso irá substituir TODAS as regras atuais.`
+        );
+        
+        if (!confirmar) return;
+        
+        // Validar estrutura
+        for (const regra of dados) {
+            if (!regra.origem || !regra.tipo) {
+                alert('❌ Estrutura inválida: falta origem ou tipo.');
+                return;
+            }
+        }
+        
+        const { error } = await supabaseClient
+            .from('regras_conversao')
+            .delete()
+            .neq('id', 0);
+        
+        if (error) throw error;
+        
+        const batchSize = 50;
+        let inseridos = 0;
+        
+        for (let i = 0; i < dados.length; i += batchSize) {
+            const batch = dados.slice(i, i + batchSize);
+            const { error: insertError } = await supabaseClient
+                .from('regras_conversao')
+                .insert(batch);
+            
+            if (insertError) throw insertError;
+            inseridos += batch.length;
+        }
+        
+        await carregarRegrasPremium();
+        atualizarCardsResumo();
+        atualizarBarraProgresso();
+        renderizarContasPlano();
+        renderizarTabelaConversaoPremium();
+        
+        alert(`✅ ${inseridos} regras importadas com sucesso!`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao importar:', error);
+        alert('Erro ao importar: ' + error.message);
+    }
+    
+    event.target.value = '';
+}
+
+async function salvarMapeamentoConversaoUpsert() {
+    console.log('💾 SALVANDO MAPEAMENTO COM UPSERT (NÃO DELETA)...');
+    
+    const regrasAtuais = dadosRegrasPremium;
+    const regrasDoPopup = [];
+    
+    // Coletar regras da tabela atual
+    document.querySelectorAll('#tabelaConversaoPremiumBody tr').forEach(tr => {
+        const colunas = tr.querySelectorAll('td');
+        if (colunas.length < 5) return;
+        
+        const origemCell = colunas[1];
+        if (!origemCell) return;
+        
+        const origem = origemCell.textContent.trim().split('\n')[0].trim();
+        if (!origem || origem === 'Nenhuma regra encontrada') return;
+        
+        const destinoSelect = tr.querySelector('.conversao-select-plano-receita, .conversao-select-plano-despesa');
+        let destino = '';
+        if (destinoSelect) destino = destinoSelect.value;
+        
+        const statusCell = colunas[3];
+        let tipo = 'DESPESA';
+        const tipoSpan = origemCell.querySelector('span');
+        if (tipoSpan && tipoSpan.textContent.includes('Receita')) tipo = 'RECEITA';
+        
+        if (origem && destino) {
+            const regraExistente = regrasAtuais.find(r => r.origem === origem && r.tipo === tipo);
+            if (regraExistente) {
+                regrasDoPopup.push({
+                    id: regraExistente.id,
+                    tipo: tipo,
+                    origem: origem,
+                    destino_identificador: destino,
+                    destino_caixa: tipo === 'RECEITA' ? getTituloFechamentoCaixa(origem) : null,
+                    ativo: true
+                });
+            } else {
+                regrasDoPopup.push({
+                    tipo: tipo,
+                    origem: origem,
+                    destino_identificador: destino,
+                    destino_caixa: tipo === 'RECEITA' ? getTituloFechamentoCaixa(origem) : null,
+                    ativo: true
+                });
+            }
+        }
+    });
+    
+    if (regrasDoPopup.length === 0) {
+        alert('⚠️ Nenhuma regra para salvar.');
+        return;
+    }
+    
+    let atualizados = 0;
+    let inseridos = 0;
+    let erros = 0;
+    
+    for (const regra of regrasDoPopup) {
+        if (regra.id) {
+            // UPDATE
+            try {
+                const { error } = await supabaseClient
+                    .from('regras_conversao')
+                    .update({
+                        destino_identificador: regra.destino_identificador,
+                        destino_caixa: regra.destino_caixa,
+                        ativo: regra.ativo,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', regra.id);
+                
+                if (error) throw error;
+                atualizados++;
+            } catch (error) {
+                console.error(`❌ Erro ao atualizar regra ${regra.origem}:`, error);
+                erros++;
+            }
+        } else {
+            // INSERT
+            try {
+                const { error } = await supabaseClient
+                    .from('regras_conversao')
+                    .insert({
+                        tipo: regra.tipo,
+                        origem: regra.origem,
+                        destino_identificador: regra.destino_identificador,
+                        destino_caixa: regra.destino_caixa,
+                        ativo: regra.ativo
+                    });
+                
+                if (error) throw error;
+                inseridos++;
+            } catch (error) {
+                console.error(`❌ Erro ao inserir regra ${regra.origem}:`, error);
+                erros++;
+            }
+        }
+    }
+    
+    await carregarRegrasPremium();
+    atualizarCardsResumo();
+    atualizarBarraProgresso();
+    renderizarContasPlano();
+    renderizarTabelaConversaoPremium();
+    
+    alert(
+        `✅ SALVAMENTO CONCLUÍDO!\n\n` +
+        `📝 Atualizados: ${atualizados}\n` +
+        `➕ Inseridos: ${inseridos}\n` +
+        `❌ Erros: ${erros}\n` +
+        `📋 Total de regras: ${regrasDoPopup.length}`
+    );
+}
+
+
+// ============================================================
+// FUNÇÕES DE CONVERSÃO - MODAL ANTIGO (MANTIDO PARA COMPATIBILIDADE)
+// ============================================================
+async function abrirModalConversaoSupabase() {
+    // Redirecionar para o premium
+    abrirModalConversaoPremium();
+}
+
 function fecharModalConversao() {
-    document.getElementById('modalConversao').classList.remove('active');
+    const modal = document.getElementById('modalConversao');
+    if (modal) modal.style.display = 'none';
 }
 
 function switchConversaoTab(tab, btn) {
@@ -5583,164 +6607,17 @@ function switchConversaoTab(tab, btn) {
 }
 
 async function salvarMapeamentoConversaoCompletoSupabase() {
-    console.log('💾 Salvando mapeamento de conversão na tabela regras_conversao...');
-    
-    const receitasRegras = [];
-    const despesasRegras = [];
-    
-    document.querySelectorAll('#conversaoTabReceitas .conversao-select').forEach(select => {
-        const cond = select.getAttribute('data-cond');
-        if (cond && select.value) {
-            condToTituloMap[cond] = select.value;
-        }
-    });
-    
-    document.querySelectorAll('#conversaoTabReceitas .conversao-select-plano-receita').forEach(select => {
-        const cond = select.getAttribute('data-plano-cond');
-        const planoSelecionado = select.value;
-        if (cond && planoSelecionado && planoSelecionado !== '') {
-            condToPlanoMap[cond] = planoSelecionado;
-            receitasRegras.push({
-                tipo: 'RECEITA',
-                origem: cond,
-                destino_caixa: condToTituloMap[cond] || 'VNF',
-                destino_identificador: planoSelecionado,
-                ativo: true
-            });
-        }
-    });
-    
-    document.querySelectorAll('#conversaoTabDespesas .conversao-select-plano-despesa').forEach(select => {
-        const operacao = select.getAttribute('data-operacao');
-        const planoSelecionado = select.value;
-        if (operacao && planoSelecionado && planoSelecionado !== '') {
-            operacaoToPlanoMap[operacao] = planoSelecionado;
-            despesasRegras.push({
-                tipo: 'DESPESA',
-                origem: operacao,
-                destino_caixa: null,
-                destino_identificador: planoSelecionado,
-                ativo: true
-            });
-        }
-    });
-    
-    const todasRegras = [...receitasRegras, ...despesasRegras];
-    
-    if (todasRegras.length === 0) {
-        alert('⚠️ Nenhuma regra para salvar!');
-        return;
-    }
-    
-    console.log(`📋 ${todasRegras.length} regras para salvar`);
-    
-    try {
-        const { error: deleteError } = await supabaseClient
-            .from('regras_conversao')
-            .delete()
-            .neq('id', 0);
-        
-        if (deleteError) {
-            console.error('❌ Erro ao deletar regras antigas:', deleteError);
-            alert('Erro ao deletar regras antigas: ' + deleteError.message);
-            return;
-        }
-        
-        const batchSize = 50;
-        let inseridos = 0;
-        
-        for (let i = 0; i < todasRegras.length; i += batchSize) {
-            const batch = todasRegras.slice(i, i + batchSize);
-            const { error: insertError } = await supabaseClient
-                .from('regras_conversao')
-                .insert(batch);
-            
-            if (insertError) {
-                console.error('❌ Erro ao inserir lote:', insertError);
-                alert('Erro ao salvar: ' + insertError.message);
-                return;
-            }
-            inseridos += batch.length;
-            console.log(`✅ Lote ${Math.floor(i/batchSize) + 1}: ${batch.length} inseridos`);
-        }
-        
-        localStorage.setItem('condToTituloMap', JSON.stringify(condToTituloMap));
-        localStorage.setItem('condToPlanoMap', JSON.stringify(condToPlanoMap));
-        
-        alert(`✅ ${inseridos} regras salvas com sucesso!`);
-        
-        fecharModalConversao();
-        
-    } catch (err) {
-        console.error('❌ Erro ao salvar:', err);
-        alert('Erro ao salvar: ' + err.message);
-    }
+    // Redirecionar para o novo método
+    await salvarMapeamentoConversaoUpsert();
 }
 
 async function atualizarRegrasConversao() {
-    console.log('🔄 ATUALIZANDO REGRAS DE CONVERSÃO DO SUPABASE...');
-    
-    try {
-        await carregarRegrasConversaoSupabase();
-        await carregarPlanoContasSupabase();
-        
-        const tbodyReceitas = document.getElementById('conversaoTableBodyReceitas');
-        if (tbodyReceitas) {
-            const condUnicas = [...new Set(vendasData.map(v => v.cond_pag).filter(c => c && c !== '-'))];
-            let html = '';
-            for (const cond of condUnicas) {
-                const tituloAtual = condToTituloMap[cond] || 'VNF';
-                const planoAtual = condToPlanoMap[cond] || '';
-                html += `<tr>
-                    <td><strong>${escapeHtml(cond)}</strong></td>
-                    <td>
-                        <select class="conversao-select" data-cond="${escapeHtml(cond)}">
-                            <option value="DINHEIRO" ${tituloAtual === 'DINHEIRO' ? 'selected' : ''}>DINHEIRO</option>
-                            <option value="DEBITO" ${tituloAtual === 'DEBITO' ? 'selected' : ''}>DEBITO</option>
-                            <option value="CREDITO" ${tituloAtual === 'CREDITO' ? 'selected' : ''}>CREDITO</option>
-                            <option value="CREDITO PARCELADO" ${tituloAtual === 'CREDITO PARCELADO' ? 'selected' : ''}>CREDITO PARCELADO</option>
-                            <option value="AG" ${tituloAtual === 'AG' ? 'selected' : ''}>AG</option>
-                            <option value="PIX" ${tituloAtual === 'PIX' ? 'selected' : ''}>PIX</option>
-                            <option value="VNF" ${tituloAtual === 'VNF' ? 'selected' : ''}>VNF</option>
-                        </select>
-                    </td>
-                    <td>
-                        <select class="conversao-select-plano-receita" data-plano-cond="${escapeHtml(cond)}">
-                            <option value="">Selecione...</option>
-                            ${estruturaDRE.receitas.map(p => `<option value="${p.identificador || p.nome}" ${(planoAtual === p.identificador || planoAtual === p.nome) ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
-                        </select>
-                    </td>
-                </tr>`;
-            }
-            tbodyReceitas.innerHTML = html;
-        }
-        
-        const tbodyDespesas = document.getElementById('conversaoTableBodyDespesas');
-        if (tbodyDespesas) {
-            const todosPlanosDespesa = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
-            const operacoesUnicas = [...new Set(despesasDataReais.map(d => d.operacao).filter(op => op && op !== '-'))];
-            let html = '';
-            for (const operacao of operacoesUnicas) {
-                const planoAtual = operacaoToPlanoMap[operacao] || '';
-                html += `<tr>
-                    <td><strong>${escapeHtml(operacao)}</strong></td>
-                    <td>
-                        <select class="conversao-select-plano-despesa" data-operacao="${escapeHtml(operacao)}">
-                            <option value="">Selecione...</option>
-                            ${todosPlanosDespesa.map(p => `<option value="${p.identificador || p.nome}" ${(planoAtual === p.identificador || planoAtual === p.nome) ? 'selected' : ''}>${p.cod} - ${p.nome}</option>`).join('')}
-                        </select>
-                    </td>
-                </tr>`;
-            }
-            tbodyDespesas.innerHTML = html;
-        }
-        
-        alert('✅ Regras atualizadas do Supabase com sucesso!');
-        
-    } catch (error) {
-        console.error('❌ Erro ao atualizar regras:', error);
-        alert('Erro ao atualizar regras: ' + error.message);
-    }
+    await carregarRegrasPremium();
+    atualizarCardsResumo();
+    atualizarBarraProgresso();
+    renderizarContasPlano();
+    renderizarTabelaConversaoPremium();
+    alert('✅ Regras atualizadas do Supabase com sucesso!');
 }
 
 // ============================================================
@@ -8643,7 +9520,7 @@ function toggleCommandBar() {
         'modalFechamentoCaixa', 'modalEstatisticas', 'modalConversao', 'modalComparativos',
         'modalPeriodoPDF', 'modalPeriodoCaixaPDF', 'modalPlano', 'modalEditConta',
         'modalDrilldownReceitas', 'modalDrilldownDespesas', 'modalConsultaConversao', 
-        'modalDrilldownValor', 'modalAuditoriaIntegracao'
+        'modalDrilldownValor', 'modalAuditoriaIntegracao', 'modalConversaoPremium'
     ];
 
     function fecharTodosModais() {
@@ -8676,6 +9553,7 @@ function toggleCommandBar() {
         else if (id === 'modalConsultaConversao') nomeFuncao = 'abrirModalConsultaConversao';
         else if (id === 'modalDrilldownValor') nomeFuncao = 'abrirDetalhamentoValor';
         else if (id === 'modalAuditoriaIntegracao') nomeFuncao = 'abrirPopupAuditoria';
+        else if (id === 'modalConversaoPremium') nomeFuncao = 'abrirModalConversaoPremium';
         
         const funcaoOriginal = window[nomeFuncao];
         
@@ -9052,5 +9930,191 @@ window.forcarCorrecaoAgora = async function() {
 console.log('✅ Correção definitiva instalada!');
 console.log('📌 Para forçar a correção agora, execute: forcarCorrecaoAgora()');
 </script>
+<!-- ========================================== -->
+<!-- CORREÇÃO DEFINITIVA DO DRE - FIM DO ARQUIVO -->
+<!-- ========================================== -->
+<script>
+(function() {
+    console.log('🔧 CORREÇÃO DEFINITIVA ATIVADA!');
+    
+    // Aguardar o DOM carregar completamente
+    function aguardarEExecutar() {
+        // Verificar se as funções necessárias existem
+        if (typeof extrairMes === 'undefined' || 
+            typeof formatarMoeda === 'undefined' || 
+            typeof adicionarEventosCliqueDRE === 'undefined' ||
+            typeof estruturaDRE === 'undefined') {
+            console.log('⏳ Aguardando funções carregarem...');
+            setTimeout(aguardarEExecutar, 500);
+            return;
+        }
+        
+        console.log('✅ Funções carregadas! Aplicando correção...');
+        
+        // Sobrescrever a função
+        window.gerarDREComSupabase = async function() {
+            console.log('🔄 DRE - CORREÇÃO ATIVADA (COMPARAÇÃO EXATA)');
+            try {
+                const corpo = document.getElementById('corpoDRE');
+                if (!corpo) return;
+                
+                function calc(id, mes) {
+                    let total = 0;
+                    if (typeof receitasDataReais !== 'undefined') {
+                        receitasDataReais.forEach(r => {
+                            if (extrairMes(r.data) === mes && r.plano === id) {
+                                total += Number(r.valor) || 0;
+                            }
+                        });
+                    }
+                    if (typeof despesasDataReais !== 'undefined') {
+                        despesasDataReais.forEach(d => {
+                            if (extrairMes(d.data) === mes && d.plano === id) {
+                                total += Number(d.valor) || 0;
+                            }
+                        });
+                    }
+                    if (typeof contasExtrasData !== 'undefined') {
+                        contasExtrasData.forEach(s => {
+                            if (extrairMes(s.dt_pagto) === mes && s.plano === id) {
+                                total += Number(s.valor) || 0;
+                            }
+                        });
+                    }
+                    return total;
+                }
+                
+                function add(cod, nome, vals, cls) {
+                    const tr = document.createElement('tr');
+                    tr.className = cls || '';
+                    let total = 0;
+                    let html = `<td>${cod ? cod + ' - ' + nome : nome}</td>`;
+                    for (let i = 0; i < 12; i++) {
+                        const v = vals[i] || 0;
+                        total += v;
+                        if (v !== 0) tr.classList.add('linha-com-movimentacao');
+                        html += `<td class="${v >= 0 ? 'valor-positivo' : 'valor-negativo'}">${formatarMoeda(v)}</td>`;
+                    }
+                    html += `<td class="${total >= 0 ? 'valor-positivo' : 'valor-negativo'}">${formatarMoeda(total)}</td>`;
+                    tr.innerHTML = html;
+                    corpo.appendChild(tr);
+                }
+                
+                corpo.innerHTML = '';
+                
+                // RECEITAS
+                const recMensal = [];
+                for (let m = 0; m < 12; m++) {
+                    let t = 0;
+                    if (estruturaDRE && estruturaDRE.receitas) {
+                        estruturaDRE.receitas.forEach(r => {
+                            t += calc(r.identificador || `${r.cod} - ${r.nome}`, m);
+                        });
+                    }
+                    recMensal[m] = t;
+                }
+                add('', 'RECEITAS TOTAIS', recMensal, 'dre-group-title');
+                
+                if (estruturaDRE && estruturaDRE.receitas) {
+                    estruturaDRE.receitas.forEach(r => {
+                        const vals = [];
+                        const id = r.identificador || `${r.cod} - ${r.nome}`;
+                        for (let m = 0; m < 12; m++) vals[m] = calc(id, m);
+                        add(r.cod, r.nome, vals, 'dre-subgroup');
+                    });
+                }
+                
+                // CUSTOS VARIAVEIS
+                const dvMensal = [];
+                for (let m = 0; m < 12; m++) {
+                    let t = 0;
+                    if (estruturaDRE && estruturaDRE.custosVariaveis) {
+                        estruturaDRE.custosVariaveis.forEach(c => {
+                            t += calc(c.identificador || `${c.cod} - ${c.nome}`, m);
+                        });
+                    }
+                    dvMensal[m] = -Math.abs(t);
+                }
+                add('', 'CUSTOS VARIAVEIS', dvMensal, 'dre-group-title');
+                
+                if (estruturaDRE && estruturaDRE.custosVariaveis) {
+                    estruturaDRE.custosVariaveis.forEach(c => {
+                        const vals = [];
+                        const id = c.identificador || `${c.cod} - ${c.nome}`;
+                        for (let m = 0; m < 12; m++) vals[m] = -Math.abs(calc(id, m));
+                        add(c.cod, c.nome, vals, 'dre-subgroup');
+                    });
+                }
+                
+                const lb = recMensal.map((r, i) => r + dvMensal[i]);
+                add('', 'LUCRO BRUTO', lb, 'dre-total-row');
+                
+                // CUSTOS FIXOS
+                const dfMensal = [];
+                for (let m = 0; m < 12; m++) {
+                    let t = 0;
+                    if (estruturaDRE && estruturaDRE.custosFixos) {
+                        estruturaDRE.custosFixos.forEach(c => {
+                            t += calc(c.identificador || `${c.cod} - ${c.nome}`, m);
+                        });
+                    }
+                    dfMensal[m] = -Math.abs(t);
+                }
+                add('', 'CUSTOS FIXOS', dfMensal, 'dre-group-title');
+                
+                if (estruturaDRE && estruturaDRE.custosFixos) {
+                    estruturaDRE.custosFixos.forEach(c => {
+                        const vals = [];
+                        const id = c.identificador || `${c.cod} - ${c.nome}`;
+                        for (let m = 0; m < 12; m++) vals[m] = -Math.abs(calc(id, m));
+                        add(c.cod, c.nome, vals, 'dre-subgroup');
+                    });
+                }
+                
+                const ro = lb.map((l, i) => l + dfMensal[i]);
+                add('', 'RESULTADO OPERACIONAL', ro, 'dre-total-row');
+                
+                if (typeof adicionarEventosCliqueDRE === 'function') {
+                    adicionarEventosCliqueDRE();
+                }
+                console.log('✅ DRE CORRIGIDO!');
+            } catch(e) { console.error('Erro no DRE:', e); }
+        };
+        
+        // Reaplicar planos
+        function reaplicarPlanos() {
+            console.log('🔄 Reaplicando planos...');
+            if (typeof receitasDataReais !== 'undefined' && typeof condToPlanoMap !== 'undefined') {
+                receitasDataReais.forEach(r => {
+                    const p = condToPlanoMap[r.cond_pag];
+                    if (p) r.plano = p;
+                });
+                const pr = {};
+                receitasDataReais.forEach(r => pr[r.id] = r.plano);
+                localStorage.setItem('planos_receitas_personalizados', JSON.stringify(pr));
+            }
+            if (typeof despesasDataReais !== 'undefined' && typeof operacaoToPlanoMap !== 'undefined') {
+                despesasDataReais.forEach(d => {
+                    const p = operacaoToPlanoMap[d.operacao];
+                    if (p) d.plano = p;
+                });
+                const pd = {};
+                despesasDataReais.forEach(d => pd[d.id] = d.plano);
+                localStorage.setItem('planos_despesas_personalizados', JSON.stringify(pd));
+            }
+            console.log('✅ Planos reaplicados!');
+        }
+        
+        // Executar correção
+        reaplicarPlanos();
+        window.gerarDREComSupabase();
+        console.log('✅ CORREÇÃO DEFINITIVA APLICADA!');
+    }
+    
+    // Iniciar o processo de espera
+    aguardarEExecutar();
+})();
+</script>
+
 </body>
 </html>
