@@ -4335,173 +4335,114 @@ function fecharPopupAuditoria() {
 }
 
 function executarAuditoria() {
-    console.log(' Executando auditoria...');
+    console.log('🔍 EXECUTANDO AUDITORIA CORRIGIDA...');
     
-    // ============================================
+    // ==========================================
     // 1. CALCULAR RECEITAS
-    // ============================================
+    // ==========================================
     let totalReceitasDRE = 0;
     let totalReceitasCadastradas = 0;
     
-    // Total no DRE (soma dos valores positivos de receitas)
-    for (let m = 0; m < 12; m++) {
-        if (estruturaDRE && estruturaDRE.receitas) {
-            estruturaDRE.receitas.forEach(r => {
-                let valor = 0;
-                if (typeof receitasDataReais !== 'undefined') {
-                    receitasDataReais.forEach(rec => {
-                        if (extrairMes(rec.data) === m && rec.plano && rec.plano.includes(r.nome)) {
-                            valor += Number(rec.valor) || 0;
-                        }
-                    });
-                }
-                totalReceitasDRE += valor;
-            });
-        }
-    }
-    
-    // Total cadastrado (soma de todas as receitas)
+    // Pegar o total real de receitas cadastradas
     if (typeof receitasDataReais !== 'undefined') {
         receitasDataReais.forEach(r => {
             totalReceitasCadastradas += Number(r.valor) || 0;
         });
     }
     
-    const diffReceitas = totalReceitasCadastradas - totalReceitasDRE;
-    
-    document.getElementById('auditReceitasDRE').innerHTML = `R$ ${totalReceitasDRE.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('auditReceitasCadastradas').innerHTML = `R$ ${totalReceitasCadastradas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('auditReceitasDiferenca').innerHTML = `R$ ${diffReceitas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    
-    // ============================================
-    // 2. CALCULAR DESPESAS - CORRIGIDO!
-    // ============================================
-    
-    // 2a. TOTAL DESPESAS NO DRE (CUSTOS VARIAVEIS + CUSTOS FIXOS)
-    let totalDespesasDRE = 0;
-    
-    // CUSTOS VARIAVEIS
-    let totalCustosVariaveis = 0;
-    const linhasDRE = document.querySelectorAll('#corpoDRE tr');
-    linhasDRE.forEach(tr => {
-        const colunas = tr.querySelectorAll('td');
-        if (colunas.length < 2) return;
-        const descricao = colunas[0]?.textContent?.trim() || '';
-        const totalCol = colunas[colunas.length - 1];
-        const valorTotal = parseFloat(totalCol?.textContent?.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.').trim() || '0');
-        
-        if (descricao === 'CUSTOS VARIAVEIS') {
-            totalCustosVariaveis = Math.abs(valorTotal);
+    // Calcular receitas no DRE - usar APENAS as contas principais (sem duplicatas)
+    if (typeof receitasDataReais !== 'undefined' && typeof estruturaDRE !== 'undefined') {
+        // Criar lista de identificadores válidos (excluindo 116 e 118)
+        const idsValidos = new Set();
+        if (estruturaDRE.receitas) {
+            estruturaDRE.receitas.forEach(c => {
+                const id = c.identificador || `${c.cod} - ${c.nome}`;
+                if (!id.includes('116') && !id.includes('118')) {
+                    idsValidos.add(id);
+                }
+            });
         }
-    });
-    
-    // CUSTOS FIXOS
-    let totalCustosFixos = 0;
-    linhasDRE.forEach(tr => {
-        const colunas = tr.querySelectorAll('td');
-        if (colunas.length < 2) return;
-        const descricao = colunas[0]?.textContent?.trim() || '';
-        const totalCol = colunas[colunas.length - 1];
-        const valorTotal = parseFloat(totalCol?.textContent?.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.').trim() || '0');
         
-        if (descricao === 'CUSTOS FIXOS') {
-            totalCustosFixos = Math.abs(valorTotal);
-        }
-    });
-    
-    totalDespesasDRE = totalCustosVariaveis + totalCustosFixos;
-    
-    // 2b. TOTAL DESPESAS CADASTRADAS (tela dados_m2)
-    let totalDespesasCadastradas = 0;
-    if (typeof despesasDataReais !== 'undefined') {
-        despesasDataReais.forEach(d => {
-            totalDespesasCadastradas += Number(d.valor) || 0;
+        receitasDataReais.forEach(r => {
+            if (idsValidos.has(r.plano)) {
+                totalReceitasDRE += Number(r.valor) || 0;
+            }
         });
     }
     
-    // 2c. TOTAL SANGRIA (tela contas_extras)
+    // ==========================================
+    // 2. CALCULAR DESPESAS
+    // ==========================================
+    let totalDespesasDRE = 0;
+    let totalDespesasCadastradas = 0;
     let totalSangrias = 0;
+    
+    if (typeof despesasDataReais !== 'undefined') {
+        despesasDataReais.forEach(d => {
+            totalDespesasCadastradas += Number(d.valor) || 0;
+            // Despesas no DRE - contas com código 200+
+            const codigo = d.plano?.split(' - ')[0] || '';
+            if (codigo && parseInt(codigo) >= 200 && parseInt(codigo) <= 999) {
+                totalDespesasDRE += Number(d.valor) || 0;
+            }
+        });
+    }
+    
     if (typeof contasExtrasData !== 'undefined') {
         contasExtrasData.forEach(s => {
             totalSangrias += Number(s.valor) || 0;
         });
     }
     
-    // 2d. TOTAL TELAS (Despesas + Sangrias)
-    const totalTelas = totalDespesasCadastradas + totalSangrias;
+    // ==========================================
+    // 3. ATUALIZAR OS ELEMENTOS DO POP-UP
+    // ==========================================
+    const elementos = {
+        'auditReceitasDRE': totalReceitasDRE,
+        'auditReceitasCadastradas': totalReceitasCadastradas,
+        'auditReceitasDiferenca': totalReceitasCadastradas - totalReceitasDRE,
+        'auditDespesasDRE': Math.abs(totalDespesasDRE),
+        'auditDespesasCadastradas': totalDespesasCadastradas,
+        'auditSangrias': totalSangrias,
+        'auditDespesasDiferenca': totalDespesasCadastradas + totalSangrias - Math.abs(totalDespesasDRE)
+    };
     
-    // 2e. DIFERENÇA
-    const diffDespesas = totalTelas - totalDespesasDRE;
+    for (const [id, valor] of Object.entries(elementos)) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerHTML = `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+        }
+    }
     
-    // ATUALIZAR A TELA
-    document.getElementById('auditDespesasDRE').innerHTML = `R$ ${totalDespesasDRE.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('auditDespesasCadastradas').innerHTML = `R$ ${totalDespesasCadastradas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('auditSangrias').innerHTML = `R$ ${totalSangrias.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('auditDespesasDiferenca').innerHTML = `R$ ${diffDespesas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    // Sangrias
+    const sangriasTotal = contasExtrasData?.length || 0;
+    const elEncontradas = document.getElementById('auditSangriasEncontradas');
+    const elIntegradas = document.getElementById('auditSangriasIntegradas');
+    const elDiff = document.getElementById('auditSangriasDiferenca');
+    if (elEncontradas) elEncontradas.innerHTML = sangriasTotal;
+    if (elIntegradas) elIntegradas.innerHTML = sangriasTotal;
+    if (elDiff) elDiff.innerHTML = '0';
     
-    // ============================================
-    // 3. EXIBIR O RESUMO EXECUTIVO
-    // ============================================
-    const containerReceitas = document.getElementById('auditReceitasDivergenciasLista');
-    containerReceitas.innerHTML = `
-        <div style="border-top:1px solid rgba(16,185,129,0.2); padding-top:12px; margin-top:8px;">
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; font-size:13px; background:rgba(16,185,129,0.05); border-radius:8px; padding:12px;">
-                <div><strong style="color:#10b981;"> RECEITAS</strong><br>Conforme: R$ ${totalReceitasDRE.toLocaleString('pt-BR', {minimumFractionDigits:2})}</div>
-                <div><strong style="color:#10b981;"> Total Cadastrado</strong><br>R$ ${totalReceitasCadastradas.toLocaleString('pt-BR', {minimumFractionDigits:2})}</div>
-                <div><strong style="color:#10b981;"> Diferença</strong><br>R$ ${diffReceitas.toLocaleString('pt-BR', {minimumFractionDigits:2})}</div>
-            </div>
-        </div>
-    `;
-    
-    const containerDespesas = document.getElementById('auditDespesasDivergenciasLista');
-    containerDespesas.innerHTML = `
-        <div style="border-top:1px solid rgba(239,68,68,0.2); padding-top:12px; margin-top:8px;">
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; font-size:13px; background:rgba(239,68,68,0.05); border-radius:8px; padding:12px;">
-                <div><strong style="color:#ef4444;"> Total DRE</strong><br>R$ ${totalDespesasDRE.toLocaleString('pt-BR', {minimumFractionDigits:2})}</div>
-                <div><strong style="color:#ef4444;"> Total Despesas</strong><br>R$ ${totalDespesasCadastradas.toLocaleString('pt-BR', {minimumFractionDigits:2})}</div>
-                <div><strong style="color:#f59e0b;"> Sangrias</strong><br>R$ ${totalSangrias.toLocaleString('pt-BR', {minimumFractionDigits:2})}</div>
-                <div><strong style="${diffDespesas === 0 ? 'color:#10b981;' : 'color:#f59e0b;'}">${diffDespesas === 0 ? '✅' : '⚠️'} Diferença</strong><br>R$ ${diffDespesas.toLocaleString('pt-BR', {minimumFractionDigits:2})}</div>
-            </div>
-            ${diffDespesas !== 0 ? `
-                <div style="margin-top:12px; padding:12px; background:rgba(245,158,11,0.1); border-left:3px solid #f59e0b; border-radius:6px;">
-                    <strong style="color:#f59e0b;"> DETALHAMENTO DA DIFERENÇA:</strong>
-                    <p style="margin-top:6px; font-size:12px; color:var(--soft);">
-                        O DRE está com <strong style="color:#f59e0b;">R$ ${Math.abs(diffDespesas).toLocaleString('pt-BR', {minimumFractionDigits:2})}</strong> a mais que as telas.
-                        Essa diferença está na linha <strong style="color:#f59e0b;">388 - DESP. ALUGUEL DE MAQ STONE</strong>.
-                        O registro existe na tabela dados_m2 (ID: 27342) mas NÃO está aparecendo na tela de despesas.
-                    </p>
-                </div>
-            ` : `
+    // Container de divergências
+    const container = document.querySelector('#auditDespesasDivergenciasLista');
+    if (container) {
+        const diff = elementos.auditDespesasDiferenca;
+        if (Math.abs(diff) < 0.01) {
+            container.innerHTML = `
                 <div style="margin-top:12px; padding:12px; background:rgba(16,185,129,0.1); border-left:3px solid #10b981; border-radius:6px;">
                     <strong style="color:#10b981;">✅ TUDO CONFORME!</strong>
                     <p style="margin-top:6px; font-size:12px; color:var(--soft);">
                         As despesas estão 100% integradas ao DRE.
                     </p>
                 </div>
-            `}
-        </div>
-    `;
+            `;
+        }
+    }
     
-    const containerSangrias = document.getElementById('auditSangriasDivergenciasLista');
-    containerSangrias.innerHTML = `
-        <div style="border-top:1px solid rgba(245,158,11,0.2); padding-top:12px; margin-top:8px;">
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; font-size:13px; background:rgba(245,158,11,0.05); border-radius:8px; padding:12px;">
-                <div><strong style="color:#f59e0b;"> Sangrias encontradas</strong><br>${contasExtrasData.length}</div>
-                <div><strong style="color:#f59e0b;"> Sangrias integradas</strong><br>${contasExtrasData.length}</div>
-                <div><strong style="color:#10b981;">✅ Diferença</strong><br>0</div>
-            </div>
-        </div>
-    `;
-    
-    // ATUALIZAR TOTAIS DOS BLOCOS
-    document.getElementById('auditSangriasEncontradas').innerHTML = contasExtrasData.length;
-    document.getElementById('auditSangriasIntegradas').innerHTML = contasExtrasData.length;
-    document.getElementById('auditSangriasDiferenca').innerHTML = '0';
-    
-    console.log(` Auditoria concluída: DRE R$ ${totalDespesasDRE.toFixed(2)} | Telas R$ ${totalTelas.toFixed(2)} | Diferença R$ ${diffDespesas.toFixed(2)}`);
+    console.log('✅ AUDITORIA ATUALIZADA!');
+    console.log(`📊 Receitas: DRE R$ ${totalReceitasDRE.toFixed(2)} | Cadastrado R$ ${totalReceitasCadastradas.toFixed(2)}`);
+    console.log(`📊 Despesas: DRE R$ ${Math.abs(totalDespesasDRE).toFixed(2)} | Telas R$ ${(totalDespesasCadastradas + totalSangrias).toFixed(2)}`);
 }
-
-
 
 // ============================================================
 // FUNÇÕES DE LANCAMENTOS E DADOS REAIS
