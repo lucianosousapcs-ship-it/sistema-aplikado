@@ -748,7 +748,7 @@
             }
         }
 
-        /* ===== POPUP IMAGEM ===== */
+        /* ===== POPUP IMAGEM ORIGINAL (que já existia) ===== */
         .image-popup-overlay {
             position: fixed;
             top: 0;
@@ -814,6 +814,71 @@
         .image-popup-close:hover {
             background: #e6b800;
             transform: scale(1.1);
+        }
+
+        /* ===== NOVO POPUP DE LOGIN MOBILE (acessado ao clicar no Login) ===== */
+        .login-mobile-popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+        }
+        .login-mobile-popup-content {
+            background: #0a0a0a;
+            max-width: 750px;
+            width: 95%;
+            border-radius: 32px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 208, 0, 0.2);
+            margin: 20px auto;
+        }
+        .login-mobile-popup-close {
+            position: absolute;
+            top: 20px;
+            right: 24px;
+            background: transparent;
+            border: none;
+            color: #9ca3af;
+            font-size: 28px;
+            cursor: pointer;
+            transition: color 0.2s;
+            z-index: 10;
+            font-weight: 300;
+        }
+        .login-mobile-popup-close:hover {
+            color: #ffd000;
+        }
+        .login-mobile-popup-body {
+            padding: 40px;
+            text-align: center;
+        }
+        .login-mobile-popup-body h3 {
+            color: #ffd000;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .login-mobile-popup-body img {
+            width: 100%;
+            height: auto;
+            max-height: 60vh;
+            object-fit: contain;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 208, 0, 0.1);
+        }
+        .login-mobile-popup-body p {
+            color: #9ca3af;
+            margin-top: 20px;
+            font-size: 0.9rem;
         }
 
         /* ===== CHATBOT TAAS DA APLIKADO ===== */
@@ -1261,9 +1326,9 @@
         <div class="social-icons-top">
             <!-- BOTÃO ATENDIMENTO VIRTUAL - ABRE O CHAT COM BADGE DE NOTIFICAÇÃO -->
             <button class="btn-virtual-attendance" id="btnVirtualAttendance">
-    <i class="fas fa-headset"></i>
-    <span class="btn-text">Atendimento Virtual</span>
-</button>
+                <i class="fas fa-headset"></i>
+                <span class="btn-text">Atendimento Virtual</span>
+            </button>
             <button class="btn-diagnostic-top" id="openDiagnosticBtn"><i class="fas fa-chart-line"></i> Diagnóstico em 5 Minutos</button>
             <a href="https://www.linkedin.com/company/aplikado/?viewAsMember=true" target="_blank"><i class="fab fa-linkedin-in"></i></a>
             <a href="https://www.instagram.com/aplikadosolucoes/" target="_blank"><i class="fab fa-instagram"></i></a>
@@ -1387,8 +1452,24 @@
         </div>
     </div>
 
+    <!-- ===== POPUP DE IMAGEM ORIGINAL (que já existia) ===== -->
     <div id="imagePopup" class="image-popup-overlay">
-        <div class="image-popup-container"><button class="image-popup-close" id="closeImagePopup">&times;</button><img src="https://images.unsplash.com/photo-1781778418397-d304d9570816?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Destaque Aplikado TaaS"></div>
+        <div class="image-popup-container">
+            <button class="image-popup-close" id="closeImagePopup">&times;</button>
+            <img src="https://images.unsplash.com/photo-1781778418397-d304d9570816?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Destaque Aplikado TaaS">
+        </div>
+    </div>
+
+    <!-- ===== NOVO POPUP DE LOGIN MOBILE (acessado ao clicar no Login) ===== -->
+    <div id="loginMobilePopup" class="login-mobile-popup-overlay">
+        <div class="login-mobile-popup-content">
+            <button class="login-mobile-popup-close" id="closeLoginMobilePopup">&times;</button>
+            <div class="login-mobile-popup-body">
+                <h3>Acesso Exclusivo</h3>
+                <img src="https://images.pexels.com/photos/38232734/pexels-photo-38232734.png" alt="Login Mobile">
+                <p>Toque fora da imagem ou no X para fechar</p>
+            </div>
+        </div>
     </div>
 
     <!-- ===== CHATBOT TAAS DA APLIKADO ===== -->
@@ -1655,6 +1736,65 @@
                     badge.innerText = count > 9 ? '9+' : count; } else if (badge) { badge.style.display = 'none'; }
             }
 
+            // ===== CONTROLE DO POPUP DE IMAGEM ORIGINAL =====
+            const imagePopup = document.getElementById('imagePopup');
+            const closeImagePopup = document.getElementById('closeImagePopup');
+            let popupClosed = false;
+
+            // Popup original (que já existia) - abre automaticamente
+            if (imagePopup && !popupClosed) {
+                setTimeout(() => {
+                    imagePopup.classList.add('active');
+                }, 500);
+            }
+
+            function closePopupAndOpenChat() {
+                if (imagePopup) {
+                    imagePopup.classList.remove('active');
+                    popupClosed = true;
+                }
+            }
+
+            if (closeImagePopup) {
+                closeImagePopup.addEventListener('click', closePopupAndOpenChat);
+            }
+
+            if (imagePopup) {
+                imagePopup.addEventListener('click', (e) => {
+                    if (e.target === imagePopup) {
+                        closePopupAndOpenChat();
+                    }
+                });
+            }
+
+            // ===== CONTROLE DO NOVO POPUP DE LOGIN MOBILE =====
+            const loginMobilePopup = document.getElementById('loginMobilePopup');
+            const closeLoginMobilePopup = document.getElementById('closeLoginMobilePopup');
+
+            function openLoginMobilePopup() {
+                if (loginMobilePopup) {
+                    loginMobilePopup.style.display = 'flex';
+                }
+            }
+
+            function closeLoginMobilePopupFunc() {
+                if (loginMobilePopup) {
+                    loginMobilePopup.style.display = 'none';
+                }
+            }
+
+            if (closeLoginMobilePopup) {
+                closeLoginMobilePopup.addEventListener('click', closeLoginMobilePopupFunc);
+            }
+
+            if (loginMobilePopup) {
+                loginMobilePopup.addEventListener('click', (e) => {
+                    if (e.target === loginMobilePopup) {
+                        closeLoginMobilePopupFunc();
+                    }
+                });
+            }
+
             // ===== FUNÇÃO PARA ATUALIZAR O BADGE DE MENSAGENS DO CHATBOT =====
             async function updateChatBadge() {
                 try {
@@ -1827,11 +1967,25 @@
                     idx = (idx + 1) % slides.length;
                     slides[idx].classList.add("active"); }, 5000); }
 
+            // ===== LOGIN - ABRE POPUP DIFERENTE POR DISPOSITIVO =====
             const loginModal = document.getElementById('loginModal');
             const openLoginBtns = document.querySelectorAll('#openModalBtn, #openModalBtnMobile');
             const closeLogin = document.getElementById('closeModal');
-            openLoginBtns.forEach(btn => { btn.addEventListener('click', (e) => { e.preventDefault();
-                    loginModal.style.display = 'flex'; }); });
+
+            openLoginBtns.forEach(btn => { 
+                btn.addEventListener('click', (e) => { 
+                    e.preventDefault();
+                    // Verifica se é dispositivo móvel (largura menor que 768px)
+                    if (window.innerWidth <= 768) {
+                        // Em mobile, abre o novo popup de login mobile
+                        openLoginMobilePopup();
+                    } else {
+                        // Em desktop, mostra o modal de login normal
+                        loginModal.style.display = 'flex';
+                    }
+                }); 
+            });
+
             if (closeLogin) closeLogin.onclick = () => loginModal.style.display = 'none';
             window.addEventListener('click', (e) => { if (e.target === loginModal) loginModal.style.display = 'none'; });
 
@@ -1842,17 +1996,6 @@
                 if (clientRedirects[user] && pass === '123') { window.location.href = clientRedirects[user]; } else {
                     alert('Credenciais inválidas. Verifique usuário e senha.'); }
             });
-
-            const imagePopup = document.getElementById('imagePopup');
-            const closeImagePopup = document.getElementById('closeImagePopup');
-            let popupClosed = false;
-            if (imagePopup && !popupClosed) { setTimeout(() => { imagePopup.classList.add('active'); }, 500); }
-
-            function closePopupAndOpenChat() { if (imagePopup) { imagePopup.classList.remove('active');
-                    popupClosed = true; } }
-            if (closeImagePopup) closeImagePopup.addEventListener('click', closePopupAndOpenChat);
-            if (imagePopup) imagePopup.addEventListener('click', (e) => { if (e.target === imagePopup)
-                closePopupAndOpenChat(); });
 
             // ===== CHATBOT TAAS DA APLIKADO =====
             const chatWindow = document.getElementById('taasChatWindow');
