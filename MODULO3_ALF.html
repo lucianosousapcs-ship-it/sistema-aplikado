@@ -4013,7 +4013,7 @@ async function verificarSeHaRegistrosNoMes(dataInicio, dataFim) {
 }
 
 // ============================================================
-// FUNÇÃO GERAR PDF DRE
+// FUNÇÃO GERAR PDF DRE - COM FILTRO DE LINHAS SEM MOVIMENTO (AJUSTE 01)
 // ============================================================
 async function gerarPDFDRE() {
     await gerarDREComSupabase();
@@ -4064,12 +4064,18 @@ async function gerarPDFDRE() {
         }
 
         const valoresMensais = [];
+        let temMovimento = false;
         for (let i = 1; i < colunas.length - 1; i++) {
             const valorNumerico = extrairNumeroDaCelula(colunas[i]);
             valoresMensais.push(valorNumerico);
+            if (valorNumerico !== 0) temMovimento = true;
         }
         
         const totalAnual = extrairNumeroDaCelula(colunas[colunas.length - 1]);
+        if (totalAnual !== 0) temMovimento = true;
+
+        // AJUSTE 01: PULAR LINHAS SEM MOVIMENTO
+        if (!temMovimento) continue;
 
         let tipo = 'item';
         if (linha.classList.contains('dre-group-title')) tipo = 'grupo';
