@@ -9451,14 +9451,101 @@ function exportarResultadosCSV() { exportarResultadosExcel(); }
 function exportarResultadosPDF() { alert(' Exportação PDF em desenvolvimento para a próxima versão'); }
 
 // ============================================================
-// COMMAND BAR TOGGLE
+// COMMAND BAR TOGGLE (AJUSTE 04 - Esconder Barra)
 // ============================================================
 let barVisible = true;
+
 function toggleCommandBar() {
     barVisible = !barVisible;
     const bar = document.getElementById('commandBar');
-    if(bar) bar.classList.toggle('hidden', !barVisible);
+    if (bar) {
+        bar.classList.toggle('hidden', !barVisible);
+        // Salvar estado
+        localStorage.setItem('command_bar_visivel', barVisible ? 'true' : 'false');
+        // Atualizar ícone do toggle
+        const toggleBtn = document.getElementById('toggleCmdBar');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = barVisible ? '▼' : '▲';
+            toggleBtn.title = barVisible ? 'Esconder Barra' : 'Mostrar Barra';
+        }
+        // Mostrar/ocultar botão de restauração se necessário
+        const restoreBtn = document.getElementById('restoreCmdBar');
+        if (!barVisible) {
+            if (!restoreBtn) {
+                const btn = document.createElement('button');
+                btn.id = 'restoreCmdBar';
+                btn.className = 'cmd-btn cmd-btn-primary';
+                btn.innerHTML = '▲ MOSTRAR BARRA';
+                btn.onclick = toggleCommandBar;
+                btn.style.position = 'fixed';
+                btn.style.bottom = '24px';
+                btn.style.left = '50%';
+                btn.style.transform = 'translateX(-50%)';
+                btn.style.zIndex = '10001';
+                btn.style.background = '#11161E';
+                btn.style.border = '1px solid rgba(230,160,23,0.35)';
+                btn.style.borderRadius = '60px';
+                btn.style.padding = '10px 24px';
+                btn.style.color = '#f5b800';
+                btn.style.fontSize = '13px';
+                btn.style.fontWeight = '600';
+                btn.style.cursor = 'pointer';
+                btn.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.5)';
+                document.body.appendChild(btn);
+            }
+        } else {
+            const restoreBtnEl = document.getElementById('restoreCmdBar');
+            if (restoreBtnEl) restoreBtnEl.remove();
+        }
+    }
 }
+
+// Inicializar estado da barra ao carregar
+document.addEventListener('DOMContentLoaded', function() {
+    const savedState = localStorage.getItem('command_bar_visivel');
+    if (savedState !== null) {
+        barVisible = savedState === 'true';
+        const bar = document.getElementById('commandBar');
+        if (bar) {
+            bar.classList.toggle('hidden', !barVisible);
+            const toggleBtn = document.getElementById('toggleCmdBar');
+            if (toggleBtn) {
+                toggleBtn.innerHTML = barVisible ? '▼' : '▲';
+                toggleBtn.title = barVisible ? 'Esconder Barra' : 'Mostrar Barra';
+            }
+            if (!barVisible) {
+                const btn = document.createElement('button');
+                btn.id = 'restoreCmdBar';
+                btn.className = 'cmd-btn cmd-btn-primary';
+                btn.innerHTML = '▲ MOSTRAR BARRA';
+                btn.onclick = toggleCommandBar;
+                btn.style.position = 'fixed';
+                btn.style.bottom = '24px';
+                btn.style.left = '50%';
+                btn.style.transform = 'translateX(-50%)';
+                btn.style.zIndex = '10001';
+                btn.style.background = '#11161E';
+                btn.style.border = '1px solid rgba(230,160,23,0.35)';
+                btn.style.borderRadius = '60px';
+                btn.style.padding = '10px 24px';
+                btn.style.color = '#f5b800';
+                btn.style.fontSize = '13px';
+                btn.style.fontWeight = '600';
+                btn.style.cursor = 'pointer';
+                btn.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.5)';
+                document.body.appendChild(btn);
+            }
+        }
+    }
+    
+    // Garantir que o toggle funcione
+    const toggleBtn = document.getElementById('toggleCmdBar');
+    if (toggleBtn) {
+        toggleBtn.onclick = toggleCommandBar;
+    }
+});
+
+
 
 // ============================================================
 // FUNÇÃO CENTRALIZADA: FECHA POP-UP ANTERIOR AO ABRIR NOVO
