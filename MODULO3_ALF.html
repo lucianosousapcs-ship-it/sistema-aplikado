@@ -10150,6 +10150,226 @@ console.log('📌 Para forçar a correção agora, execute: forcarCorrecaoAgora(
     // Iniciar o processo de espera
     aguardarEExecutar();
 })();
+    // ============================================================
+// 🟡 CORREÇÃO: INCLUIR VALOR TOTAL DAS SANGRIAS NO POP-UP DESPESAS
+// ============================================================
+
+(function() {
+    console.log('🟡 [SANGRIA-DESPESAS] Aplicando correção...');
+
+    // ============================================================
+    // 1. CORRIGIR O LAYOUT DO POP-UP DE DESPESAS
+    // ============================================================
+    function corrigirLayoutDespesas() {
+        const container = document.querySelector('#modalComprasPopup .resumo-compras');
+        if (!container) {
+            console.log('⏳ Aguardando pop-up de despesas carregar...');
+            setTimeout(corrigirLayoutDespesas, 500);
+            return;
+        }
+
+        // Verificar se o card já existe
+        if (document.getElementById('totalSangriasCompras')) {
+            console.log('✅ Card de sangria já existe');
+            // Apenas atualizar o layout
+            container.style.display = 'grid';
+            container.style.gridTemplateColumns = 'repeat(5, 1fr)';
+            container.style.gap = '15px';
+            return;
+        }
+
+        console.log('📝 Adicionando card de sangria ao pop-up de despesas...');
+
+        // FORÇAR O CONTAINER PARA GRID COM 5 COLUNAS
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = 'repeat(5, 1fr)';
+        container.style.gap = '15px';
+
+        // Pegar todos os cards existentes
+        const cardsExistentes = container.querySelectorAll('.resumo-card');
+        
+        // Criar o novo card
+        const novoCard = document.createElement('div');
+        novoCard.className = 'resumo-card';
+        novoCard.style.cssText = `
+            background: linear-gradient(135deg, #11131E, #0E1018);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(230,160,23,0.2);
+            text-align: center;
+            flex: 1;
+            border-left: 3px solid #f59e0b;
+        `;
+
+        novoCard.innerHTML = `
+            <div class="resumo-card-label" style="font-size:11px; color:var(--soft-light); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.5px;">SANGRIA</div>
+            <div class="resumo-card-value" id="totalSangriasCompras" style="font-size:22px; font-weight:700; color:#f59e0b;">R$ 0,00</div>
+            <div style="font-size:10px; color:var(--soft-light); margin-top:4px;" id="totalQtdSangriasCompras">0 registros</div>
+        `;
+
+        // Adicionar o novo card ao container
+        container.appendChild(novoCard);
+        console.log('✅ Card de sangria adicionado! Layout com 5 colunas.');
+    }
+
+    // ============================================================
+    // 2. SOBRESCREVER A FUNÇÃO DE ABERTURA DO POP-UP
+    // ============================================================
+    const originalAbrirModalCompras = window.abrirModalComprasPopup;
+
+    window.abrirModalComprasPopup = function() {
+        // Chamar a função original
+        if (typeof originalAbrirModalCompras === 'function') {
+            originalAbrirModalCompras();
+        }
+
+        // Corrigir o layout
+        setTimeout(() => {
+            corrigirLayoutDespesas();
+            // Atualizar os valores
+            if (typeof window.atualizarResumoCompras === 'function') {
+                window.atualizarResumoCompras();
+            }
+        }, 300);
+    };
+
+    // ============================================================
+    // 3. SOBRESCREVER A FUNÇÃO DE RESUMO DE COMPRAS
+    // ============================================================
+    const originalAtualizarResumoCompras = window.atualizarResumoCompras;
+
+    window.atualizarResumoCompras = function() {
+        // Chamar a função original
+        if (typeof originalAtualizarResumoCompras === 'function') {
+            originalAtualizarResumoCompras();
+        }
+
+        try {
+            // Calcular total das sangrias
+            let totalSangrias = 0;
+            let qtdSangrias = 0;
+
+            if (typeof contasExtrasData !== 'undefined' && contasExtrasData.length > 0) {
+                contasExtrasData.forEach(s => {
+                    totalSangrias += Number(s.valor) || 0;
+                    qtdSangrias++;
+                });
+            }
+
+            // Atualizar os elementos
+            const elValor = document.getElementById('totalSangriasCompras');
+            const elQtd = document.getElementById('totalQtdSangriasCompras');
+
+            if (elValor) {
+                elValor.innerHTML = `R$ ${formatMoneySimple(totalSangrias)}`;
+                elValor.style.color = '#f59e0b';
+            }
+
+            if (elQtd) {
+                elQtd.innerHTML = `${qtdSangrias} registros`;
+            }
+
+            console.log(`🟡 [SANGRIA-DESPESAS] Total: R$ ${totalSangrias.toFixed(2)} (${qtdSangrias} registros)`);
+
+        } catch (e) {
+            console.warn('⚠️ Erro ao atualizar card de sangria:', e.message);
+        }
+    };
+
+    // ============================================================
+    // 4. SOBRESCREVER A FUNÇÃO DE RENDERIZAÇÃO DE SANGRIA
+    // ============================================================
+    const originalRenderizarSangrias = window.renderizarSangriasPopup;
+
+    window.renderizarSangriasPopup = function() {
+        // Chamar a função original
+        if (typeof originalRenderizarSangrias === 'function') {
+            originalRenderizarSangrias();
+        }
+
+        // Atualizar o resumo de despesas
+        if (typeof window.atualizarResumoCompras === 'function') {
+            setTimeout(() => window.atualizarResumoCompras(), 100);
+        }
+    };
+
+    // ============================================================
+    // 5. SOBRESCREVER A FUNÇÃO DE CARREGAMENTO DE SANGRIA
+    // ============================================================
+    const originalCarregarContasExtras = window.carregarContasExtras;
+
+    window.carregarContasExtras = async function() {
+        // Chamar a função original
+        let resultado;
+        if (typeof originalCarregarContasExtras === 'function') {
+            resultado = await originalCarregarContasExtras();
+        }
+
+        // Atualizar o resumo de despesas
+        if (typeof window.atualizarResumoCompras === 'function') {
+            setTimeout(() => window.atualizarResumoCompras(), 200);
+        }
+
+        return resultado;
+    };
+
+    // ============================================================
+    // 6. CORRIGIR O CSS DOS CARDS EXISTENTES
+    // ============================================================
+    function corrigirCSSDosCards() {
+        const container = document.querySelector('#modalComprasPopup .resumo-compras');
+        if (!container) return;
+
+        // Garantir que o container use grid
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = 'repeat(5, 1fr)';
+        container.style.gap = '15px';
+        container.style.marginBottom = '20px';
+
+        // Garantir que todos os cards tenham o mesmo estilo
+        const cards = container.querySelectorAll('.resumo-card');
+        cards.forEach(card => {
+            card.style.flex = '1';
+            card.style.minWidth = '0';
+            card.style.width = '100%';
+        });
+
+        console.log('✅ CSS dos cards corrigido para 5 colunas');
+    }
+
+    // ============================================================
+    // 7. EXECUTAR AS CORREÇÕES
+    // ============================================================
+    
+    // Corrigir o layout quando a página carregar
+    setTimeout(() => {
+        corrigirLayoutDespesas();
+        corrigirCSSDosCards();
+    }, 1500);
+
+    // Também corrigir quando o pop-up for aberto
+    const observer = new MutationObserver(() => {
+        const modal = document.getElementById('modalComprasPopup');
+        if (modal && modal.classList.contains('active')) {
+            setTimeout(() => {
+                corrigirLayoutDespesas();
+                corrigirCSSDosCards();
+                if (typeof window.atualizarResumoCompras === 'function') {
+                    window.atualizarResumoCompras();
+                }
+            }, 200);
+        }
+    });
+
+    // Observar mudanças nas classes do modal
+    const modal = document.getElementById('modalComprasPopup');
+    if (modal) {
+        observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    console.log('✅ [SANGRIA-DESPESAS] Correção aplicada com sucesso!');
+    console.log('📌 Layout ajustado para 5 colunas com o card SANGRIA na mesma linha.');
+})();
 </script>
 
 </body>
