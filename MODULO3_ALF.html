@@ -4024,31 +4024,251 @@ async function gerarPDFDRE() {
         return;
     }
 
+    // ==========================================
+    // FUNÇÃO AUXILIAR
+    // ==========================================
     const extrairNumeroDaCelula = (cell) => {
         let text = cell.innerText.trim();
         let numeroTexto = text.replace(/R\$\s*/g, '').replace(/\s/g, '');
-        
         let isNegative = numeroTexto.startsWith('-');
-        if (isNegative) {
-            numeroTexto = numeroTexto.substring(1);
-        }
-        
+        if (isNegative) numeroTexto = numeroTexto.substring(1);
         let numero = parseFloat(numeroTexto.replace(/\./g, '').replace(',', '.'));
-        if (isNaN(numero)) {
-            return 0;
-        }
+        if (isNaN(numero)) return 0;
         return isNegative ? -numero : numero;
     };
 
-    const linhasDados = [];
-    const cabecalhos = tabelaDRE.querySelectorAll('thead th');
-    const meses = [];
-    for (let i = 1; i < cabecalhos.length - 1; i++) {
-        meses.push(cabecalhos[i].innerText);
+    // ==========================================
+    // EXTRAIR DADOS DO DRE PARA O RESUMO
+    // ==========================================
+    const linhasCorpo = tabelaDRE.querySelectorAll('tbody tr');
+    let totalReceita = 0;
+    let totalCustoVariavel = 0;
+    let totalCustoFixo = 0;
+    let resultadoOperacional = 0;
+    let lucroBruto = 0;
+    let topReceitas = [];
+    let topDespesas = [];
+    let resultadoMensal = [];
+    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+    linhasCorpo.forEach(linha => {
+        const colunas = linha.querySelectorAll('td');
+        if (colunas.length === 0) return;
+        
+        const descricao = colunas[0].innerText.trim();
+        let totalCelula = colunas[colunas.length - 1];
+        let valorTotal = extrairNumeroDaCelula(totalCelula);
+        
+        if (descricao === 'RECEITAS TOTAIS') totalReceita = valorTotal;
+        if (descricao === 'CUSTOS VARIAVEIS') totalCustoVariavel = Math.abs(valorTotal);
+        if (descricao === 'CUSTOS FIXOS') totalCustoFixo = Math.abs(valorTotal);
+        if (descricao === 'LUCRO BRUTO') lucroBruto = valorTotal;
+        if (descricao === 'RESULTADO OPERACIONAL') resultadoOperacional = valorTotal;
+
+        // Extrair totais de receitas e despesas
+        if (descricao.match(/^\d+ - /) && descricao !== 'RECEITAS TOTAIS') {
+            if (valorTotal > 0) {
+                topReceitas.push({ nome: descricao, valor: valorTotal });
+            } else if (valorTotal < 0 && 
+                       descricao !== 'CUSTOS VARIAVEIS' && 
+                       descricao !== 'CUSTOS FIXOS' &&
+                       descricao !== 'LUCRO BRUTO') {
+                topDespesas.push({ nome: descricao, valor: Math.abs(valorTotal) });
+            }
+        }
+
+        // Extrair resultados mensais
+        if (descricao === 'RESULTADO OPERACIONAL') {
+            for (let i = 1; i < colunas.length - 1; i++) {
+                let valor = extrairNumeroDaCelula(colunas[i]);
+                if (i - 1 < meses.length) {
+                    resultadoMensal.push({ mes: meses[i-1], valor: valor });
+                }
+            }
+        }
+    });
+
+    // Ordenar top 5
+    topReceitas.sort((a, b) => b.valor - a.valor);
+    topReceitas = topReceitas.slice(0, 5);
+    topDespesas.sort((a, b) => b.valor - a.valor);
+    topDespesas = topDespesas.slice(0, 5);
+
+    // Melhor e pior mês
+    let melhorMes = { mes: '-', valor: -999999999 };
+    let piorMes = { mes: '-', valor: 999999999 };
+    resultadoMensal.forEach(item => {
+        if (item.valor > melhorMes.valor) melhorMes = item;
+        if (item.valor < piorMes.valor) piorMes = item;
+    });
+
+    // ==========================================
+    // GERAR PÁGINA DE RESUMO EXECUTIVO
+    // ==========================================
+    function gerarPaginaResumo() {
+        const margemBruta = totalReceita > 0 ? (lucroBruto / totalReceita) * 100 : 0;
+        const margemLiquida = totalReceita > 0 ? (resultadoOperacional / totalReceita) * 100 : 0;
+        const dataEmissao = new Date().toLocaleDateString('pt-BR');
+        const horaEmissao = new Date().toLocaleTimeString('pt-BR');
+        const anoAtual = new Date().getFullYear();
+
+        return `
+        <div style="padding:20px 15px; font-family:'Arial','Helvetica',sans-serif; background:#FFFFFF; color:#000000; page-break-after:always; min-height:100%; width:100%;">
+            
+            <!-- CABEÇALHO -->
+            <div style="text-align:center; margin-bottom:15px; padding-bottom:10px; border-bottom:2px solid #000000;">
+                <div style="font-size:18pt; font-weight:bold; color:#000000; margin-bottom:2px;">DRE - RESUMO EXECUTIVO</div>
+                <div style="font-size:10pt; color:#000000;">Aplikado Soluções | Módulo III</div>
+                <div style="font-size:9pt; color:#000000;">Período: Janeiro a Dezembro de ${anoAtual}</div>
+                <div style="font-size:8pt; color:#000000; margin-top:4px;">Emissão: ${dataEmissao} às ${horaEmissao} | Página 1</div>
+            </div>
+
+            <!-- KPIs -->
+            <table style="width:100%; border-collapse:collapse; margin-bottom:16px; font-size:9pt;">
+                <tr>
+                    <th style="background:#E8E8E8; border:1px solid #000000; padding:8px 6px; text-align:center; font-weight:bold;">INDICADOR</th>
+                    <th style="background:#E8E8E8; border:1px solid #000000; padding:8px 6px; text-align:center; font-weight:bold;">VALOR</th>
+                    <th style="background:#E8E8E8; border:1px solid #000000; padding:8px 6px; text-align:center; font-weight:bold;">%</th>
+                </tr>
+                <tr>
+                    <td style="border:1px solid #000000; padding:6px 8px;">Receita Total</td>
+                    <td style="border:1px solid #000000; padding:6px 8px; text-align:right;">R$ ${totalReceita.toFixed(2).replace('.', ',')}</td>
+                    <td style="border:1px solid #000000; padding:6px 8px; text-align:right;">100,0%</td>
+                </tr>
+                <tr>
+                    <td style="border:1px solid #000000; padding:6px 8px;">Lucro Bruto</td>
+                    <td style="border:1px solid #000000; padding:6px 8px; text-align:right;">R$ ${lucroBruto.toFixed(2).replace('.', ',')}</td>
+                    <td style="border:1px solid #000000; padding:6px 8px; text-align:right;">${margemBruta.toFixed(1)}%</td>
+                </tr>
+                <tr>
+                    <td style="border:1px solid #000000; padding:6px 8px;">Resultado Operacional</td>
+                    <td style="border:1px solid #000000; padding:6px 8px; text-align:right; font-weight:bold;">${resultadoOperacional >= 0 ? 'R$ ' : '-R$ '}${Math.abs(resultadoOperacional).toFixed(2).replace('.', ',')}</td>
+                    <td style="border:1px solid #000000; padding:6px 8px; text-align:right;">${margemLiquida.toFixed(1)}%</td>
+                </tr>
+                <tr style="background:#F5F5F5; font-weight:bold;">
+                    <td style="border:1px solid #000000; padding:6px 8px;">Margem Líquida</td>
+                    <td style="border:1px solid #000000; padding:6px 8px; text-align:center;" colspan="2">${margemLiquida.toFixed(1)}% ${margemLiquida >= 0 ? '(Positiva)' : '(Atenção)'}</td>
+                </tr>
+            </table>
+
+            <!-- SAÚDE FINANCEIRA -->
+            <table style="width:100%; border-collapse:collapse; margin-bottom:16px; font-size:9pt;">
+                <tr>
+                    <th style="background:#E8E8E8; border:1px solid #000000; padding:6px 6px; text-align:center; font-weight:bold;">INDICADOR</th>
+                    <th style="background:#E8E8E8; border:1px solid #000000; padding:6px 6px; text-align:center; font-weight:bold;">SITUAÇÃO</th>
+                    <th style="background:#E8E8E8; border:1px solid #000000; padding:6px 6px; text-align:center; font-weight:bold;">DETALHE</th>
+                </tr>
+                <tr>
+                    <td style="border:1px solid #000000; padding:5px 8px; font-weight:600;">Resultado</td>
+                    <td style="border:1px solid #000000; padding:5px 8px;">${resultadoOperacional >= 0 ? 'Positivo' : 'Negativo'}</td>
+                    <td style="border:1px solid #000000; padding:5px 8px;">${Math.abs(resultadoOperacional) < 10000 ? 'Equilíbrio crítico' : 'Resultado consistente'}</td>
+                </tr>
+                <tr>
+                    <td style="border:1px solid #000000; padding:5px 8px; font-weight:600;">Tendência</td>
+                    <td style="border:1px solid #000000; padding:5px 8px;">${melhorMes.valor > 0 ? 'Recuperação' : 'Em análise'}</td>
+                    <td style="border:1px solid #000000; padding:5px 8px;">Melhor mês: ${melhorMes.mes} (R$ ${melhorMes.valor.toFixed(2).replace('.', ',')})</td>
+                </tr>
+                <tr>
+                    <td style="border:1px solid #000000; padding:5px 8px; font-weight:600;">Ponto Forte</td>
+                    <td style="border:1px solid #000000; padding:5px 8px;">Faturamento consistente</td>
+                    <td style="border:1px solid #000000; padding:5px 8px;">Média mensal: R$ ${(totalReceita / 12).toFixed(2).replace('.', ',')}</td>
+                </tr>
+            </table>
+
+            <!-- ESTRUTURA DE RECEITA -->
+            <table style="width:100%; border-collapse:collapse; margin-bottom:16px; font-size:9pt;">
+                <tr>
+                    <th colspan="2" style="background:#E8E8E8; border:1px solid #000000; padding:6px 6px; text-align:center; font-weight:bold;">ESTRUTURA DE RECEITA</th>
+                </tr>
+                ${topReceitas.map((item) => `
+                    <tr>
+                        <td style="border:1px solid #000000; padding:4px 8px;">${item.nome.substring(0, 35)}</td>
+                        <td style="border:1px solid #000000; padding:4px 8px; text-align:right;">R$ ${item.valor.toFixed(2).replace('.', ',')} (${(item.valor/totalReceita*100).toFixed(1)}%)</td>
+                    </tr>
+                `).join('')}
+                ${topReceitas.length > 0 ? `
+                    <tr>
+                        <td colspan="2" style="border:1px solid #000000; padding:4px 8px; background:#F5F5F5; font-size:8pt;">
+                            ATENÇÃO: ${topReceitas[0].valor/totalReceita > 0.4 ? 'Principal fonte de receita representa mais de 40% do total.' : 'Receita bem distribuída entre as principais fontes.'}
+                        </td>
+                    </tr>
+                ` : ''}
+            </table>
+
+            <!-- ESTRUTURA DE CUSTOS -->
+            <table style="width:100%; border-collapse:collapse; margin-bottom:16px; font-size:9pt;">
+                <tr>
+                    <th colspan="2" style="background:#E8E8E8; border:1px solid #000000; padding:6px 6px; text-align:center; font-weight:bold;">ESTRUTURA DE CUSTOS</th>
+                </tr>
+                ${topDespesas.map((item) => `
+                    <tr>
+                        <td style="border:1px solid #000000; padding:4px 8px;">${item.nome.substring(0, 35)}</td>
+                        <td style="border:1px solid #000000; padding:4px 8px; text-align:right;">R$ ${item.valor.toFixed(2).replace('.', ',')} (${(item.valor/totalReceita*100).toFixed(1)}%)</td>
+                    </tr>
+                `).join('')}
+                ${topDespesas.length > 0 ? `
+                    <tr>
+                        <td colspan="2" style="border:1px solid #000000; padding:4px 8px; background:#F5F5F5; font-size:8pt;">
+                            INSIGHT: Custos variáveis representam ${(totalCustoVariavel/totalReceita*100).toFixed(1)}% da receita.
+                        </td>
+                    </tr>
+                ` : ''}
+            </table>
+
+            <!-- ALERTAS -->
+            <table style="width:100%; border-collapse:collapse; margin-bottom:16px; font-size:9pt;">
+                <tr>
+                    <th style="background:#E8E8E8; border:1px solid #000000; padding:6px 6px; text-align:center; font-weight:bold;">PRINCIPAIS ALERTAS</th>
+                </tr>
+                <tr>
+                    <td style="border:1px solid #000000; padding:6px 8px;">
+                        <ul style="margin:0; padding-left:20px;">
+                            <li>Resultado ${resultadoOperacional >= 0 ? 'positivo' : 'negativo'} no período (${margemLiquida.toFixed(1)}%)</li>
+                            ${piorMes.valor < 0 ? `<li>${piorMes.mes} com deterioração de margem (R$ ${piorMes.valor.toFixed(2).replace('.', ',')})</li>` : ''}
+                            ${topReceitas.length > 0 && topReceitas[0].valor/totalReceita > 0.4 ? `<li>Alta dependência de receita de ${topReceitas[0].nome.substring(0, 25)} (${(topReceitas[0].valor/totalReceita*100).toFixed(1)}%)</li>` : ''}
+                            <li>Estrutura de custos variáveis elevada (${(totalCustoVariavel/totalReceita*100).toFixed(1)}% da receita)</li>
+                        </ul>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- CONCLUSÃO -->
+            <table style="width:100%; border-collapse:collapse; margin-bottom:16px; font-size:9pt;">
+                <tr>
+                    <th style="background:#E8E8E8; border:1px solid #000000; padding:6px 6px; text-align:center; font-weight:bold;">CONCLUSÃO EXECUTIVA</th>
+                </tr>
+                <tr>
+                    <td style="border:1px solid #000000; padding:8px 10px; line-height:1.5;">
+                        A operação apresenta faturamento consistente (R$ ${totalReceita.toFixed(2).replace('.', ',')} no período),
+                        porém com pressão relevante de custos variáveis (${(totalCustoVariavel/totalReceita*100).toFixed(1)}% da receita)
+                        e margem operacional ${resultadoOperacional >= 0 ? 'positiva' : 'próxima do ponto de equilíbrio'} (${margemLiquida.toFixed(1)}%).
+                        Recomenda-se ${resultadoOperacional < 0 ? 'controle de despesas e revisão de rentabilidade,' : 'manutenção do controle de custos e busca por otimização,'}
+                        especialmente nos canais de ${topDespesas.length > 0 ? topDespesas[0].nome.substring(0, 25).toLowerCase() : 'custos'}.
+                    </td>
+                </tr>
+            </table>
+
+            <!-- RODAPÉ -->
+            <div style="text-align:center; font-size:7pt; color:#000000; margin-top:16px; padding-top:8px; border-top:1px solid #CCCCCC;">
+                Aplikado Soluções - Sistema de Gestão Financeira | Emissão: ${dataEmissao} às ${horaEmissao}
+            </div>
+        </div>
+        `;
     }
 
-    const linhasCorpo = tabelaDRE.querySelectorAll('tbody tr');
-    for (const linha of linhasCorpo) {
+    // ==========================================
+    // COLETAR DADOS DO DRE (CÓDIGO ORIGINAL)
+    // ==========================================
+    const cabecalhos = tabelaDRE.querySelectorAll('thead th');
+    const mesesDRE = [];
+    for (let i = 1; i < cabecalhos.length - 1; i++) {
+        mesesDRE.push(cabecalhos[i].innerText);
+    }
+
+    const linhasDados = [];
+    const linhasCorpoDRE = tabelaDRE.querySelectorAll('tbody tr');
+    
+    for (const linha of linhasCorpoDRE) {
         const colunas = linha.querySelectorAll('td');
         if (colunas.length === 0) continue;
 
@@ -4074,7 +4294,7 @@ async function gerarPDFDRE() {
         const totalAnual = extrairNumeroDaCelula(colunas[colunas.length - 1]);
         if (totalAnual !== 0) temMovimento = true;
 
-        // AJUSTE 01: PULAR LINHAS SEM MOVIMENTO
+        // PULAR LINHAS SEM MOVIMENTO
         if (!temMovimento) continue;
 
         let tipo = 'item';
@@ -4090,7 +4310,10 @@ async function gerarPDFDRE() {
         });
     }
 
-    const gerarPaginaPDF = (tituloSecao, dadosLinhas, numeroPagina, totalPaginas) => {
+    // ==========================================
+    // GERAR PÁGINAS DO DRE (CÓDIGO ORIGINAL)
+    // ==========================================
+    function gerarPaginaPDF(tituloSecao, dadosLinhas, numeroPagina, totalPaginas) {
         const pagina = document.createElement('div');
         pagina.style.padding = '20px 15px';
         pagina.style.fontFamily = 'Arial, Helvetica, sans-serif';
@@ -4099,10 +4322,13 @@ async function gerarPDFDRE() {
         pagina.style.pageBreakAfter = 'always';
         pagina.style.minHeight = '100%';
         pagina.style.width = '100%';
+
+        // CABEÇALHO
         const header = document.createElement('div');
         header.style.marginBottom = '15px';
         header.style.padding = '8px 0';
         header.style.borderBottom = '2px solid #000000';
+
         const tituloRel = document.createElement('div');
         tituloRel.style.textAlign = 'center';
         tituloRel.style.fontSize = '16px';
@@ -4111,6 +4337,7 @@ async function gerarPDFDRE() {
         tituloRel.style.marginBottom = '5px';
         tituloRel.innerText = 'DRE - DEMONSTRATIVO DE RESULTADO DO EXERCÍCIO';
         header.appendChild(tituloRel);
+
         const anoAtual = new Date().getFullYear();
         const periodo = document.createElement('div');
         periodo.style.textAlign = 'center';
@@ -4119,6 +4346,7 @@ async function gerarPDFDRE() {
         periodo.style.marginBottom = '6px';
         periodo.innerText = `Período: Janeiro a Dezembro de ${anoAtual}`;
         header.appendChild(periodo);
+
         const dataEmissao = document.createElement('div');
         dataEmissao.style.display = 'flex';
         dataEmissao.style.justifyContent = 'space-between';
@@ -4127,6 +4355,7 @@ async function gerarPDFDRE() {
         dataEmissao.style.marginTop = '6px';
         dataEmissao.style.paddingTop = '4px';
         dataEmissao.style.borderTop = '1px solid #000000';
+        
         const agora = new Date();
         const dataSpan = document.createElement('span');
         dataSpan.innerText = `Emissão: ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR')}`;
@@ -4136,6 +4365,8 @@ async function gerarPDFDRE() {
         dataEmissao.appendChild(paginaSpan);
         header.appendChild(dataEmissao);
         pagina.appendChild(header);
+
+        // TÍTULO DA SEÇÃO
         const tituloSeccao = document.createElement('div');
         tituloSeccao.style.backgroundColor = '#D3D3D3';
         tituloSeccao.style.color = '#000000';
@@ -4148,17 +4379,21 @@ async function gerarPDFDRE() {
         tituloSeccao.style.border = '1px solid #000000';
         tituloSeccao.innerText = tituloSecao;
         pagina.appendChild(tituloSeccao);
+
+        // TABELA DRE
         const tabela = document.createElement('table');
         tabela.style.width = '100%';
         tabela.style.borderCollapse = 'collapse';
         tabela.style.fontSize = '10px';
         tabela.style.marginBottom = '15px';
         tabela.style.tableLayout = 'fixed';
+
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
         const colunas = [{ nome: 'Descrição', largura: '15%', align: 'left' }];
-        for (const mes of meses) colunas.push({ nome: mes, largura: '7%', align: 'center' });
+        for (const mes of mesesDRE) colunas.push({ nome: mes, largura: '7%', align: 'center' });
         colunas.push({ nome: 'Total', largura: '8%', align: 'center' });
+
         colunas.forEach(col => {
             const th = document.createElement('th');
             th.innerText = col.nome;
@@ -4180,6 +4415,7 @@ async function gerarPDFDRE() {
         for (const item of dadosLinhas) {
             const tr = document.createElement('tr');
             const isTotalRow = (item.tipo === 'total');
+            
             const tdDesc = document.createElement('td');
             let descricao = item.nome;
             if (item.codigo && item.codigo !== '') descricao = `${item.codigo} - ${item.nome}`;
@@ -4193,7 +4429,8 @@ async function gerarPDFDRE() {
             tdDesc.style.backgroundColor = isTotalRow ? '#F0F0F0' : '#FFFFFF';
             tdDesc.style.fontWeight = isTotalRow ? 'bold' : 'normal';
             tr.appendChild(tdDesc);
-            for (let i = 0; i < meses.length; i++) {
+
+            for (let i = 0; i < mesesDRE.length; i++) {
                 const td = document.createElement('td');
                 const valor = item.valores[i] !== undefined ? item.valores[i] : 0;
                 const valorFormatado = valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -4208,6 +4445,7 @@ async function gerarPDFDRE() {
                 if (isTotalRow) td.style.fontWeight = 'bold';
                 tr.appendChild(td);
             }
+
             const tdTotal = document.createElement('td');
             const totalFormatado = item.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             tdTotal.innerText = totalFormatado;
@@ -4225,6 +4463,7 @@ async function gerarPDFDRE() {
         tabela.appendChild(tbody);
         pagina.appendChild(tabela);
 
+        // RODAPÉ
         const footer = document.createElement('div');
         footer.style.textAlign = 'center';
         footer.style.fontSize = '7px';
@@ -4234,48 +4473,63 @@ async function gerarPDFDRE() {
         footer.style.borderTop = '1px solid #000000';
         footer.innerText = 'Aplikado Soluções - Sistema de Gestão Financeira';
         pagina.appendChild(footer);
+
         return pagina;
-    };
+    }
+
+    // ==========================================
+    // MONTAR O PDF COMPLETO
+    // ==========================================
+    const conteudoPDF = document.createElement('div');
     
-    const secaoReceitas = { titulo: 'RECEITAS OPERACIONAIS', linhas: [] };
-    const secaoCustosVariaveis = { titulo: 'CUSTOS VARIÁVEIS', linhas: [] };
-    const secaoCustosFixos = { titulo: 'CUSTOS FIXOS', linhas: [] };
-    const secaoResultados = { titulo: 'RESULTADO DO EXERCÍCIO', linhas: [] };
-    let secaoAtual = secaoReceitas;
+    // 1. ADICIONAR PÁGINA DE RESUMO EXECUTIVO
+    const resumoDiv = document.createElement('div');
+    resumoDiv.innerHTML = gerarPaginaResumo();
+    conteudoPDF.appendChild(resumoDiv);
+    
+    // 2. ADICIONAR PÁGINAS DO DRE
+    const secoes = [
+        { titulo: 'RECEITAS OPERACIONAIS', linhas: [] },
+        { titulo: 'CUSTOS VARIÁVEIS', linhas: [] },
+        { titulo: 'CUSTOS FIXOS', linhas: [] },
+        { titulo: 'RESULTADO DO EXERCÍCIO', linhas: [] }
+    ];
+    
+    let secaoAtual = secoes[0];
     for (const linha of linhasDados) {
         if (linha.nome === 'RECEITAS TOTAIS') {
-            secaoAtual = secaoReceitas;
+            secaoAtual = secoes[0];
             secaoAtual.linhas.push(linha);
         } 
         else if (linha.nome === 'CUSTOS VARIAVEIS') {
-            secaoAtual = secaoCustosVariaveis;
+            secaoAtual = secoes[1];
             secaoAtual.linhas.push(linha);
         }
         else if (linha.nome === 'CUSTOS FIXOS') {
-            secaoAtual = secaoCustosFixos;
+            secaoAtual = secoes[2];
             secaoAtual.linhas.push(linha);
         }
         else if (linha.nome === 'RESULTADO OPERACIONAL') {
-            secaoAtual = secaoResultados;
+            secaoAtual = secoes[3];
             secaoAtual.linhas.push(linha);
         }
         else if (secaoAtual) {
             secaoAtual.linhas.push(linha);
         }
     }
-    const secoes = [secaoReceitas, secaoCustosVariaveis, secaoCustosFixos, secaoResultados];
+
     const linhasPorPagina = 22;
-    let numeroPagina = 1;
-    let totalPaginas = 0;
+    let numeroPagina = 2;
+    let totalPaginas = 1;
+    
     for (const secao of secoes) {
+        if (secao.linhas.length === 0) continue;
         totalPaginas += Math.ceil(secao.linhas.length / linhasPorPagina);
     }
     if (totalPaginas === 0) totalPaginas = 1;
 
-    const conteudoPDF = document.createElement('div');
     for (const secao of secoes) {
         if (secao.linhas.length === 0) continue;
-        
         for (let i = 0; i < secao.linhas.length; i += linhasPorPagina) {
             const paginasLinhas = secao.linhas.slice(i, i + linhasPorPagina);
             const pagina = gerarPaginaPDF(secao.titulo, paginasLinhas, numeroPagina++, totalPaginas);
@@ -4283,14 +4537,9 @@ async function gerarPDFDRE() {
         }
     }
 
-    if (conteudoPDF.children.length === 0) {
-        const paginaVazia = document.createElement('div');
-        paginaVazia.innerHTML = '<div style="text-align:center; padding:100px; font-family:Arial;">Nenhum dado encontrado no DRE para gerar o relatório.</div>';
-        paginaVazia.style.backgroundColor = '#FFFFFF';
-        paginaVazia.style.height = '100%';
-        conteudoPDF.appendChild(paginaVazia);
-    }
-
+    // ==========================================
+    // GERAR PDF
+    // ==========================================
     const opt = {
         margin: [0.3, 0.3, 0.3, 0.3],
         filename: `DRE_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '_')}.pdf`,
