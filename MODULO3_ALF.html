@@ -6209,6 +6209,7 @@ async function carregarPlanoContasSupabase() {
         const { data, error } = await supabaseClient
             .from('plano_contas')
             .select('codigo, nome, tipo, grupo_dre, tipo_classificacao, identificador')
+            .eq('ativo', true)
             .order('codigo', { ascending: true });
         
         if (error) {
@@ -6219,7 +6220,10 @@ async function carregarPlanoContasSupabase() {
         console.log(`✅ Total de registros no banco: ${data?.length || 0}`);
         
         if (data && data.length > 0) {
-            // ✅ FILTRO CORRIGIDO - INCLUI TODAS AS RECEITAS
+            // ==========================================
+            // ✅ CORREÇÃO: INCLUIR TODAS AS RECEITAS
+            // ==========================================
+            // Buscar TODAS as contas com tipo = 'RECEITA'
             const receitas = data.filter(p => 
                 p.tipo === 'RECEITA' || 
                 p.tipo_classificacao === 'RECEITAS' || 
@@ -6227,7 +6231,7 @@ async function carregarPlanoContasSupabase() {
                 p.tipo_classificacao === 'RECEITAS FINANCEIRAS'
             );
             
-            // ✅ GARANTIR QUE 116 E 118 ESTEJAM INCLUÍDOS
+            // GARANTIR que 116 e 118 estejam incluídos
             const contas116 = data.filter(p => p.codigo === '116' || p.codigo === '118');
             for (const conta of contas116) {
                 if (!receitas.some(r => r.codigo === conta.codigo)) {
@@ -6274,7 +6278,7 @@ async function carregarPlanoContasSupabase() {
                 }))
             };
             
-            // ✅ SALVAR NO CACHE
+            // Salvar no cache
             localStorage.setItem('estruturaDREModuloIII', JSON.stringify(estruturaDRE));
             
             console.log(`✅ estruturaDRE atualizada: Receitas=${estruturaDRE.receitas.length}, Variáveis=${estruturaDRE.custosVariaveis.length}, Fixas=${estruturaDRE.custosFixos.length}`);
@@ -6288,7 +6292,6 @@ async function carregarPlanoContasSupabase() {
         return null;
     }
 }
-
 // ============================================================
 // FUNÇÕES DE REGRAS DE CONVERSÃO
 // ============================================================
