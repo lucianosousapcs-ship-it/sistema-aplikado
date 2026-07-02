@@ -5203,7 +5203,7 @@ function fecharPopupAuditoria() {
 }
 
 function executarAuditoria() {
-    console.log('🔍 EXECUTANDO AUDITORIA CORRIGIDA...');
+    console.log('🔍 EXECUTANDO AUDITORIA - USANDO LÓGICA DO DRE...');
     
     // ==========================================
     // 1. CALCULAR RECEITAS - MESMA LÓGICA DO DRE
@@ -5217,51 +5217,46 @@ function executarAuditoria() {
         });
     }
     
-    // Usar a MESMA lógica do DRE para calcular
+    // USAR A MESMA LÓGICA DO DRE PARA CALCULAR
     if (typeof receitasDataReais !== 'undefined' && typeof estruturaDRE !== 'undefined') {
-        // Criar lista de identificadores válidos do DRE
-        const idsValidos = new Set();
+        // CRIAR LISTA DE PLANOS VÁLIDOS IGUAL AO DRE
+        const planosValidos = new Set();
         if (estruturaDRE.receitas) {
-            estruturaDRE.receitas.forEach(c => {
-                const id = c.identificador || `${c.cod} - ${c.nome}`;
-                idsValidos.add(id);
-                // Também adicionar só o nome e só o código
-                if (c.nome) idsValidos.add(c.nome);
-                if (c.cod) idsValidos.add(c.cod);
+            estruturaDRE.receitas.forEach(p => {
+                // Adicionar todas as variações do plano
+                planosValidos.add(p.nome);
+                planosValidos.add(p.cod);
+                planosValidos.add(p.identificador);
+                if (p.nome) {
+                    const partes = p.nome.split(' - ');
+                    if (partes.length > 1) planosValidos.add(partes[1]);
+                }
             });
         }
         
-        console.log(`📋 ${idsValidos.size} identificadores válidos no DRE`);
+        console.log(`📋 ${planosValidos.size} planos válidos no DRE`);
         
         // Somar receitas que estão no DRE
         receitasDataReais.forEach(r => {
             const plano = r.plano || '';
-            let encontrado = false;
+            let valido = false;
             
-            // Verificar se o plano está na lista de válidos
-            for (const id of idsValidos) {
-                if (plano === id || plano.includes(id) || id.includes(plano)) {
-                    encontrado = true;
+            // Verificação exata
+            for (const p of planosValidos) {
+                if (plano === p || plano.includes(p) || p.includes(plano)) {
+                    valido = true;
                     break;
                 }
             }
             
-            // Se não encontrou, verificar se o plano é um código numérico
-            if (!encontrado) {
-                const codigoPlano = plano.split(' - ')[0];
-                if (codigoPlano && idsValidos.has(codigoPlano)) {
-                    encontrado = true;
-                }
-            }
-            
-            if (encontrado) {
+            if (valido) {
                 totalReceitasDRE += Number(r.valor) || 0;
             }
         });
     }
     
     // ==========================================
-    // 2. CALCULAR DESPESAS
+    // 2. CALCULAR DESPESAS - MESMA LÓGICA DO DRE
     // ==========================================
     let totalDespesasDRE = 0;
     let totalDespesasCadastradas = 0;
@@ -5272,33 +5267,33 @@ function executarAuditoria() {
             totalDespesasCadastradas += Number(d.valor) || 0;
             
             const plano = d.plano || '';
-            let encontrado = false;
+            let valido = false;
             
-            // Verificar em custos variaveis
+            // Verificar em custos variáveis
             if (estruturaDRE && estruturaDRE.custosVariaveis) {
-                for (const c of estruturaDRE.custosVariaveis) {
-                    const id = c.identificador || `${c.cod} - ${c.nome}`;
+                for (const p of estruturaDRE.custosVariaveis) {
+                    const id = p.identificador || `${p.cod} - ${p.nome}`;
                     if (plano === id || plano.includes(id) || id.includes(plano) ||
-                        plano === c.nome || plano.includes(c.nome) || c.nome.includes(plano)) {
-                        encontrado = true;
+                        plano === p.nome || plano.includes(p.nome) || p.nome.includes(plano)) {
+                        valido = true;
                         break;
                     }
                 }
             }
             
             // Verificar em custos fixos
-            if (!encontrado && estruturaDRE && estruturaDRE.custosFixos) {
-                for (const c of estruturaDRE.custosFixos) {
-                    const id = c.identificador || `${c.cod} - ${c.nome}`;
+            if (!valido && estruturaDRE && estruturaDRE.custosFixos) {
+                for (const p of estruturaDRE.custosFixos) {
+                    const id = p.identificador || `${p.cod} - ${p.nome}`;
                     if (plano === id || plano.includes(id) || id.includes(plano) ||
-                        plano === c.nome || plano.includes(c.nome) || c.nome.includes(plano)) {
-                        encontrado = true;
+                        plano === p.nome || plano.includes(p.nome) || p.nome.includes(plano)) {
+                        valido = true;
                         break;
                     }
                 }
             }
             
-            if (encontrado) {
+            if (valido) {
                 totalDespesasDRE += Number(d.valor) || 0;
             }
         });
@@ -5371,6 +5366,7 @@ function executarAuditoria() {
     
     console.log('✅ AUDITORIA CORRIGIDA!');
     console.log(`📊 Receitas: DRE R$ ${totalReceitasDRE.toFixed(2)} | Cadastrado R$ ${totalReceitasCadastradas.toFixed(2)} | Diff R$ ${diffReceitas.toFixed(2)}`);
+    console.log(`📊 Despesas: DRE R$ ${Math.abs(totalDespesasDRE).toFixed(2)} | Cadastrado R$ ${totalDespesasCadastradas.toFixed(2)} | Sangrias R$ ${totalSangrias.toFixed(2)} | Diff R$ ${diffDespesas.toFixed(2)}`);
 }
 // ============================================================
 // FUNÇÕES DE LANCAMENTOS E DADOS REAIS
