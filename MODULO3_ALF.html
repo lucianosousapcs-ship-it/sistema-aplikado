@@ -6161,11 +6161,22 @@ async function carregarPlanoContasSupabase() {
         console.log(`✅ Total de registros no banco: ${data?.length || 0}`);
         
         if (data && data.length > 0) {
+            // ✅ FILTRO CORRIGIDO - INCLUI TODAS AS RECEITAS
             const receitas = data.filter(p => 
+                p.tipo === 'RECEITA' || 
                 p.tipo_classificacao === 'RECEITAS' || 
                 p.tipo_classificacao === 'RECEITA DE SERVIÇOS' || 
                 p.tipo_classificacao === 'RECEITAS FINANCEIRAS'
             );
+            
+            // ✅ GARANTIR QUE 116 E 118 ESTEJAM INCLUÍDOS
+            const contas116 = data.filter(p => p.codigo === '116' || p.codigo === '118');
+            for (const conta of contas116) {
+                if (!receitas.some(r => r.codigo === conta.codigo)) {
+                    receitas.push(conta);
+                    console.log(`✅ ${conta.codigo} - ${conta.nome} adicionado manualmente`);
+                }
+            }
             
             const despesasVariaveis = data.filter(p => 
                 p.tipo_classificacao === 'DESPESAS VARIAVEIS' || 
@@ -6205,6 +6216,7 @@ async function carregarPlanoContasSupabase() {
                 }))
             };
             
+            // ✅ SALVAR NO CACHE
             localStorage.setItem('estruturaDREModuloIII', JSON.stringify(estruturaDRE));
             
             console.log(`✅ estruturaDRE atualizada: Receitas=${estruturaDRE.receitas.length}, Variáveis=${estruturaDRE.custosVariaveis.length}, Fixas=${estruturaDRE.custosFixos.length}`);
