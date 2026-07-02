@@ -5206,30 +5206,42 @@ function executarAuditoria() {
     console.log('🔍 EXECUTANDO AUDITORIA CORRIGIDA...');
     
     // ==========================================
-    // 1. CALCULAR RECEITAS
+    // 1. CALCULAR RECEITAS USANDO A MESMA LÓGICA DO DRE
     // ==========================================
     let totalReceitasDRE = 0;
     let totalReceitasCadastradas = 0;
     
+    // Somar todas as receitas cadastradas
     if (typeof receitasDataReais !== 'undefined') {
         receitasDataReais.forEach(r => {
             totalReceitasCadastradas += Number(r.valor) || 0;
         });
     }
     
+    // Calcular receitas no DRE usando a MESMA LÓGICA do gerarDREComSupabase
     if (typeof receitasDataReais !== 'undefined' && typeof estruturaDRE !== 'undefined') {
-        const idsValidos = new Set();
+        // Pegar todos os nomes de contas do DRE
+        const nomesValidos = new Set();
         if (estruturaDRE.receitas) {
             estruturaDRE.receitas.forEach(c => {
                 const id = c.identificador || `${c.cod} - ${c.nome}`;
-                if (!id.includes('116') && !id.includes('118')) {
-                    idsValidos.add(id);
-                }
+                nomesValidos.add(id);
+                nomesValidos.add(c.nome);
+                if (c.cod) nomesValidos.add(c.cod);
             });
         }
         
+        // Somar apenas as receitas que têm plano válido
         receitasDataReais.forEach(r => {
-            if (idsValidos.has(r.plano)) {
+            const plano = r.plano || '';
+            let valido = false;
+            for (const nome of nomesValidos) {
+                if (plano.includes(nome) || nome.includes(plano)) {
+                    valido = true;
+                    break;
+                }
+            }
+            if (valido) {
                 totalReceitasDRE += Number(r.valor) || 0;
             }
         });
@@ -5245,14 +5257,33 @@ function executarAuditoria() {
     if (typeof despesasDataReais !== 'undefined') {
         despesasDataReais.forEach(d => {
             totalDespesasCadastradas += Number(d.valor) || 0;
-            const codigo = d.plano?.split(' - ')[0] || '';
-            if (codigo && parseInt(codigo) >= 200 && parseInt(codigo) <= 999) {
+            const plano = d.plano || '';
+            let noDRE = false;
+            if (estruturaDRE && estruturaDRE.custosVariaveis) {
+                estruturaDRE.custosVariaveis.forEach(c => {
+                    const id = c.identificador || `${c.cod} - ${c.nome}`;
+                    if (plano.includes(id) || id.includes(plano) || 
+                        plano.includes(c.nome) || c.nome.includes(plano)) {
+                        noDRE = true;
+                    }
+                });
+            }
+            if (estruturaDRE && estruturaDRE.custosFixos) {
+                estruturaDRE.custosFixos.forEach(c => {
+                    const id = c.identificador || `${c.cod} - ${c.nome}`;
+                    if (plano.includes(id) || id.includes(plano) || 
+                        plano.includes(c.nome) || c.nome.includes(plano)) {
+                        noDRE = true;
+                    }
+                });
+            }
+            if (noDRE) {
                 totalDespesasDRE += Number(d.valor) || 0;
             }
         });
     }
     
-    // Sangrias (só para exibição, NÃO somar no DRE)
+    // Sangrias
     if (typeof contasExtrasData !== 'undefined') {
         contasExtrasData.forEach(s => {
             totalSangrias += Number(s.valor) || 0;
@@ -5260,10 +5291,10 @@ function executarAuditoria() {
     }
     
     // ==========================================
-    // 3. CALCULAR DIFERENÇAS CORRETAMENTE
+    // 3. CALCULAR DIFERENÇAS
     // ==========================================
     const diffReceitas = totalReceitasCadastradas - totalReceitasDRE;
-    const diffDespesas = totalDespesasCadastradas - Math.abs(totalDespesasDRE); // ← CORRIGIDO: sem sangrias!
+    const diffDespesas = totalDespesasCadastradas - Math.abs(totalDespesasDRE);
     
     // ==========================================
     // 4. ATUALIZAR POP-UP
@@ -5279,22 +5310,19 @@ function executarAuditoria() {
     
     // Sangrias
     const sangriasTotal = contasExtrasData?.length || 0;
-    const elEncontradas = document.getElementById('auditSangriasEncontradas');
-    const elIntegradas = document.getElementById('auditSangriasIntegradas');
-    const elDiff = document.getElementById('auditSangriasDiferenca');
-    if (elEncontradas) elEncontradas.innerHTML = sangriasTotal;
-    if (elIntegradas) elIntegradas.innerHTML = sangriasTotal;
-    if (elDiff) elDiff.innerHTML = '0';
+    document.getElementById('auditSangriasEncontradas').innerHTML = sangriasTotal;
+    document.getElementById('auditSangriasIntegradas').innerHTML = sangriasTotal;
+    document.getElementById('auditSangriasDiferenca').innerHTML = '0';
     
     // Container de divergências
     const container = document.querySelector('#auditDespesasDivergenciasLista');
     if (container) {
-        if (Math.abs(diffDespesas) < 0.01) {
+        if (Math.abs(diffDespesas) < 0.01 && Math.abs(diffReceitas) < 0.01) {
             container.innerHTML = `
                 <div style="margin-top:12px; padding:12px; background:rgba(16,185,129,0.1); border-left:3px solid #10b981; border-radius:6px;">
                     <strong style="color:#10b981;">✅ TUDO CONFORME!</strong>
                     <p style="margin-top:6px; font-size:12px; color:var(--soft);">
-                        As despesas estão 100% integradas ao DRE.
+                        Todas as receitas e despesas estão 100% integradas ao DRE.
                     </p>
                 </div>
             `;
@@ -5303,7 +5331,7 @@ function executarAuditoria() {
                 <div style="margin-top:12px; padding:12px; background:rgba(245,158,11,0.1); border-left:3px solid #f59e0b; border-radius:6px;">
                     <strong style="color:#f59e0b;">⚠️ DIVERGÊNCIA DETECTADA!</strong>
                     <p style="margin-top:6px; font-size:12px; color:var(--soft);">
-                        Diferença de R$ ${Math.abs(diffDespesas).toLocaleString('pt-BR', {minimumFractionDigits:2})} nas despesas.
+                        Receitas: R$ ${Math.abs(diffReceitas).toFixed(2)} de diferença
                     </p>
                 </div>
             `;
