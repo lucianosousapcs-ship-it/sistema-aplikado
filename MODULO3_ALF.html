@@ -5206,42 +5206,55 @@ function executarAuditoria() {
     console.log('🔍 EXECUTANDO AUDITORIA CORRIGIDA...');
     
     // ==========================================
-    // 1. CALCULAR RECEITAS USANDO A MESMA LÓGICA DO DRE
+    // 1. CALCULAR RECEITAS - MESMA LÓGICA DO DRE
     // ==========================================
     let totalReceitasDRE = 0;
     let totalReceitasCadastradas = 0;
     
-    // Somar todas as receitas cadastradas
     if (typeof receitasDataReais !== 'undefined') {
         receitasDataReais.forEach(r => {
             totalReceitasCadastradas += Number(r.valor) || 0;
         });
     }
     
-    // Calcular receitas no DRE usando a MESMA LÓGICA do gerarDREComSupabase
+    // Usar a MESMA lógica do DRE para calcular
     if (typeof receitasDataReais !== 'undefined' && typeof estruturaDRE !== 'undefined') {
-        // Pegar todos os nomes de contas do DRE
-        const nomesValidos = new Set();
+        // Criar lista de identificadores válidos do DRE
+        const idsValidos = new Set();
         if (estruturaDRE.receitas) {
             estruturaDRE.receitas.forEach(c => {
                 const id = c.identificador || `${c.cod} - ${c.nome}`;
-                nomesValidos.add(id);
-                nomesValidos.add(c.nome);
-                if (c.cod) nomesValidos.add(c.cod);
+                idsValidos.add(id);
+                // Também adicionar só o nome e só o código
+                if (c.nome) idsValidos.add(c.nome);
+                if (c.cod) idsValidos.add(c.cod);
             });
         }
         
-        // Somar apenas as receitas que têm plano válido
+        console.log(`📋 ${idsValidos.size} identificadores válidos no DRE`);
+        
+        // Somar receitas que estão no DRE
         receitasDataReais.forEach(r => {
             const plano = r.plano || '';
-            let valido = false;
-            for (const nome of nomesValidos) {
-                if (plano.includes(nome) || nome.includes(plano)) {
-                    valido = true;
+            let encontrado = false;
+            
+            // Verificar se o plano está na lista de válidos
+            for (const id of idsValidos) {
+                if (plano === id || plano.includes(id) || id.includes(plano)) {
+                    encontrado = true;
                     break;
                 }
             }
-            if (valido) {
+            
+            // Se não encontrou, verificar se o plano é um código numérico
+            if (!encontrado) {
+                const codigoPlano = plano.split(' - ')[0];
+                if (codigoPlano && idsValidos.has(codigoPlano)) {
+                    encontrado = true;
+                }
+            }
+            
+            if (encontrado) {
                 totalReceitasDRE += Number(r.valor) || 0;
             }
         });
@@ -5257,27 +5270,35 @@ function executarAuditoria() {
     if (typeof despesasDataReais !== 'undefined') {
         despesasDataReais.forEach(d => {
             totalDespesasCadastradas += Number(d.valor) || 0;
+            
             const plano = d.plano || '';
-            let noDRE = false;
+            let encontrado = false;
+            
+            // Verificar em custos variaveis
             if (estruturaDRE && estruturaDRE.custosVariaveis) {
-                estruturaDRE.custosVariaveis.forEach(c => {
+                for (const c of estruturaDRE.custosVariaveis) {
                     const id = c.identificador || `${c.cod} - ${c.nome}`;
-                    if (plano.includes(id) || id.includes(plano) || 
-                        plano.includes(c.nome) || c.nome.includes(plano)) {
-                        noDRE = true;
+                    if (plano === id || plano.includes(id) || id.includes(plano) ||
+                        plano === c.nome || plano.includes(c.nome) || c.nome.includes(plano)) {
+                        encontrado = true;
+                        break;
                     }
-                });
+                }
             }
-            if (estruturaDRE && estruturaDRE.custosFixos) {
-                estruturaDRE.custosFixos.forEach(c => {
+            
+            // Verificar em custos fixos
+            if (!encontrado && estruturaDRE && estruturaDRE.custosFixos) {
+                for (const c of estruturaDRE.custosFixos) {
                     const id = c.identificador || `${c.cod} - ${c.nome}`;
-                    if (plano.includes(id) || id.includes(plano) || 
-                        plano.includes(c.nome) || c.nome.includes(plano)) {
-                        noDRE = true;
+                    if (plano === id || plano.includes(id) || id.includes(plano) ||
+                        plano === c.nome || plano.includes(c.nome) || c.nome.includes(plano)) {
+                        encontrado = true;
+                        break;
                     }
-                });
+                }
             }
-            if (noDRE) {
+            
+            if (encontrado) {
                 totalDespesasDRE += Number(d.valor) || 0;
             }
         });
@@ -5299,20 +5320,30 @@ function executarAuditoria() {
     // ==========================================
     // 4. ATUALIZAR POP-UP
     // ==========================================
-    document.getElementById('auditReceitasDRE').innerHTML = `R$ ${totalReceitasDRE.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('auditReceitasCadastradas').innerHTML = `R$ ${totalReceitasCadastradas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('auditReceitasDiferenca').innerHTML = `R$ ${diffReceitas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    const elReceitasDRE = document.getElementById('auditReceitasDRE');
+    const elReceitasCad = document.getElementById('auditReceitasCadastradas');
+    const elReceitasDiff = document.getElementById('auditReceitasDiferenca');
+    const elDespesasDRE = document.getElementById('auditDespesasDRE');
+    const elDespesasCad = document.getElementById('auditDespesasCadastradas');
+    const elSangrias = document.getElementById('auditSangrias');
+    const elDespesasDiff = document.getElementById('auditDespesasDiferenca');
+    const elSangriasEnc = document.getElementById('auditSangriasEncontradas');
+    const elSangriasInt = document.getElementById('auditSangriasIntegradas');
+    const elSangriasDiff = document.getElementById('auditSangriasDiferenca');
     
-    document.getElementById('auditDespesasDRE').innerHTML = `R$ ${Math.abs(totalDespesasDRE).toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('auditDespesasCadastradas').innerHTML = `R$ ${totalDespesasCadastradas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('auditSangrias').innerHTML = `R$ ${totalSangrias.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('auditDespesasDiferenca').innerHTML = `R$ ${diffDespesas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    if (elReceitasDRE) elReceitasDRE.innerHTML = `R$ ${totalReceitasDRE.toFixed(2).replace('.', ',')}`;
+    if (elReceitasCad) elReceitasCad.innerHTML = `R$ ${totalReceitasCadastradas.toFixed(2).replace('.', ',')}`;
+    if (elReceitasDiff) elReceitasDiff.innerHTML = `R$ ${diffReceitas.toFixed(2).replace('.', ',')}`;
     
-    // Sangrias
+    if (elDespesasDRE) elDespesasDRE.innerHTML = `R$ ${Math.abs(totalDespesasDRE).toFixed(2).replace('.', ',')}`;
+    if (elDespesasCad) elDespesasCad.innerHTML = `R$ ${totalDespesasCadastradas.toFixed(2).replace('.', ',')}`;
+    if (elSangrias) elSangrias.innerHTML = `R$ ${totalSangrias.toFixed(2).replace('.', ',')}`;
+    if (elDespesasDiff) elDespesasDiff.innerHTML = `R$ ${diffDespesas.toFixed(2).replace('.', ',')}`;
+    
     const sangriasTotal = contasExtrasData?.length || 0;
-    document.getElementById('auditSangriasEncontradas').innerHTML = sangriasTotal;
-    document.getElementById('auditSangriasIntegradas').innerHTML = sangriasTotal;
-    document.getElementById('auditSangriasDiferenca').innerHTML = '0';
+    if (elSangriasEnc) elSangriasEnc.innerHTML = sangriasTotal;
+    if (elSangriasInt) elSangriasInt.innerHTML = sangriasTotal;
+    if (elSangriasDiff) elSangriasDiff.innerHTML = '0';
     
     // Container de divergências
     const container = document.querySelector('#auditDespesasDivergenciasLista');
@@ -5340,7 +5371,6 @@ function executarAuditoria() {
     
     console.log('✅ AUDITORIA CORRIGIDA!');
     console.log(`📊 Receitas: DRE R$ ${totalReceitasDRE.toFixed(2)} | Cadastrado R$ ${totalReceitasCadastradas.toFixed(2)} | Diff R$ ${diffReceitas.toFixed(2)}`);
-    console.log(`📊 Despesas: DRE R$ ${Math.abs(totalDespesasDRE).toFixed(2)} | Cadastrado R$ ${totalDespesasCadastradas.toFixed(2)} | Sangrias R$ ${totalSangrias.toFixed(2)} | Diff R$ ${diffDespesas.toFixed(2)}`);
 }
 // ============================================================
 // FUNÇÕES DE LANCAMENTOS E DADOS REAIS
