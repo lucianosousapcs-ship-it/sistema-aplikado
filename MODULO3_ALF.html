@@ -11535,6 +11535,78 @@ console.log('📌 Para forçar a correção agora, execute: forcarCorrecaoAgora(
     console.log('📌 Layout ajustado para 5 colunas com o card SANGRIA na mesma linha.');
 })();
 </script>
+<!-- ============================================================
+     CORREÇÃO - ADICIONAR 116 E 118 NO DRE
+     ============================================================ -->
+<script>
+(function corrigirDRE() {
+    console.log('🔧 VERIFICANDO E CORRIGINDO DRE...');
+    
+    setTimeout(() => {
+        try {
+            if (typeof estruturaDRE === 'undefined' || !estruturaDRE) {
+                console.log('⏳ estruturaDRE não carregado, tentando novamente...');
+                setTimeout(arguments.callee, 1000);
+                return;
+            }
+            
+            if (!estruturaDRE.receitas) {
+                estruturaDRE.receitas = [];
+            }
+            
+            const tem116 = estruturaDRE.receitas.some(r => r.cod === '116' || r.codigo === '116');
+            const tem118 = estruturaDRE.receitas.some(r => r.cod === '118' || r.codigo === '118');
+            
+            let alterado = false;
+            
+            if (!tem116) {
+                estruturaDRE.receitas.push({
+                    cod: '116',
+                    codigo: '116',
+                    nome: 'REC. FATURA',
+                    identificador: '116 - REC. FATURA',
+                    grupo_dre: '1 RECEITAS DE VENDAS',
+                    tipo_classificacao: 'RECEITAS'
+                });
+                alterado = true;
+                console.log('✅ 116 - REC. FATURA adicionado ao DRE');
+            }
+            
+            if (!tem118) {
+                estruturaDRE.receitas.push({
+                    cod: '118',
+                    codigo: '118',
+                    nome: 'REAPRESENTACAO CHEQUE',
+                    identificador: '118 - REAPRESENTACAO CHEQUE',
+                    grupo_dre: '1 RECEITAS DE VENDAS',
+                    tipo_classificacao: 'RECEITAS'
+                });
+                alterado = true;
+                console.log('✅ 118 - REAPRESENTACAO CHEQUE adicionado ao DRE');
+            }
+            
+            if (alterado) {
+                localStorage.setItem('estruturaDREModuloIII', JSON.stringify(estruturaDRE));
+                console.log('💾 DRE atualizado e salvo no cache');
+                
+                setTimeout(() => {
+                    if (typeof gerarDREComSupabase === 'function') {
+                        gerarDREComSupabase();
+                        console.log('🔄 DRE recarregado com 116 e 118');
+                    }
+                }, 500);
+            } else {
+                console.log('ℹ️ 116 e 118 já estão no DRE');
+            }
+            
+        } catch (error) {
+            console.error('❌ Erro ao corrigir DRE:', error);
+        }
+    }, 2000);
+})();
+</script>
 
+</body>
+</html>
 </body>
 </html>
