@@ -11537,23 +11537,35 @@ console.log('📌 Para forçar a correção agora, execute: forcarCorrecaoAgora(
 
 </script>
 // ============================================================
-// CORREÇÃO FINAL - ADICIONAR 116 E 118 NO DRE
+// CORREÇÃO - ADICIONAR 116 E 118 NO DRE
 // ============================================================
 (function corrigirDREFinal() {
     console.log('🔧 CORRIGINDO DRE - ADICIONANDO 116 E 118...');
     
-    // Aguardar o sistema carregar
+    let tentativas = 0;
+    const maxTentativas = 20;
+    
     const interval = setInterval(() => {
+        tentativas++;
+        
         try {
             // Verificar se estruturaDRE já foi carregado
             if (typeof estruturaDRE === 'undefined' || !estruturaDRE || !estruturaDRE.receitas) {
-                console.log('⏳ Aguardando estruturaDRE carregar...');
+                if (tentativas >= maxTentativas) {
+                    console.log('❌ Tempo esgotado, estruturaDRE não carregou');
+                    clearInterval(interval);
+                    return;
+                }
+                console.log(`⏳ Aguardando estruturaDRE carregar... (${tentativas}/${maxTentativas})`);
                 return;
             }
             
+            console.log('📋 estruturaDRE encontrado!');
+            console.log(`📊 Receitas atuais: ${estruturaDRE.receitas.length}`);
+            
             // Verificar se 116 já existe
-            const tem116 = estruturaDRE.receitas.some(r => r.cod === '116' || r.codigo === '116');
-            const tem118 = estruturaDRE.receitas.some(r => r.cod === '118' || r.codigo === '118');
+            const tem116 = estruturaDRE.receitas.some(r => r.cod === '116' || r.codigo === '116' || r.identificador === '116 - REC. FATURA');
+            const tem118 = estruturaDRE.receitas.some(r => r.cod === '118' || r.codigo === '118' || r.identificador === '118 - REAPRESENTACAO CHEQUE');
             
             let alterado = false;
             
@@ -11592,8 +11604,10 @@ console.log('📌 Para forçar a correção agora, execute: forcarCorrecaoAgora(
                 
                 // Recarregar o DRE
                 if (typeof gerarDREComSupabase === 'function') {
-                    gerarDREComSupabase();
-                    console.log('🔄 DRE recarregado');
+                    setTimeout(() => {
+                        gerarDREComSupabase();
+                        console.log('🔄 DRE recarregado com 116 e 118');
+                    }, 500);
                 }
                 
                 clearInterval(interval);
@@ -11604,6 +11618,9 @@ console.log('📌 Para forçar a correção agora, execute: forcarCorrecaoAgora(
             
         } catch (error) {
             console.error('❌ Erro:', error);
+            if (tentativas >= maxTentativas) {
+                clearInterval(interval);
+            }
         }
     }, 1000);
 })();
