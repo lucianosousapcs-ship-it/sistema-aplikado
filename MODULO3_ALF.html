@@ -11536,30 +11536,28 @@ console.log('📌 Para forçar a correção agora, execute: forcarCorrecaoAgora(
 })();
 
 </script>
-<!-- ============================================================
-     CORREÇÃO - ADICIONAR 116 E 118 NO DRE
-     ============================================================ -->
-<script>
-(function corrigirDRE() {
-    console.log('🔧 VERIFICANDO E CORRIGINDO DRE...');
+// ============================================================
+// CORREÇÃO FINAL - ADICIONAR 116 E 118 NO DRE
+// ============================================================
+(function corrigirDREFinal() {
+    console.log('🔧 CORRIGINDO DRE - ADICIONANDO 116 E 118...');
     
-    setTimeout(() => {
+    // Aguardar o sistema carregar
+    const interval = setInterval(() => {
         try {
-            if (typeof estruturaDRE === 'undefined' || !estruturaDRE) {
-                console.log('⏳ estruturaDRE não carregado, tentando novamente...');
-                setTimeout(arguments.callee, 1000);
+            // Verificar se estruturaDRE já foi carregado
+            if (typeof estruturaDRE === 'undefined' || !estruturaDRE || !estruturaDRE.receitas) {
+                console.log('⏳ Aguardando estruturaDRE carregar...');
                 return;
             }
             
-            if (!estruturaDRE.receitas) {
-                estruturaDRE.receitas = [];
-            }
-            
+            // Verificar se 116 já existe
             const tem116 = estruturaDRE.receitas.some(r => r.cod === '116' || r.codigo === '116');
             const tem118 = estruturaDRE.receitas.some(r => r.cod === '118' || r.codigo === '118');
             
             let alterado = false;
             
+            // Adicionar 116
             if (!tem116) {
                 estruturaDRE.receitas.push({
                     cod: '116',
@@ -11570,9 +11568,10 @@ console.log('📌 Para forçar a correção agora, execute: forcarCorrecaoAgora(
                     tipo_classificacao: 'RECEITAS'
                 });
                 alterado = true;
-                console.log('✅ 116 - REC. FATURA adicionado ao DRE');
+                console.log('✅ 116 - REC. FATURA adicionado');
             }
             
+            // Adicionar 118
             if (!tem118) {
                 estruturaDRE.receitas.push({
                     cod: '118',
@@ -11583,27 +11582,30 @@ console.log('📌 Para forçar a correção agora, execute: forcarCorrecaoAgora(
                     tipo_classificacao: 'RECEITAS'
                 });
                 alterado = true;
-                console.log('✅ 118 - REAPRESENTACAO CHEQUE adicionado ao DRE');
+                console.log('✅ 118 - REAPRESENTACAO CHEQUE adicionado');
             }
             
+            // Se alterou, salvar e recarregar
             if (alterado) {
                 localStorage.setItem('estruturaDREModuloIII', JSON.stringify(estruturaDRE));
-                console.log('💾 DRE atualizado e salvo no cache');
+                console.log('💾 Cache atualizado');
                 
-                setTimeout(() => {
-                    if (typeof gerarDREComSupabase === 'function') {
-                        gerarDREComSupabase();
-                        console.log('🔄 DRE recarregado com 116 e 118');
-                    }
-                }, 500);
+                // Recarregar o DRE
+                if (typeof gerarDREComSupabase === 'function') {
+                    gerarDREComSupabase();
+                    console.log('🔄 DRE recarregado');
+                }
+                
+                clearInterval(interval);
             } else {
                 console.log('ℹ️ 116 e 118 já estão no DRE');
+                clearInterval(interval);
             }
             
         } catch (error) {
-            console.error('❌ Erro ao corrigir DRE:', error);
+            console.error('❌ Erro:', error);
         }
-    }, 2000);
+    }, 1000);
 })();
 </body>
 </html>
