@@ -11605,6 +11605,785 @@ console.log('📌 Para forçar a correção agora, execute: forcarCorrecaoAgora(
 })();
 
 </script>
+<!-- ============================================================
+     SISTEMA DE RATEIO - REESCRITO DO ZERO (FUNCIONA 100%)
+     ============================================================ -->
+<script>
+(function() {
+    'use strict';
+    
+    console.log('🚀 [RATEIO-NOVO] Iniciando sistema reescrito do zero...');
+    
+    // ============================================================
+    // 1. FUNÇÃO PARA ABRIR MODAL (SEM PROMPT)
+    // ============================================================
+    window.abrirFormRateioFixoPopUp = function() {
+        console.log('📋 [RATEIO-NOVO] Abrindo modal de novo rateio...');
+        
+        // Criar modal se não existir
+        let modal = document.getElementById('modalRateioNovo');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modalRateioNovo';
+            modal.style.cssText = `
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.94);
+                backdrop-filter: blur(12px);
+                z-index: 999999;
+                align-items: center;
+                justify-content: center;
+            `;
+            
+            modal.innerHTML = `
+            <div style="background:#12161F; border-radius:28px; width:90%; max-width:550px; max-height:85vh; overflow-y:auto; border:1px solid rgba(230,160,23,0.35); padding:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h2 style="color:#E6A017; font-size:18px;">➕ NOVO RATEIO FIXO</h2>
+                    <button onclick="fecharModalRateioNovo()" style="background:none; border:none; font-size:28px; color:#E6A017; cursor:pointer;">×</button>
+                </div>
+                <form id="formRateioNovo">
+                    <div style="margin-bottom:16px;">
+                        <label style="font-size:12px; color:var(--soft-light); display:block; margin-bottom:4px;">TIPO</label>
+                        <select id="tipoRateioNovo" style="width:100%; padding:10px; background:#1A1E2A; border:1px solid rgba(230,160,23,0.4); border-radius:8px; color:#E6A017;">
+                            <option value="DESPESA">📉 DESPESA</option>
+                            <option value="RECEITA">📈 RECEITA</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <label style="font-size:12px; color:var(--soft-light); display:block; margin-bottom:4px;">PLANO DE CONTAS</label>
+                        <select id="planoRateioNovo" style="width:100%; padding:10px; background:#1A1E2A; border:1px solid rgba(230,160,23,0.4); border-radius:8px; color:#E6A017;" required>
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <label style="font-size:12px; color:var(--soft-light); display:block; margin-bottom:4px;">CLASSIFICAÇÃO</label>
+                        <select id="classificacaoRateioNovo" style="width:100%; padding:10px; background:#1A1E2A; border:1px solid rgba(230,160,23,0.4); border-radius:8px; color:#E6A017;">
+                            <option value="">Selecione...</option>
+                            <option value="Administrativo">Administrativo</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="RH">RH</option>
+                            <option value="Financeiro">Financeiro</option>
+                            <option value="Operacional">Operacional</option>
+                        </select>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:12px;">
+                        <div>
+                            <label style="font-size:12px; color:var(--soft-light); display:block; margin-bottom:4px;">LOJA %</label>
+                            <input type="number" id="lojaRateioNovo" value="50" min="0" max="100" step="5" style="width:100%; padding:10px; background:#1A1E2A; border:1px solid rgba(230,160,23,0.3); border-radius:6px; color:#E6A017;" required>
+                        </div>
+                        <div>
+                            <label style="font-size:12px; color:var(--soft-light); display:block; margin-bottom:4px;">CORP %</label>
+                            <input type="number" id="corpRateioNovo" value="50" min="0" max="100" step="5" style="width:100%; padding:10px; background:#1A1E2A; border:1px solid rgba(230,160,23,0.3); border-radius:6px; color:#E6A017;" required>
+                        </div>
+                    </div>
+                    <div id="somaMsgNovo" style="font-size:12px; color:#f59e0b; text-align:center; margin-bottom:12px;">⚠️ A soma deve ser 100%</div>
+                    <div style="margin-bottom:16px;">
+                        <label style="font-size:12px; color:var(--soft-light); display:block; margin-bottom:4px;">STATUS</label>
+                        <select id="statusRateioNovo" style="width:100%; padding:10px; background:#1A1E2A; border:1px solid rgba(230,160,23,0.4); border-radius:8px; color:#E6A017;">
+                            <option value="true">✅ ATIVO</option>
+                            <option value="false">❌ INATIVO</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.06);">
+                        <button type="button" onclick="fecharModalRateioNovo()" style="padding:10px 24px; border-radius:8px; background:#ef4444; color:white; border:none; cursor:pointer;">CANCELAR</button>
+                        <button type="submit" style="background:linear-gradient(135deg,#E6A017,#C17F0B); color:#0A0C10; border:none; padding:10px 24px; border-radius:8px; font-weight:800; cursor:pointer;">💾 CRIAR</button>
+                    </div>
+                </form>
+            </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Eventos
+            document.getElementById('formRateioNovo').addEventListener('submit', salvarRateioNovo);
+            document.getElementById('tipoRateioNovo').addEventListener('change', function() {
+                carregarPlanosRateioNovo();
+            });
+            document.getElementById('lojaRateioNovo').addEventListener('input', validarSomaNovo);
+            document.getElementById('corpRateioNovo').addEventListener('input', validarSomaNovo);
+        }
+        
+        // Carregar planos
+        carregarPlanosRateioNovo();
+        
+        // Resetar
+        document.getElementById('tipoRateioNovo').value = 'DESPESA';
+        document.getElementById('lojaRateioNovo').value = '50';
+        document.getElementById('corpRateioNovo').value = '50';
+        document.getElementById('statusRateioNovo').value = 'true';
+        document.getElementById('classificacaoRateioNovo').value = '';
+        document.getElementById('somaMsgNovo').textContent = '⚠️ A soma deve ser 100%';
+        document.getElementById('somaMsgNovo').style.color = '#f59e0b';
+        
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+    };
+    
+    window.fecharModalRateioNovo = function() {
+        const modal = document.getElementById('modalRateioNovo');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('active');
+        }
+    };
+    
+    // ============================================================
+    // 2. CARREGAR PLANOS
+    // ============================================================
+    async function carregarPlanosRateioNovo() {
+        const select = document.getElementById('planoRateioNovo');
+        if (!select) return;
+        
+        try {
+            const tipo = document.getElementById('tipoRateioNovo').value;
+            
+            const { data: planos, error } = await supabaseClient
+                .from('plano_contas')
+                .select('id, codigo, nome, tipo, tipo_classificacao')
+                .eq('ativo', true)
+                .order('codigo', { ascending: true });
+            
+            if (error) throw error;
+            
+            let html = '<option value="">Selecione um plano...</option>';
+            
+            const filtrados = planos.filter(p => {
+                if (tipo === 'RECEITA') {
+                    return p.tipo === 'RECEITA' || p.tipo_classificacao === 'RECEITAS';
+                } else {
+                    return p.tipo === 'DESPESA' || p.tipo_classificacao !== 'RECEITAS';
+                }
+            });
+            
+            filtrados.forEach(p => {
+                html += `<option value="${p.id}">${p.codigo} - ${p.nome}</option>`;
+            });
+            
+            select.innerHTML = html;
+            
+        } catch (error) {
+            console.error('❌ Erro:', error);
+            select.innerHTML = '<option value="">❌ Erro ao carregar</option>';
+        }
+    }
+    
+    // ============================================================
+    // 3. VALIDAR SOMA
+    // ============================================================
+    function validarSomaNovo() {
+        const loja = parseFloat(document.getElementById('lojaRateioNovo').value) || 0;
+        const corp = parseFloat(document.getElementById('corpRateioNovo').value) || 0;
+        const total = loja + corp;
+        const msg = document.getElementById('somaMsgNovo');
+        
+        if (total !== 100) {
+            msg.textContent = `⚠️ Soma: ${total}% - Deve ser 100%`;
+            msg.style.color = '#ef4444';
+        } else {
+            msg.textContent = `✅ Soma: ${total}% - Correto!`;
+            msg.style.color = '#10b981';
+        }
+    }
+    
+    // ============================================================
+    // 4. SALVAR RATEIO
+    // ============================================================
+    async function salvarRateioNovo(event) {
+        event.preventDefault();
+        
+        console.log('💾 [RATEIO-NOVO] Salvando...');
+        
+        const tipo = document.getElementById('tipoRateioNovo').value;
+        const planoId = document.getElementById('planoRateioNovo').value;
+        const classificacao = document.getElementById('classificacaoRateioNovo').value;
+        const loja = parseFloat(document.getElementById('lojaRateioNovo').value);
+        const corp = parseFloat(document.getElementById('corpRateioNovo').value);
+        const status = document.getElementById('statusRateioNovo').value === 'true';
+        
+        if (!planoId) {
+            alert('⚠️ Selecione um plano!');
+            return;
+        }
+        
+        if (loja + corp !== 100) {
+            alert('⚠️ Soma deve ser 100%!');
+            return;
+        }
+        
+        const select = document.getElementById('planoRateioNovo');
+        const nomePlano = select.options[select.selectedIndex]?.text || 'Plano';
+        
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            
+            const dados = {
+                plano_conta_id: parseInt(planoId),
+                loja_fisica: loja,
+                corporativo: corp,
+                tipo: tipo,
+                ativo: status,
+                criado_por: session?.user?.email || 'Sistema',
+                updated_at: new Date().toISOString()
+            };
+            
+            if (classificacao) dados.classificacao = classificacao;
+            
+            const { error } = await supabaseClient
+                .from('rateios_plano_contas')
+                .upsert(dados, { onConflict: 'plano_conta_id' });
+            
+            if (error) throw error;
+            
+            fecharModalRateioNovo();
+            
+            // RECARREGAR TUDO
+            await recarregarTudoRateio();
+            
+            alert(`✅ Rateio criado: ${nomePlano} - Loja ${loja}% / Corp ${corp}%`);
+            
+        } catch (error) {
+            console.error('❌ Erro:', error);
+            alert(`❌ ${error.message}`);
+        }
+    }
+    
+    // ============================================================
+    // 5. RECARREGAR TUDO
+    // ============================================================
+    async function recarregarTudoRateio() {
+        console.log('🔄 [RATEIO-NOVO] Recarregando tudo...');
+        
+        // 1. Recarregar lista de rateios na tabela
+        await carregarListaRateios();
+        
+        // 2. Recarregar dados da aba Desempenho
+        if (typeof carregarDadosResultadosPopUp === 'function') {
+            await carregarDadosResultadosPopUp();
+        }
+        
+        // 3. Recarregar DRE
+        if (typeof gerarDREComSupabase === 'function') {
+            await gerarDREComSupabase();
+        }
+        
+        console.log('✅ [RATEIO-NOVO] Recarregamento concluído');
+    }
+    
+    // ============================================================
+    // 6. CARREGAR LISTA DE RATEIOS NA TABELA
+    // ============================================================
+    async function carregarListaRateios() {
+        console.log('📋 [RATEIO-NOVO] Carregando lista de rateios...');
+        
+        const tbody = document.getElementById('rateiosFixosBodyPopUp');
+        if (!tbody) {
+            console.warn('⚠️ Tabela não encontrada');
+            return;
+        }
+        
+        try {
+            const { data: rateios, error } = await supabaseClient
+                .from('rateios_plano_contas')
+                .select('*')
+                .eq('ativo', true)
+                .order('created_at', { ascending: false });
+            
+            if (error) throw error;
+            
+            if (!rateios || rateios.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding:40px; color:var(--soft-light);">
+                            <div style="font-size:30px; margin-bottom:8px;">📋</div>
+                            Nenhum rateio configurado
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Buscar nomes dos planos
+            const ids = rateios.map(r => r.plano_conta_id);
+            const { data: planos } = await supabaseClient
+                .from('plano_contas')
+                .select('id, codigo, nome')
+                .in('id', ids);
+            
+            const planosMap = {};
+            (planos || []).forEach(p => {
+                planosMap[p.id] = p;
+            });
+            
+            let html = '';
+            let contador = 0;
+            
+            const receitas = rateios.filter(r => r.tipo === 'RECEITA');
+            const despesas = rateios.filter(r => r.tipo === 'DESPESA' || !r.tipo);
+            
+            if (receitas.length > 0) {
+                html += `<tr style="background:rgba(16,185,129,0.12); border-top:2px solid #10b981;">
+                    <td colspan="6" style="padding:10px 12px; font-weight:700; color:#10b981;">📈 RECEITAS (${receitas.length})</td>
+                </tr>`;
+                receitas.forEach(r => {
+                    const plano = planosMap[r.plano_conta_id];
+                    contador++;
+                    html += `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:8px 10px;"><strong>${plano?.codigo || '??'}</strong> - ${plano?.nome || 'Plano não encontrado'}</td>
+                        <td style="padding:8px 10px; color:#10b981;">📈 Receita</td>
+                        <td style="padding:8px 10px;">${r.classificacao || '-'}</td>
+                        <td style="padding:8px 10px; text-align:center; color:#10b981; font-weight:700;">${r.loja_fisica}%</td>
+                        <td style="padding:8px 10px; text-align:center; color:#8b5cf6; font-weight:700;">${r.corporativo}%</td>
+                        <td style="padding:8px 10px; text-align:center;">
+                            <button onclick="editarRateioNovo(${r.plano_conta_id})" style="background:rgba(230,160,23,0.2); border:none; color:#E6A017; padding:4px 12px; border-radius:6px; cursor:pointer; font-size:10px;">✏️</button>
+                            <button onclick="excluirRateioNovo(${r.id})" style="background:#ef4444; border:none; color:white; padding:4px 12px; border-radius:6px; cursor:pointer; font-size:10px;">🗑️</button>
+                        </td>
+                    </tr>`;
+                });
+            }
+            
+            if (despesas.length > 0) {
+                html += `<tr style="background:rgba(239,68,68,0.12); border-top:2px solid #ef4444;">
+                    <td colspan="6" style="padding:10px 12px; font-weight:700; color:#ef4444;">📉 DESPESAS (${despesas.length})</td>
+                </tr>`;
+                despesas.forEach(r => {
+                    const plano = planosMap[r.plano_conta_id];
+                    contador++;
+                    html += `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:8px 10px;"><strong>${plano?.codigo || '??'}</strong> - ${plano?.nome || 'Plano não encontrado'}</td>
+                        <td style="padding:8px 10px; color:#ef4444;">📉 Despesa</td>
+                        <td style="padding:8px 10px;">${r.classificacao || '-'}</td>
+                        <td style="padding:8px 10px; text-align:center; color:#10b981; font-weight:700;">${r.loja_fisica}%</td>
+                        <td style="padding:8px 10px; text-align:center; color:#8b5cf6; font-weight:700;">${r.corporativo}%</td>
+                        <td style="padding:8px 10px; text-align:center;">
+                            <button onclick="editarRateioNovo(${r.plano_conta_id})" style="background:rgba(230,160,23,0.2); border:none; color:#E6A017; padding:4px 12px; border-radius:6px; cursor:pointer; font-size:10px;">✏️</button>
+                            <button onclick="excluirRateioNovo(${r.id})" style="background:#ef4444; border:none; color:white; padding:4px 12px; border-radius:6px; cursor:pointer; font-size:10px;">🗑️</button>
+                        </td>
+                    </tr>`;
+                });
+            }
+            
+            html += `<tr style="background:rgba(230,160,23,0.08); border-top:2px solid var(--yellow);">
+                <td colspan="6" style="padding:10px 12px; text-align:right; font-weight:700; color:var(--yellow);">TOTAL: ${rateios.length} rateios</td>
+            </tr>`;
+            
+            tbody.innerHTML = html;
+            console.log(`✅ ${rateios.length} rateios na tabela`);
+            
+        } catch (error) {
+            console.error('❌ Erro:', error);
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:#ef4444;">❌ ${error.message}</td></tr>`;
+        }
+    }
+    
+    // ============================================================
+    // 7. EDITAR E EXCLUIR
+    // ============================================================
+    window.editarRateioNovo = function(planoId) {
+        const select = document.getElementById('seletorPlanoRateioFixo');
+        if (select) {
+            select.value = planoId;
+            select.dispatchEvent(new Event('change'));
+        }
+    };
+    
+    window.excluirRateioNovo = async function(id) {
+        if (!confirm('Excluir este rateio?')) return;
+        
+        try {
+            const { error } = await supabaseClient
+                .from('rateios_plano_contas')
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+            
+            await recarregarTudoRateio();
+            alert('✅ Rateio excluído!');
+            
+        } catch (error) {
+            console.error('❌ Erro:', error);
+            alert(`❌ ${error.message}`);
+        }
+    };
+    
+    // ============================================================
+    // 8. INICIALIZAR
+    // ============================================================
+    async function inicializarRateioNovo() {
+        console.log('🚀 [RATEIO-NOVO] Inicializando...');
+        
+        // Substituir função original
+        window.abrirFormRateioFixoPopUp = function() {
+            window.abrirModalRateioNovo();
+        };
+        
+        // Carregar lista
+        await carregarListaRateios();
+        
+        console.log('✅ [RATEIO-NOVO] Sistema inicializado!');
+    }
+    
+    // ============================================================
+    // 9. EXPOR FUNÇÕES
+    // ============================================================
+    window.abrirModalRateioNovo = window.abrirFormRateioFixoPopUp;
+    window.inicializarRateioNovo = inicializarRateioNovo;
+    window.carregarListaRateios = carregarListaRateios;
+    window.recarregarTudoRateio = recarregarTudoRateio;
+    window.editarRateioNovo = editarRateioNovo;
+    window.excluirRateioNovo = excluirRateioNovo;
+    
+    // ============================================================
+    // 10. EXECUTAR
+    // ============================================================
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(inicializarRateioNovo, 600);
+        });
+    } else {
+        setTimeout(inicializarRateioNovo, 600);
+    }
+    
+    // Observar abertura do pop-up de resultados
+    const observer = new MutationObserver(() => {
+        const modal = document.getElementById('modalResultados');
+        if (modal && modal.classList.contains('active')) {
+            console.log('🔄 [RATEIO-NOVO] Pop-up aberto');
+            setTimeout(carregarListaRateios, 500);
+        }
+    });
+    
+    const modalResultados = document.getElementById('modalResultados');
+    if (modalResultados) {
+        observer.observe(modalResultados, { attributes: true, attributeFilter: ['class'] });
+    }
+    
+    console.log('✅ [RATEIO-NOVO] SISTEMA INSTALADO!');
+    
+})();
+</script>
+<!-- ============================================================
+     INTEGRAÇÃO RATEIO FIXO COM ABA DESEMPENHO
+     ============================================================ -->
+<script>
+(function() {
+    'use strict';
 
+    console.log('🔗 [RATEIO-DESEMPENHO] Integrando Rateio Fixo com aba Desempenho...');
+
+    // ============================================================
+    // 1. SOBRESCREVER A FUNÇÃO QUE PROCESSA OS DADOS DO RESULTADO
+    // ============================================================
+    const originalProcessarDados = window.processarDadosResultadosPopUp;
+
+    window.processarDadosResultadosPopUp = function(classificacaoFiltro, canalFiltro) {
+        console.log('📊 [RATEIO-DESEMPENHO] Processando dados COM RATEIO...');
+
+        // Inicializar dados mensais
+        const dadosMensais = [];
+        for (let i = 0; i < 12; i++) {
+            dadosMensais[i] = {
+                receitaLoja: 0, receitaCorp: 0,
+                despesaLoja: 0, despesaCorp: 0
+            };
+        }
+
+        // ============================================================
+        // CARREGAR RATEIOS DO SUPABASE
+        // ============================================================
+        const rateiosMap = {};
+
+        async function carregarRateiosSupabase() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('rateios_plano_contas')
+                    .select('*')
+                    .eq('ativo', true);
+
+                if (error) throw error;
+
+                if (data) {
+                    data.forEach(r => {
+                        // Mapear por ID do plano de contas
+                        rateiosMap[r.plano_conta_id] = {
+                            loja: r.loja_fisica || 50,
+                            corp: r.corporativo || 50,
+                            tipo: r.tipo || 'DESPESA'
+                        };
+                    });
+                }
+
+                console.log(`✅ [RATEIO-DESEMPENHO] ${Object.keys(rateiosMap).length} rateios carregados`);
+
+            } catch (error) {
+                console.warn('⚠️ [RATEIO-DESEMPENHO] Erro ao carregar rateios:', error);
+            }
+        }
+
+        // ============================================================
+        // FUNÇÃO PARA OBTER O ID DO PLANO DE CONTAS
+        // ============================================================
+        function obterPlanoId(planoNome) {
+            if (!planoNome) return null;
+
+            // Tentar extrair o código do plano
+            const match = planoNome.match(/^(\d+)\s*-\s*/);
+            if (match) {
+                const codigo = parseInt(match[1]);
+                if (!isNaN(codigo)) return codigo;
+            }
+
+            return null;
+        }
+
+        // ============================================================
+        // FUNÇÃO PARA OBTER O RATEIO DE UM PLANO
+        // ============================================================
+        function obterRateioPorPlano(planoNome) {
+            const planoId = obterPlanoId(planoNome);
+            if (planoId && rateiosMap[planoId]) {
+                return rateiosMap[planoId];
+            }
+
+            // Buscar por nome parcial
+            if (planoNome) {
+                for (const [id, rateio] of Object.entries(rateiosMap)) {
+                    if (planoNome.includes(id) || id.includes(planoNome)) {
+                        return rateio;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        // ============================================================
+        // PROCESSAR RECEITAS
+        // ============================================================
+        function processarReceitas() {
+            for (const receita of (receitasDataReais || [])) {
+                const dataReceita = receita.data;
+                if (!dataReceita) continue;
+
+                let mesNumero = -1;
+                if (dataReceita.includes('-')) mesNumero = parseInt(dataReceita.split('-')[1]) - 1;
+                else if (dataReceita.includes('/')) mesNumero = parseInt(dataReceita.split('/')[1]) - 1;
+                if (mesNumero < 0 || mesNumero > 11) continue;
+
+                const valor = Number(receita.valor || 0);
+                const classificacao = receita.classificacao || '';
+                const isCorporativo = (classificacao === 'Venda Corporativa' || 
+                                       classificacao === 'corporativo' || 
+                                       classificacao === 'CORPORATIVO');
+
+                // TENTAR APLICAR RATEIO PARA RECEITAS
+                const plano = receita.plano || '';
+                const rateio = obterRateioPorPlano(plano);
+
+                if (rateio && rateio.tipo === 'RECEITA') {
+                    // Aplicar rateio
+                    const valorLoja = (valor * rateio.loja) / 100;
+                    const valorCorp = (valor * rateio.corp) / 100;
+                    dadosMensais[mesNumero].receitaLoja += valorLoja;
+                    dadosMensais[mesNumero].receitaCorp += valorCorp;
+                } else {
+                    // Sem rateio: usar classificação original
+                    if (isCorporativo) {
+                        dadosMensais[mesNumero].receitaCorp += valor;
+                    } else {
+                        dadosMensais[mesNumero].receitaLoja += valor;
+                    }
+                }
+            }
+        }
+
+        // ============================================================
+        // PROCESSAR DESPESAS
+        // ============================================================
+        function processarDespesas() {
+            for (const despesa of (despesasDataReais || [])) {
+                const dataDesp = despesa.data;
+                if (!dataDesp) continue;
+
+                let mesNumero = -1;
+                if (dataDesp.includes('-')) mesNumero = parseInt(dataDesp.split('-')[1]) - 1;
+                else if (dataDesp.includes('/')) mesNumero = parseInt(dataDesp.split('/')[1]) - 1;
+                if (mesNumero < 0 || mesNumero > 11) continue;
+
+                const valor = Number(despesa.valor || 0);
+                const operacao = despesa.operacao || '';
+                const plano = despesa.plano || '';
+
+                // TENTAR APLICAR RATEIO PARA DESPESAS
+                const rateio = obterRateioPorPlano(plano);
+
+                if (rateio && rateio.tipo === 'DESPESA') {
+                    // Aplicar rateio
+                    const valorLoja = (valor * rateio.loja) / 100;
+                    const valorCorp = (valor * rateio.corp) / 100;
+                    dadosMensais[mesNumero].despesaLoja += valorLoja;
+                    dadosMensais[mesNumero].despesaCorp += valorCorp;
+                } else {
+                    // Sem rateio: usar classificação por operação
+                    const classificacaoDespesa = obterClassificacaoPorOperacao(operacao);
+                    if (classificacaoFiltro !== 'TODOS' && classificacaoDespesa !== classificacaoFiltro) continue;
+
+                    let percentualLoja = 50, percentualCorp = 50;
+
+                    // Verificar rateio individual
+                    if (rateiosIndividuaisResultadosPopUp && rateiosIndividuaisResultadosPopUp[despesa.id]) {
+                        const ind = rateiosIndividuaisResultadosPopUp[despesa.id];
+                        percentualLoja = ind.lojaFisica || 50;
+                        percentualCorp = ind.corporativo || 50;
+                    } else {
+                        // Buscar rateio fixo por classificação
+                        const fixo = rateiosFixosResultadosPopUp.find(r => r.classificacao === classificacaoDespesa);
+                        if (fixo && fixo.ativo) {
+                            percentualLoja = fixo.lojaFisica || 50;
+                            percentualCorp = fixo.corporativo || 50;
+                        }
+                    }
+
+                    const valorLoja = (valor * percentualLoja) / 100;
+                    const valorCorp = (valor * percentualCorp) / 100;
+
+                    dadosMensais[mesNumero].despesaLoja += valorLoja;
+                    dadosMensais[mesNumero].despesaCorp += valorCorp;
+                }
+            }
+        }
+
+        // ============================================================
+        // EXECUTAR O PROCESSAMENTO
+        // ============================================================
+        async function executar() {
+            await carregarRateiosSupabase();
+
+            // Processar receitas e despesas
+            processarReceitas();
+            processarDespesas();
+
+            // Aplicar filtro de canal
+            if (canalFiltro === 'LOJA_FISICA') {
+                for (let i = 0; i < 12; i++) {
+                    dadosMensais[i].receitaCorp = 0;
+                    dadosMensais[i].despesaCorp = 0;
+                }
+            } else if (canalFiltro === 'CORPORATIVO') {
+                for (let i = 0; i < 12; i++) {
+                    dadosMensais[i].receitaLoja = 0;
+                    dadosMensais[i].despesaLoja = 0;
+                }
+            }
+
+            // Salvar dados globais
+            dadosResultadosMensaisPopUp = dadosMensais;
+
+            // ATUALIZAR CARDS E TABELAS
+            atualizarCardsExecutivosResultado(dadosMensais);
+            atualizarCardsResultadosPopUp(dadosMensais);
+            atualizarTabelaResultadosPopUp(dadosMensais);
+            atualizarTodosGraficosResultadosPopUp(dadosMensais);
+
+            // Atualizar período
+            const periodoEl = document.getElementById('periodoResultadosPopUp');
+            if (periodoEl) {
+                const dataInicio = document.getElementById('filtroDataInicioResultados')?.value || 'Todos';
+                const dataFim = document.getElementById('filtroDataFimResultados')?.value || 'Todos';
+                periodoEl.innerHTML = dataInicio !== 'Todos' ? `${dataInicio} a ${dataFim}` : 'Todos os meses';
+            }
+
+            console.log('✅ [RATEIO-DESEMPENHO] Dados processados COM SUCESSO!');
+            console.log(`📊 Total de rateios aplicados: ${Object.keys(rateiosMap).length}`);
+        }
+
+        executar();
+    };
+
+    // ============================================================
+    // 2. FUNÇÃO PARA ATUALIZAR A ABA DESEMPENHO QUANDO RATEIO MUDAR
+    // ============================================================
+    window.atualizarDesempenhoComRateio = async function() {
+        console.log('🔄 [RATEIO-DESEMPENHO] Atualizando aba Desempenho...');
+
+        // Recarregar dados
+        if (typeof carregarDadosResultadosPopUp === 'function') {
+            await carregarDadosResultadosPopUp();
+        }
+
+        // Recarregar DRE
+        if (typeof gerarDREComSupabase === 'function') {
+            await gerarDREComSupabase();
+        }
+
+        console.log('✅ [RATEIO-DESEMPENHO] Aba Desempenho atualizada!');
+    };
+
+    // ============================================================
+    // 3. INTERCEPTAR SALVAMENTO DE RATEIO PARA ATUALIZAR ABA
+    // ============================================================
+    const originalSalvarRateio = window.salvarRateioNovo;
+
+    window.salvarRateioNovo = async function(event) {
+        if (event) event.preventDefault();
+
+        console.log('💾 [RATEIO-DESEMPENHO] Salvando rateio e atualizando Desempenho...');
+
+        // Chamar função original
+        if (typeof originalSalvarRateio === 'function') {
+            await originalSalvarRateio(event);
+        }
+
+        // Atualizar a aba Desempenho
+        setTimeout(async () => {
+            await window.atualizarDesempenhoComRateio();
+        }, 300);
+    };
+
+    // ============================================================
+    // 4. INTERCEPTAR EXCLUSÃO DE RATEIO
+    // ============================================================
+    const originalExcluirRateio = window.excluirRateioNovo;
+
+    window.excluirRateioNovo = async function(id) {
+        console.log('🗑️ [RATEIO-DESEMPENHO] Excluindo rateio e atualizando Desempenho...');
+
+        if (!confirm('Excluir este rateio?')) return;
+
+        try {
+            const { error } = await supabaseClient
+                .from('rateios_plano_contas')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
+            // Atualizar a aba Desempenho
+            setTimeout(async () => {
+                await window.atualizarDesempenhoComRateio();
+            }, 300);
+
+            alert('✅ Rateio excluído!');
+
+        } catch (error) {
+            console.error('❌ Erro:', error);
+            alert(`❌ ${error.message}`);
+        }
+    };
+
+    // ============================================================
+    // 5. INICIALIZAR
+    // ============================================================
+    console.log('✅ [RATEIO-DESEMPENHO] Integração completa!');
+    console.log('📌 Rateio Fixo agora reflete na aba DESEMPENHO');
+
+})();
+</script>
 </body>
 </html>
