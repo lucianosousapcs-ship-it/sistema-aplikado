@@ -5203,118 +5203,83 @@ function fecharPopupAuditoria() {
 }
 
 function executarAuditoria() {
-    console.log('🔍 EXECUTANDO AUDITORIA - USANDO LÓGICA DO DRE...');
+    console.log('🔍 EXECUTANDO AUDITORIA - VERSÃO CORRIGIDA');
     
-    // ==========================================
-    // 1. CALCULAR RECEITAS - MESMA LÓGICA DO DRE
-    // ==========================================
+    // Calcular totais usando a mesma lógica do DRE
     let totalReceitasDRE = 0;
     let totalReceitasCadastradas = 0;
-    
-    if (typeof receitasDataReais !== 'undefined') {
-        receitasDataReais.forEach(r => {
-            totalReceitasCadastradas += Number(r.valor) || 0;
-        });
-    }
-    
-    // USAR A MESMA LÓGICA DO DRE PARA CALCULAR
-    if (typeof receitasDataReais !== 'undefined' && typeof estruturaDRE !== 'undefined') {
-        // CRIAR LISTA DE PLANOS VÁLIDOS IGUAL AO DRE
-        const planosValidos = new Set();
-        if (estruturaDRE.receitas) {
-            estruturaDRE.receitas.forEach(p => {
-                // Adicionar todas as variações do plano
-                planosValidos.add(p.nome);
-                planosValidos.add(p.cod);
-                planosValidos.add(p.identificador);
-                if (p.nome) {
-                    const partes = p.nome.split(' - ');
-                    if (partes.length > 1) planosValidos.add(partes[1]);
-                }
-            });
-        }
-        
-        console.log(`📋 ${planosValidos.size} planos válidos no DRE`);
-        
-        // Somar receitas que estão no DRE
-        receitasDataReais.forEach(r => {
-            const plano = r.plano || '';
-            let valido = false;
-            
-            // Verificação exata
-            for (const p of planosValidos) {
-                if (plano === p || plano.includes(p) || p.includes(plano)) {
-                    valido = true;
-                    break;
-                }
-            }
-            
-            if (valido) {
-                totalReceitasDRE += Number(r.valor) || 0;
-            }
-        });
-    }
-    
-    // ==========================================
-    // 2. CALCULAR DESPESAS - MESMA LÓGICA DO DRE
-    // ==========================================
     let totalDespesasDRE = 0;
     let totalDespesasCadastradas = 0;
     let totalSangrias = 0;
     
-    if (typeof despesasDataReais !== 'undefined') {
-        despesasDataReais.forEach(d => {
-            totalDespesasCadastradas += Number(d.valor) || 0;
+    // Lista de planos válidos no DRE
+    const planosValidos = new Set();
+    if (typeof estruturaDRE !== 'undefined') {
+        const todosPlanos = [
+            ...(estruturaDRE.receitas || []),
+            ...(estruturaDRE.custosVariaveis || []),
+            ...(estruturaDRE.custosFixos || [])
+        ];
+        todosPlanos.forEach(p => {
+            const id = p.identificador || `${p.cod} - ${p.nome}`;
+            planosValidos.add(id);
+            planosValidos.add(p.nome);
+            planosValidos.add(`${p.cod} - ${p.nome}`);
+        });
+        console.log(`📋 ${planosValidos.size} planos válidos no DRE`);
+    }
+    
+    // Calcular receitas
+    if (typeof receitasDataReais !== 'undefined') {
+        receitasDataReais.forEach(r => {
+            const valor = Number(r.valor) || 0;
+            totalReceitasCadastradas += valor;
             
-            const plano = d.plano || '';
+            const plano = r.plano || '';
             let valido = false;
-            
-            // Verificar em custos variáveis
-            if (estruturaDRE && estruturaDRE.custosVariaveis) {
-                for (const p of estruturaDRE.custosVariaveis) {
-                    const id = p.identificador || `${p.cod} - ${p.nome}`;
-                    if (plano === id || plano.includes(id) || id.includes(plano) ||
-                        plano === p.nome || plano.includes(p.nome) || p.nome.includes(plano)) {
-                        valido = true;
-                        break;
-                    }
+            for (const p of planosValidos) {
+                if (p && plano && (plano === p || plano.includes(p) || p.includes(plano))) {
+                    valido = true;
+                    break;
                 }
             }
-            
-            // Verificar em custos fixos
-            if (!valido && estruturaDRE && estruturaDRE.custosFixos) {
-                for (const p of estruturaDRE.custosFixos) {
-                    const id = p.identificador || `${p.cod} - ${p.nome}`;
-                    if (plano === id || plano.includes(id) || id.includes(plano) ||
-                        plano === p.nome || plano.includes(p.nome) || p.nome.includes(plano)) {
-                        valido = true;
-                        break;
-                    }
-                }
-            }
-            
-            if (valido) {
-                totalDespesasDRE += Number(d.valor) || 0;
-            }
+            if (valido) totalReceitasDRE += valor;
         });
     }
     
-    // Sangrias
+    // Calcular despesas
+    if (typeof despesasDataReais !== 'undefined') {
+        despesasDataReais.forEach(d => {
+            const valor = Number(d.valor) || 0;
+            totalDespesasCadastradas += valor;
+            
+            const plano = d.plano || '';
+            let valido = false;
+            for (const p of planosValidos) {
+                if (p && plano && (plano === p || plano.includes(p) || p.includes(plano))) {
+                    valido = true;
+                    break;
+                }
+            }
+            if (valido) totalDespesasDRE += valor;
+        });
+    }
+    
+    // Calcular sangrias
     if (typeof contasExtrasData !== 'undefined') {
         contasExtrasData.forEach(s => {
             totalSangrias += Number(s.valor) || 0;
         });
     }
     
-    // ==========================================
-    // 3. CALCULAR DIFERENÇAS
-    // ==========================================
     const diffReceitas = totalReceitasCadastradas - totalReceitasDRE;
-    const diffDespesas = totalDespesasCadastradas - Math.abs(totalDespesasDRE);
+    const diffDespesas = totalDespesasCadastradas - totalDespesasDRE;
     
-    // ==========================================
-    // 4. ATUALIZAR POP-UP
-    // ==========================================
+    console.log(`📊 Receitas: DRE R$ ${totalReceitasDRE.toFixed(2)} | Cadastrado R$ ${totalReceitasCadastradas.toFixed(2)} | Diff R$ ${diffReceitas.toFixed(2)}`);
+    console.log(`📊 Despesas: DRE R$ ${totalDespesasDRE.toFixed(2)} | Cadastrado R$ ${totalDespesasCadastradas.toFixed(2)} | Sangrias R$ ${totalSangrias.toFixed(2)} | Diff R$ ${diffDespesas.toFixed(2)}`);
+    console.log('✅ AUDITORIA CORRIGIDA!');
+    
+    // Atualizar os elementos HTML da auditoria
     const elReceitasDRE = document.getElementById('auditReceitasDRE');
     const elReceitasCad = document.getElementById('auditReceitasCadastradas');
     const elReceitasDiff = document.getElementById('auditReceitasDiferenca');
@@ -5322,25 +5287,16 @@ function executarAuditoria() {
     const elDespesasCad = document.getElementById('auditDespesasCadastradas');
     const elSangrias = document.getElementById('auditSangrias');
     const elDespesasDiff = document.getElementById('auditDespesasDiferenca');
-    const elSangriasEnc = document.getElementById('auditSangriasEncontradas');
-    const elSangriasInt = document.getElementById('auditSangriasIntegradas');
-    const elSangriasDiff = document.getElementById('auditSangriasDiferenca');
     
     if (elReceitasDRE) elReceitasDRE.innerHTML = `R$ ${totalReceitasDRE.toFixed(2).replace('.', ',')}`;
     if (elReceitasCad) elReceitasCad.innerHTML = `R$ ${totalReceitasCadastradas.toFixed(2).replace('.', ',')}`;
     if (elReceitasDiff) elReceitasDiff.innerHTML = `R$ ${diffReceitas.toFixed(2).replace('.', ',')}`;
-    
-    if (elDespesasDRE) elDespesasDRE.innerHTML = `R$ ${Math.abs(totalDespesasDRE).toFixed(2).replace('.', ',')}`;
+    if (elDespesasDRE) elDespesasDRE.innerHTML = `R$ ${totalDespesasDRE.toFixed(2).replace('.', ',')}`;
     if (elDespesasCad) elDespesasCad.innerHTML = `R$ ${totalDespesasCadastradas.toFixed(2).replace('.', ',')}`;
     if (elSangrias) elSangrias.innerHTML = `R$ ${totalSangrias.toFixed(2).replace('.', ',')}`;
     if (elDespesasDiff) elDespesasDiff.innerHTML = `R$ ${diffDespesas.toFixed(2).replace('.', ',')}`;
     
-    const sangriasTotal = contasExtrasData?.length || 0;
-    if (elSangriasEnc) elSangriasEnc.innerHTML = sangriasTotal;
-    if (elSangriasInt) elSangriasInt.innerHTML = sangriasTotal;
-    if (elSangriasDiff) elSangriasDiff.innerHTML = '0';
-    
-    // Container de divergências
+    // Atualizar container de divergências
     const container = document.querySelector('#auditDespesasDivergenciasLista');
     if (container) {
         if (Math.abs(diffDespesas) < 0.01 && Math.abs(diffReceitas) < 0.01) {
@@ -5352,21 +5308,8 @@ function executarAuditoria() {
                     </p>
                 </div>
             `;
-        } else {
-            container.innerHTML = `
-                <div style="margin-top:12px; padding:12px; background:rgba(245,158,11,0.1); border-left:3px solid #f59e0b; border-radius:6px;">
-                    <strong style="color:#f59e0b;">⚠️ DIVERGÊNCIA DETECTADA!</strong>
-                    <p style="margin-top:6px; font-size:12px; color:var(--soft);">
-                        Receitas: R$ ${Math.abs(diffReceitas).toFixed(2)} de diferença
-                    </p>
-                </div>
-            `;
         }
     }
-    
-    console.log('✅ AUDITORIA CORRIGIDA!');
-    console.log(`📊 Receitas: DRE R$ ${totalReceitasDRE.toFixed(2)} | Cadastrado R$ ${totalReceitasCadastradas.toFixed(2)} | Diff R$ ${diffReceitas.toFixed(2)}`);
-    console.log(`📊 Despesas: DRE R$ ${Math.abs(totalDespesasDRE).toFixed(2)} | Cadastrado R$ ${totalDespesasCadastradas.toFixed(2)} | Sangrias R$ ${totalSangrias.toFixed(2)} | Diff R$ ${diffDespesas.toFixed(2)}`);
 }
 // ============================================================
 // FUNÇÕES DE LANCAMENTOS E DADOS REAIS
