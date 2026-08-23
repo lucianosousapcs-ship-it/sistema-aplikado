@@ -299,7 +299,8 @@
         }
 
         .form-group input,
-        .form-group select {
+        .form-group select,
+        .form-group textarea {
             font-family: 'Poppins', sans-serif;
             width: 100%;
             padding: 12px 15px;
@@ -313,7 +314,8 @@
         }
 
         .form-group input:focus,
-        .form-group select:focus {
+        .form-group select:focus,
+        .form-group textarea:focus {
             border-color: #FF8C00;
             box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
             background: #ffffff;
@@ -321,6 +323,12 @@
 
         .form-group input::placeholder {
             color: rgba(26, 10, 0, 0.3);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-size: 13px;
         }
 
         .form-row {
@@ -408,6 +416,16 @@
 
         .btn-success:hover {
             background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: #fff;
+        }
+
+        .btn-info:hover {
+            background: #138496;
             transform: translateY(-2px);
         }
 
@@ -541,8 +559,14 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .badge-count {
@@ -553,6 +577,26 @@
             font-size: 11px;
             font-weight: 700;
             margin-left: 5px;
+        }
+
+        .manual-input-area {
+            margin-top: 10px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            border: 1px dashed rgba(255, 140, 0, 0.3);
+        }
+
+        .manual-input-area h4 {
+            font-size: 14px;
+            color: #7a3a00;
+            margin-bottom: 8px;
+        }
+
+        .manual-input-area .hint {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
         }
 
         @media (max-width: 768px) {
@@ -610,7 +654,7 @@
         <div class="page-title">
             <div class="badge">Módulo I - RH</div>
             <h1><i class="fas fa-clock"></i> Controle de Ponto</h1>
-            <p>Anexe a foto do cartão de ponto para preencher automaticamente ou manualmente</p>
+            <p>Anexe a foto do cartão de ponto para preencher automaticamente</p>
         </div>
 
         <div class="upload-section">
@@ -632,7 +676,7 @@
 
                 <div class="form-group">
                     <label for="funcionario">Nome do Funcionário</label>
-                    <input type="text" id="funcionario" placeholder="Ex: Gilman de Castro">
+                    <input type="text" id="funcionario" placeholder="Ex: Gilman de Castro" value="Gilman de Castro">
                 </div>
 
                 <div class="form-row">
@@ -680,6 +724,23 @@
                 </div>
 
                 <div class="ocr-status" id="ocrStatus"></div>
+            </div>
+        </div>
+
+        <!-- Área de entrada manual (fallback) -->
+        <div class="table-section" style="background: rgba(255,255,255,0.3);">
+            <div class="manual-input-area">
+                <h4><i class="fas fa-pencil-alt"></i> Entrada Manual de Dados (Fallback)</h4>
+                <p class="hint">Se o OCR não funcionar, cole os dados no formato: <strong>dia, entrada1, saida1, entrada2, saida2</strong> (um por linha)</p>
+                <div class="form-group">
+                    <textarea id="manualData" rows="6" placeholder="Ex:&#10;1,5:14,10:00,10:30,13:45&#10;2,11:53,19:59,20:30,21:17&#10;3,11:47,20:09,20:33,21:16"></textarea>
+                </div>
+                <button class="btn-action btn-info" onclick="preencherManual()">
+                    <i class="fas fa-upload"></i> Preencher Manualmente
+                </button>
+                <button class="btn-action btn-success" onclick="carregarExemplo()" style="margin-left: 10px;">
+                    <i class="fas fa-database"></i> Carregar Exemplo
+                </button>
             </div>
         </div>
 
@@ -734,7 +795,16 @@
         // ============================================================
         const DIAS_DO_MES = 31;
         let dadosExtraidos = [];
-        let arquivoCarregado = null;
+
+        // Dados de exemplo
+        const DADOS_EXEMPLO = [
+            { dia: 1, entrada1: '5:14', saida1: '10:00', entrada2: '10:30', saida2: '13:45' },
+            { dia: 2, entrada1: '11:53', saida1: '19:59', entrada2: '20:30', saida2: '21:17' },
+            { dia: 3, entrada1: '11:47', saida1: '20:09', entrada2: '20:33', saida2: '21:16' },
+            { dia: 4, entrada1: '11:52', saida1: '20:05', entrada2: '20:35', saida2: '21:17' },
+            { dia: 5, entrada1: '11:56', saida1: '16:57', entrada2: '20:27', saida2: '21:14' },
+            { dia: 6, entrada1: '11:50', saida1: '20:01', entrada2: '20:31', saida2: '21:06' }
+        ];
 
         // ============================================================
         // 2. GERAÇÃO DA TABELA
@@ -769,6 +839,7 @@
                 input.addEventListener('change', function() {
                     const tr = this.closest('tr');
                     calcularLinha(tr);
+                    atualizarContador();
                 });
             });
         }
@@ -813,7 +884,7 @@
 
                 let diff = (fim - inicio) / 1000 / 60;
                 const horas = Math.floor(diff / 60);
-                const minutos = diff % 60;
+                const minutos = Math.round(diff % 60);
 
                 return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
             } catch (e) {
@@ -891,7 +962,6 @@
                 return;
             }
 
-            console.log('Dados salvos:', { nome, funcao, mes, ano, matricula });
             mostrarStatus(`✅ Dados de ${nome} salvos com sucesso!`, 'success');
         }
 
@@ -908,281 +978,4 @@
         // ============================================================
         // 5. STATUS / NOTIFICAÇÕES
         // ============================================================
-        function mostrarStatus(mensagem, tipo = 'info') {
-            const status = document.getElementById('ocrStatus');
-            status.style.display = 'block';
-            status.textContent = mensagem;
-            status.className = 'ocr-status ' + tipo;
-
-            if (tipo !== 'error') {
-                setTimeout(() => {
-                    status.style.display = 'none';
-                }, 6000);
-            }
-        }
-
-        // ============================================================
-        // 6. UPLOAD E PRÉ-VISUALIZAÇÃO DA IMAGEM
-        // ============================================================
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const imagePreview = document.getElementById('imagePreview');
-        const uploadIcon = document.getElementById('uploadIcon');
-        const uploadText = document.getElementById('uploadText');
-        const uploadSub = document.getElementById('uploadSub');
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFile(files[0]);
-            }
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                handleFile(e.target.files[0]);
-            }
-        });
-
-        function handleFile(file) {
-            if (!file.type.startsWith('image/')) {
-                mostrarStatus('⚠️ Por favor, selecione uma imagem (JPG ou PNG).', 'error');
-                return;
-            }
-
-            arquivoCarregado = file;
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                imagePreview.src = e.target.result;
-                imagePreview.style.display = 'block';
-
-                uploadIcon.style.display = 'none';
-                uploadText.style.display = 'none';
-                uploadSub.style.display = 'none';
-
-                dropZone.style.border = '2px solid #4CAF50';
-                dropZone.style.backgroundColor = 'rgba(76, 175, 80, 0.05)';
-
-                mostrarStatus('📸 Imagem carregada! Processando OCR...', 'info');
-                processarImagem(file);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // ============================================================
-        // 7. OCR E EXTRAÇÃO DE DADOS DA IMAGEM
-        // ============================================================
-        async function processarImagem(file) {
-            const progressContainer = document.getElementById('progressContainer');
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-
-            progressContainer.style.display = 'block';
-            progressBar.style.width = '10%';
-            progressText.textContent = '⏳ Inicializando OCR...';
-
-            try {
-                // Extrair texto da imagem usando Tesseract.js
-                const result = await Tesseract.recognize(
-                    file,
-                    'por',
-                    {
-                        logger: (m) => {
-                            if (m.status === 'recognizing text') {
-                                const progress = Math.round(m.progress * 100);
-                                progressBar.style.width = `${Math.min(progress, 85)}%`;
-                                progressText.textContent = `📖 Lendo texto... ${Math.min(progress, 85)}%`;
-                            }
-                        }
-                    }
-                );
-
-                progressBar.style.width = '90%';
-                progressText.textContent = '🔍 Processando dados...';
-
-                const texto = result.data.text;
-                console.log('📄 Texto extraído:', texto);
-
-                // Extrair os dados do texto
-                const dados = extrairDadosDoTexto(texto);
-
-                if (dados && dados.length > 0) {
-                    preencherTabela(dados);
-                    progressBar.style.width = '100%';
-                    progressText.textContent = '✅ Preenchimento concluído!';
-                    mostrarStatus(`✅ ${dados.length} registros de ponto encontrados e preenchidos!`, 'success');
-                } else {
-                    progressBar.style.width = '100%';
-                    progressText.textContent = '⚠️ Nenhum dado de ponto encontrado.';
-                    mostrarStatus('⚠️ Não foi possível identificar dados de ponto na imagem. Tente uma foto mais nítida.', 'error');
-                }
-
-            } catch (error) {
-                console.error('❌ Erro no OCR:', error);
-                progressBar.style.width = '100%';
-                progressText.textContent = '❌ Erro ao processar imagem.';
-                mostrarStatus('❌ Erro ao processar a imagem. Verifique se a foto está legível.', 'error');
-            } finally {
-                setTimeout(() => {
-                    progressContainer.style.display = 'none';
-                    progressBar.style.width = '0%';
-                }, 3000);
-            }
-        }
-
-        // ============================================================
-        // 8. EXTRAÇÃO DE DADOS DO TEXTO OCR
-        // ============================================================
-        function extrairDadosDoTexto(texto) {
-            const linhas = texto.split('\n');
-            const dados = [];
-
-            // Extrair nome do funcionário
-            const nomeMatch = texto.match(/Empregado\s*[:.]?\s*([A-Za-zÀ-ú\s]+)/i);
-            if (nomeMatch) {
-                document.getElementById('funcionario').value = nomeMatch[1].trim();
-            }
-
-            // Extrair ano
-            const anoMatch = texto.match(/Ano\s*[:.]?\s*(\d{4})/i);
-            if (anoMatch) {
-                document.getElementById('ano').value = anoMatch[1];
-            }
-
-            // Extrair função
-            const funcaoMatch = texto.match(/Função\s*[:.]?\s*([A-Za-zÀ-ú\s.]+)/i);
-            if (funcaoMatch) {
-                document.getElementById('funcao').value = funcaoMatch[1].trim();
-            }
-
-            // Padrões para identificar linhas de ponto
-            // Padrão 1: "1   5:14   10:00   10:30   11:45"
-            // Padrão 2: "1   11:53   19:59   20:30   21:17"
-            // Padrão 3: "1   5:14   10:00   10:30   11:45   extras..."
-            const padraoSimples = /^(\d+)\s+(\d{1,2}:\d{2})\s+(\d{1,2}:\d{2})\s+(\d{1,2}:\d{2})\s+(\d{1,2}:\d{2})/;
-
-            // Também tenta encontrar números com hífen ou ponto
-            const padraoAlternativo = /^(\d+)[\s.:-]+(\d{1,2}:\d{2})[\s.:-]+(\d{1,2}:\d{2})[\s.:-]+(\d{1,2}:\d{2})[\s.:-]+(\d{1,2}:\d{2})/;
-
-            for (const linha of linhas) {
-                const linhaLimpa = linha.trim();
-                if (!linhaLimpa) continue;
-
-                // Tenta o padrão principal
-                let match = linhaLimpa.match(padraoSimples);
-                if (!match) {
-                    match = linhaLimpa.match(padraoAlternativo);
-                }
-
-                if (match) {
-                    const dia = parseInt(match[1]);
-                    const entrada1 = match[2];
-                    const saida1 = match[3];
-                    const entrada2 = match[4];
-                    const saida2 = match[5];
-
-                    // Validação básica
-                    if (dia >= 1 && dia <= 31 && 
-                        validarHora(entrada1) && validarHora(saida1) &&
-                        validarHora(entrada2) && validarHora(saida2)) {
-
-                        // Verifica se já existe esse dia
-                        const existe = dados.some(d => d.dia === dia);
-                        if (!existe) {
-                            dados.push({
-                                dia: dia,
-                                entrada1: entrada1,
-                                saida1: saida1,
-                                entrada2: entrada2,
-                                saida2: saida2
-                            });
-                        }
-                    }
-                }
-            }
-
-            // Ordena por dia
-            dados.sort((a, b) => a.dia - b.dia);
-            console.log('📊 Dados extraídos:', dados);
-            return dados;
-        }
-
-        function validarHora(hora) {
-            if (!hora) return false;
-            const partes = hora.split(':');
-            if (partes.length !== 2) return false;
-            const horas = parseInt(partes[0]);
-            const minutos = parseInt(partes[1]);
-            return horas >= 0 && horas <= 23 && minutos >= 0 && minutos <= 59;
-        }
-
-        // ============================================================
-        // 9. PREENCHIMENTO DA TABELA
-        // ============================================================
-        function preencherTabela(dados) {
-            if (!dados || dados.length === 0) {
-                mostrarStatus('⚠️ Nenhum dado para preencher.', 'error');
-                return;
-            }
-
-            let preenchidos = 0;
-
-            dados.forEach(item => {
-                const dia = item.dia;
-                const linha = document.querySelector(`#corpoTabela tr[data-dia="${dia}"]`);
-                if (linha) {
-                    const entrada1 = linha.querySelector('.entrada1');
-                    const saida1 = linha.querySelector('.saida1');
-                    const entrada2 = linha.querySelector('.entrada2');
-                    const saida2 = linha.querySelector('.saida2');
-
-                    if (entrada1 && item.entrada1) {
-                        entrada1.value = item.entrada1;
-                        entrada1.classList.add('preenchido');
-                    }
-                    if (saida1 && item.saida1) {
-                        saida1.value = item.saida1;
-                        saida1.classList.add('preenchido');
-                    }
-                    if (entrada2 && item.entrada2) {
-                        entrada2.value = item.entrada2;
-                        entrada2.classList.add('preenchido');
-                    }
-                    if (saida2 && item.saida2) {
-                        saida2.value = item.saida2;
-                        saida2.classList.add('preenchido');
-                    }
-
-                    // Calcula os totais
-                    calcularLinha(linha);
-                    preenchidos++;
-                }
-            });
-
-            atualizarContador();
-            mostrarStatus(`✅ ${preenchidos} dias preenchidos automaticamente!`, 'success');
-        }
-
-        // ============================================================
-        // 10. INICIALIZAÇÃO
-        // ============================================================
-        window.onload = function() {
-            gerarTabela();
-            console.log('🚀 Sistema de ponto inicializado!');
-            console.log('📌 Faça upload da imagem do cartão de ponto para preenchimento automático.');
-        };
-    </script>
-</body>
-</html>
+        function mostrarStatus(mensagem, tipo = 'info')
