@@ -2,691 +2,599 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Folha de Ponto | ApliKado</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Folha de Ponto | ApliKado - OCR</title>
     
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    
-    <!-- Tesseract.js para OCR -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js">
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: linear-gradient(135deg, #ffe0b0 0%, #ffb84d 30%, #FF8C00 60%, #e07000 100%);
             font-family: 'Poppins', sans-serif;
             color: #1a0a00;
             min-height: 100vh;
+            padding-bottom: 40px;
         }
-
         .main-header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(10, 6, 2, 0.95);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 140, 0, 0.15);
-            z-index: 1000;
-            padding: 12px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 64px;
+            position: fixed; top: 0; left: 0; width: 100%;
+            background: rgba(10, 6, 2, 0.95); backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 140, 0, 0.15); z-index: 1000;
+            padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; height: 60px;
         }
+        .logo { font-family: 'Poppins', sans-serif; font-size: 20px; font-weight: 700; color: #fff; }
+        .logo span { color: #FF8C00; }
+        .nav-menu a { color: rgba(255,255,255,0.7); text-decoration: none; margin-left: 16px; font-size: 13px; font-weight: 500; transition: color 0.3s; }
+        .nav-menu a:hover { color: #FF8C00; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 80px 16px 20px; display: flex; flex-direction: column; gap: 20px; }
+        
+        .page-title { text-align: center; margin-bottom: 5px; }
+        .page-title h1 { font-size: 28px; font-weight: 800; color: #1a0a00; }
+        .page-title h1 i { color: #FF8C00; margin-right: 10px; }
+        .page-title p { color: rgba(26, 10, 0, 0.7); font-weight: 500; font-size: 14px; }
 
-        .logo {
-            font-family: 'Poppins', sans-serif;
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            color: #fff;
-        }
-
-        .logo span {
-            color: #FF8C00;
-            text-transform: lowercase;
-        }
-
-        .nav-menu {
-            display: flex;
-            gap: 28px;
-            align-items: center;
-        }
-
-        .nav-menu a {
-            font-family: 'Poppins', sans-serif;
-            color: rgba(255, 255, 255, 0.4);
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 400;
-            transition: all 0.3s;
-            position: relative;
-            letter-spacing: 0.5px;
-        }
-
-        .nav-menu a::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: #FF8C00;
-            transition: width 0.3s;
-        }
-
-        .nav-menu a:hover {
-            color: #ffffff;
-        }
-
-        .nav-menu a:hover::after {
-            width: 100%;
-        }
-
-        .nav-menu a i {
-            margin-right: 6px;
-            font-size: 12px;
-        }
-
-        #btnVoltar {
-            color: #FF8C00 !important;
-            font-weight: 600;
-        }
-
-        #btnVoltar::after {
-            background: #FF8C00;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 90px 40px 40px;
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-        }
-
-        .page-title {
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .page-title .badge {
-            display: inline-block;
-            background: rgba(255, 140, 0, 0.15);
-            border: 1px solid rgba(255, 140, 0, 0.20);
-            padding: 4px 20px;
-            border-radius: 30px;
-            font-size: 11px;
-            font-weight: 600;
-            color: #7a3a00;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-        }
-
-        .page-title h1 {
-            font-size: 38px;
-            font-weight: 800;
-            color: #1a0a00;
-            letter-spacing: -1px;
-            line-height: 1.1;
-        }
-
-        .page-title h1 i {
-            color: #FF8C00;
-            margin-right: 10px;
-        }
-
-        .page-title p {
-            color: rgba(26, 10, 0, 0.7);
-            font-size: 16px;
-            font-weight: 400;
-            margin-top: 8px;
-        }
-
-        .upload-section {
+        /* CORES PADRÃO APLIKADO - LARANJA */
+        .main-actions {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
             background: rgba(255, 255, 255, 0.4);
             backdrop-filter: blur(12px);
-            border-radius: 20px;
-            padding: 30px;
-            border: 1px solid rgba(255, 140, 0, 0.15);
-            box-shadow: 0 8px 32px rgba(255, 140, 0, 0.08);
-        }
-
-        .drop-zone {
-            border: 3px dashed rgba(255, 140, 0, 0.5);
             border-radius: 16px;
-            background: rgba(255, 255, 255, 0.3);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 300px;
+            padding: 20px;
+            border: 1px solid rgba(255, 140, 0, 0.15);
+        }
+        .main-actions .action-card {
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 14px;
+            padding: 20px 12px;
+            text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            padding: 20px;
+            border: 2px solid transparent;
         }
-
-        .drop-zone:hover {
+        .main-actions .action-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
             border-color: #FF8C00;
-            background: rgba(255, 255, 255, 0.5);
         }
-
-        .drop-zone.dragover {
-            border-color: #FF8C00;
-            background: rgba(255, 140, 0, 0.2);
-        }
-
-        .drop-zone i {
-            font-size: 60px;
-            color: rgba(255, 140, 0, 0.5);
-            margin-bottom: 15px;
-            transition: all 0.3s;
-        }
-
-        .drop-zone:hover i {
+        .main-actions .action-card i {
+            font-size: 36px;
             color: #FF8C00;
-            transform: scale(1.1);
+            margin-bottom: 8px;
         }
-
-        .drop-zone p {
+        .main-actions .action-card h3 {
             font-size: 16px;
-            font-weight: 600;
-            color: #7a3a00;
-            margin-bottom: 5px;
+            color: #1a0a00;
+            margin-bottom: 4px;
         }
-
-        .drop-zone span {
+        .main-actions .action-card p {
             font-size: 12px;
-            color: rgba(26, 10, 0, 0.5);
-            font-weight: 400;
+            color: rgba(26, 10, 0, 0.6);
         }
-
-        .drop-zone input[type="file"] {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .image-preview {
-            max-width: 100%;
-            max-height: 250px;
-            object-fit: contain;
+        .main-actions .action-card .badge-camera {
             display: none;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-            margin-top: 10px;
-        }
-
-        .progress-container {
-            display: none;
-            width: 100%;
-            margin-top: 15px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 8px;
-        }
-
-        .progress-bar {
-            width: 0%;
-            height: 8px;
-            background: linear-gradient(90deg, #FF8C00, #e07000);
-            border-radius: 4px;
-            transition: width 0.3s;
-        }
-
-        .progress-text {
-            font-size: 12px;
-            color: #7a3a00;
-            text-align: center;
-            margin-top: 5px;
         }
 
         .data-form {
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            justify-content: center;
-        }
-
-        .data-form h3 {
-            font-size: 20px;
-            font-weight: 700;
-            color: #1a0a00;
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .data-form h3 i {
-            color: #FF8C00;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .form-group label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #7a3a00;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            font-family: 'Poppins', sans-serif;
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid rgba(255, 140, 0, 0.2);
-            border-radius: 10px;
-            font-size: 14px;
-            background: rgba(255, 255, 255, 0.6);
-            color: #1a0a00;
-            transition: all 0.3s;
-            outline: none;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            border-color: #FF8C00;
-            box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
-            background: #ffffff;
-        }
-
-        .form-group input::placeholder {
-            color: rgba(26, 10, 0, 0.3);
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 80px;
-            font-size: 13px;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .table-section {
-            background: rgba(255, 255, 255, 0.5);
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.4);
             backdrop-filter: blur(12px);
-            border-radius: 20px;
-            padding: 30px;
+            border-radius: 16px;
+            padding: 20px;
             border: 1px solid rgba(255, 140, 0, 0.15);
-            box-shadow: 0 8px 32px rgba(255, 140, 0, 0.08);
         }
+        .data-form h3 { font-size: 17px; color: #1a0a00; margin-bottom: 3px; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 11px; font-weight: 600; color: #7a3a00; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group select {
+            font-family: 'Poppins', sans-serif; width: 100%; padding: 10px 14px;
+            border: 1px solid rgba(255, 140, 0, 0.2); border-radius: 10px; font-size: 13px;
+            background: rgba(255, 255, 255, 0.6); color: #1a0a00; outline: none;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: #FF8C00; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1); }
+        .form-group input.preenchido { background: #fff3e0; border-color: #FF8C00; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-        .table-header {
+        .table-section { background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(12px); border-radius: 16px; padding: 20px; border: 1px solid rgba(255, 140, 0, 0.15); }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+        .table-header h3 { font-size: 18px; color: #1a0a00; }
+        .badge-count { background: #FF8C00; color: #fff; border-radius: 20px; padding: 2px 12px; font-size: 13px; }
+        
+        .ponto-table-wrapper { overflow-x: auto; border-radius: 12px; border: 1px solid rgba(255, 140, 0, 0.15); }
+        .ponto-table { width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.7); min-width: 650px; }
+        .ponto-table th { background: rgba(255, 140, 0, 0.2); color: #7a3a00; font-size: 10px; font-weight: 700; padding: 10px 6px; text-align: center; border-bottom: 2px solid #FF8C00; }
+        .ponto-table td { font-size: 13px; padding: 6px 3px; text-align: center; border-bottom: 1px solid rgba(255, 140, 0, 0.1); }
+        .ponto-table td strong { color: #7a3a00; }
+        .ponto-table input { font-family: 'Poppins', sans-serif; width: 75px; padding: 5px 6px; border: 1px solid rgba(255, 140, 0, 0.2); border-radius: 6px; text-align: center; background: #ffffff; outline: none; font-size: 12px; transition: all 0.3s; }
+        .ponto-table input:focus { border-color: #FF8C00; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1); }
+        .ponto-table input.preenchido { background: #fff3e0; border-color: #FF8C00; }
+        .ponto-table input[readonly] { background: rgba(0,0,0,0.03); color: #555; cursor: default; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .modal.active {
+            display: flex !important;
+        }
+        .modal-content {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 20px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 92vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: modalFadeIn 0.3s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #FF8C00;
+            padding-bottom: 12px;
+        }
+        .modal-header h2 {
+            font-size: 20px;
+            color: #1a0a00;
+        }
+        .modal-header h2 i {
+            color: #FF8C00;
+            margin-right: 10px;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+            padding: 0 10px;
+        }
+        .modal-close:hover { color: #dc3545; }
+
+        .capture-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .capture-options .capture-btn {
+            padding: 16px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            background: #f8f9fa;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+        .capture-options .capture-btn:hover {
+            border-color: #FF8C00;
+            background: rgba(255, 140, 0, 0.05);
+        }
+        .capture-options .capture-btn i {
+            font-size: 28px;
+            color: #FF8C00;
+            margin-bottom: 6px;
+        }
+        .capture-options .capture-btn p {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a0a00;
+        }
+        .capture-options .capture-btn span {
+            font-size: 11px;
+            color: #666;
         }
 
-        .table-header h3 {
-            font-size: 22px;
-            font-weight: 700;
-            color: #1a0a00;
+        .camera-container {
+            display: none;
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        .camera-container.active {
+            display: block;
+        }
+        .camera-container video {
+            width: 100%;
+            max-height: 350px;
+            object-fit: cover;
+        }
+        .camera-container .camera-controls {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+        }
+        .camera-container .camera-controls button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            background: rgba(255,255,255,0.3);
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
+        }
+        .camera-container .camera-controls button:hover {
+            background: rgba(255,255,255,0.5);
+            transform: scale(1.05);
+        }
+        .camera-container .camera-controls button.capture-btn-cam {
+            background: #FF8C00;
+            border-color: #FF8C00;
+        }
+        .camera-container .camera-controls button.capture-btn-cam:hover {
+            background: #e07000;
+        }
+        .camera-container .camera-controls button.close-cam {
+            background: rgba(220, 53, 69, 0.8);
+            border-color: #dc3545;
+        }
+        .camera-container .camera-controls button.close-cam:hover {
+            background: #dc3545;
         }
 
-        .table-header h3 i {
-            color: #FF8C00;
+        .modal-drop-zone {
+            border: 3px dashed rgba(255, 140, 0, 0.4);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.5);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+            cursor: pointer;
+            position: relative;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        .modal-drop-zone.visible {
+            display: flex;
+        }
+        .modal-drop-zone:hover { border-color: #FF8C00; background: rgba(255, 140, 0, 0.05); }
+        .modal-drop-zone.dragover { border-color: #FF8C00; background: rgba(255, 140, 0, 0.1); }
+        .modal-drop-zone i { font-size: 32px; color: rgba(255, 140, 0, 0.5); margin-bottom: 8px; }
+        .modal-drop-zone p { font-size: 14px; font-weight: 600; color: #7a3a00; }
+        .modal-drop-zone span { font-size: 11px; color: rgba(26, 10, 0, 0.5); }
+        .modal-drop-zone input[type="file"] { position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        
+        .modal-preview { max-width: 100%; max-height: 200px; object-fit: contain; display: none; margin-top: 12px; border-radius: 8px; }
+        .modal-preview.visible { display: block; }
+
+        .modal-progress { display: none; margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; }
+        .modal-progress .bar { width: 0%; height: 6px; background: linear-gradient(90deg, #FF8C00, #e07000); border-radius: 4px; transition: width 0.3s; }
+        .modal-progress .text { font-size: 11px; color: #7a3a00; text-align: center; margin-top: 4px; }
+
+        .modal-ocr-result {
+            display: none;
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #FF8C00;
+            background: #fff3e0;
+        }
+        .modal-ocr-result.visible { display: block; }
+        .modal-ocr-result h4 { color: #e07000; margin-bottom: 8px; font-size: 15px; }
+
+        .ocr-grid {
+            display: grid;
+            grid-template-columns: 40px 65px 65px 65px 65px 30px;
+            gap: 3px;
+            padding: 3px 0;
+            align-items: center;
+            font-size: 12px;
+        }
+        .ocr-grid.header {
+            font-weight: 700;
+            color: #7a3a00;
+            background: rgba(255, 140, 0, 0.1);
+            border-radius: 6px;
+            padding: 6px 3px;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        .ocr-grid .dia { font-weight: 600; color: #7a3a00; text-align: center; }
+        .ocr-grid input {
+            padding: 3px 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 11px;
+            text-align: center;
+            font-family: 'Poppins', sans-serif;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        .ocr-grid input:focus { border-color: #FF8C00; outline: none; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1); }
+        .ocr-grid input.preenchido-ocr { background: #fff3e0; border-color: #FF8C00; }
+        .ocr-grid input.nao-encontrado { background: #f5f5f5; border-color: #ccc; }
+        .ocr-grid .status-icon { text-align: center; font-size: 14px; }
+        .ocr-grid .status-icon.ok { color: #FF8C00; }
+        .ocr-grid .status-icon.fail { color: #999; }
+
+        .ocr-scroll {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 8px;
+            padding-right: 4px;
+        }
+        .ocr-scroll::-webkit-scrollbar { width: 5px; }
+        .ocr-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .ocr-scroll::-webkit-scrollbar-thumb { background: #FF8C00; border-radius: 10px; }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
         }
 
         .btn-action {
             font-family: 'Poppins', sans-serif;
-            padding: 10px 20px;
+            padding: 8px 18px;
             border: none;
-            border-radius: 12px;
-            font-size: 14px;
+            border-radius: 10px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(145deg, #FF8C00, #e07000);
-            color: #ffffff;
-            box-shadow: 0 4px 16px rgba(255, 140, 0, 0.2);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 24px rgba(255, 140, 0, 0.3);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background: rgba(255, 140, 0, 0.1);
-            color: #7a3a00;
-            border: 1px solid rgba(255, 140, 0, 0.2);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 140, 0, 0.2);
-        }
-
-        .btn-success {
-            background: #28a745;
-            color: #fff;
-        }
-
-        .btn-success:hover {
-            background: #218838;
-            transform: translateY(-2px);
-        }
-
-        .btn-info {
-            background: #17a2b8;
-            color: #fff;
-        }
-
-        .btn-info:hover {
-            background: #138496;
-            transform: translateY(-2px);
-        }
-
-        .ponto-table-wrapper {
-            overflow-x: auto;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 140, 0, 0.15);
-        }
-
-        .ponto-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: rgba(255, 255, 255, 0.7);
-            min-width: 700px;
-        }
-
-        .ponto-table th {
-            font-family: 'Poppins', sans-serif;
-            background: rgba(255, 140, 0, 0.2);
-            color: #7a3a00;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 12px;
-            text-align: center;
-            border-bottom: 2px solid #FF8C00;
-        }
-
-        .ponto-table td {
-            font-family: 'Poppins', sans-serif;
-            font-size: 14px;
-            padding: 10px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 140, 0, 0.1);
-            color: #1a0a00;
-        }
-
-        .ponto-table tbody tr:hover {
-            background: rgba(255, 140, 0, 0.05);
-        }
-
-        .ponto-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        .ponto-table input {
-            font-family: 'Poppins', sans-serif;
-            width: 80px;
-            padding: 6px 8px;
-            border: 1px solid rgba(255, 140, 0, 0.2);
-            border-radius: 6px;
-            text-align: center;
-            font-size: 14px;
-            background: #ffffff;
-            color: #1a0a00;
-            outline: none;
+            gap: 6px;
             transition: all 0.3s;
         }
+        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn-primary { background: linear-gradient(145deg, #FF8C00, #e07000); color: #ffffff; }
+        .btn-success { background: #FF8C00; color: #fff; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+        .btn-outline-primary { background: transparent; color: #FF8C00; border: 2px solid #FF8C00; }
+        .btn-outline-primary:hover { background: #FF8C00; color: #fff; }
 
-        .ponto-table input:focus {
-            border-color: #FF8C00;
-            box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.1);
-        }
+        .ocr-status { display: none; margin-top: 8px; padding: 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.8); font-size: 13px; text-align: center; border-left: 4px solid #FF8C00; }
+        .ocr-status.success { border-left-color: #FF8C00; color: #7a3a00; background: rgba(255, 140, 0, 0.1); }
+        .ocr-status.error { border-left-color: #dc3545; color: #721c24; background: rgba(220, 53, 69, 0.1); }
+        .ocr-status.info { border-left-color: #FF8C00; color: #7a3a00; background: rgba(255, 140, 0, 0.1); }
 
-        .ponto-table input:disabled {
-            background: #f5f5f5;
-            cursor: not-allowed;
-        }
-
-        .ponto-table input.preenchido {
-            background: #e8f5e9;
-            border-color: #4CAF50;
-        }
-
-        .total-row {
-            background: rgba(255, 140, 0, 0.15) !important;
-            font-weight: 700 !important;
-        }
-
-        .total-row td {
-            color: #7a3a00 !important;
-            font-size: 16px !important;
-        }
-
-        .footer {
-            text-align: center;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 140, 0, 0.1);
-            width: 100%;
-        }
-
-        .footer p {
-            font-size: 12px;
-            color: rgba(26, 10, 0, 0.7);
-        }
-
-        .footer span {
-            color: #8a4a00;
+        .badge-ocr {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
             font-weight: 600;
         }
+        .badge-ocr.success { background: #FF8C00; color: #fff; }
+        .badge-ocr.warning { background: #ffc107; color: #212529; }
+        .badge-ocr.danger { background: #dc3545; color: #fff; }
 
-        .ocr-status {
-            display: none;
-            margin-top: 10px;
+        .manual-grid {
+            display: grid;
+            grid-template-columns: 45px 80px 80px 80px 80px 40px;
+            gap: 5px;
+            align-items: center;
+            margin-bottom: 4px;
+            padding: 6px 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .manual-grid:hover { background: #e9ecef; }
+        .manual-grid .dia-label { font-weight: 700; color: #7a3a00; text-align: center; font-size: 12px; }
+        .manual-grid input { padding: 5px 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; text-align: center; width: 100%; font-family: 'Poppins', sans-serif; }
+        .manual-grid input:focus { border-color: #FF8C00; outline: none; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1); }
+        .manual-grid .btn-remove-manual { background: #dc3545; color: #fff; border: none; border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 12px; transition: background 0.3s; }
+        .manual-grid .btn-remove-manual:hover { background: #c82333; }
+
+        .manual-header {
+            display: grid;
+            grid-template-columns: 45px 80px 80px 80px 80px 40px;
+            gap: 5px;
+            padding: 6px 10px;
+            margin-bottom: 8px;
+            font-weight: 700;
+            font-size: 11px;
+            color: #7a3a00;
+            background: rgba(255, 140, 0, 0.1);
+            border-radius: 8px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .scrollable-linhas { max-height: 350px; overflow-y: auto; margin-top: 8px; padding-right: 4px; }
+        .scrollable-linhas::-webkit-scrollbar { width: 5px; }
+        .scrollable-linhas::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .scrollable-linhas::-webkit-scrollbar-thumb { background: #FF8C00; border-radius: 10px; }
+
+        .input-group-sm { display: flex; flex-direction: column; gap: 4px; }
+        .input-group-sm label { font-size: 10px; font-weight: 600; color: #7a3a00; text-transform: uppercase; }
+        .input-group-sm input, .input-group-sm select { padding: 7px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; font-family: 'Poppins', sans-serif; }
+
+        .debug-text {
+            font-size: 10px;
+            color: #666;
+            max-height: 150px;
+            overflow-y: auto;
+            background: #1a1a2e;
+            color: #ffb84d;
             padding: 10px;
             border-radius: 8px;
-            background: rgba(255, 255, 255, 0.8);
-            font-size: 14px;
-            text-align: center;
-            border-left: 4px solid #FF8C00;
-            animation: fadeIn 0.3s ease;
+            margin-top: 8px;
+            display: none;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 1.4;
         }
-
-        .ocr-status.success {
-            border-left-color: #28a745;
-            color: #155724;
-            background: rgba(40, 167, 69, 0.1);
-        }
-
-        .ocr-status.error {
-            border-left-color: #dc3545;
-            color: #721c24;
-            background: rgba(220, 53, 69, 0.1);
-        }
-
-        .ocr-status.info {
-            border-left-color: #17a2b8;
-            color: #0c5460;
-            background: rgba(23, 162, 184, 0.1);
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .badge-count {
-            background: #FF8C00;
-            color: #fff;
-            border-radius: 50%;
-            padding: 2px 8px;
-            font-size: 11px;
-            font-weight: 700;
-            margin-left: 5px;
-        }
-
-        .manual-input-area {
-            margin-top: 10px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 10px;
-            border: 1px dashed rgba(255, 140, 0, 0.3);
-        }
-
-        .manual-input-area h4 {
-            font-size: 14px;
-            color: #7a3a00;
-            margin-bottom: 8px;
-        }
-
-        .manual-input-area .hint {
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 8px;
-        }
+        .debug-text.visible { display: block; }
 
         @media (max-width: 768px) {
-            .main-header {
-                padding: 10px 16px;
-                height: 56px;
-            }
-            .logo {
-                font-size: 20px;
-            }
-            .nav-menu {
-                display: none;
-            }
-            .container {
-                padding: 72px 16px 20px;
-            }
-            .page-title h1 {
-                font-size: 28px;
-            }
-            .upload-section {
-                grid-template-columns: 1fr;
-                padding: 20px;
-            }
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-            .table-section {
-                padding: 20px;
-            }
-            .table-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .btn-action {
-                width: 100%;
-                justify-content: center;
-            }
+            .main-header { padding: 10px 16px; }
+            .nav-menu a { margin-left: 10px; font-size: 12px; }
+            .container { padding: 72px 12px 16px; gap: 15px; }
+            .main-actions { grid-template-columns: 1fr; gap: 10px; padding: 15px; }
+            .main-actions .action-card { padding: 15px; }
+            .main-actions .action-card i { font-size: 28px; }
+            .form-row { grid-template-columns: 1fr; gap: 10px; }
+            .capture-options { grid-template-columns: 1fr; }
+            .modal-content { padding: 16px; }
+            .manual-grid { grid-template-columns: 35px 55px 55px 55px 55px 35px; font-size: 10px; padding: 4px 8px; }
+            .manual-header { grid-template-columns: 35px 55px 55px 55px 55px 35px; font-size: 9px; padding: 4px 8px; }
+            .ocr-grid { grid-template-columns: 30px 45px 45px 45px 45px 25px; font-size: 10px; }
+            .ocr-grid.header { font-size: 8px; }
+            .ponto-table input { width: 50px; font-size: 10px; padding: 3px 4px; }
+            .page-title h1 { font-size: 22px; }
+            .data-form { padding: 15px; }
+            .table-section { padding: 15px; }
+            .camera-container .camera-controls button { width: 44px; height: 44px; font-size: 18px; }
+        }
+        @media (max-width: 480px) {
+            .ponto-table input { width: 40px; font-size: 9px; padding: 2px 3px; }
+            .btn-action { font-size: 11px; padding: 6px 12px; }
+            .manual-grid { grid-template-columns: 28px 40px 40px 40px 40px 28px; font-size: 9px; padding: 3px 5px; }
+            .manual-header { grid-template-columns: 28px 40px 40px 40px 40px 28px; font-size: 8px; padding: 3px 5px; }
+            .manual-grid input { font-size: 10px; padding: 3px 4px; }
+            .ocr-grid { grid-template-columns: 25px 35px 35px 35px 35px 22px; font-size: 9px; }
+            .ocr-grid input { font-size: 9px; padding: 2px 3px; }
+            .modal-header h2 { font-size: 17px; }
+            .camera-container .camera-controls button { width: 38px; height: 38px; font-size: 15px; }
         }
     </style>
 </head>
 <body>
 
-    <header class="main-header">
-        <div class="logo">Apli<span>kado</span></div>
+    <!-- MODAL ANEXAR FOTO -->
+    <div class="modal" id="modalFoto">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-camera"></i> Capturar ou Anexar Foto</h2>
+                <button class="modal-close" onclick="fecharModalFoto()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 12px; color: #666; font-size: 13px;">
+                    <i class="fas fa-info-circle"></i> 
+                    Escolha uma opção abaixo para capturar ou selecionar a imagem do cartão de ponto.
+                </p>
 
-        <nav class="nav-menu">
-            <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
-            <a href="#"><i class="fas fa-chart-line"></i> Analytics</a>
-            <a href="#"><i class="fas fa-sliders-h"></i> Configurações</a>
-            <a href="CLIENT_QNUTRI.html" id="btnVoltar"><i class="fas fa-arrow-left"></i> Voltar</a>
-        </nav>
-    </header>
+                <div class="capture-options">
+                    <div class="capture-btn" onclick="abrirCamera()">
+                        <i class="fas fa-camera-retro"></i>
+                        <p>Tirar Foto</p>
+                        <span>Usar a câmera do celular</span>
+                    </div>
+                    <div class="capture-btn" onclick="abrirGaleria()">
+                        <i class="fas fa-folder-open"></i>
+                        <p>Selecionar da Galeria</p>
+                        <span>Escolher imagem existente</span>
+                    </div>
+                </div>
 
-    <div class="container">
-        <div class="page-title">
-            <div class="badge">Módulo I - RH</div>
-            <h1><i class="fas fa-clock"></i> Controle de Ponto</h1>
-            <p>Anexe a foto do cartão de ponto para preencher automaticamente</p>
-        </div>
+                <div class="camera-container" id="cameraContainer">
+                    <video id="video" autoplay playsinline></video>
+                    <div class="camera-controls">
+                        <button class="close-cam" onclick="fecharCamera()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <button class="capture-btn-cam" onclick="capturarFoto()">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                    </div>
+                </div>
 
-        <div class="upload-section">
-            <div class="drop-zone" id="dropZone">
-                <i class="fas fa-cloud-upload-alt" id="uploadIcon"></i>
-                <p id="uploadText">Arraste e solte a foto do cartão</p>
-                <span id="uploadSub">ou clique para selecionar (JPG, PNG)</span>
-                <input type="file" id="fileInput" accept="image/*">
-                <img src="" alt="Pré-visualização" class="image-preview" id="imagePreview">
-
-                <div class="progress-container" id="progressContainer">
-                    <div class="progress-bar" id="progressBar"></div>
-                    <div class="progress-text" id="progressText">Processando...</div>
+                <div class="modal-drop-zone" id="modalDropZone">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Arraste e solte a foto do cartão</p>
+                    <span>ou clique para selecionar (JPG, PNG, WEBP)</span>
+                    <input type="file" id="modalFileInput" accept="image/*">
+                    <img src="" alt="Pré-visualização" class="modal-preview" id="modalPreview">
+                </div>
+                
+                <div class="modal-progress" id="modalProgress">
+                    <div class="bar" id="modalProgressBar"></div>
+                    <div class="text" id="modalProgressText">Processando...</div>
+                </div>
+                
+                <div class="modal-ocr-result" id="modalOcrResult">
+                    <h4><i class="fas fa-robot" style="color: #FF8C00;"></i> Resultado do Reconhecimento</h4>
+                    <div id="modalOcrInfo" style="font-size: 12px; color: #666; margin-bottom: 8px;"></div>
+                    <div class="ocr-scroll" id="ocrLinhasContainer"></div>
+                    <div style="margin-top: 8px; font-size: 11px; color: #999;">
+                        <i class="fas fa-info-circle"></i> 
+                        <span style="color: #FF8C00;">● Laranja</span> = identificado | 
+                        <span style="color: #999;">● Cinza</span> = não encontrado
+                    </div>
+                </div>
+                
+                <div class="debug-text" id="debugText"></div>
+                
+                <div class="modal-actions">
+                    <button class="btn-action btn-success" onclick="aplicarOcr()"><i class="fas fa-check"></i> Aplicar Dados</button>
+                    <button class="btn-action btn-secondary" onclick="fecharModalFoto()"><i class="fas fa-times"></i> Cancelar</button>
+                    <button class="btn-action btn-warning" onclick="toggleDebug()"><i class="fas fa-bug"></i> Debug</button>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="data-form">
-                <h3><i class="fas fa-user-circle"></i> Dados do Funcionário</h3>
-
-                <div class="form-group">
-                    <label for="funcionario">Nome do Funcionário</label>
-                    <input type="text" id="funcionario" placeholder="Ex: Gilman de Castro" value="Gilman de Castro">
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="funcao">Função</label>
-                        <input type="text" id="funcao" placeholder="Ex: Aux. de cozinha">
+    <!-- MODAL DIGITAÇÃO MANUAL -->
+    <div class="modal" id="modalManual">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-pencil-alt"></i> Digitação Manual</h2>
+                <button class="modal-close" onclick="fecharModalManual()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 10px; color: #666; font-size: 13px;">Preencha os dados do funcionário e os horários para cada dia.</p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; background: #f8f9fa; padding: 12px; border-radius: 10px;">
+                    <div class="input-group-sm">
+                        <label for="modalFuncionario">Nome do Funcionário</label>
+                        <input type="text" id="modalFuncionario" placeholder="Digite o nome">
                     </div>
-                    <div class="form-group">
-                        <label for="mes">Mês de Referência</label>
-                        <select id="mes">
+                    <div class="input-group-sm">
+                        <label for="modalFuncao">Função</label>
+                        <input type="text" id="modalFuncao" placeholder="Digite a função">
+                    </div>
+                    <div class="input-group-sm">
+                        <label for="modalMatricula">Matrícula (Nº Reg.)</label>
+                        <input type="text" id="modalMatricula" placeholder="Digite a matrícula">
+                    </div>
+                    <div class="input-group-sm">
+                        <label for="modalMes">Mês de Referência</label>
+                        <select id="modalMes">
                             <option value="Janeiro">Janeiro</option>
                             <option value="Fevereiro">Fevereiro</option>
                             <option value="Março">Março</option>
@@ -701,119 +609,168 @@
                             <option value="Dezembro">Dezembro</option>
                         </select>
                     </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="ano">Ano</label>
-                        <input type="number" id="ano" placeholder="2026" min="2020" max="2030" value="2026">
-                    </div>
-                    <div class="form-group">
-                        <label for="matricula">Matrícula</label>
-                        <input type="text" id="matricula" placeholder="Ex: 001">
+                    <div class="input-group-sm">
+                        <label for="modalAno">Ano</label>
+                        <input type="number" id="modalAno" value="2026" min="2020" max="2030">
                     </div>
                 </div>
-
-                <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn-action btn-primary" onclick="salvarDados()">
-                        <i class="fas fa-save"></i> Salvar Dados
-                    </button>
-                    <button class="btn-action btn-secondary" onclick="limparCampos()">
-                        <i class="fas fa-eraser"></i> Limpar
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 600; color: #7a3a00; font-size: 13px;"><i class="fas fa-clock"></i> Horários</span>
+                    <button class="btn-action btn-success" onclick="adicionarLinhaManual()" style="padding: 4px 14px; font-size: 11px;">
+                        <i class="fas fa-plus"></i> Adicionar
                     </button>
                 </div>
+                
+                <div class="manual-header">
+                    <span>Dia</span>
+                    <span>Entrada 1</span>
+                    <span>Saída 1</span>
+                    <span>Entrada 2</span>
+                    <span>Saída 2</span>
+                    <span></span>
+                </div>
+                
+                <div class="scrollable-linhas" id="containerLinhas"></div>
+                
+                <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn-action btn-outline-primary" onclick="preencherDiasRestantes()" style="font-size: 11px; padding: 6px 14px;">
+                        <i class="fas fa-fill-drip"></i> Preencher Dias Restantes
+                    </button>
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="btn-action btn-success" onclick="aplicarManual()"><i class="fas fa-check"></i> Aplicar Dados</button>
+                    <button class="btn-action btn-secondary" onclick="fecharModalManual()"><i class="fas fa-times"></i> Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                <div class="ocr-status" id="ocrStatus"></div>
+    <!-- HEADER -->
+    <header class="main-header">
+        <div class="logo">Apli<span>kado</span></div>
+        <nav class="nav-menu">
+            <a href="#"><i class="fas fa-th-large"></i> Dashboard</a>
+            <a href="#"><i class="fas fa-sliders-h"></i> Configurações</a>
+        </nav>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <div class="container">
+        <div class="page-title">
+            <h1><i class="fas fa-clock"></i> Controle de Ponto</h1>
+            <p>Escolha uma das opções abaixo para preencher a folha de ponto</p>
+        </div>
+
+        <div class="main-actions">
+            <div class="action-card" onclick="abrirModalFoto()">
+                <i class="fas fa-camera"></i>
+                <h3>Anexar Foto</h3>
+                <p>Carregue uma imagem do cartão de ponto</p>
+            </div>
+            <div class="action-card" onclick="abrirModalManual()">
+                <i class="fas fa-pencil-alt"></i>
+                <h3>Digitar Manualmente</h3>
+                <p>Preencha os horários manualmente</p>
+            </div>
+            <div class="action-card" onclick="abrirModalFoto()" style="background: rgba(255, 140, 0, 0.1); border-color: #FF8C00;">
+                <i class="fas fa-qrcode"></i>
+                <h3>Scanear Cartão</h3>
+                <p>Use a câmera para escanear</p>
             </div>
         </div>
 
-        <!-- Área de entrada manual (fallback) -->
-        <div class="table-section" style="background: rgba(255,255,255,0.3);">
-            <div class="manual-input-area">
-                <h4><i class="fas fa-pencil-alt"></i> Entrada Manual de Dados (Fallback)</h4>
-                <p class="hint">Se o OCR não funcionar, cole os dados no formato: <strong>dia, entrada1, saida1, entrada2, saida2</strong> (um por linha)</p>
-                <div class="form-group">
-                    <textarea id="manualData" rows="6" placeholder="Ex:&#10;1,5:14,10:00,10:30,13:45&#10;2,11:53,19:59,20:30,21:17&#10;3,11:47,20:09,20:33,21:16"></textarea>
-                </div>
-                <button class="btn-action btn-info" onclick="preencherManual()">
-                    <i class="fas fa-upload"></i> Preencher Manualmente
-                </button>
-                <button class="btn-action btn-success" onclick="carregarExemplo()" style="margin-left: 10px;">
-                    <i class="fas fa-database"></i> Carregar Exemplo
-                </button>
+        <div class="data-form">
+            <h3><i class="fas fa-user-circle"></i> Dados do Funcionário</h3>
+            <div class="form-group">
+                <label for="funcionario">Nome do Funcionário</label>
+                <input type="text" id="funcionario" placeholder="Digite o nome do funcionário">
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="funcao">Função</label>
+                    <input type="text" id="funcao" placeholder="Digite a função">
+                </div>
+                <div class="form-group">
+                    <label for="mes">Mês de Referência</label>
+                    <select id="mes">
+                        <option value="Janeiro">Janeiro</option>
+                        <option value="Fevereiro">Fevereiro</option>
+                        <option value="Março">Março</option>
+                        <option value="Abril">Abril</option>
+                        <option value="Maio">Maio</option>
+                        <option value="Junho">Junho</option>
+                        <option value="Julho">Julho</option>
+                        <option value="Agosto">Agosto</option>
+                        <option value="Setembro">Setembro</option>
+                        <option value="Outubro">Outubro</option>
+                        <option value="Novembro">Novembro</option>
+                        <option value="Dezembro">Dezembro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ano">Ano</label>
+                    <input type="number" id="ano" placeholder="2026" min="2020" max="2030" value="2026">
+                </div>
+                <div class="form-group">
+                    <label for="matricula">Matrícula (Nº Reg.)</label>
+                    <input type="text" id="matricula" placeholder="Digite a matrícula">
+                </div>
+            </div>
+            <div class="action-bar" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+                <button class="btn-action btn-primary" onclick="salvarDados()"><i class="fas fa-save"></i> Salvar</button>
+                <button class="btn-action btn-danger" onclick="limparTudo()"><i class="fas fa-trash"></i> Limpar</button>
+                <button class="btn-action btn-warning" onclick="exportarCSV()"><i class="fas fa-file-export"></i> CSV</button>
+            </div>
+            <div class="ocr-status" id="ocrStatus"></div>
         </div>
 
         <div class="table-section">
             <div class="table-header">
-                <h3><i class="fas fa-table"></i> Espelhamento do Cartão de Ponto <span class="badge-count" id="totalRegistros">0</span></h3>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn-action btn-secondary" onclick="limparTabela()">
-                        <i class="fas fa-trash-alt"></i> Limpar Tabela
-                    </button>
-                    <button class="btn-action btn-primary" onclick="calcularTotais()">
-                        <i class="fas fa-calculator"></i> Calcular Totais
-                    </button>
-                </div>
+                <h3><i class="fas fa-table"></i> Espelhamento <span class="badge-count" id="totalRegistros">0</span></h3>
             </div>
-
             <div class="ponto-table-wrapper">
                 <table class="ponto-table" id="tabelaPonto">
                     <thead>
                         <tr>
                             <th rowspan="2">Dia</th>
                             <th colspan="2">1º Turno</th>
-                            <th colspan="1">Total</th>
+                            <th>Total</th>
                             <th colspan="2">2º Turno</th>
-                            <th colspan="1">Total</th>
-                            <th rowspan="2">HORAS TOTAIS</th>
+                            <th>Total</th>
+                            <th rowspan="2">Total Geral</th>
                         </tr>
                         <tr>
-                            <th>Entrada</th>
-                            <th>Saída</th>
-                            <th>1º</th>
-                            <th>Entrada</th>
-                            <th>Saída</th>
-                            <th>2º</th>
+                            <th>Entrada</th><th>Saída</th><th>1º</th>
+                            <th>Entrada</th><th>Saída</th><th>2º</th>
                         </tr>
                     </thead>
-                    <tbody id="corpoTabela">
-                    </tbody>
+                    <tbody id="corpoTabela"></tbody>
                 </table>
             </div>
-        </div>
-
-        <div class="footer">
-            <p>© 2026 <span>ApliKado</span> — Plataforma de Automação e Integração de Dados</p>
-            <p style="margin-top: 2px; opacity: 0.7;">Ambiente seguro e escalável v2.0</p>
         </div>
     </div>
 
     <script>
         // ============================================================
-        // 1. CONFIGURAÇÕES E VARIÁVEIS GLOBAIS
+        // VARIÁVEIS GLOBAIS
         // ============================================================
-        const DIAS_DO_MES = 31;
-        let dadosExtraidos = [];
-
-        // Dados de exemplo
-        const DADOS_EXEMPLO = [
-            { dia: 1, entrada1: '5:14', saida1: '10:00', entrada2: '10:30', saida2: '13:45' },
-            { dia: 2, entrada1: '11:53', saida1: '19:59', entrada2: '20:30', saida2: '21:17' },
-            { dia: 3, entrada1: '11:47', saida1: '20:09', entrada2: '20:33', saida2: '21:16' },
-            { dia: 4, entrada1: '11:52', saida1: '20:05', entrada2: '20:35', saida2: '21:17' },
-            { dia: 5, entrada1: '11:56', saida1: '16:57', entrada2: '20:27', saida2: '21:14' },
-            { dia: 6, entrada1: '11:50', saida1: '20:01', entrada2: '20:31', saida2: '21:06' }
-        ];
+        let dadosOcrExtraidos = {};
+        let isProcessing = false;
+        let debugVisible = false;
+        let stream = null;
+        let imagemCapturada = null;
 
         // ============================================================
-        // 2. GERAÇÃO DA TABELA
+        // GERAR TABELA
         // ============================================================
         function gerarTabela() {
             const tbody = document.getElementById('corpoTabela');
             tbody.innerHTML = '';
-
-            for (let i = 1; i <= DIAS_DO_MES; i++) {
+            for (let i = 1; i <= 31; i++) {
                 const tr = document.createElement('tr');
                 tr.dataset.dia = i;
                 tr.innerHTML = `
@@ -828,154 +785,728 @@
                 `;
                 tbody.appendChild(tr);
             }
-
-            adicionarEventosCalculo();
+            adicionarEventos();
             atualizarContador();
         }
 
-        function adicionarEventosCalculo() {
-            const inputs = document.querySelectorAll('#corpoTabela input[type="time"]');
-            inputs.forEach(input => {
+        function adicionarEventos() {
+            document.querySelectorAll('#corpoTabela input[type="time"]').forEach(input => {
                 input.addEventListener('change', function() {
                     const tr = this.closest('tr');
-                    calcularLinha(tr);
-                    atualizarContador();
-                });
-            });
-        }
-
-        // ============================================================
-        // 3. CÁLCULOS DE HORAS
-        // ============================================================
-        function calcularLinha(tr) {
-            const entrada1 = tr.querySelector('.entrada1').value;
-            const saida1 = tr.querySelector('.saida1').value;
-            const total1 = tr.querySelector('.total1');
-
-            const entrada2 = tr.querySelector('.entrada2').value;
-            const saida2 = tr.querySelector('.saida2').value;
-            const total2 = tr.querySelector('.total2');
-
-            const totalGeral = tr.querySelector('.total-geral');
-
-            if (entrada1 && saida1) {
-                total1.value = calcularDiferencaHoras(entrada1, saida1);
-            } else {
-                total1.value = '00:00';
-            }
-
-            if (entrada2 && saida2) {
-                total2.value = calcularDiferencaHoras(entrada2, saida2);
-            } else {
-                total2.value = '00:00';
-            }
-
-            totalGeral.value = somarHoras(total1.value, total2.value);
-        }
-
-        function calcularDiferencaHoras(horaInicio, horaFim) {
-            try {
-                const inicio = new Date(`1970-01-01T${horaInicio}:00`);
-                const fim = new Date(`1970-01-01T${horaFim}:00`);
-
-                if (fim < inicio) {
-                    fim.setDate(fim.getDate() + 1);
-                }
-
-                let diff = (fim - inicio) / 1000 / 60;
-                const horas = Math.floor(diff / 60);
-                const minutos = Math.round(diff % 60);
-
-                return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
-            } catch (e) {
-                return '00:00';
-            }
-        }
-
-        function somarHoras(hora1, hora2) {
-            if (!hora1 || !hora2 || hora1 === '00:00' || hora2 === '00:00') return '00:00';
-            try {
-                const [h1, m1] = hora1.split(':').map(Number);
-                const [h2, m2] = hora2.split(':').map(Number);
-
-                let totalMinutos = (h1 * 60 + m1) + (h2 * 60 + m2);
-                const horas = Math.floor(totalMinutos / 60);
-                const minutos = totalMinutos % 60;
-
-                return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
-            } catch (e) {
-                return '00:00';
-            }
-        }
-
-        // ============================================================
-        // 4. FUNÇÕES DA TABELA
-        // ============================================================
-        function calcularTotais() {
-            const linhas = document.querySelectorAll('#corpoTabela tr');
-            let count = 0;
-            linhas.forEach(tr => {
-                const entrada1 = tr.querySelector('.entrada1').value;
-                if (entrada1) {
-                    calcularLinha(tr);
-                    count++;
-                }
-            });
-            mostrarStatus(`✅ ${count} registros calculados com sucesso!`, 'success');
-        }
-
-        function limparTabela() {
-            if (!confirm('Tem certeza que deseja limpar todos os dados da tabela?')) return;
-
-            const linhas = document.querySelectorAll('#corpoTabela tr');
-            linhas.forEach(tr => {
-                tr.querySelectorAll('input').forEach(input => {
-                    if (input.type === 'time') {
-                        input.value = '';
-                        input.className = input.className.replace('preenchido', '');
-                    } else {
-                        input.value = '00:00';
+                    if (tr) {
+                        calcularLinha(tr);
+                        atualizarContador();
                     }
                 });
+                input.addEventListener('blur', function() {
+                    const tr = this.closest('tr');
+                    if (tr) calcularLinha(tr);
+                });
             });
-            dadosExtraidos = [];
-            atualizarContador();
-            mostrarStatus('🗑️ Tabela limpa!', 'info');
         }
 
-        function limparCampos() {
-            document.getElementById('funcionario').value = '';
-            document.getElementById('funcao').value = '';
-            document.getElementById('matricula').value = '';
-            document.getElementById('ano').value = '2026';
+        function calcularLinha(tr) {
+            const e1 = tr.querySelector('.entrada1').value;
+            const s1 = tr.querySelector('.saida1').value;
+            const t1 = tr.querySelector('.total1');
+            const e2 = tr.querySelector('.entrada2').value;
+            const s2 = tr.querySelector('.saida2').value;
+            const t2 = tr.querySelector('.total2');
+            const tg = tr.querySelector('.total-geral');
+
+            t1.value = (e1 && s1) ? diffHoras(e1, s1) : '00:00';
+            t2.value = (e2 && s2) ? diffHoras(e2, s2) : '00:00';
+            tg.value = somarHoras(t1.value, t2.value);
         }
 
-        function salvarDados() {
-            const nome = document.getElementById('funcionario').value;
-            const funcao = document.getElementById('funcao').value;
-            const mes = document.getElementById('mes').value;
-            const ano = document.getElementById('ano').value;
-            const matricula = document.getElementById('matricula').value;
+        function diffHoras(inicio, fim) {
+            try {
+                const i = new Date(`1970-01-01T${inicio}:00`);
+                const f = new Date(`1970-01-01T${fim}:00`);
+                if (f < i) f.setDate(f.getDate() + 1);
+                const diff = (f - i) / 1000 / 60;
+                return `${String(Math.floor(diff/60)).padStart(2,'0')}:${String(Math.round(diff%60)).padStart(2,'0')}`;
+            } catch { return '00:00'; }
+        }
 
-            if (!nome) {
-                mostrarStatus('⚠️ Por favor, preencha o nome do funcionário.', 'error');
-                return;
+        function somarHoras(h1, h2) {
+            if (!h1 || !h2 || h1 === '00:00' || h2 === '00:00') return '00:00';
+            try {
+                const [a, b] = h1.split(':').map(Number);
+                const [c, d] = h2.split(':').map(Number);
+                let total = (a*60+b) + (c*60+d);
+                return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
+            } catch { return '00:00'; }
+        }
+
+        // ============================================================
+        // MODAL FOTO
+        // ============================================================
+        function abrirModalFoto() {
+            const modal = document.getElementById('modalFoto');
+            modal.classList.add('active');
+            document.getElementById('modalPreview').classList.remove('visible');
+            document.getElementById('modalPreview').src = '';
+            document.getElementById('modalOcrResult').classList.remove('visible');
+            document.getElementById('modalProgress').style.display = 'none';
+            document.getElementById('modalFileInput').value = '';
+            document.getElementById('debugText').classList.remove('visible');
+            document.getElementById('debugText').textContent = '';
+            document.getElementById('modalDropZone').classList.add('visible');
+            dadosOcrExtraidos = {};
+            imagemCapturada = null;
+            fecharCamera();
+        }
+
+        function fecharModalFoto() {
+            document.getElementById('modalFoto').classList.remove('active');
+            fecharCamera();
+        }
+
+        function toggleDebug() {
+            const el = document.getElementById('debugText');
+            debugVisible = !debugVisible;
+            if (debugVisible) {
+                el.classList.add('visible');
+            } else {
+                el.classList.remove('visible');
+            }
+        }
+
+        // ============================================================
+        // CÂMERA
+        // ============================================================
+        function abrirCamera() {
+            const container = document.getElementById('cameraContainer');
+            const video = document.getElementById('video');
+            
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+                    audio: false 
+                })
+                .then(function(mediaStream) {
+                    stream = mediaStream;
+                    video.srcObject = mediaStream;
+                    container.classList.add('active');
+                    document.getElementById('modalDropZone').classList.remove('visible');
+                })
+                .catch(function(err) {
+                    console.error('Erro ao acessar câmera:', err);
+                    alert('Não foi possível acessar a câmera. Verifique as permissões.\nErro: ' + err.message);
+                    document.getElementById('modalDropZone').classList.add('visible');
+                });
+            } else {
+                alert('Seu dispositivo não suporta acesso à câmera.');
+            }
+        }
+
+        function fecharCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            document.getElementById('cameraContainer').classList.remove('active');
+            document.getElementById('video').srcObject = null;
+            document.getElementById('modalDropZone').classList.add('visible');
+        }
+
+        function capturarFoto() {
+            const video = document.getElementById('video');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 1920;
+            canvas.height = video.videoHeight || 1080;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+            imagemCapturada = dataUrl;
+            
+            fecharCamera();
+            
+            const preview = document.getElementById('modalPreview');
+            preview.src = dataUrl;
+            preview.classList.add('visible');
+            document.getElementById('modalDropZone').classList.add('visible');
+            
+            processarImagem(dataUrl);
+        }
+
+        // ============================================================
+        // GALERIA
+        // ============================================================
+        function abrirGaleria() {
+            document.getElementById('modalFileInput').click();
+        }
+
+        // ============================================================
+        // DROP ZONE
+        // ============================================================
+        const modalDropZone = document.getElementById('modalDropZone');
+        const modalFileInput = document.getElementById('modalFileInput');
+
+        if (modalDropZone) {
+            modalDropZone.addEventListener('click', function(e) {
+                if (e.target.tagName !== 'INPUT') {
+                    modalFileInput.click();
+                }
+            });
+
+            modalDropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                modalDropZone.classList.add('dragover');
+            });
+            modalDropZone.addEventListener('dragleave', () => {
+                modalDropZone.classList.remove('dragover');
+            });
+            modalDropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                modalDropZone.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    const file = e.dataTransfer.files[0];
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(ev) {
+                            const dataUrl = ev.target.result;
+                            const preview = document.getElementById('modalPreview');
+                            preview.src = dataUrl;
+                            preview.classList.add('visible');
+                            processarImagem(dataUrl);
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        alert('Por favor, selecione uma imagem.');
+                    }
+                }
+            });
+
+            modalFileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    const file = e.target.files[0];
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(ev) {
+                            const dataUrl = ev.target.result;
+                            const preview = document.getElementById('modalPreview');
+                            preview.src = dataUrl;
+                            preview.classList.add('visible');
+                            processarImagem(dataUrl);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // PROCESSAR IMAGEM - OCR
+        // ============================================================
+        function processarImagem(dataUrl) {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            const img = new Image();
+            img.onload = function() {
+                executarOcrCompleto(img);
+            };
+            img.onerror = function() {
+                alert('Erro ao carregar a imagem.');
+                isProcessing = false;
+            };
+            img.src = dataUrl;
+        }
+
+        async function executarOcrCompleto(img) {
+            const progressDiv = document.getElementById('modalProgress');
+            const progressBar = document.getElementById('modalProgressBar');
+            const progressText = document.getElementById('modalProgressText');
+            const debugEl = document.getElementById('debugText');
+            
+            progressDiv.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Preparando imagem...';
+
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                let width = img.width;
+                let height = img.height;
+                const maxDim = 1800;
+                if (width > maxDim || height > maxDim) {
+                    const ratio = Math.min(maxDim / width, maxDim / height);
+                    width = Math.floor(width * ratio);
+                    height = Math.floor(height * ratio);
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+                    const threshold = 110;
+                    const value = gray > threshold ? 255 : 0;
+                    data[i] = data[i+1] = data[i+2] = value;
+                }
+                ctx.putImageData(imageData, 0, 0);
+
+                progressBar.style.width = '10%';
+                progressText.textContent = 'Lendo imagem com OCR...';
+
+                let textoCompleto = '';
+                try {
+                    const result = await Tesseract.recognize(
+                        canvas,
+                        'por',
+                        {
+                            tessedit_pageseg_mode: '6',
+                            preserve_interword_spaces: '1'
+                        }
+                    );
+                    textoCompleto = result.data.text;
+                    debugEl.textContent = '=== TEXTO COMPLETO ===\n' + textoCompleto + '\n\n';
+                } catch (e) {
+                    console.warn('Erro na leitura:', e);
+                    debugEl.textContent = 'ERRO: ' + e.message + '\n';
+                }
+
+                progressBar.style.width = '30%';
+                progressText.textContent = 'Extraindo cabeçalho...';
+
+                let nome = '';
+                let matricula = '';
+                let mes = '';
+                let ano = '';
+
+                const linhas = textoCompleto.split('\n');
+                for (let linha of linhas) {
+                    const nomeMatch = linha.match(/(?:Empregado|Funcion[áa]rio|Nome)\s*[:.]?\s*([A-Za-zÀ-ú\s]{3,})/i);
+                    if (nomeMatch && nomeMatch[1].trim().length > 2) nome = nomeMatch[1].trim();
+                    
+                    const matrMatch = linha.match(/(?:N[º°]\s*Reg\.?|Matr[íi]cula|N[º°])\s*[:.]?\s*(\d+)/i);
+                    if (matrMatch) matricula = matrMatch[1].trim();
+                    
+                    const mesMatch = linha.match(/(?:M[eê]s|Refer[eê]ncia)\s*[:.]?\s*([A-Za-zçã]+)/i);
+                    if (mesMatch) mes = mesMatch[1].trim();
+                    
+                    const anoMatch = linha.match(/\b(20\d{2})\b/);
+                    if (anoMatch) ano = anoMatch[1];
+                }
+
+                if (nome) { document.getElementById('funcionario').value = nome; document.getElementById('funcionario').classList.add('preenchido'); }
+                if (matricula) { document.getElementById('matricula').value = matricula; document.getElementById('matricula').classList.add('preenchido'); }
+                if (mes) {
+                    const opcoes = document.getElementById('mes').options;
+                    for (let opt of opcoes) {
+                        if (opt.value.toLowerCase() === mes.toLowerCase()) { opt.selected = true; break; }
+                    }
+                }
+                if (ano) document.getElementById('ano').value = ano;
+
+                progressBar.style.width = '50%';
+                progressText.textContent = 'Buscando horários...';
+
+                let horariosEncontrados = {};
+                
+                // Método 1: Padrão "dia hora hora hora hora"
+                for (let linha of linhas) {
+                    const match = linha.match(/(\d{1,2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})/);
+                    if (match) {
+                        const dia = parseInt(match[1]);
+                        if (dia >= 1 && dia <= 31) {
+                            horariosEncontrados[dia] = {
+                                e1: match[2].replace('.', ':'),
+                                s1: match[3].replace('.', ':'),
+                                e2: match[4].replace('.', ':'),
+                                s2: match[5].replace('.', ':')
+                            };
+                        }
+                    }
+                }
+
+                // Método 2: Ler linha por linha
+                if (Object.keys(horariosEncontrados).length < 5) {
+                    const alturaLinha = Math.floor((height * 0.6) / 31);
+                    const inicioY = Math.floor(height * 0.12);
+                    const larguraTabela = Math.floor(width * 0.65);
+                    const inicioX = Math.floor(width * 0.05);
+
+                    for (let dia = 1; dia <= 31; dia++) {
+                        try {
+                            const bloco = document.createElement('canvas');
+                            bloco.width = larguraTabela;
+                            bloco.height = Math.min(alturaLinha + 10, 50);
+                            const ctxBloco = bloco.getContext('2d');
+                            
+                            const yPos = inicioY + ((dia - 1) * alturaLinha);
+                            ctxBloco.drawImage(canvas, inicioX, yPos, larguraTabela, bloco.height, 0, 0, larguraTabela, bloco.height);
+                            
+                            const resLinha = await Tesseract.recognize(bloco, 'por', {
+                                tessedit_pageseg_mode: '7',
+                                tessedit_char_whitelist: '0123456789:.- '
+                            });
+                            
+                            const textoLinha = resLinha.data.text;
+                            const horarios = textoLinha.match(/(\d{1,2}[:.]\d{2})/g);
+                            
+                            if (horarios && horarios.length >= 4) {
+                                horariosEncontrados[dia] = {
+                                    e1: horarios[0].replace('.', ':'),
+                                    s1: horarios[1].replace('.', ':'),
+                                    e2: horarios[2].replace('.', ':'),
+                                    s2: horarios[3].replace('.', ':')
+                                };
+                            }
+                            
+                            const progresso = 50 + (dia / 31) * 45;
+                            progressBar.style.width = `${progresso}%`;
+                            progressText.textContent = `Lendo linha ${dia}/31...`;
+                            
+                            await new Promise(r => setTimeout(r, 10));
+                        } catch (e) {
+                            console.warn(`Erro na linha ${dia}:`, e);
+                        }
+                    }
+                }
+
+                dadosOcrExtraidos = horariosEncontrados;
+
+                progressBar.style.width = '100%';
+                progressText.textContent = 'OCR concluído!';
+
+                mostrarResultadosOcr();
+                isProcessing = false;
+
+            } catch (error) {
+                console.error('Erro no OCR:', error);
+                alert('Erro na leitura OCR: ' + error.message);
+                isProcessing = false;
+            }
+        }
+
+        function mostrarResultadosOcr() {
+            const resultDiv = document.getElementById('modalOcrResult');
+            const container = document.getElementById('ocrLinhasContainer');
+            const infoDiv = document.getElementById('modalOcrInfo');
+            
+            container.innerHTML = '';
+            
+            const total = Object.keys(dadosOcrExtraidos).length;
+            const nome = document.getElementById('funcionario').value || 'Não identificado';
+            const matricula = document.getElementById('matricula').value || 'Não identificada';
+            
+            infoDiv.innerHTML = `
+                <span class="badge-ocr ${total > 0 ? 'success' : 'warning'}">
+                    ${total} linhas com horários identificados
+                </span>
+                <span style="margin-left: 12px;">Nome: <strong>${nome}</strong></span>
+                <span style="margin-left: 12px;">Matrícula: <strong>${matricula}</strong></span>
+            `;
+
+            const header = document.createElement('div');
+            header.className = 'ocr-grid header';
+            header.innerHTML = `<span>Dia</span><span>Entrada 1</span><span>Saída 1</span><span>Entrada 2</span><span>Saída 2</span><span>Status</span>`;
+            container.appendChild(header);
+
+            for (let dia = 1; dia <= 31; dia++) {
+                const div = document.createElement('div');
+                div.className = 'ocr-grid';
+                
+                const dados = dadosOcrExtraidos[dia] || { e1: '', s1: '', e2: '', s2: '' };
+                const temDados = dados.e1 || dados.s1 || dados.e2 || dados.s2;
+                const statusClass = temDados ? 'ok' : 'fail';
+                const statusIcon = temDados ? '✅' : '❌';
+                
+                div.innerHTML = `
+                    <span class="dia">${String(dia).padStart(2, '0')}</span>
+                    <input type="time" class="ocr-e1 ${dados.e1 ? 'preenchido-ocr' : 'nao-encontrado'}" value="${dados.e1 || ''}">
+                    <input type="time" class="ocr-s1 ${dados.s1 ? 'preenchido-ocr' : 'nao-encontrado'}" value="${dados.s1 || ''}">
+                    <input type="time" class="ocr-e2 ${dados.e2 ? 'preenchido-ocr' : 'nao-encontrado'}" value="${dados.e2 || ''}">
+                    <input type="time" class="ocr-s2 ${dados.s2 ? 'preenchido-ocr' : 'nao-encontrado'}" value="${dados.s2 || ''}">
+                    <span class="status-icon ${statusClass}">${statusIcon}</span>
+                `;
+                container.appendChild(div);
             }
 
-            mostrarStatus(`✅ Dados de ${nome} salvos com sucesso!`, 'success');
+            resultDiv.classList.add('visible');
+        }
+
+        function aplicarOcr() {
+            const linhas = document.querySelectorAll('.ocr-grid:not(.header)');
+            let dadosAtualizados = {};
+            let count = 0;
+
+            linhas.forEach(el => {
+                const dia = parseInt(el.querySelector('.dia').textContent);
+                const e1 = el.querySelector('.ocr-e1').value;
+                const s1 = el.querySelector('.ocr-s1').value;
+                const e2 = el.querySelector('.ocr-e2').value;
+                const s2 = el.querySelector('.ocr-s2').value;
+                
+                if (e1 || s1 || e2 || s2) {
+                    dadosAtualizados[dia] = { e1, s1, e2, s2 };
+                }
+            });
+
+            for (const [dia, dados] of Object.entries(dadosAtualizados)) {
+                const tr = document.querySelector(`#corpoTabela tr[data-dia="${dia}"]`);
+                if (tr) {
+                    if (dados.e1) { tr.querySelector('.entrada1').value = dados.e1; tr.querySelector('.entrada1').classList.add('preenchido'); count++; }
+                    if (dados.s1) { tr.querySelector('.saida1').value = dados.s1; tr.querySelector('.saida1').classList.add('preenchido'); count++; }
+                    if (dados.e2) { tr.querySelector('.entrada2').value = dados.e2; tr.querySelector('.entrada2').classList.add('preenchido'); count++; }
+                    if (dados.s2) { tr.querySelector('.saida2').value = dados.s2; tr.querySelector('.saida2').classList.add('preenchido'); count++; }
+                    calcularLinha(tr);
+                }
+            }
+
+            fecharModalFoto();
+            atualizarContador();
+            mostrarStatus(`✅ ${count} horários preenchidos!`, 'success');
+        }
+
+        // ============================================================
+        // MODAL DIGITAÇÃO MANUAL
+        // ============================================================
+        function abrirModalManual() {
+            const modal = document.getElementById('modalManual');
+            modal.classList.add('active');
+            
+            document.getElementById('modalFuncionario').value = document.getElementById('funcionario').value || '';
+            document.getElementById('modalFuncao').value = document.getElementById('funcao').value || '';
+            document.getElementById('modalMatricula').value = document.getElementById('matricula').value || '';
+            document.getElementById('modalMes').value = document.getElementById('mes').value || 'Janeiro';
+            document.getElementById('modalAno').value = document.getElementById('ano').value || '2026';
+            
+            const container = document.getElementById('containerLinhas');
+            container.innerHTML = '';
+            
+            let temDados = false;
+            document.querySelectorAll('#corpoTabela tr').forEach(tr => {
+                const e1 = tr.querySelector('.entrada1').value;
+                const s1 = tr.querySelector('.saida1').value;
+                const e2 = tr.querySelector('.entrada2').value;
+                const s2 = tr.querySelector('.saida2').value;
+                if (e1 || s1 || e2 || s2) temDados = true;
+            });
+            
+            if (temDados) {
+                document.querySelectorAll('#corpoTabela tr').forEach(tr => {
+                    const dia = tr.dataset.dia;
+                    const e1 = tr.querySelector('.entrada1').value;
+                    const s1 = tr.querySelector('.saida1').value;
+                    const e2 = tr.querySelector('.entrada2').value;
+                    const s2 = tr.querySelector('.saida2').value;
+                    adicionarLinhaManualComDados(dia, e1, s1, e2, s2);
+                });
+            } else {
+                for (let i = 1; i <= 5; i++) {
+                    adicionarLinhaManualComDados(i, '', '', '', '');
+                }
+            }
+        }
+
+        function fecharModalManual() {
+            document.getElementById('modalManual').classList.remove('active');
+        }
+
+        function adicionarLinhaManual() {
+            const container = document.getElementById('containerLinhas');
+            const numLinha = container.children.length + 1;
+            adicionarLinhaManualComDados(numLinha, '', '', '', '');
+        }
+
+        function adicionarLinhaManualComDados(dia, e1, s1, e2, s2) {
+            const container = document.getElementById('containerLinhas');
+            const div = document.createElement('div');
+            div.className = 'manual-grid';
+            div.dataset.dia = dia;
+            div.innerHTML = `
+                <span class="dia-label">${String(dia).padStart(2, '0')}</span>
+                <input type="time" class="me1" value="${e1}">
+                <input type="time" class="ms1" value="${s1}">
+                <input type="time" class="me2" value="${e2}">
+                <input type="time" class="ms2" value="${s2}">
+                <button class="btn-remove-manual" onclick="this.closest('.manual-grid').remove()">✕</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function preencherDiasRestantes() {
+            const container = document.getElementById('containerLinhas');
+            const diasExistentes = new Set();
+            container.querySelectorAll('.manual-grid').forEach(el => {
+                diasExistentes.add(parseInt(el.dataset.dia));
+            });
+            
+            let ultimoDia = 0;
+            for (let d of diasExistentes) {
+                if (d > ultimoDia) ultimoDia = d;
+            }
+            
+            let adicionados = 0;
+            for (let i = ultimoDia + 1; i <= 31 && adicionados < 10; i++) {
+                adicionarLinhaManualComDados(i, '', '', '', '');
+                adicionados++;
+            }
+            
+            if (adicionados === 0) {
+                alert('Todos os dias já foram adicionados.');
+            }
+        }
+
+        function aplicarManual() {
+            const nome = document.getElementById('modalFuncionario').value;
+            const funcao = document.getElementById('modalFuncao').value;
+            const matricula = document.getElementById('modalMatricula').value;
+            const mes = document.getElementById('modalMes').value;
+            const ano = document.getElementById('modalAno').value;
+            
+            if (nome) { document.getElementById('funcionario').value = nome; document.getElementById('funcionario').classList.add('preenchido'); }
+            if (funcao) { document.getElementById('funcao').value = funcao; document.getElementById('funcao').classList.add('preenchido'); }
+            if (matricula) { document.getElementById('matricula').value = matricula; document.getElementById('matricula').classList.add('preenchido'); }
+            document.getElementById('mes').value = mes;
+            document.getElementById('ano').value = ano;
+
+            const linhas = document.querySelectorAll('.manual-grid');
+            let count = 0;
+
+            linhas.forEach(el => {
+                const dia = parseInt(el.dataset.dia);
+                const e1 = el.querySelector('.me1').value;
+                const s1 = el.querySelector('.ms1').value;
+                const e2 = el.querySelector('.me2').value;
+                const s2 = el.querySelector('.ms2').value;
+                
+                if (dia >= 1 && dia <= 31) {
+                    const tr = document.querySelector(`#corpoTabela tr[data-dia="${dia}"]`);
+                    if (tr) {
+                        if (e1) { tr.querySelector('.entrada1').value = e1; tr.querySelector('.entrada1').classList.add('preenchido'); count++; }
+                        if (s1) { tr.querySelector('.saida1').value = s1; tr.querySelector('.saida1').classList.add('preenchido'); count++; }
+                        if (e2) { tr.querySelector('.entrada2').value = e2; tr.querySelector('.entrada2').classList.add('preenchido'); count++; }
+                        if (s2) { tr.querySelector('.saida2').value = s2; tr.querySelector('.saida2').classList.add('preenchido'); count++; }
+                        calcularLinha(tr);
+                    }
+                }
+            });
+
+            fecharModalManual();
+            atualizarContador();
+            mostrarStatus(`✅ ${count} horários preenchidos!`, 'success');
+        }
+
+        // ============================================================
+        // FUNÇÕES GERAIS
+        // ============================================================
+        function mostrarStatus(msg, tipo) {
+            const el = document.getElementById('ocrStatus');
+            el.style.display = 'block';
+            el.textContent = msg;
+            el.className = 'ocr-status ' + (tipo || 'info');
+            setTimeout(() => { el.style.display = 'none'; }, 8000);
         }
 
         function atualizarContador() {
-            const linhas = document.querySelectorAll('#corpoTabela tr');
             let count = 0;
-            linhas.forEach(tr => {
-                const entrada1 = tr.querySelector('.entrada1').value;
-                if (entrada1) count++;
+            document.querySelectorAll('#corpoTabela tr').forEach(tr => {
+                if (tr.querySelector('.entrada1').value) count++;
             });
             document.getElementById('totalRegistros').textContent = count;
         }
 
+        function limparTudo() {
+            document.querySelectorAll('#corpoTabela tr').forEach(tr => {
+                tr.querySelectorAll('input').forEach(input => { 
+                    input.value = ''; 
+                    input.classList.remove('preenchido'); 
+                });
+            });
+            document.getElementById('funcionario').value = '';
+            document.getElementById('funcionario').classList.remove('preenchido');
+            document.getElementById('funcao').value = '';
+            document.getElementById('funcao').classList.remove('preenchido');
+            document.getElementById('matricula').value = '';
+            document.getElementById('matricula').classList.remove('preenchido');
+            document.getElementById('ano').value = '2026';
+            document.getElementById('mes').value = 'Janeiro';
+            atualizarContador();
+            mostrarStatus('🧹 Dados limpos.', 'info');
+        }
+
+        function salvarDados() {
+            const dados = {
+                funcionario: document.getElementById('funcionario').value,
+                funcao: document.getElementById('funcao').value,
+                mes: document.getElementById('mes').value,
+                ano: document.getElementById('ano').value,
+                matricula: document.getElementById('matricula').value,
+                registros: []
+            };
+            
+            document.querySelectorAll('#corpoTabela tr').forEach(tr => {
+                const dia = tr.dataset.dia;
+                const e1 = tr.querySelector('.entrada1').value;
+                const s1 = tr.querySelector('.saida1').value;
+                const e2 = tr.querySelector('.entrada2').value;
+                const s2 = tr.querySelector('.saida2').value;
+                if (e1 || s1 || e2 || s2) {
+                    dados.registros.push({ dia, e1, s1, e2, s2 });
+                }
+            });
+            
+            console.log('Dados salvos:', dados);
+            mostrarStatus(`✅ ${dados.registros.length} registros salvos!`, 'success');
+            alert('Dados salvos com sucesso!');
+        }
+
+        function exportarCSV() {
+            let csv = 'Dia,Entrada1,Saída1,Entrada2,Saída2,Total1,Total2,TotalGeral\n';
+            document.querySelectorAll('#corpoTabela tr').forEach(tr => {
+                const dia = tr.dataset.dia;
+                const e1 = tr.querySelector('.entrada1').value;
+                const s1 = tr.querySelector('.saida1').value;
+                const e2 = tr.querySelector('.entrada2').value;
+                const s2 = tr.querySelector('.saida2').value;
+                const t1 = tr.querySelector('.total1').value;
+                const t2 = tr.querySelector('.total2').value;
+                const tg = tr.querySelector('.total-geral').value;
+                csv += `${dia},${e1},${s1},${e2},${s2},${t1},${t2},${tg}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ponto_${document.getElementById('funcionario').value || 'funcionario'}_${document.getElementById('mes').value}_${document.getElementById('ano').value}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            mostrarStatus('📊 CSV exportado!', 'success');
+        }
+
+        // Fechar modais
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                fecharModalFoto();
+                fecharModalManual();
+            }
+        });
+
+        document.getElementById('modalFoto').addEventListener('click', function(e) {
+            if (e.target === this) fecharModalFoto();
+        });
+        document.getElementById('modalManual').addEventListener('click', function(e) {
+            if (e.target === this) fecharModalManual();
+        });
+
         // ============================================================
-        // 5. STATUS / NOTIFICAÇÕES
+        // INICIALIZAÇÃO
         // ============================================================
-        function mostrarStatus(mensagem, tipo = 'info')
+        window.onload = function() { 
+            gerarTabela();
+            console.log('ApliKado - Sistema de Ponto inicializado!');
+        };
+    </script>
+</body>
+</html>
