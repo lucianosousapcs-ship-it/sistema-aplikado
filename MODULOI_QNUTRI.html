@@ -3,761 +3,386 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Folha de Ponto | ApliKado - OCR</title>
-    
+    <title>Folha de Ponto | ApliKado</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: linear-gradient(135deg, #ffe0b0 0%, #ffb84d 30%, #FF8C00 60%, #e07000 100%);
-            font-family: 'Poppins', sans-serif;
-            color: #1a0a00;
-            min-height: 100vh;
-            padding-bottom: 40px;
-        }
-        .main-header {
-            position: fixed; top: 0; left: 0; width: 100%;
-            background: rgba(10, 6, 2, 0.95); backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 140, 0, 0.15); z-index: 1000;
-            padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; height: 60px;
-        }
+        body { background: linear-gradient(135deg, #ffe0b0 0%, #ffb84d 30%, #FF8C00 60%, #e07000 100%); font-family: 'Poppins', sans-serif; color: #1a0a00; min-height: 100vh; padding-bottom: 40px; }
+        
+        .main-header { position: fixed; top: 0; left: 0; width: 100%; background: rgba(10, 6, 2, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 140, 0, 0.15); z-index: 1000; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; height: 56px; }
         .logo { font-family: 'Poppins', sans-serif; font-size: 20px; font-weight: 700; color: #fff; }
         .logo span { color: #FF8C00; }
-        .nav-menu { display: flex; align-items: center; gap: 8px; }
-        .nav-menu a { 
-            color: rgba(255,255,255,0.7); 
-            text-decoration: none; 
-            font-size: 13px; 
-            font-weight: 500; 
-            transition: color 0.3s;
-            padding: 6px 12px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .nav-menu a:hover { 
-            color: #fff; 
-            background: rgba(255, 140, 0, 0.15);
-        }
-        .nav-menu a.btn-voltar {
-            background: rgba(255, 140, 0, 0.2);
-            color: #FF8C00;
-            border: 1px solid rgba(255, 140, 0, 0.3);
-        }
-        .nav-menu a.btn-voltar:hover {
-            background: rgba(255, 140, 0, 0.35);
-            color: #fff;
-        }
-        .container { max-width: 1200px; margin: 0 auto; padding: 80px 16px 20px; display: flex; flex-direction: column; gap: 20px; }
-        
-        .page-title { text-align: center; margin-bottom: 5px; }
-        .page-title h1 { font-size: 28px; font-weight: 800; color: #1a0a00; }
+        .nav-menu { display: flex; align-items: center; gap: 6px; }
+        .nav-menu a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 12px; font-weight: 500; transition: color 0.3s; padding: 6px 12px; border-radius: 8px; display: flex; align-items: center; gap: 6px; }
+        .nav-menu a:hover { color: #fff; background: rgba(255, 140, 0, 0.15); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 72px 16px 20px; display: flex; flex-direction: column; gap: 16px; }
+        .page-title { text-align: center; margin-bottom: 4px; }
+        .page-title h1 { font-size: 26px; font-weight: 800; color: #1a0a00; }
         .page-title h1 i { color: #FF8C00; margin-right: 10px; }
-        .page-title p { color: rgba(26, 10, 0, 0.7); font-weight: 500; font-size: 14px; }
+        .page-title p { color: rgba(26, 10, 0, 0.7); font-weight: 500; font-size: 13px; }
 
-        /* CORES PADRÃO APLIKADO - LARANJA */
-        .main-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(12px);
-            border-radius: 16px;
-            padding: 20px;
-            border: 1px solid rgba(255, 140, 0, 0.15);
-        }
-        .main-actions .action-card {
-            background: rgba(255, 255, 255, 0.6);
-            border-radius: 14px;
-            padding: 20px 12px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-        .main-actions .action-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-            border-color: #FF8C00;
-        }
-        .main-actions .action-card i {
-            font-size: 36px;
-            color: #FF8C00;
-            margin-bottom: 8px;
-        }
-        .main-actions .action-card h3 {
-            font-size: 16px;
-            color: #1a0a00;
-            margin-bottom: 4px;
-        }
-        .main-actions .action-card p {
-            font-size: 12px;
-            color: rgba(26, 10, 0, 0.6);
-        }
-        .main-actions .action-card .badge-camera {
-            display: none;
-        }
-
-        .data-form {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(12px);
-            border-radius: 16px;
-            padding: 20px;
-            border: 1px solid rgba(255, 140, 0, 0.15);
-        }
-        .data-form h3 { font-size: 17px; color: #1a0a00; margin-bottom: 3px; }
-        .form-group { display: flex; flex-direction: column; gap: 4px; }
-        .form-group label { font-size: 11px; font-weight: 600; color: #7a3a00; text-transform: uppercase; letter-spacing: 0.5px; }
-        .form-group input, .form-group select {
-            font-family: 'Poppins', sans-serif; width: 100%; padding: 10px 14px;
-            border: 1px solid rgba(255, 140, 0, 0.2); border-radius: 10px; font-size: 13px;
-            background: rgba(255, 255, 255, 0.6); color: #1a0a00; outline: none;
-            transition: border-color 0.3s;
-        }
+        .data-form { display: flex; flex-direction: column; gap: 10px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 140, 0, 0.15); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .form-group { display: flex; flex-direction: column; gap: 3px; }
+        .form-group label { font-size: 10px; font-weight: 600; color: #7a3a00; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group select { font-family: 'Poppins', sans-serif; width: 100%; padding: 8px 12px; border: 1px solid rgba(255, 140, 0, 0.2); border-radius: 8px; font-size: 13px; background: rgba(255, 255, 255, 0.6); color: #1a0a00; outline: none; transition: border-color 0.3s; }
         .form-group input:focus, .form-group select:focus { border-color: #FF8C00; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1); }
-        .form-group input.preenchido { background: #fff3e0; border-color: #FF8C00; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-        .table-section { background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(12px); border-radius: 16px; padding: 20px; border: 1px solid rgba(255, 140, 0, 0.15); }
-        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
-        .table-header h3 { font-size: 18px; color: #1a0a00; }
-        .badge-count { background: #FF8C00; color: #fff; border-radius: 20px; padding: 2px 12px; font-size: 13px; }
-        
-        .ponto-table-wrapper { overflow-x: auto; border-radius: 12px; border: 1px solid rgba(255, 140, 0, 0.15); }
-        .ponto-table { width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.7); min-width: 650px; }
-        .ponto-table th { background: rgba(255, 140, 0, 0.2); color: #7a3a00; font-size: 10px; font-weight: 700; padding: 10px 6px; text-align: center; border-bottom: 2px solid #FF8C00; }
-        .ponto-table td { font-size: 13px; padding: 6px 3px; text-align: center; border-bottom: 1px solid rgba(255, 140, 0, 0.1); }
-        .ponto-table td strong { color: #7a3a00; }
-        .ponto-table input { font-family: 'Poppins', sans-serif; width: 75px; padding: 5px 6px; border: 1px solid rgba(255, 140, 0, 0.2); border-radius: 6px; text-align: center; background: #ffffff; outline: none; font-size: 12px; transition: all 0.3s; }
-        .ponto-table input:focus { border-color: #FF8C00; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1); }
-        .ponto-table input.preenchido { background: #fff3e0; border-color: #FF8C00; }
-        .ponto-table input[readonly] { background: rgba(0,0,0,0.03); color: #555; cursor: default; }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 9999;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(8px);
-            justify-content: center;
-            align-items: center;
-            overflow-y: auto;
-            padding: 16px;
-        }
-        .modal.active {
-            display: flex !important;
-        }
-        .modal-content {
-            background: #ffffff;
-            padding: 24px;
-            border-radius: 20px;
-            max-width: 900px;
-            width: 100%;
-            max-height: 92vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            animation: modalFadeIn 0.3s ease;
-        }
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: translateY(-20px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #FF8C00;
-            padding-bottom: 12px;
-        }
-        .modal-header h2 {
-            font-size: 20px;
-            color: #1a0a00;
-        }
-        .modal-header h2 i {
-            color: #FF8C00;
-            margin-right: 10px;
-        }
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            color: #999;
-            transition: color 0.3s;
-            padding: 0 10px;
-        }
-        .modal-close:hover { color: #dc3545; }
-
-        .capture-options {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-        .capture-options .capture-btn {
-            padding: 16px;
-            border: 2px solid #ddd;
-            border-radius: 12px;
-            background: #f8f9fa;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.3s ease;
-            font-family: 'Poppins', sans-serif;
-        }
-        .capture-options .capture-btn:hover {
-            border-color: #FF8C00;
-            background: rgba(255, 140, 0, 0.05);
-        }
-        .capture-options .capture-btn i {
-            font-size: 28px;
-            color: #FF8C00;
-            margin-bottom: 6px;
-        }
-        .capture-options .capture-btn p {
-            font-size: 13px;
-            font-weight: 600;
-            color: #1a0a00;
-        }
-        .capture-options .capture-btn span {
-            font-size: 11px;
-            color: #666;
-        }
-
-        .camera-container {
-            display: none;
-            position: relative;
-            background: #000;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 15px;
-        }
-        .camera-container.active {
-            display: block;
-        }
-        .camera-container video {
-            width: 100%;
-            max-height: 350px;
-            object-fit: cover;
-        }
-        .camera-container .camera-controls {
-            position: absolute;
-            bottom: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 12px;
-        }
-        .camera-container .camera-controls button {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            border: 3px solid #fff;
-            background: rgba(255,255,255,0.3);
-            color: #fff;
-            font-size: 20px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .camera-container .camera-controls button:hover {
-            background: rgba(255,255,255,0.5);
-            transform: scale(1.05);
-        }
-        .camera-container .camera-controls button.capture-btn-cam {
-            background: #FF8C00;
-            border-color: #FF8C00;
-        }
-        .camera-container .camera-controls button.capture-btn-cam:hover {
-            background: #e07000;
-        }
-        .camera-container .camera-controls button.close-cam {
-            background: rgba(220, 53, 69, 0.8);
-            border-color: #dc3545;
-        }
-        .camera-container .camera-controls button.close-cam:hover {
-            background: #dc3545;
-        }
-
-        .modal-drop-zone {
-            border: 3px dashed rgba(255, 140, 0, 0.4);
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.5);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 120px;
-            cursor: pointer;
-            position: relative;
-            padding: 20px;
-            transition: all 0.3s ease;
-        }
-        .modal-drop-zone.visible {
-            display: flex;
-        }
-        .modal-drop-zone:hover { border-color: #FF8C00; background: rgba(255, 140, 0, 0.05); }
-        .modal-drop-zone.dragover { border-color: #FF8C00; background: rgba(255, 140, 0, 0.1); }
-        .modal-drop-zone i { font-size: 32px; color: rgba(255, 140, 0, 0.5); margin-bottom: 8px; }
-        .modal-drop-zone p { font-size: 14px; font-weight: 600; color: #7a3a00; }
-        .modal-drop-zone span { font-size: 11px; color: rgba(26, 10, 0, 0.5); }
-        .modal-drop-zone input[type="file"] { position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-        
-        .modal-preview { max-width: 100%; max-height: 200px; object-fit: contain; display: none; margin-top: 12px; border-radius: 8px; }
-        .modal-preview.visible { display: block; }
-
-        .modal-progress { display: none; margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; }
-        .modal-progress .bar { width: 0%; height: 6px; background: linear-gradient(90deg, #FF8C00, #e07000); border-radius: 4px; transition: width 0.3s; }
-        .modal-progress .text { font-size: 11px; color: #7a3a00; text-align: center; margin-top: 4px; }
-
-        .modal-ocr-result {
-            display: none;
-            margin-top: 12px;
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 4px solid #FF8C00;
-            background: #fff3e0;
-        }
-        .modal-ocr-result.visible { display: block; }
-        .modal-ocr-result h4 { color: #e07000; margin-bottom: 8px; font-size: 15px; }
-
-        .ocr-grid {
-            display: grid;
-            grid-template-columns: 40px 65px 65px 65px 65px 30px;
-            gap: 3px;
-            padding: 3px 0;
-            align-items: center;
-            font-size: 12px;
-        }
-        .ocr-grid.header {
-            font-weight: 700;
-            color: #7a3a00;
-            background: rgba(255, 140, 0, 0.1);
-            border-radius: 6px;
-            padding: 6px 3px;
-            font-size: 10px;
-            text-transform: uppercase;
-        }
-        .ocr-grid .dia { font-weight: 600; color: #7a3a00; text-align: center; }
-        .ocr-grid input {
-            padding: 3px 4px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 11px;
-            text-align: center;
-            font-family: 'Poppins', sans-serif;
-            width: 100%;
-            transition: all 0.3s;
-        }
-        .ocr-grid input:focus { border-color: #FF8C00; outline: none; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1); }
-        .ocr-grid input.preenchido-ocr { background: #fff3e0; border-color: #FF8C00; }
-        .ocr-grid input.nao-encontrado { background: #f5f5f5; border-color: #ccc; }
-        .ocr-grid .status-icon { text-align: center; font-size: 14px; }
-        .ocr-grid .status-icon.ok { color: #FF8C00; }
-        .ocr-grid .status-icon.fail { color: #999; }
-
-        .ocr-scroll {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-top: 8px;
-            padding-right: 4px;
-        }
-        .ocr-scroll::-webkit-scrollbar { width: 5px; }
-        .ocr-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        .ocr-scroll::-webkit-scrollbar-thumb { background: #FF8C00; border-radius: 10px; }
-
-        .modal-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-
-        .btn-action {
-            font-family: 'Poppins', sans-serif;
-            padding: 8px 18px;
-            border: none;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.3s;
-        }
+        .action-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+        .btn-action { font-family: 'Poppins', sans-serif; padding: 7px 16px; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.3s; }
         .btn-action:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .btn-primary { background: linear-gradient(145deg, #FF8C00, #e07000); color: #ffffff; }
-        .btn-success { background: #FF8C00; color: #fff; }
+        .btn-primary { background: #FF8C00; color: #fff; }
         .btn-danger { background: #dc3545; color: #fff; }
         .btn-warning { background: #ffc107; color: #212529; }
+        .btn-success { background: #28a745; color: #fff; }
         .btn-secondary { background: #6c757d; color: #fff; }
         .btn-outline-primary { background: transparent; color: #FF8C00; border: 2px solid #FF8C00; }
         .btn-outline-primary:hover { background: #FF8C00; color: #fff; }
 
-        .ocr-status { display: none; margin-top: 8px; padding: 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.8); font-size: 13px; text-align: center; border-left: 4px solid #FF8C00; }
-        .ocr-status.success { border-left-color: #FF8C00; color: #7a3a00; background: rgba(255, 140, 0, 0.1); }
-        .ocr-status.error { border-left-color: #dc3545; color: #721c24; background: rgba(220, 53, 69, 0.1); }
-        .ocr-status.info { border-left-color: #FF8C00; color: #7a3a00; background: rgba(255, 140, 0, 0.1); }
+        .table-section { background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(12px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 140, 0, 0.15); }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; }
+        .table-header h3 { font-size: 17px; color: #1a0a00; }
+        .badge-count { background: #FF8C00; color: #fff; border-radius: 20px; padding: 2px 12px; font-size: 12px; }
+        .ponto-table-wrapper { overflow-x: auto; border-radius: 12px; border: 1px solid rgba(255, 140, 0, 0.15); }
+        .ponto-table { width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.7); min-width: 600px; font-size: 12px; }
+        .ponto-table th { background: rgba(255, 140, 0, 0.2); color: #7a3a00; font-size: 9px; font-weight: 700; padding: 8px 4px; text-align: center; border-bottom: 2px solid #FF8C00; }
+        .ponto-table td { font-size: 12px; padding: 4px 2px; text-align: center; border-bottom: 1px solid rgba(255, 140, 0, 0.1); }
+        .ponto-table td strong { color: #7a3a00; }
+        .ponto-table input { font-family: 'Poppins', sans-serif; width: 65px; padding: 4px 5px; border: 1px solid rgba(255, 140, 0, 0.2); border-radius: 5px; text-align: center; background: #ffffff; outline: none; font-size: 11px; transition: all 0.3s; }
+        .ponto-table input:focus { border-color: #FF8C00; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1); }
+        .ponto-table input[readonly] { background: rgba(0,0,0,0.03); color: #555; cursor: default; }
 
-        .badge-ocr {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        .badge-ocr.success { background: #FF8C00; color: #fff; }
-        .badge-ocr.warning { background: #ffc107; color: #212529; }
-        .badge-ocr.danger { background: #dc3545; color: #fff; }
+        /* MODAIS */
+        .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); justify-content: center; align-items: center; overflow-y: auto; padding: 16px; }
+        .modal.active { display: flex !important; }
+        .modal-content { background: #ffffff; padding: 20px; border-radius: 20px; max-width: 1300px; width: 100%; max-height: 95vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalFadeIn 0.3s ease; }
+        @keyframes modalFadeIn { from { opacity: 0; transform: translateY(-20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #FF8C00; padding-bottom: 10px; }
+        .modal-header h2 { font-size: 19px; color: #1a0a00; }
+        .modal-header h2 i { color: #FF8C00; margin-right: 8px; }
+        .modal-close { background: none; border: none; font-size: 26px; cursor: pointer; color: #999; padding: 0 10px; }
+        .modal-close:hover { color: #dc3545; }
 
-        .manual-grid {
-            display: grid;
-            grid-template-columns: 45px 80px 80px 80px 80px 40px;
-            gap: 5px;
-            align-items: center;
-            margin-bottom: 4px;
-            padding: 6px 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border: 1px solid #e9ecef;
-        }
-        .manual-grid:hover { background: #e9ecef; }
-        .manual-grid .dia-label { font-weight: 700; color: #7a3a00; text-align: center; font-size: 12px; }
-        .manual-grid input { padding: 5px 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; text-align: center; width: 100%; font-family: 'Poppins', sans-serif; }
-        .manual-grid input:focus { border-color: #FF8C00; outline: none; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1); }
-        .manual-grid .btn-remove-manual { background: #dc3545; color: #fff; border: none; border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 12px; transition: background 0.3s; }
-        .manual-grid .btn-remove-manual:hover { background: #c82333; }
+        .editor-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 8px; }
+        .editor-imagem { display: flex; flex-direction: column; gap: 10px; border-right: 1px solid #ddd; padding-right: 20px; }
+        .upload-area { border: 2px dashed rgba(255, 140, 0, 0.3); border-radius: 12px; padding: 12px; text-align: center; background: #fafafa; cursor: pointer; transition: all 0.3s; position: relative; }
+        .upload-area:hover { border-color: #FF8C00; background: #fff3e0; }
+        .upload-area i { font-size: 28px; color: rgba(255, 140, 0, 0.5); }
+        .upload-area p { font-size: 12px; font-weight: 600; color: #7a3a00; }
+        .upload-area span { font-size: 10px; color: #999; }
+        .upload-area input[type="file"] { position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; top: 0; left: 0; }
 
-        .manual-header {
-            display: grid;
-            grid-template-columns: 45px 80px 80px 80px 80px 40px;
-            gap: 5px;
-            padding: 6px 10px;
-            margin-bottom: 8px;
-            font-weight: 700;
-            font-size: 11px;
-            color: #7a3a00;
-            background: rgba(255, 140, 0, 0.1);
-            border-radius: 8px;
-            text-align: center;
-            text-transform: uppercase;
-        }
+        .imagem-container { border: 1px solid #ddd; border-radius: 12px; overflow: hidden; background: #f5f5f5; height: 450px; position: relative; cursor: grab; }
+        .imagem-container:active { cursor: grabbing; }
+        #imgDisplay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-repeat: no-repeat; background-position: center; background-size: contain; transition: transform 0.1s; }
+        .zoom-controls { position: absolute; top: 10px; right: 10px; z-index: 10; background: white; border-radius: 8px; padding: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .btn-zoom { background: none; border: none; padding: 8px; cursor: pointer; font-size: 16px; color: #7a3a00; }
+        .btn-zoom:hover { background: #f0f0f0; border-radius: 4px; }
 
-        .scrollable-linhas { max-height: 350px; overflow-y: auto; margin-top: 8px; padding-right: 4px; }
-        .scrollable-linhas::-webkit-scrollbar { width: 5px; }
-        .scrollable-linhas::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        .scrollable-linhas::-webkit-scrollbar-thumb { background: #FF8C00; border-radius: 10px; }
+        .status-ocr { padding: 8px 12px; border-radius: 8px; font-size: 11px; background: #f8f9fa; display: none; }
+        .status-ocr.visible { display: block; }
+        .status-ocr .bar { height: 4px; background: #FF8C00; border-radius: 4px; width: 0%; transition: width 0.3s; margin-top: 4px; }
 
-        .input-group-sm { display: flex; flex-direction: column; gap: 4px; }
-        .input-group-sm label { font-size: 10px; font-weight: 600; color: #7a3a00; text-transform: uppercase; }
-        .input-group-sm input, .input-group-sm select { padding: 7px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; font-family: 'Poppins', sans-serif; }
+        .editor-grade { display: flex; flex-direction: column; gap: 6px; }
+        .grade-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+        .grade-header span { font-weight: 600; color: #7a3a00; font-size: 13px; }
+        .grid-scroll { max-height: 430px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 10px; padding: 4px 6px; background: #fafafa; }
+        .linha-grid { display: grid; grid-template-columns: 40px 80px 80px 80px 80px; gap: 4px; align-items: center; padding: 4px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+        .linha-grid:hover { background: #fff8f0; }
+        .linha-grid.header { font-weight: 700; color: #7a3a00; background: #fff; border-bottom: 2px solid #FF8C00; position: sticky; top: 0; z-index: 2; padding: 8px 4px; border-radius: 0; }
+        .linha-grid .dia-label { font-weight: 700; color: #7a3a00; text-align: center; }
+        .linha-grid input { padding: 6px 4px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; text-align: center; width: 100%; font-family: 'Poppins', sans-serif; background: #fff; }
+        .linha-grid input:focus { border-color: #FF8C00; outline: none; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1); }
+        .linha-grid input.preenchido-ocr { background: #e8f5e9; border-color: #4CAF50; }
+        .linha-grid input.preenchido-manual { background: #fff3e0; border-color: #FF8C00; }
 
-        .debug-text {
-            font-size: 10px;
-            color: #666;
-            max-height: 150px;
-            overflow-y: auto;
-            background: #1a1a2e;
-            color: #ffb84d;
-            padding: 10px;
-            border-radius: 8px;
-            margin-top: 8px;
-            display: none;
-            font-family: 'Courier New', monospace;
-            white-space: pre-wrap;
-            word-break: break-all;
-            line-height: 1.4;
-        }
-        .debug-text.visible { display: block; }
+        .modal-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; justify-content: flex-end; border-top: 1px solid #eee; padding-top: 12px; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #28a745; color: #fff; padding: 15px 25px; border-radius: 8px; font-size: 16px; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 10005; display: none; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-        @media (max-width: 768px) {
-            .main-header { padding: 10px 16px; }
-            .nav-menu a { font-size: 12px; padding: 4px 10px; }
-            .container { padding: 72px 12px 16px; gap: 15px; }
-            .main-actions { grid-template-columns: 1fr; gap: 10px; padding: 15px; }
-            .main-actions .action-card { padding: 15px; }
-            .main-actions .action-card i { font-size: 28px; }
-            .form-row { grid-template-columns: 1fr; gap: 10px; }
-            .capture-options { grid-template-columns: 1fr; }
-            .modal-content { padding: 16px; }
-            .manual-grid { grid-template-columns: 35px 55px 55px 55px 55px 35px; font-size: 10px; padding: 4px 8px; }
-            .manual-header { grid-template-columns: 35px 55px 55px 55px 55px 35px; font-size: 9px; padding: 4px 8px; }
-            .ocr-grid { grid-template-columns: 30px 45px 45px 45px 45px 25px; font-size: 10px; }
-            .ocr-grid.header { font-size: 8px; }
-            .ponto-table input { width: 50px; font-size: 10px; padding: 3px 4px; }
-            .page-title h1 { font-size: 22px; }
-            .data-form { padding: 15px; }
-            .table-section { padding: 15px; }
-            .camera-container .camera-controls button { width: 44px; height: 44px; font-size: 18px; }
-        }
-        @media (max-width: 480px) {
-            .ponto-table input { width: 40px; font-size: 9px; padding: 2px 3px; }
-            .btn-action { font-size: 11px; padding: 6px 12px; }
-            .manual-grid { grid-template-columns: 28px 40px 40px 40px 40px 28px; font-size: 9px; padding: 3px 5px; }
-            .manual-header { grid-template-columns: 28px 40px 40px 40px 40px 28px; font-size: 8px; padding: 3px 5px; }
-            .manual-grid input { font-size: 10px; padding: 3px 4px; }
-            .ocr-grid { grid-template-columns: 25px 35px 35px 35px 35px 22px; font-size: 9px; }
-            .ocr-grid input { font-size: 9px; padding: 2px 3px; }
-            .modal-header h2 { font-size: 17px; }
-            .camera-container .camera-controls button { width: 38px; height: 38px; font-size: 15px; }
-        }
+        /* CADASTRO (LISTA DE FUNCIONÁRIOS) */
+        .modal-cadastro-content { max-width: 1100px; }
+        
+        .filtros-cadastro { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #eee; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+        .filtros-cadastro h4 { width: 100%; margin-bottom: 10px; color: #7a3a00; }
+
+        .lista-funcionarios { max-height: 350px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #eee; border-radius: 10px; }
+        .lista-funcionarios table { width: 100%; border-collapse: collapse; }
+        .lista-funcionarios th { background: #f8f9fa; font-size: 11px; padding: 10px; text-align: left; border-bottom: 2px solid #FF8C00; position: sticky; top: 0; }
+        .lista-funcionarios td { font-size: 13px; padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        .foto-mini { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; }
+        .btn-acao-tabela { background: none; border: none; cursor: pointer; font-size: 14px; padding: 5px; }
+        .btn-selecionar { color: #28a745; }
+        .btn-editar { color: #FF8C00; }
+        .btn-excluir { color: #dc3545; }
+
+        .form-cadastro-novo { background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #eee; margin-top: 10px; }
+        .form-cadastro-novo h4 { margin-bottom: 15px; color: #7a3a00; }
+        .grid-form { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        .foto-upload-cadastro { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #ddd; border-radius: 10px; padding: 20px; cursor: pointer; background: #fff; position: relative; }
+        .foto-upload-cadastro img { width: 120px; height: 120px; object-fit: cover; border-radius: 50%; margin-bottom: 10px; }
+        .foto-upload-cadastro:hover { border-color: #FF8C00; }
+        .foto-upload-cadastro input { position: absolute; opacity: 0; cursor: pointer; width: 100%; height: 100%; top: 0; left: 0; }
+        .campos-form { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        @media (max-width: 900px) { .editor-layout { grid-template-columns: 1fr; } .editor-imagem { border-right: none; padding-right: 0; border-bottom: 1px solid #ddd; padding-bottom: 20px; } .imagem-container { height: 300px; } .grid-form { grid-template-columns: 1fr; } .campos-form { grid-template-columns: 1fr; } }
+        @media (max-width: 480px) { .linha-grid { grid-template-columns: 25px 50px 50px 50px 50px; font-size: 10px; } }
     </style>
 </head>
 <body>
 
-    <!-- MODAL ANEXAR FOTO -->
-    <div class="modal" id="modalFoto">
-        <div class="modal-content">
+    <div class="toast" id="toastSucesso"><i class="fas fa-check-circle"></i> <span id="toastMsg">Salvo!</span></div>
+
+    <!-- MODAL CADASTRO / LISTA DE FUNCIONÁRIOS -->
+    <div class="modal" id="modalCadastro">
+        <div class="modal-content modal-cadastro-content">
             <div class="modal-header">
-                <h2><i class="fas fa-camera"></i> Capturar ou Anexar Foto</h2>
-                <button class="modal-close" onclick="fecharModalFoto()">&times;</button>
+                <h2><i class="fas fa-users"></i> Gestão de Funcionários</h2>
+                <button class="modal-close" onclick="fecharModalCadastro()">&times;</button>
             </div>
             <div class="modal-body">
-                <p style="margin-bottom: 12px; color: #666; font-size: 13px;">
-                    <i class="fas fa-info-circle"></i> 
-                    Escolha uma opção abaixo para capturar ou selecionar a imagem do cartão de ponto.
-                </p>
-
-                <div class="capture-options">
-                    <div class="capture-btn" onclick="abrirCamera()">
-                        <i class="fas fa-camera-retro"></i>
-                        <p>Tirar Foto</p>
-                        <span>Usar a câmera do celular</span>
-                    </div>
-                    <div class="capture-btn" onclick="abrirGaleria()">
-                        <i class="fas fa-folder-open"></i>
-                        <p>Selecionar da Galeria</p>
-                        <span>Escolher imagem existente</span>
-                    </div>
-                </div>
-
-                <div class="camera-container" id="cameraContainer">
-                    <video id="video" autoplay playsinline></video>
-                    <div class="camera-controls">
-                        <button class="close-cam" onclick="fecharCamera()">
-                            <i class="fas fa-times"></i>
-                        </button>
-                        <button class="capture-btn-cam" onclick="capturarFoto()">
-                            <i class="fas fa-camera"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="modal-drop-zone" id="modalDropZone">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>Arraste e solte a foto do cartão</p>
-                    <span>ou clique para selecionar (JPG, PNG, WEBP)</span>
-                    <input type="file" id="modalFileInput" accept="image/*">
-                    <img src="" alt="Pré-visualização" class="modal-preview" id="modalPreview">
-                </div>
                 
-                <div class="modal-progress" id="modalProgress">
-                    <div class="bar" id="modalProgressBar"></div>
-                    <div class="text" id="modalProgressText">Processando...</div>
-                </div>
-                
-                <div class="modal-ocr-result" id="modalOcrResult">
-                    <h4><i class="fas fa-robot" style="color: #FF8C00;"></i> Resultado do Reconhecimento</h4>
-                    <div id="modalOcrInfo" style="font-size: 12px; color: #666; margin-bottom: 8px;"></div>
-                    <div class="ocr-scroll" id="ocrLinhasContainer"></div>
-                    <div style="margin-top: 8px; font-size: 11px; color: #999;">
-                        <i class="fas fa-info-circle"></i> 
-                        <span style="color: #FF8C00;">● Laranja</span> = identificado | 
-                        <span style="color: #999;">● Cinza</span> = não encontrado
-                    </div>
-                </div>
-                
-                <div class="debug-text" id="debugText"></div>
-                
-                <div class="modal-actions">
-                    <button class="btn-action btn-success" onclick="aplicarOcr()"><i class="fas fa-check"></i> Aplicar Dados</button>
-                    <button class="btn-action btn-secondary" onclick="fecharModalFoto()"><i class="fas fa-times"></i> Cancelar</button>
-                    <button class="btn-action btn-warning" onclick="toggleDebug()"><i class="fas fa-bug"></i> Debug</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DIGITAÇÃO MANUAL -->
-    <div class="modal" id="modalManual">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-pencil-alt"></i> Digitação Manual</h2>
-                <button class="modal-close" onclick="fecharModalManual()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p style="margin-bottom: 10px; color: #666; font-size: 13px;">Preencha os dados do funcionário e os horários para cada dia.</p>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; background: #f8f9fa; padding: 12px; border-radius: 10px;">
-                    <div class="input-group-sm">
-                        <label for="modalFuncionario">Nome do Funcionário</label>
-                        <input type="text" id="modalFuncionario" placeholder="Digite o nome">
-                    </div>
-                    <div class="input-group-sm">
-                        <label for="modalFuncao">Função</label>
-                        <input type="text" id="modalFuncao" placeholder="Digite a função">
-                    </div>
-                    <div class="input-group-sm">
-                        <label for="modalMatricula">Matrícula (Nº Reg.)</label>
-                        <input type="text" id="modalMatricula" placeholder="Digite a matrícula">
-                    </div>
-                    <div class="input-group-sm">
-                        <label for="modalMes">Mês de Referência</label>
-                        <select id="modalMes">
-                            <option value="Janeiro">Janeiro</option>
-                            <option value="Fevereiro">Fevereiro</option>
-                            <option value="Março">Março</option>
-                            <option value="Abril">Abril</option>
-                            <option value="Maio">Maio</option>
-                            <option value="Junho">Junho</option>
-                            <option value="Julho">Julho</option>
-                            <option value="Agosto">Agosto</option>
-                            <option value="Setembro">Setembro</option>
-                            <option value="Outubro">Outubro</option>
-                            <option value="Novembro">Novembro</option>
-                            <option value="Dezembro">Dezembro</option>
+                <!-- FILTRO POR EMPRESA -->
+                <div class="filtros-cadastro">
+                    <h4><i class="fas fa-filter"></i> Filtrar por Empresa</h4>
+                    <div class="form-group" style="min-width: 200px;">
+                        <label>Selecione a Unidade</label>
+                        <select id="filtroEmpresaCadastro" onchange="renderizarTabelaCadastrados()">
+                            <option value="">Todas as Empresas</option>
+                            <option value="Spoleto">Spoleto</option>
+                            <option value="A2B">A2B</option>
+                            <option value="Acço">Acço</option>
+                            <option value="Copaenergia">Copaenergia</option>
+                            <option value="INSS">INSS</option>
                         </select>
                     </div>
-                    <div class="input-group-sm">
-                        <label for="modalAno">Ano</label>
-                        <input type="number" id="modalAno" value="2026" min="2020" max="2030">
+                    <button class="btn-action btn-secondary" onclick="limparFiltroEmpresa()"><i class="fas fa-times"></i> Limpar Filtro</button>
+                </div>
+
+                <!-- LISTA DE CADASTRADOS -->
+                <h3 style="margin-bottom: 10px; font-size: 15px; color: #333;"><i class="fas fa-list"></i> Funcionários Cadastrados</h3>
+                <div class="lista-funcionarios">
+                    <table id="tabelaCadastrados">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Foto</th>
+                                <th>Nome Completo</th>
+                                <th>CPF</th>
+                                <th>Unidade</th>
+                                <th style="text-align: center;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyCadastrados"></tbody>
+                    </table>
+                </div>
+
+                <!-- FORMULÁRIO PARA CADASTRAR / EDITAR FUNCIONÁRIO -->
+                <div class="form-cadastro-novo" id="formCadastroNovo">
+                    <h4 id="tituloFormCadastro"><i class="fas fa-user-plus"></i> Adicionar Novo Funcionário</h4>
+                    <div class="grid-form">
+                        <div class="foto-upload-cadastro" onclick="document.getElementById('inputFoto').click()">
+                            <img id="previewFoto" src="https://via.placeholder.com/120" alt="Foto">
+                            <p style="font-size:12px; color:#777;"><i class="fas fa-camera"></i> Clique para anexar/alterar foto</p>
+                            <input type="file" id="inputFoto" accept="image/*" onchange="carregarFoto(event)">
+                        </div>
+
+                        <div class="campos-form">
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label>Nome Completo *</label>
+                                <input type="text" id="cadNome" placeholder="Nome do funcionário">
+                            </div>
+                            <div class="form-group">
+                                <label>CPF</label>
+                                <input type="text" id="cadCPF" placeholder="000.000.000-00">
+                            </div>
+                            <div class="form-group">
+                                <label>Unidade</label>
+                                <select id="cadUnidade">
+                                    <option value="Spoleto">Spoleto</option>
+                                    <option value="A2B">A2B</option>
+                                    <option value="Acço">Acço</option>
+                                    <option value="Copaenergia">Copaenergia</option>
+                                    <option value="INSS">INSS</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Data Admissão</label>
+                                <input type="date" id="cadAdmissao">
+                            </div>
+                            <div class="form-group">
+                                <label>Validade ASO</label>
+                                <input type="date" id="cadASO">
+                            </div>
+                            <div class="form-group">
+                                <label>Aniversário</label>
+                                <input type="date" id="cadAniversario">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                        <button class="btn-action btn-warning" onclick="limparFormCadastro()" style="display:none;" id="btnCancelarEdicao"><i class="fas fa-times"></i> Cancelar Edição</button>
+                        <button class="btn-action btn-success" onclick="salvarFuncionario()"><i class="fas fa-save"></i> Salvar Cadastro</button>
                     </div>
                 </div>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-weight: 600; color: #7a3a00; font-size: 13px;"><i class="fas fa-clock"></i> Horários</span>
-                    <button class="btn-action btn-success" onclick="adicionarLinhaManual()" style="padding: 4px 14px; font-size: 11px;">
-                        <i class="fas fa-plus"></i> Adicionar
-                    </button>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDITOR DE PONTO -->
+    <div class="modal" id="modalEditor">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Editor de Ponto</h2>
+                <button class="modal-close" onclick="fecharModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; background: #f8f9fa; padding: 10px 14px; border-radius: 10px;">
+                    <div>
+                        <label style="font-size:9px;font-weight:600;color:#7a3a00;text-transform:uppercase;">Nome</label>
+                        <input type="text" id="editNome" placeholder="Funcionário" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:5px;font-size:13px;">
+                    </div>
+                    <div>
+                        <label style="font-size:9px;font-weight:600;color:#7a3a00;text-transform:uppercase;">Empresa</label>
+                        <input type="text" id="editEmpresa" placeholder="Empresa" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:5px;font-size:13px;">
+                    </div>
+                    <div>
+                        <label style="font-size:9px;font-weight:600;color:#7a3a00;text-transform:uppercase;">Matrícula</label>
+                        <input type="text" id="editMatricula" placeholder="Matrícula" style="width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:5px;font-size:13px;">
+                    </div>
                 </div>
-                
-                <div class="manual-header">
-                    <span>Dia</span>
-                    <span>Entrada 1</span>
-                    <span>Saída 1</span>
-                    <span>Entrada 2</span>
-                    <span>Saída 2</span>
-                    <span></span>
+
+                <div class="editor-layout">
+                    <div class="editor-imagem">
+                        <div class="upload-area" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Clique para selecionar a imagem do cartão</p>
+                            <span>JPG, PNG, WEBP</span>
+                            <input type="file" id="fileInput" accept="image/*">
+                        </div>
+
+                        <div class="imagem-container" id="imagemContainer">
+                            <div class="zoom-controls">
+                                <button class="btn-zoom" onclick="zoomIn()"><i class="fas fa-search-plus"></i></button>
+                                <button class="btn-zoom" onclick="zoomOut()"><i class="fas fa-search-minus"></i></button>
+                            </div>
+                            <div id="imgDisplay" style="background-image: none;"></div>
+                        </div>
+
+                        <div class="status-ocr" id="statusOcr">
+                            <span id="statusOcrText"><i class="fas fa-robot"></i> Processando OCR...</span>
+                            <div class="bar" id="progressBar"></div>
+                        </div>
+
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button class="btn-action btn-outline-primary" onclick="executarOCR()" style="font-size:11px;padding:4px 12px;">
+                                <i class="fas fa-eye"></i> Tentar OCR novamente
+                            </button>
+                            <button class="btn-action btn-secondary" onclick="limparImagem()" style="font-size:11px;padding:4px 12px;">
+                                <i class="fas fa-times"></i> Remover imagem
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="editor-grade">
+                        <div class="grade-header">
+                            <span><i class="fas fa-clock"></i> Horários <span style="font-weight:400;color:#999;font-size:11px;">(digite manualmente)</span></span>
+                            <div>
+                                <button class="btn-action btn-secondary" onclick="preencherDiasVazios()" style="padding:2px 10px;font-size:10px;">
+                                    <i class="fas fa-fill-drip"></i> Preencher vazios
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid-scroll" id="gridContainer">
+                            <div class="linha-grid header">
+                                <span>Dia</span><span>Entrada 1</span><span>Saída 1</span><span>Entrada 2</span><span>Saída 2</span>
+                            </div>
+                        </div>
+
+                        <div style="font-size:9px;color:#999;margin-top:4px;">
+                            <span style="background:#e8f5e9;padding:1px 6px;border-radius:4px;border:1px solid #4CAF50;">Verde</span> = Reconhecido por OCR &nbsp;|&nbsp;
+                            <span style="background:#fff3e0;padding:1px 6px;border-radius:4px;border:1px solid #FF8C00;">Laranja</span> = Digitado manualmente
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="scrollable-linhas" id="containerLinhas"></div>
-                
-                <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button class="btn-action btn-outline-primary" onclick="preencherDiasRestantes()" style="font-size: 11px; padding: 6px 14px;">
-                        <i class="fas fa-fill-drip"></i> Preencher Dias Restantes
-                    </button>
-                </div>
-                
+
                 <div class="modal-actions">
-                    <button class="btn-action btn-success" onclick="aplicarManual()"><i class="fas fa-check"></i> Aplicar Dados</button>
-                    <button class="btn-action btn-secondary" onclick="fecharModalManual()"><i class="fas fa-times"></i> Cancelar</button>
+                    <button class="btn-action btn-success" onclick="aplicarEditor()"><i class="fas fa-check"></i> Aplicar Dados</button>
+                    <button class="btn-action btn-secondary" onclick="fecharModal()"><i class="fas fa-times"></i> Cancelar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- HEADER -->
     <header class="main-header">
         <div class="logo">Apli<span>kado</span></div>
         <nav class="nav-menu">
-            <a href="CLIENT_QNUTRI.html" class="btn-voltar">
-                <i class="fas fa-arrow-left"></i> Voltar
-            </a>
+            <a href="#"><i class="fas fa-arrow-left"></i> Voltar</a>
             <a href="#"><i class="fas fa-th-large"></i> Dashboard</a>
-            <a href="#"><i class="fas fa-sliders-h"></i> Configurações</a>
         </nav>
     </header>
 
-    <!-- CONTEÚDO PRINCIPAL -->
     <div class="container">
         <div class="page-title">
             <h1><i class="fas fa-clock"></i> Controle de Ponto</h1>
-            <p>Escolha uma das opções abaixo para preencher a folha de ponto</p>
-        </div>
-
-        <div class="main-actions">
-            <div class="action-card" onclick="abrirModalFoto()">
-                <i class="fas fa-camera"></i>
-                <h3>Anexar Foto</h3>
-                <p>Carregue uma imagem do cartão de ponto</p>
-            </div>
-            <div class="action-card" onclick="abrirModalManual()">
-                <i class="fas fa-pencil-alt"></i>
-                <h3>Digitar Manualmente</h3>
-                <p>Preencha os horários manualmente</p>
-            </div>
-            <div class="action-card" onclick="abrirModalFoto()" style="background: rgba(255, 140, 0, 0.1); border-color: #FF8C00;">
-                <i class="fas fa-qrcode"></i>
-                <h3>Scanear Cartão</h3>
-                <p>Use a câmera para escanear</p>
-            </div>
+            <p>Busque pelo funcionário, anexe a imagem do cartão e digite os horários</p>
         </div>
 
         <div class="data-form">
-            <h3><i class="fas fa-user-circle"></i> Dados do Funcionário</h3>
-            <div class="form-group">
-                <label for="funcionario">Nome do Funcionário</label>
-                <input type="text" id="funcionario" placeholder="Digite o nome do funcionário">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="funcionario">Nome do Funcionário</label>
+                    <input type="text" id="funcionario" list="listaFuncionarios" placeholder="Digite ou escolha..." autocomplete="off" oninput="buscarDados()">
+                    <datalist id="listaFuncionarios"></datalist>
+                </div>
+                <div class="form-group">
+                    <label for="empresa">Empresa</label>
+                    <input type="text" id="empresa" readonly placeholder="Preenchido automaticamente">
+                </div>
+                <div class="form-group">
+                    <label for="matricula">Matrícula / CPF</label>
+                    <input type="text" id="matricula" readonly placeholder="Preenchido automaticamente">
+                </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="funcao">Função</label>
-                    <input type="text" id="funcao" placeholder="Digite a função">
-                </div>
-                <div class="form-group">
-                    <label for="mes">Mês de Referência</label>
+                    <label for="mes">Mês</label>
                     <select id="mes">
-                        <option value="Janeiro">Janeiro</option>
-                        <option value="Fevereiro">Fevereiro</option>
-                        <option value="Março">Março</option>
-                        <option value="Abril">Abril</option>
-                        <option value="Maio">Maio</option>
-                        <option value="Junho">Junho</option>
-                        <option value="Julho">Julho</option>
-                        <option value="Agosto">Agosto</option>
-                        <option value="Setembro">Setembro</option>
-                        <option value="Outubro">Outubro</option>
-                        <option value="Novembro">Novembro</option>
-                        <option value="Dezembro">Dezembro</option>
+                        <option value="Janeiro">Janeiro</option><option value="Fevereiro">Fevereiro</option>
+                        <option value="Março">Março</option><option value="Abril">Abril</option>
+                        <option value="Maio">Maio</option><option value="Junho">Junho</option>
+                        <option value="Julho">Julho</option><option value="Agosto">Agosto</option>
+                        <option value="Setembro">Setembro</option><option value="Outubro">Outubro</option>
+                        <option value="Novembro">Novembro</option><option value="Dezembro">Dezembro</option>
                     </select>
                 </div>
-            </div>
-            <div class="form-row">
                 <div class="form-group">
                     <label for="ano">Ano</label>
-                    <input type="number" id="ano" placeholder="2026" min="2020" max="2030" value="2026">
+                    <input type="number" id="ano" value="2026" min="2020" max="2030">
                 </div>
-                <div class="form-group">
-                    <label for="matricula">Matrícula (Nº Reg.)</label>
-                    <input type="text" id="matricula" placeholder="Digite a matrícula">
+                <div class="form-group" style="justify-content:flex-end; gap: 10px; flex-direction: row;">
+                    <button class="btn-action btn-primary" onclick="abrirModalCadastro()" style="margin-top:auto;">
+                        <i class="fas fa-users"></i> Cadastro
+                    </button>
+                    <button class="btn-action btn-success" onclick="abrirModal()" style="margin-top:auto;">
+                        <i class="fas fa-edit"></i> Abrir Editor
+                    </button>
                 </div>
             </div>
-            <div class="action-bar" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
-                <button class="btn-action btn-primary" onclick="salvarDados()"><i class="fas fa-save"></i> Salvar</button>
+            <div class="action-bar">
+                <button class="btn-action btn-secondary" onclick="buscarDados()"><i class="fas fa-search"></i> Buscar Dados</button>
+                <button class="btn-action btn-success" onclick="salvarDados()"><i class="fas fa-save"></i> Salvar</button>
                 <button class="btn-action btn-danger" onclick="limparTudo()"><i class="fas fa-trash"></i> Limpar</button>
                 <button class="btn-action btn-warning" onclick="exportarCSV()"><i class="fas fa-file-export"></i> CSV</button>
             </div>
-            <div class="ocr-status" id="ocrStatus"></div>
         </div>
 
         <div class="table-section">
             <div class="table-header">
-                <h3><i class="fas fa-table"></i> Espelhamento <span class="badge-count" id="totalRegistros">0</span></h3>
+                <h3><i class="fas fa-table"></i> Folha de Ponto <span class="badge-count" id="totalRegistros">0</span></h3>
             </div>
             <div class="ponto-table-wrapper">
                 <table class="ponto-table" id="tabelaPonto">
@@ -782,65 +407,483 @@
     </div>
 
     <script>
-        // ============================================================
-        // VARIÁVEIS GLOBAIS
-        // ============================================================
-        let dadosOcrExtraidos = {};
-        let isProcessing = false;
-        let debugVisible = false;
-        let stream = null;
-        let imagemCapturada = null;
+        // ========== ESTRUTURA DE DADOS COM LOCALSTORAGE (CORRIGIDA) ==========
+        let funcionariosCadastrados = JSON.parse(localStorage.getItem('funcionarios')) || [];
+        let pontosPorFuncionario = JSON.parse(localStorage.getItem('pontosPorFuncionario')) || {};
+        
+        let funcionarioAtual = null;
+        let fotoAtualCadastro = "";
+        let indexEditando = -1;
 
-        // ============================================================
-        // GERAR TABELA
-        // ============================================================
+        // Variáveis do Sistema de Ponto
+        let imagemDataURL = null;
+        let isProcessing = false;
+        let ocrExecutado = false;
+        let escalaAtual = 1;
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
+
+        const imgDisplay = document.getElementById('imgDisplay');
+
+        // Se não houver funcionários cadastrados, carrega a lista padrão
+        if (funcionariosCadastrados.length === 0) {
+            funcionariosCadastrados = [
+                { nome: "Alexsander da Cruz Silva", cpf: "145.261.297-80", unidade: "Spoleto", admissao: "15/03/2021", aso: "08/08/2026", foto: "" },
+                { nome: "Ana Paula Gama da Silva", cpf: "130.815.567-08", unidade: "Spoleto", admissao: "02/05/2018", aso: "05/05/2026", foto: "" },
+                { nome: "Célia Regina Costa Pessanha", cpf: "094.151.467-61", unidade: "Copaenergia", admissao: "06/11/2025", aso: "07/11/2026", foto: "" },
+                { nome: "Eufary Lorosa", cpf: "023.023.167-54", unidade: "Copaenergia", admissao: "14/11/2025", aso: "27/01/2027", foto: "" }
+            ];
+        }
+
+        // ========== SALVAR NO LOCALSTORAGE (CORRIGIDO) ==========
+        function salvarFuncionariosStorage() {
+            localStorage.setItem('funcionarios', JSON.stringify(funcionariosCadastrados));
+        }
+        function salvarPontosStorage() {
+            localStorage.setItem('pontosPorFuncionario', JSON.stringify(pontosPorFuncionario));
+        }
+
+        // Inicialização
+        window.onload = function() { 
+            gerarTabela(); 
+            carregarDatalist();
+            renderizarTabelaCadastrados();
+        };
+
+        function carregarDatalist() {
+            const datalist = document.getElementById('listaFuncionarios');
+            datalist.innerHTML = '';
+            funcionariosCadastrados.forEach(func => {
+                const option = document.createElement('option');
+                option.value = func.nome;
+                datalist.appendChild(option);
+            });
+        }
+
+        // ========== FILTRO POR EMPRESA ==========
+        function limparFiltroEmpresa() {
+            document.getElementById('filtroEmpresaCadastro').value = "";
+            renderizarTabelaCadastrados();
+        }
+
+        // ========== RENDERIZAR TABELA DE CADASTRADOS ==========
+        function renderizarTabelaCadastrados() {
+            const tbody = document.getElementById('tbodyCadastrados');
+            tbody.innerHTML = '';
+            
+            const filtroEmpresa = document.getElementById('filtroEmpresaCadastro').value;
+
+            funcionariosCadastrados.forEach((func, index) => {
+                if (filtroEmpresa && func.unidade !== filtroEmpresa) return;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><img src="${func.foto || 'https://via.placeholder.com/40'}" class="foto-mini" onerror="this.src='https://via.placeholder.com/40'"></td>
+                    <td><strong>${func.nome}</strong></td>
+                    <td>${func.cpf}</td>
+                    <td>${func.unidade}</td>
+                    <td style="text-align: center;">
+                        <button class="btn-acao-tabela btn-selecionar" onclick="selecionarFuncionario(${index})" title="Selecionar"><i class="fas fa-check-circle"></i></button>
+                        <button class="btn-acao-tabela btn-editar" onclick="abrirEdicao(${index})" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-acao-tabela btn-excluir" onclick="excluirFuncionario(${index})" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Selecionar funcionário e carregar pontos salvos
+        function selecionarFuncionario(index) {
+            const func = funcionariosCadastrados[index];
+            document.getElementById('funcionario').value = func.nome;
+            document.getElementById('empresa').value = func.unidade;
+            document.getElementById('matricula').value = func.cpf;
+
+            funcionarioAtual = func.nome;
+            
+            // Carrega os pontos salvos deste funcionário
+            let pontosDesteFunc = pontosPorFuncionario[func.nome] || {};
+            dadosHorarios = pontosDesteFunc;
+            gerarTabela();
+
+            fecharModalCadastro();
+            mostrarToast('✅ Funcionário selecionado! Pontos carregados.');
+        }
+
+        // ========== EDITAR FUNCIONÁRIO (CORRIGIDO) ==========
+        function abrirEdicao(index) {
+            indexEditando = index;
+            const func = funcionariosCadastrados[index];
+            
+            document.getElementById('tituloFormCadastro').innerHTML = '<i class="fas fa-edit"></i> Editando: ' + func.nome;
+            document.getElementById('cadNome').value = func.nome;
+            document.getElementById('cadCPF').value = func.cpf;
+            document.getElementById('cadUnidade').value = func.unidade;
+            document.getElementById('cadAdmissao').value = func.admissao || '';
+            document.getElementById('cadASO').value = func.aso || '';
+            document.getElementById('cadAniversario').value = func.aniversario || '';
+            
+            document.getElementById('previewFoto').src = func.foto || 'https://via.placeholder.com/120';
+            fotoAtualCadastro = func.foto || "";
+
+            document.getElementById('btnCancelarEdicao').style.display = 'inline-flex';
+            document.getElementById('formCadastroNovo').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function limparFormCadastro() {
+            indexEditando = -1;
+            document.getElementById('tituloFormCadastro').innerHTML = '<i class="fas fa-user-plus"></i> Adicionar Novo Funcionário';
+            document.getElementById('cadNome').value = '';
+            document.getElementById('cadCPF').value = '';
+            document.getElementById('cadUnidade').value = 'Spoleto';
+            document.getElementById('cadAdmissao').value = '';
+            document.getElementById('cadASO').value = '';
+            document.getElementById('cadAniversario').value = '';
+            document.getElementById('previewFoto').src = "https://via.placeholder.com/120";
+            fotoAtualCadastro = "";
+            document.getElementById('btnCancelarEdicao').style.display = 'none';
+        }
+
+        function excluirFuncionario(index) {
+            if (confirm("Deseja excluir este funcionário e todos os pontos dele?")) {
+                const nome = funcionariosCadastrados[index].nome;
+                funcionariosCadastrados.splice(index, 1);
+                delete pontosPorFuncionario[nome]; // Apaga os pontos do funcionário
+                salvarFuncionariosStorage();
+                salvarPontosStorage();
+                renderizarTabelaCadastrados();
+                carregarDatalist();
+                atualizarContador();
+            }
+        }
+
+        // ========== LÓGICA DO MODAL CADASTRO ==========
+        function abrirModalCadastro() {
+            document.getElementById('modalCadastro').classList.add('active');
+            limparFormCadastro();
+            renderizarTabelaCadastrados();
+        }
+
+        function fecharModalCadastro() {
+            document.getElementById('modalCadastro').classList.remove('active');
+        }
+
+        function carregarFoto(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    fotoAtualCadastro = e.target.result;
+                    document.getElementById('previewFoto').src = fotoAtualCadastro;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function salvarFuncionario() {
+            const nome = document.getElementById('cadNome').value;
+            if (!nome) { mostrarToast('⚠️ Preencha o Nome!'); return; }
+
+            const dadosFunc = {
+                nome: nome,
+                cpf: document.getElementById('cadCPF').value,
+                unidade: document.getElementById('cadUnidade').value,
+                admissao: document.getElementById('cadAdmissao').value,
+                aso: document.getElementById('cadASO').value,
+                aniversario: document.getElementById('cadAniversario').value,
+                foto: fotoAtualCadastro
+            };
+
+            if (indexEditando === -1) {
+                funcionariosCadastrados.push(dadosFunc);
+            } else {
+                funcionariosCadastrados[indexEditando] = dadosFunc;
+                indexEditando = -1;
+            }
+
+            salvarFuncionariosStorage();
+            renderizarTabelaCadastrados(); 
+            carregarDatalist(); 
+            limparFormCadastro();
+            mostrarToast('✅ Funcionário salvo com sucesso!');
+        }
+
+        // ========== BUSCA PRINCIPAL ==========
+        function buscarDados() {
+            const nomeBusca = document.getElementById('funcionario').value.toLowerCase();
+            const func = funcionariosCadastrados.find(f => f.nome.toLowerCase() === nomeBusca);
+
+            if (func) {
+                document.getElementById('empresa').value = func.unidade;
+                document.getElementById('matricula').value = func.cpf;
+                funcionarioAtual = func.nome;
+                
+                // Carrega pontos do funcionário buscado
+                dadosHorarios = pontosPorFuncionario[func.nome] || {};
+                gerarTabela();
+            } else {
+                document.getElementById('empresa').value = '';
+                document.getElementById('matricula').value = '';
+                funcionarioAtual = null;
+            }
+        }
+
+        // ========== ABERTURA DO EDITOR ==========
+        function abrirModal() {
+            if (!funcionarioAtual) {
+                mostrarToast('⚠️ Selecione um funcionário antes de abrir o editor!');
+                return;
+            }
+
+            document.getElementById('modalEditor').classList.add('active');
+            
+            document.getElementById('editNome').value = document.getElementById('funcionario').value;
+            document.getElementById('editEmpresa').value = document.getElementById('empresa').value;
+            document.getElementById('editMatricula').value = document.getElementById('matricula').value;
+
+            montarGrade();
+            escalaAtual = 1;
+            translateX = 0; translateY = 0;
+            imgDisplay.style.transform = 'scale(1)';
+
+            if (imagemDataURL) mostrarImagem(imagemDataURL);
+        }
+
+        function fecharModal() {
+            document.getElementById('modalEditor').classList.remove('active');
+        }
+
+        function montarGrade() {
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = `
+                <div class="linha-grid header">
+                    <span>Dia</span><span>Entrada 1</span><span>Saída 1</span><span>Entrada 2</span><span>Saída 2</span>
+                </div>
+            `;
+
+            for (let dia = 1; dia <= 31; dia++) {
+                const dados = dadosHorarios[dia] || { e1: '', s1: '', e2: '', s2: '' };
+                const div = document.createElement('div');
+                div.className = 'linha-grid';
+                div.dataset.dia = dia;
+
+                const clsE1 = dados.e1 && dados._origem === 'ocr' ? 'preenchido-ocr' : (dados.e1 ? 'preenchido-manual' : '');
+                const clsS1 = dados.s1 && dados._origem === 'ocr' ? 'preenchido-ocr' : (dados.s1 ? 'preenchido-manual' : '');
+                const clsE2 = dados.e2 && dados._origem === 'ocr' ? 'preenchido-ocr' : (dados.e2 ? 'preenchido-manual' : '');
+                const clsS2 = dados.s2 && dados._origem === 'ocr' ? 'preenchido-ocr' : (dados.s2 ? 'preenchido-manual' : '');
+
+                div.innerHTML = `
+                    <span class="dia-label">${String(dia).padStart(2, '0')}</span>
+                    <input type="time" class="ed-e1 ${clsE1}" value="${dados.e1 || ''}" oninput="marcarManual(this)">
+                    <input type="time" class="ed-s1 ${clsS1}" value="${dados.s1 || ''}" oninput="marcarManual(this)">
+                    <input type="time" class="ed-e2 ${clsE2}" value="${dados.e2 || ''}" oninput="marcarManual(this)">
+                    <input type="time" class="ed-s2 ${clsS2}" value="${dados.s2 || ''}" oninput="marcarManual(this)">
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function marcarManual(input) {
+            if (input.value) {
+                input.classList.remove('preenchido-ocr');
+                input.classList.add('preenchido-manual');
+            } else {
+                input.classList.remove('preenchido-ocr', 'preenchido-manual');
+            }
+            const linha = input.closest('.linha-grid');
+            if (linha) linha.dataset.origem = 'manual';
+        }
+
+        // ========== UPLOAD IMAGEM ==========
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'INPUT') fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    imagemDataURL = ev.target.result;
+                    mostrarImagem(imagemDataURL);
+                    executarOCR();
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        function mostrarImagem(dataUrl) {
+            imgDisplay.style.backgroundImage = `url('${dataUrl}')`;
+        }
+
+        function limparImagem() {
+            imagemDataURL = null;
+            imgDisplay.style.backgroundImage = 'none';
+            document.getElementById('statusOcr').classList.remove('visible');
+            fileInput.value = '';
+            ocrExecutado = false;
+            document.querySelectorAll('.linha-grid input').forEach(inp => inp.classList.remove('preenchido-ocr'));
+            document.querySelectorAll('.linha-grid').forEach(linha => delete linha.dataset.origem);
+        }
+
+        // ========== ZOOM ==========
+        function zoomIn() { if (escalaAtual < 3) { escalaAtual += 0.2; aplicarTransformacao(); } }
+        function zoomOut() { if (escalaAtual > 0.5) { escalaAtual -= 0.2; aplicarTransformacao(); } }
+        function aplicarTransformacao() { imgDisplay.style.transform = `scale(${escalaAtual}) translate(${translateX}px, ${translateY}px)`; imgDisplay.style.transformOrigin = 'center center'; }
+        
+        imgDisplay.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX - translateX; startY = e.clientY - translateY; });
+        window.addEventListener('mousemove', (e) => { if (!isDragging) return; translateX = e.clientX - startX; translateY = e.clientY - startY; aplicarTransformacao(); });
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        // ========== OCR ==========
+        async function executarOCR() {
+            if (!imagemDataURL) { mostrarToast('⚠️ Nenhuma imagem carregada.'); return; }
+            if (isProcessing) return;
+            isProcessing = true;
+
+            const statusDiv = document.getElementById('statusOcr');
+            const statusText = document.getElementById('statusOcrText');
+            const progressBar = document.getElementById('progressBar');
+            statusDiv.classList.add('visible');
+            statusText.textContent = '🔄 Lendo imagem com OCR...';
+            progressBar.style.width = '30%';
+
+            try {
+                const img = new Image();
+                img.src = imagemDataURL;
+                await new Promise(resolve => img.onload = resolve);
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width * 2;
+                canvas.height = img.height * 2;
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                progressBar.style.width = '60%';
+                statusText.textContent = '🔍 Analisando números...';
+
+                const result = await Tesseract.recognize(canvas, 'por', { tessedit_pageseg_mode: '6', tessedit_char_whitelist: '0123456789:.- ' });
+
+                progressBar.style.width = '90%';
+                const texto = result.data.text;
+                const linhas = texto.split('\n');
+                let encontrados = 0;
+
+                document.querySelectorAll('.linha-grid input').forEach(inp => inp.classList.remove('preenchido-ocr'));
+
+                for (let linha of linhas) {
+                    const match = linha.match(/(\d{1,2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})/);
+                    if (match) {
+                        const dia = parseInt(match[1]);
+                        if (dia >= 1 && dia <= 31) {
+                            const linhaEl = document.querySelector(`.linha-grid[data-dia="${dia}"]`);
+                            if (linhaEl) {
+                                const inpE1 = linhaEl.querySelector('.ed-e1'); const inpS1 = linhaEl.querySelector('.ed-s1');
+                                const inpE2 = linhaEl.querySelector('.ed-e2'); const inpS2 = linhaEl.querySelector('.ed-s2');
+
+                                if (!inpE1.value) { inpE1.value = match[2].replace('.', ':'); inpE1.classList.add('preenchido-ocr'); }
+                                if (!inpS1.value) { inpS1.value = match[3].replace('.', ':'); inpS1.classList.add('preenchido-ocr'); }
+                                if (!inpE2.value) { inpE2.value = match[4].replace('.', ':'); inpE2.classList.add('preenchido-ocr'); }
+                                if (!inpS2.value) { inpS2.value = match[5].replace('.', ':'); inpS2.classList.add('preenchido-ocr'); }
+
+                                linhaEl.dataset.origem = 'ocr'; encontrados++;
+                            }
+                        }
+                    }
+                }
+
+                progressBar.style.width = '100%';
+                statusText.textContent = `✅ OCR concluído! ${encontrados} horários reconhecidos.`;
+                mostrarToast(`OCR identificou ${encontrados} dias`);
+                setTimeout(() => statusDiv.classList.remove('visible'), 3000);
+
+            } catch (error) {
+                statusText.textContent = '❌ Erro no OCR: ' + error.message;
+            } finally { isProcessing = false; }
+        }
+
+        function preencherDiasVazios() {
+            let adicionados = 0;
+            document.querySelectorAll('.linha-grid[data-dia]').forEach(el => {
+                if (!el.querySelector('.ed-e1').value) {
+                    el.querySelector('.ed-e1').value = '08:00'; el.querySelector('.ed-s1').value = '12:00';
+                    el.querySelector('.ed-e2').value = '13:00'; el.querySelector('.ed-s2').value = '17:00';
+                    el.querySelectorAll('input').forEach(inp => { inp.classList.remove('preenchido-ocr'); inp.classList.add('preenchido-manual'); });
+                    adicionados++;
+                }
+            });
+            mostrarToast(`✅ ${adicionados} dias preenchidos.`);
+        }
+
+        // ========== APLICAR EDITOR (SALVAMENTO CORRIGIDO) ==========
+        function aplicarEditor() {
+            if (!funcionarioAtual) { mostrarToast('⚠️ Nenhum funcionário selecionado!'); return; }
+
+            // Coleta os horários da grade
+            let novosPontos = {};
+            document.querySelectorAll('.linha-grid[data-dia]').forEach(el => {
+                const dia = parseInt(el.dataset.dia);
+                const e1 = el.querySelector('.ed-e1').value; const s1 = el.querySelector('.ed-s1').value;
+                const e2 = el.querySelector('.ed-e2').value; const s2 = el.querySelector('.ed-s2').value;
+
+                if (e1 || s1 || e2 || s2) {
+                    const origem = el.dataset.origem || 'manual';
+                    novosPontos[dia] = { e1, s1, e2, s2, _origem: origem };
+                }
+            });
+
+            // SALVA NO OBJETO GERAL E NO LOCALSTORAGE
+            pontosPorFuncionario[funcionarioAtual] = novosPontos;
+            dadosHorarios = novosPontos;
+            salvarPontosStorage(); 
+
+            // Atualiza a tabela principal
+            gerarTabela();
+
+            document.getElementById('funcionario').value = document.getElementById('editNome').value;
+            document.getElementById('empresa').value = document.getElementById('editEmpresa').value;
+            document.getElementById('matricula').value = document.getElementById('editMatricula').value;
+
+            atualizarContador();
+            mostrarToast('✅ Ponto salvo para ' + funcionarioAtual + '!');
+            fecharModal();
+        }
+
+        // ========== TABELA PRINCIPAL ==========
         function gerarTabela() {
             const tbody = document.getElementById('corpoTabela');
             tbody.innerHTML = '';
             for (let i = 1; i <= 31; i++) {
                 const tr = document.createElement('tr');
                 tr.dataset.dia = i;
+                const dados = dadosHorarios[i] || {};
                 tr.innerHTML = `
                     <td><strong>${String(i).padStart(2, '0')}</strong></td>
-                    <td><input type="time" class="entrada1" data-dia="${i}"></td>
-                    <td><input type="time" class="saida1" data-dia="${i}"></td>
-                    <td><input type="text" class="total1" readonly placeholder="00:00"></td>
-                    <td><input type="time" class="entrada2" data-dia="${i}"></td>
-                    <td><input type="time" class="saida2" data-dia="${i}"></td>
-                    <td><input type="text" class="total2" readonly placeholder="00:00"></td>
-                    <td><input type="text" class="total-geral" readonly placeholder="00:00"></td>
+                    <td><input type="time" class="e1" data-dia="${i}" value="${dados.e1 || ''}"></td>
+                    <td><input type="time" class="s1" data-dia="${i}" value="${dados.s1 || ''}"></td>
+                    <td><input type="text" class="t1" readonly placeholder="00:00"></td>
+                    <td><input type="time" class="e2" data-dia="${i}" value="${dados.e2 || ''}"></td>
+                    <td><input type="time" class="s2" data-dia="${i}" value="${dados.s2 || ''}"></td>
+                    <td><input type="text" class="t2" readonly placeholder="00:00"></td>
+                    <td><input type="text" class="tg" readonly placeholder="00:00"></td>
                 `;
                 tbody.appendChild(tr);
             }
-            adicionarEventos();
-            atualizarContador();
+            adicionarEventosTabela(); atualizarContador();
         }
 
-        function adicionarEventos() {
+        function adicionarEventosTabela() {
             document.querySelectorAll('#corpoTabela input[type="time"]').forEach(input => {
-                input.addEventListener('change', function() {
-                    const tr = this.closest('tr');
-                    if (tr) {
-                        calcularLinha(tr);
-                        atualizarContador();
-                    }
-                });
-                input.addEventListener('blur', function() {
-                    const tr = this.closest('tr');
-                    if (tr) calcularLinha(tr);
-                });
+                input.addEventListener('change', function() { const tr = this.closest('tr'); if (tr) { calcularLinha(tr); } });
             });
         }
 
         function calcularLinha(tr) {
-            const e1 = tr.querySelector('.entrada1').value;
-            const s1 = tr.querySelector('.saida1').value;
-            const t1 = tr.querySelector('.total1');
-            const e2 = tr.querySelector('.entrada2').value;
-            const s2 = tr.querySelector('.saida2').value;
-            const t2 = tr.querySelector('.total2');
-            const tg = tr.querySelector('.total-geral');
-
+            const e1 = tr.querySelector('.e1').value, s1 = tr.querySelector('.s1').value, t1 = tr.querySelector('.t1');
+            const e2 = tr.querySelector('.e2').value, s2 = tr.querySelector('.s2').value, t2 = tr.querySelector('.t2');
+            const tg = tr.querySelector('.tg');
             t1.value = (e1 && s1) ? diffHoras(e1, s1) : '00:00';
             t2.value = (e2 && s2) ? diffHoras(e2, s2) : '00:00';
             tg.value = somarHoras(t1.value, t2.value);
@@ -848,8 +891,7 @@
 
         function diffHoras(inicio, fim) {
             try {
-                const i = new Date(`1970-01-01T${inicio}:00`);
-                const f = new Date(`1970-01-01T${fim}:00`);
+                const i = new Date(`1970-01-01T${inicio}:00`), f = new Date(`1970-01-01T${fim}:00`);
                 if (f < i) f.setDate(f.getDate() + 1);
                 const diff = (f - i) / 1000 / 60;
                 return `${String(Math.floor(diff/60)).padStart(2,'0')}:${String(Math.round(diff%60)).padStart(2,'0')}`;
@@ -858,682 +900,28 @@
 
         function somarHoras(h1, h2) {
             if (!h1 || !h2 || h1 === '00:00' || h2 === '00:00') return '00:00';
-            try {
-                const [a, b] = h1.split(':').map(Number);
-                const [c, d] = h2.split(':').map(Number);
-                let total = (a*60+b) + (c*60+d);
-                return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
-            } catch { return '00:00'; }
+            try { const [a,b] = h1.split(':').map(Number), [c,d] = h2.split(':').map(Number); let t = (a*60+b)+(c*60+d); return `${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}`; } catch { return '00:00'; }
         }
 
-        // ============================================================
-        // MODAL FOTO
-        // ============================================================
-        function abrirModalFoto() {
-            const modal = document.getElementById('modalFoto');
-            modal.classList.add('active');
-            document.getElementById('modalPreview').classList.remove('visible');
-            document.getElementById('modalPreview').src = '';
-            document.getElementById('modalOcrResult').classList.remove('visible');
-            document.getElementById('modalProgress').style.display = 'none';
-            document.getElementById('modalFileInput').value = '';
-            document.getElementById('debugText').classList.remove('visible');
-            document.getElementById('debugText').textContent = '';
-            document.getElementById('modalDropZone').classList.add('visible');
-            dadosOcrExtraidos = {};
-            imagemCapturada = null;
-            fecharCamera();
-        }
-
-        function fecharModalFoto() {
-            document.getElementById('modalFoto').classList.remove('active');
-            fecharCamera();
-        }
-
-        function toggleDebug() {
-            const el = document.getElementById('debugText');
-            debugVisible = !debugVisible;
-            if (debugVisible) {
-                el.classList.add('visible');
-            } else {
-                el.classList.remove('visible');
-            }
-        }
-
-        // ============================================================
-        // CÂMERA
-        // ============================================================
-        function abrirCamera() {
-            const container = document.getElementById('cameraContainer');
-            const video = document.getElementById('video');
-            
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
-                    audio: false 
-                })
-                .then(function(mediaStream) {
-                    stream = mediaStream;
-                    video.srcObject = mediaStream;
-                    container.classList.add('active');
-                    document.getElementById('modalDropZone').classList.remove('visible');
-                })
-                .catch(function(err) {
-                    console.error('Erro ao acessar câmera:', err);
-                    alert('Não foi possível acessar a câmera. Verifique as permissões.\nErro: ' + err.message);
-                    document.getElementById('modalDropZone').classList.add('visible');
-                });
-            } else {
-                alert('Seu dispositivo não suporta acesso à câmera.');
-            }
-        }
-
-        function fecharCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
-            document.getElementById('cameraContainer').classList.remove('active');
-            document.getElementById('video').srcObject = null;
-            document.getElementById('modalDropZone').classList.add('visible');
-        }
-
-        function capturarFoto() {
-            const video = document.getElementById('video');
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth || 1920;
-            canvas.height = video.videoHeight || 1080;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-            imagemCapturada = dataUrl;
-            
-            fecharCamera();
-            
-            const preview = document.getElementById('modalPreview');
-            preview.src = dataUrl;
-            preview.classList.add('visible');
-            document.getElementById('modalDropZone').classList.add('visible');
-            
-            processarImagem(dataUrl);
-        }
-
-        // ============================================================
-        // GALERIA
-        // ============================================================
-        function abrirGaleria() {
-            document.getElementById('modalFileInput').click();
-        }
-
-        // ============================================================
-        // DROP ZONE
-        // ============================================================
-        const modalDropZone = document.getElementById('modalDropZone');
-        const modalFileInput = document.getElementById('modalFileInput');
-
-        if (modalDropZone) {
-            modalDropZone.addEventListener('click', function(e) {
-                if (e.target.tagName !== 'INPUT') {
-                    modalFileInput.click();
-                }
-            });
-
-            modalDropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                modalDropZone.classList.add('dragover');
-            });
-            modalDropZone.addEventListener('dragleave', () => {
-                modalDropZone.classList.remove('dragover');
-            });
-            modalDropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                modalDropZone.classList.remove('dragover');
-                if (e.dataTransfer.files.length > 0) {
-                    const file = e.dataTransfer.files[0];
-                    if (file.type.startsWith('image/')) {
-                        const reader = new FileReader();
-                        reader.onload = function(ev) {
-                            const dataUrl = ev.target.result;
-                            const preview = document.getElementById('modalPreview');
-                            preview.src = dataUrl;
-                            preview.classList.add('visible');
-                            processarImagem(dataUrl);
-                        };
-                        reader.readAsDataURL(file);
-                    } else {
-                        alert('Por favor, selecione uma imagem.');
-                    }
-                }
-            });
-
-            modalFileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    const file = e.target.files[0];
-                    if (file.type.startsWith('image/')) {
-                        const reader = new FileReader();
-                        reader.onload = function(ev) {
-                            const dataUrl = ev.target.result;
-                            const preview = document.getElementById('modalPreview');
-                            preview.src = dataUrl;
-                            preview.classList.add('visible');
-                            processarImagem(dataUrl);
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                }
-            });
-        }
-
-        // ============================================================
-        // PROCESSAR IMAGEM - OCR
-        // ============================================================
-        function processarImagem(dataUrl) {
-            if (isProcessing) return;
-            isProcessing = true;
-
-            const img = new Image();
-            img.onload = function() {
-                executarOcrCompleto(img);
-            };
-            img.onerror = function() {
-                alert('Erro ao carregar a imagem.');
-                isProcessing = false;
-            };
-            img.src = dataUrl;
-        }
-
-        async function executarOcrCompleto(img) {
-            const progressDiv = document.getElementById('modalProgress');
-            const progressBar = document.getElementById('modalProgressBar');
-            const progressText = document.getElementById('modalProgressText');
-            const debugEl = document.getElementById('debugText');
-            
-            progressDiv.style.display = 'block';
-            progressBar.style.width = '0%';
-            progressText.textContent = 'Preparando imagem...';
-
-            try {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                let width = img.width;
-                let height = img.height;
-                const maxDim = 1800;
-                if (width > maxDim || height > maxDim) {
-                    const ratio = Math.min(maxDim / width, maxDim / height);
-                    width = Math.floor(width * ratio);
-                    height = Math.floor(height * ratio);
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                ctx.drawImage(img, 0, 0, width, height);
-
-                const imageData = ctx.getImageData(0, 0, width, height);
-                const data = imageData.data;
-                for (let i = 0; i < data.length; i += 4) {
-                    const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-                    const threshold = 110;
-                    const value = gray > threshold ? 255 : 0;
-                    data[i] = data[i+1] = data[i+2] = value;
-                }
-                ctx.putImageData(imageData, 0, 0);
-
-                progressBar.style.width = '10%';
-                progressText.textContent = 'Lendo imagem com OCR...';
-
-                let textoCompleto = '';
-                try {
-                    const result = await Tesseract.recognize(
-                        canvas,
-                        'por',
-                        {
-                            tessedit_pageseg_mode: '6',
-                            preserve_interword_spaces: '1'
-                        }
-                    );
-                    textoCompleto = result.data.text;
-                    debugEl.textContent = '=== TEXTO COMPLETO ===\n' + textoCompleto + '\n\n';
-                } catch (e) {
-                    console.warn('Erro na leitura:', e);
-                    debugEl.textContent = 'ERRO: ' + e.message + '\n';
-                }
-
-                progressBar.style.width = '30%';
-                progressText.textContent = 'Extraindo cabeçalho...';
-
-                let nome = '';
-                let matricula = '';
-                let mes = '';
-                let ano = '';
-
-                const linhas = textoCompleto.split('\n');
-                for (let linha of linhas) {
-                    const nomeMatch = linha.match(/(?:Empregado|Funcion[áa]rio|Nome)\s*[:.]?\s*([A-Za-zÀ-ú\s]{3,})/i);
-                    if (nomeMatch && nomeMatch[1].trim().length > 2) nome = nomeMatch[1].trim();
-                    
-                    const matrMatch = linha.match(/(?:N[º°]\s*Reg\.?|Matr[íi]cula|N[º°])\s*[:.]?\s*(\d+)/i);
-                    if (matrMatch) matricula = matrMatch[1].trim();
-                    
-                    const mesMatch = linha.match(/(?:M[eê]s|Refer[eê]ncia)\s*[:.]?\s*([A-Za-zçã]+)/i);
-                    if (mesMatch) mes = mesMatch[1].trim();
-                    
-                    const anoMatch = linha.match(/\b(20\d{2})\b/);
-                    if (anoMatch) ano = anoMatch[1];
-                }
-
-                if (nome) { document.getElementById('funcionario').value = nome; document.getElementById('funcionario').classList.add('preenchido'); }
-                if (matricula) { document.getElementById('matricula').value = matricula; document.getElementById('matricula').classList.add('preenchido'); }
-                if (mes) {
-                    const opcoes = document.getElementById('mes').options;
-                    for (let opt of opcoes) {
-                        if (opt.value.toLowerCase() === mes.toLowerCase()) { opt.selected = true; break; }
-                    }
-                }
-                if (ano) document.getElementById('ano').value = ano;
-
-                progressBar.style.width = '50%';
-                progressText.textContent = 'Buscando horários...';
-
-                let horariosEncontrados = {};
-                
-                // Método 1: Padrão "dia hora hora hora hora"
-                for (let linha of linhas) {
-                    const match = linha.match(/(\d{1,2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})/);
-                    if (match) {
-                        const dia = parseInt(match[1]);
-                        if (dia >= 1 && dia <= 31) {
-                            horariosEncontrados[dia] = {
-                                e1: match[2].replace('.', ':'),
-                                s1: match[3].replace('.', ':'),
-                                e2: match[4].replace('.', ':'),
-                                s2: match[5].replace('.', ':')
-                            };
-                        }
-                    }
-                }
-
-                // Método 2: Ler linha por linha
-                if (Object.keys(horariosEncontrados).length < 5) {
-                    const alturaLinha = Math.floor((height * 0.6) / 31);
-                    const inicioY = Math.floor(height * 0.12);
-                    const larguraTabela = Math.floor(width * 0.65);
-                    const inicioX = Math.floor(width * 0.05);
-
-                    for (let dia = 1; dia <= 31; dia++) {
-                        try {
-                            const bloco = document.createElement('canvas');
-                            bloco.width = larguraTabela;
-                            bloco.height = Math.min(alturaLinha + 10, 50);
-                            const ctxBloco = bloco.getContext('2d');
-                            
-                            const yPos = inicioY + ((dia - 1) * alturaLinha);
-                            ctxBloco.drawImage(canvas, inicioX, yPos, larguraTabela, bloco.height, 0, 0, larguraTabela, bloco.height);
-                            
-                            const resLinha = await Tesseract.recognize(bloco, 'por', {
-                                tessedit_pageseg_mode: '7',
-                                tessedit_char_whitelist: '0123456789:.- '
-                            });
-                            
-                            const textoLinha = resLinha.data.text;
-                            const horarios = textoLinha.match(/(\d{1,2}[:.]\d{2})/g);
-                            
-                            if (horarios && horarios.length >= 4) {
-                                horariosEncontrados[dia] = {
-                                    e1: horarios[0].replace('.', ':'),
-                                    s1: horarios[1].replace('.', ':'),
-                                    e2: horarios[2].replace('.', ':'),
-                                    s2: horarios[3].replace('.', ':')
-                                };
-                            }
-                            
-                            const progresso = 50 + (dia / 31) * 45;
-                            progressBar.style.width = `${progresso}%`;
-                            progressText.textContent = `Lendo linha ${dia}/31...`;
-                            
-                            await new Promise(r => setTimeout(r, 10));
-                        } catch (e) {
-                            console.warn(`Erro na linha ${dia}:`, e);
-                        }
-                    }
-                }
-
-                dadosOcrExtraidos = horariosEncontrados;
-
-                progressBar.style.width = '100%';
-                progressText.textContent = 'OCR concluído!';
-
-                mostrarResultadosOcr();
-                isProcessing = false;
-
-            } catch (error) {
-                console.error('Erro no OCR:', error);
-                alert('Erro na leitura OCR: ' + error.message);
-                isProcessing = false;
-            }
-        }
-
-        function mostrarResultadosOcr() {
-            const resultDiv = document.getElementById('modalOcrResult');
-            const container = document.getElementById('ocrLinhasContainer');
-            const infoDiv = document.getElementById('modalOcrInfo');
-            
-            container.innerHTML = '';
-            
-            const total = Object.keys(dadosOcrExtraidos).length;
-            const nome = document.getElementById('funcionario').value || 'Não identificado';
-            const matricula = document.getElementById('matricula').value || 'Não identificada';
-            
-            infoDiv.innerHTML = `
-                <span class="badge-ocr ${total > 0 ? 'success' : 'warning'}">
-                    ${total} linhas com horários identificados
-                </span>
-                <span style="margin-left: 12px;">Nome: <strong>${nome}</strong></span>
-                <span style="margin-left: 12px;">Matrícula: <strong>${matricula}</strong></span>
-            `;
-
-            const header = document.createElement('div');
-            header.className = 'ocr-grid header';
-            header.innerHTML = `<span>Dia</span><span>Entrada 1</span><span>Saída 1</span><span>Entrada 2</span><span>Saída 2</span><span>Status</span>`;
-            container.appendChild(header);
-
-            for (let dia = 1; dia <= 31; dia++) {
-                const div = document.createElement('div');
-                div.className = 'ocr-grid';
-                
-                const dados = dadosOcrExtraidos[dia] || { e1: '', s1: '', e2: '', s2: '' };
-                const temDados = dados.e1 || dados.s1 || dados.e2 || dados.s2;
-                const statusClass = temDados ? 'ok' : 'fail';
-                const statusIcon = temDados ? '✅' : '❌';
-                
-                div.innerHTML = `
-                    <span class="dia">${String(dia).padStart(2, '0')}</span>
-                    <input type="time" class="ocr-e1 ${dados.e1 ? 'preenchido-ocr' : 'nao-encontrado'}" value="${dados.e1 || ''}">
-                    <input type="time" class="ocr-s1 ${dados.s1 ? 'preenchido-ocr' : 'nao-encontrado'}" value="${dados.s1 || ''}">
-                    <input type="time" class="ocr-e2 ${dados.e2 ? 'preenchido-ocr' : 'nao-encontrado'}" value="${dados.e2 || ''}">
-                    <input type="time" class="ocr-s2 ${dados.s2 ? 'preenchido-ocr' : 'nao-encontrado'}" value="${dados.s2 || ''}">
-                    <span class="status-icon ${statusClass}">${statusIcon}</span>
-                `;
-                container.appendChild(div);
-            }
-
-            resultDiv.classList.add('visible');
-        }
-
-        function aplicarOcr() {
-            const linhas = document.querySelectorAll('.ocr-grid:not(.header)');
-            let dadosAtualizados = {};
-            let count = 0;
-
-            linhas.forEach(el => {
-                const dia = parseInt(el.querySelector('.dia').textContent);
-                const e1 = el.querySelector('.ocr-e1').value;
-                const s1 = el.querySelector('.ocr-s1').value;
-                const e2 = el.querySelector('.ocr-e2').value;
-                const s2 = el.querySelector('.ocr-s2').value;
-                
-                if (e1 || s1 || e2 || s2) {
-                    dadosAtualizados[dia] = { e1, s1, e2, s2 };
-                }
-            });
-
-            for (const [dia, dados] of Object.entries(dadosAtualizados)) {
-                const tr = document.querySelector(`#corpoTabela tr[data-dia="${dia}"]`);
-                if (tr) {
-                    if (dados.e1) { tr.querySelector('.entrada1').value = dados.e1; tr.querySelector('.entrada1').classList.add('preenchido'); count++; }
-                    if (dados.s1) { tr.querySelector('.saida1').value = dados.s1; tr.querySelector('.saida1').classList.add('preenchido'); count++; }
-                    if (dados.e2) { tr.querySelector('.entrada2').value = dados.e2; tr.querySelector('.entrada2').classList.add('preenchido'); count++; }
-                    if (dados.s2) { tr.querySelector('.saida2').value = dados.s2; tr.querySelector('.saida2').classList.add('preenchido'); count++; }
-                    calcularLinha(tr);
-                }
-            }
-
-            fecharModalFoto();
-            atualizarContador();
-            mostrarStatus(`✅ ${count} horários preenchidos!`, 'success');
-        }
-
-        // ============================================================
-        // MODAL DIGITAÇÃO MANUAL
-        // ============================================================
-        function abrirModalManual() {
-            const modal = document.getElementById('modalManual');
-            modal.classList.add('active');
-            
-            document.getElementById('modalFuncionario').value = document.getElementById('funcionario').value || '';
-            document.getElementById('modalFuncao').value = document.getElementById('funcao').value || '';
-            document.getElementById('modalMatricula').value = document.getElementById('matricula').value || '';
-            document.getElementById('modalMes').value = document.getElementById('mes').value || 'Janeiro';
-            document.getElementById('modalAno').value = document.getElementById('ano').value || '2026';
-            
-            const container = document.getElementById('containerLinhas');
-            container.innerHTML = '';
-            
-            let temDados = false;
-            document.querySelectorAll('#corpoTabela tr').forEach(tr => {
-                const e1 = tr.querySelector('.entrada1').value;
-                const s1 = tr.querySelector('.saida1').value;
-                const e2 = tr.querySelector('.entrada2').value;
-                const s2 = tr.querySelector('.saida2').value;
-                if (e1 || s1 || e2 || s2) temDados = true;
-            });
-            
-            if (temDados) {
-                document.querySelectorAll('#corpoTabela tr').forEach(tr => {
-                    const dia = tr.dataset.dia;
-                    const e1 = tr.querySelector('.entrada1').value;
-                    const s1 = tr.querySelector('.saida1').value;
-                    const e2 = tr.querySelector('.entrada2').value;
-                    const s2 = tr.querySelector('.saida2').value;
-                    adicionarLinhaManualComDados(dia, e1, s1, e2, s2);
-                });
-            } else {
-                for (let i = 1; i <= 5; i++) {
-                    adicionarLinhaManualComDados(i, '', '', '', '');
-                }
-            }
-        }
-
-        function fecharModalManual() {
-            document.getElementById('modalManual').classList.remove('active');
-        }
-
-        function adicionarLinhaManual() {
-            const container = document.getElementById('containerLinhas');
-            const numLinha = container.children.length + 1;
-            adicionarLinhaManualComDados(numLinha, '', '', '', '');
-        }
-
-        function adicionarLinhaManualComDados(dia, e1, s1, e2, s2) {
-            const container = document.getElementById('containerLinhas');
-            const div = document.createElement('div');
-            div.className = 'manual-grid';
-            div.dataset.dia = dia;
-            div.innerHTML = `
-                <span class="dia-label">${String(dia).padStart(2, '0')}</span>
-                <input type="time" class="me1" value="${e1}">
-                <input type="time" class="ms1" value="${s1}">
-                <input type="time" class="me2" value="${e2}">
-                <input type="time" class="ms2" value="${s2}">
-                <button class="btn-remove-manual" onclick="this.closest('.manual-grid').remove()">✕</button>
-            `;
-            container.appendChild(div);
-        }
-
-        function preencherDiasRestantes() {
-            const container = document.getElementById('containerLinhas');
-            const diasExistentes = new Set();
-            container.querySelectorAll('.manual-grid').forEach(el => {
-                diasExistentes.add(parseInt(el.dataset.dia));
-            });
-            
-            let ultimoDia = 0;
-            for (let d of diasExistentes) {
-                if (d > ultimoDia) ultimoDia = d;
-            }
-            
-            let adicionados = 0;
-            for (let i = ultimoDia + 1; i <= 31 && adicionados < 10; i++) {
-                adicionarLinhaManualComDados(i, '', '', '', '');
-                adicionados++;
-            }
-            
-            if (adicionados === 0) {
-                alert('Todos os dias já foram adicionados.');
-            }
-        }
-
-        function aplicarManual() {
-            const nome = document.getElementById('modalFuncionario').value;
-            const funcao = document.getElementById('modalFuncao').value;
-            const matricula = document.getElementById('modalMatricula').value;
-            const mes = document.getElementById('modalMes').value;
-            const ano = document.getElementById('modalAno').value;
-            
-            if (nome) { document.getElementById('funcionario').value = nome; document.getElementById('funcionario').classList.add('preenchido'); }
-            if (funcao) { document.getElementById('funcao').value = funcao; document.getElementById('funcao').classList.add('preenchido'); }
-            if (matricula) { document.getElementById('matricula').value = matricula; document.getElementById('matricula').classList.add('preenchido'); }
-            document.getElementById('mes').value = mes;
-            document.getElementById('ano').value = ano;
-
-            const linhas = document.querySelectorAll('.manual-grid');
-            let count = 0;
-
-            linhas.forEach(el => {
-                const dia = parseInt(el.dataset.dia);
-                const e1 = el.querySelector('.me1').value;
-                const s1 = el.querySelector('.ms1').value;
-                const e2 = el.querySelector('.me2').value;
-                const s2 = el.querySelector('.ms2').value;
-                
-                if (dia >= 1 && dia <= 31) {
-                    const tr = document.querySelector(`#corpoTabela tr[data-dia="${dia}"]`);
-                    if (tr) {
-                        if (e1) { tr.querySelector('.entrada1').value = e1; tr.querySelector('.entrada1').classList.add('preenchido'); count++; }
-                        if (s1) { tr.querySelector('.saida1').value = s1; tr.querySelector('.saida1').classList.add('preenchido'); count++; }
-                        if (e2) { tr.querySelector('.entrada2').value = e2; tr.querySelector('.entrada2').classList.add('preenchido'); count++; }
-                        if (s2) { tr.querySelector('.saida2').value = s2; tr.querySelector('.saida2').classList.add('preenchido'); count++; }
-                        calcularLinha(tr);
-                    }
-                }
-            });
-
-            fecharModalManual();
-            atualizarContador();
-            mostrarStatus(`✅ ${count} horários preenchidos!`, 'success');
-        }
-
-        // ============================================================
-        // FUNÇÕES GERAIS
-        // ============================================================
-        function mostrarStatus(msg, tipo) {
-            const el = document.getElementById('ocrStatus');
-            el.style.display = 'block';
-            el.textContent = msg;
-            el.className = 'ocr-status ' + (tipo || 'info');
-            setTimeout(() => { el.style.display = 'none'; }, 8000);
-        }
-
-        function atualizarContador() {
-            let count = 0;
-            document.querySelectorAll('#corpoTabela tr').forEach(tr => {
-                if (tr.querySelector('.entrada1').value) count++;
-            });
-            document.getElementById('totalRegistros').textContent = count;
-        }
+        function atualizarContador() { let c=0; document.querySelectorAll('#corpoTabela tr').forEach(tr => { if (tr.querySelector('.e1').value) c++; }); document.getElementById('totalRegistros').textContent = c; }
 
         function limparTudo() {
-            document.querySelectorAll('#corpoTabela tr').forEach(tr => {
-                tr.querySelectorAll('input').forEach(input => { 
-                    input.value = ''; 
-                    input.classList.remove('preenchido'); 
-                });
-            });
-            document.getElementById('funcionario').value = '';
-            document.getElementById('funcionario').classList.remove('preenchido');
-            document.getElementById('funcao').value = '';
-            document.getElementById('funcao').classList.remove('preenchido');
-            document.getElementById('matricula').value = '';
-            document.getElementById('matricula').classList.remove('preenchido');
-            document.getElementById('ano').value = '2026';
-            document.getElementById('mes').value = 'Janeiro';
-            atualizarContador();
-            mostrarStatus('🧹 Dados limpos.', 'info');
+            document.querySelectorAll('#corpoTabela tr').forEach(tr => tr.querySelectorAll('input').forEach(inp => inp.value = ''));
+            document.getElementById('funcionario').value = ''; document.getElementById('empresa').value = ''; document.getElementById('matricula').value = '';
+            funcionarioAtual = null;
+            dadosHorarios = {}; atualizarContador(); mostrarToast('🧹 Dados limpos.');
         }
 
-        function salvarDados() {
-            const dados = {
-                funcionario: document.getElementById('funcionario').value,
-                funcao: document.getElementById('funcao').value,
-                mes: document.getElementById('mes').value,
-                ano: document.getElementById('ano').value,
-                matricula: document.getElementById('matricula').value,
-                registros: []
-            };
-            
-            document.querySelectorAll('#corpoTabela tr').forEach(tr => {
-                const dia = tr.dataset.dia;
-                const e1 = tr.querySelector('.entrada1').value;
-                const s1 = tr.querySelector('.saida1').value;
-                const e2 = tr.querySelector('.entrada2').value;
-                const s2 = tr.querySelector('.saida2').value;
-                if (e1 || s1 || e2 || s2) {
-                    dados.registros.push({ dia, e1, s1, e2, s2 });
-                }
-            });
-            
-            console.log('Dados salvos:', dados);
-            mostrarStatus(`✅ ${dados.registros.length} registros salvos!`, 'success');
-            alert('Dados salvos com sucesso!');
-        }
+        function salvarDados() { mostrarToast('✅ Registros salvos!'); }
 
         function exportarCSV() {
             let csv = 'Dia,Entrada1,Saída1,Entrada2,Saída2,Total1,Total2,TotalGeral\n';
             document.querySelectorAll('#corpoTabela tr').forEach(tr => {
-                const dia = tr.dataset.dia;
-                const e1 = tr.querySelector('.entrada1').value;
-                const s1 = tr.querySelector('.saida1').value;
-                const e2 = tr.querySelector('.entrada2').value;
-                const s2 = tr.querySelector('.saida2').value;
-                const t1 = tr.querySelector('.total1').value;
-                const t2 = tr.querySelector('.total2').value;
-                const tg = tr.querySelector('.total-geral').value;
-                csv += `${dia},${e1},${s1},${e2},${s2},${t1},${t2},${tg}\n`;
+                csv += `${tr.dataset.dia},${tr.querySelector('.e1').value},${tr.querySelector('.s1').value},${tr.querySelector('.e2').value},${tr.querySelector('.s2').value},${tr.querySelector('.t1').value},${tr.querySelector('.t2').value},${tr.querySelector('.tg').value}\n`;
             });
-            
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `ponto_${document.getElementById('funcionario').value || 'funcionario'}_${document.getElementById('mes').value}_${document.getElementById('ano').value}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            mostrarStatus('📊 CSV exportado!', 'success');
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ponto.csv'; a.click();
         }
-
-        // Fechar modais
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                fecharModalFoto();
-                fecharModalManual();
-            }
-        });
-
-        document.getElementById('modalFoto').addEventListener('click', function(e) {
-            if (e.target === this) fecharModalFoto();
-        });
-        document.getElementById('modalManual').addEventListener('click', function(e) {
-            if (e.target === this) fecharModalManual();
-        });
-
-        // ============================================================
-        // INICIALIZAÇÃO
-        // ============================================================
-        window.onload = function() { 
-            gerarTabela();
-            console.log('ApliKado - Sistema de Ponto inicializado!');
-        };
     </script>
 </body>
 </html>
