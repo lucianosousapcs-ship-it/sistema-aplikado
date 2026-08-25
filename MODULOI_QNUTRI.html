@@ -10,7 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ===== TODO O SEU CSS AQUI (mantido) ===== */
+        /* ===== TODOS OS ESTILOS ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: linear-gradient(135deg, #ffe0b0 0%, #ffb84d 30%, #FF8C00 60%, #e07000 100%);
@@ -1009,7 +1009,7 @@
                     <h4 id="tituloFormCadastro"><i class="fas fa-user-plus"></i> Adicionar Novo Funcionário</h4>
                     <div class="grid-form">
                         <div class="foto-upload-cadastro" onclick="document.getElementById('inputFoto').click()">
-                            <img id="previewFoto" src="https://via.placeholder.com/120" alt="Foto">
+                            <img id="previewFoto" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e0e0'/%3E%3Ctext x='60' y='65' font-size='40' text-anchor='middle' fill='%23999' font-family='Arial'%3E%3F%3C/text%3E%3C/svg%3E" alt="Foto">
                             <p style="font-size:12px; color:#777;"><i class="fas fa-camera"></i> Clique para anexar/alterar foto</p>
                             <input type="file" id="inputFoto" accept="image/*" onchange="carregarFoto(event)">
                         </div>
@@ -1370,7 +1370,7 @@
                     </div>
                     <div class="funcionario-foto" id="fotoFuncionario" style="display:none;">
                         <div id="fotoContainer">
-                            <img id="fotoSelecionada" src="https://via.placeholder.com/64" alt="Foto">
+                            <img id="fotoSelecionada" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%23e0e0e0'/%3E%3Ctext x='32' y='40' font-size='28' text-anchor='middle' fill='%23999' font-family='Arial'%3E%3F%3C/text%3E%3C/svg%3E" alt="Foto">
                         </div>
                         <div class="info-foto">
                             <span class="nome-foto" id="fotoNome">Funcionário</span>
@@ -1430,17 +1430,15 @@
 
     <script>
         // ============================================================
-        // 🔥 CONFIGURAÇÃO SUPABASE - CORRIGIDA (URL EM MINÚSCULAS)
+        // 🔥 CONFIGURAÇÃO SUPABASE - CORRIGIDA
         // ============================================================
-        // ✅ ATENÇÃO: A URL DEVE ESTAR TODA EM MINÚSCULAS!
-        const SUPABASE_URL = 'https://rkwsotfempic9psiexxc.supabase.co';
+        const SUPABASE_URL = 'https://avzxplcdutqzlxfievza.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_rkwsOtfEMpic9PsiExxC_w_rzYqZNRs';
         
         console.log('🚀 Inicializando Supabase...');
-        console.log('📡 URL (corrigida):', SUPABASE_URL);
+        console.log('📡 URL:', SUPABASE_URL);
         console.log('🔑 Chave:', SUPABASE_KEY.substring(0, 30) + '...');
         
-        // Inicializa o cliente Supabase
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
             auth: {
                 autoRefreshToken: true,
@@ -1481,14 +1479,21 @@
             try {
                 console.log('🔄 Testando conexão com Supabase...');
                 
-                const { data, error } = await supabaseClient
+                const { data, error, count } = await supabaseClient
                     .from('funcionarios')
-                    .select('count', { count: 'exact', head: true });
+                    .select('*', { count: 'exact', head: true });
                 
                 if (error) {
                     console.error('❌ Erro na conexão:', error);
                     console.error('❌ Código:', error.code);
                     console.error('❌ Mensagem:', error.message);
+                    
+                    // Verifica se é erro de tabela
+                    if (error.message && error.message.includes('does not exist')) {
+                        console.warn('⚠️ Tabela "funcionarios" não existe!');
+                        mostrarToast('⚠️ Tabela não existe. Crie no Supabase.');
+                        return false;
+                    }
                     
                     let msg = '❌ Erro ao conectar: ';
                     if (error.message.includes('Failed to fetch') || error.message.includes('ERR_NAME_NOT_RESOLVED')) {
@@ -1497,8 +1502,6 @@
                         msg += 'Chave de API inválida.';
                     } else if (error.message.includes('permission denied')) {
                         msg += 'Permissão negada. Configure RLS.';
-                    } else if (error.message.includes('does not exist')) {
-                        msg += 'Tabela "funcionarios" não existe.';
                     } else {
                         msg += error.message;
                     }
@@ -1508,8 +1511,10 @@
                 }
                 
                 console.log('✅ Conexão com Supabase estabelecida!');
+                console.log('📊 Total de funcionários:', count);
                 mostrarToast('✅ Conectado ao Supabase!');
                 return true;
+                
             } catch (error) {
                 console.error('❌ Erro inesperado:', error);
                 mostrarToast('❌ Erro: ' + error.message);
@@ -1534,6 +1539,9 @@
                     return;
                 }
 
+                const mes = document.getElementById('mes').value;
+                const ano = parseInt(document.getElementById('ano').value);
+
                 // 1. Carregar funcionários
                 const { data: funcionarios, error: errFunc } = await supabaseClient
                     .from('funcionarios')
@@ -1554,9 +1562,11 @@
                 // 2. Carregar marcações
                 const { data: marcacoes, error: errMarc } = await supabaseClient
                     .from('marcacoes')
-                    .select('*');
+                    .select('*')
+                    .eq('mes', mes)
+                    .eq('ano', ano);
 
-                if (!errMarc && marcacoes) {
+                if (!errMarc && marcacoes && marcacoes.length > 0) {
                     pontosPorFuncionario = {};
                     marcacoes.forEach(m => {
                         const func = funcionariosCadastrados.find(f => f.id === m.funcionario_id);
@@ -1581,9 +1591,11 @@
                 // 3. Carregar imagens
                 const { data: imagens, error: errImg } = await supabaseClient
                     .from('imagens_cartao')
-                    .select('*');
+                    .select('*')
+                    .eq('mes', mes)
+                    .eq('ano', ano);
 
-                if (!errImg && imagens) {
+                if (!errImg && imagens && imagens.length > 0) {
                     imagemCartaoPorFuncionario = {};
                     imagens.forEach(img => {
                         const func = funcionariosCadastrados.find(f => f.id === img.funcionario_id);
@@ -1627,9 +1639,12 @@
                 
                 const conectado = await testarConexaoSupabase();
                 if (!conectado) {
-                    mostrarToast('⚠️ Não foi possível sincronizar.');
+                    mostrarToast('⚠️ Não foi possível sincronizar. Verifique a conexão.');
                     return;
                 }
+
+                const mes = document.getElementById('mes').value;
+                const ano = parseInt(document.getElementById('ano').value);
 
                 // Sincronizar funcionários
                 for (const func of funcionariosCadastrados) {
@@ -1661,9 +1676,6 @@
                 }
 
                 // Sincronizar marcações
-                const mes = document.getElementById('mes').value;
-                const ano = parseInt(document.getElementById('ano').value);
-
                 for (const [nome, pontos] of Object.entries(pontosPorFuncionario)) {
                     const func = funcionariosCadastrados.find(f => f.nome === nome);
                     if (!func || !func.id) continue;
@@ -1736,7 +1748,7 @@
                 salvarPontosStorage();
                 salvarImagemCartaoStorage();
 
-                mostrarToast('✅ Dados sincronizados!');
+                mostrarToast('✅ Dados sincronizados com sucesso!');
 
             } catch (error) {
                 console.error('❌ Erro ao sincronizar:', error);
@@ -1798,7 +1810,7 @@
             document.getElementById('cadAdmissao').value = '';
             document.getElementById('cadASO').value = '';
             document.getElementById('cadAniversario').value = '';
-            document.getElementById('previewFoto').src = "https://via.placeholder.com/120";
+            document.getElementById('previewFoto').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e0e0'/%3E%3Ctext x='60' y='65' font-size='40' text-anchor='middle' fill='%23999' font-family='Arial'%3E%3F%3C/text%3E%3C/svg%3E";
             fotoAtualCadastro = "";
             document.getElementById('btnCancelarEdicao').style.display = 'none';
         }
@@ -1825,7 +1837,7 @@
             document.getElementById('cadAdmissao').value = func.admissao || '';
             document.getElementById('cadASO').value = func.aso || '';
             document.getElementById('cadAniversario').value = func.aniversario || '';
-            document.getElementById('previewFoto').src = func.foto || 'https://via.placeholder.com/120';
+            document.getElementById('previewFoto').src = func.foto || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e0e0'/%3E%3Ctext x='60' y='65' font-size='40' text-anchor='middle' fill='%23999' font-family='Arial'%3E%3F%3C/text%3E%3C/svg%3E";
             fotoAtualCadastro = func.foto || "";
             document.getElementById('btnCancelarEdicao').style.display = 'inline-flex';
             document.getElementById('formCadastroNovo').scrollIntoView({ behavior: 'smooth' });
@@ -1837,12 +1849,12 @@
 
             const dadosFunc = {
                 nome: nome,
-                cpf: document.getElementById('cadCPF').value,
-                unidade: document.getElementById('cadUnidade').value,
-                admissao: document.getElementById('cadAdmissao').value,
-                aso: document.getElementById('cadASO').value,
-                aniversario: document.getElementById('cadAniversario').value,
-                foto: fotoAtualCadastro
+                cpf: document.getElementById('cadCPF').value || null,
+                unidade: document.getElementById('cadUnidade').value || null,
+                admissao: document.getElementById('cadAdmissao').value || null,
+                aso: document.getElementById('cadASO').value || null,
+                aniversario: document.getElementById('cadAniversario').value || null,
+                foto: fotoAtualCadastro || null
             };
 
             try {
@@ -1930,7 +1942,7 @@
                 if (filtroEmpresa && func.unidade !== filtroEmpresa) return;
                 const tr = document.createElement('tr');
                 const fotoHtml = func.foto ?
-                    `<img src="${func.foto}" class="foto-mini" onerror="this.src='https://via.placeholder.com/40'">` :
+                    `<img src="${func.foto}" class="foto-mini" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\'%3E%3Crect width=\'40\' height=\'40\' fill=\'%23e0e0e0\'/%3E%3Ctext x=\'20\' y=\'28\' font-size=\'20\' text-anchor=\'middle\' fill=\'%23999\' font-family=\'Arial\'%3E%3F%3C/text%3E%3C/svg%3E'">` :
                     `<div style="width:40px;height:40px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:18px;color:#999;"><i class="fas fa-user"></i></div>`;
                 tr.innerHTML = `
                     <td>${fotoHtml}</td>
@@ -2082,7 +2094,7 @@
         }
 
         // ============================================================
-        // FUNÇÕES DO EDITOR (resumidas - todas as funções estão aqui)
+        // FUNÇÕES DO EDITOR
         // ============================================================
         function abrirModal() {
             if (!funcionarioAtual) {
