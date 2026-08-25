@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -17,7 +18,6 @@
             min-height: 100vh;
             padding-bottom: 40px;
         }
-
         .main-header {
             position: fixed;
             top: 0;
@@ -47,9 +47,9 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            cursor: pointer;
         }
         .nav-menu a:hover { color: #fff; background: rgba(255, 140, 0, 0.15); }
-
         .sidebar-toggle {
             position: fixed;
             left: 0;
@@ -74,7 +74,6 @@
         .sidebar-toggle:hover { background: rgba(255, 140, 0, 0.3); }
         .sidebar-toggle i { transition: transform 0.3s; }
         .sidebar-toggle.collapsed i { transform: rotate(180deg); }
-
         .sidebar {
             position: fixed;
             left: 0;
@@ -104,7 +103,6 @@
             margin-top: 4px;
         }
         .sidebar .sidebar-label:first-of-type { border-top: none; margin-top: 0; }
-
         .sidebar-btn {
             font-family: 'Poppins', sans-serif;
             background: transparent;
@@ -133,7 +131,6 @@
             padding: 1px 8px;
             border-radius: 10px;
         }
-
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -144,12 +141,10 @@
         }
         .container.with-sidebar { padding-left: 236px; }
         @media (max-width: 768px) { .container.with-sidebar { padding-left: 16px; } }
-
         .page-title { text-align: center; margin-bottom: 4px; }
         .page-title h1 { font-size: 26px; font-weight: 800; color: #1a0a00; }
         .page-title h1 i { color: #FF8C00; margin-right: 10px; }
         .page-title p { color: rgba(26, 10, 0, 0.7); font-weight: 500; font-size: 13px; }
-
         .data-form {
             display: flex;
             flex-direction: column;
@@ -193,7 +188,6 @@
             border-color: #FF8C00;
             box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
         }
-
         .funcionario-foto {
             display: flex;
             align-items: center;
@@ -226,7 +220,6 @@
             font-size: 28px;
             color: #999;
         }
-
         .action-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
         .btn-action {
             font-family: 'Poppins', sans-serif;
@@ -253,7 +246,6 @@
         .btn-outline-danger:hover { background: #dc3545; color: #fff; }
         .btn-pdf { background: #dc3545; color: #fff; }
         .btn-pdf:hover { background: #c82333; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(220,53,69,0.3); }
-
         .table-section {
             background: rgba(255, 255, 255, 0.5);
             backdrop-filter: blur(12px);
@@ -327,12 +319,6 @@
         .ponto-table .total-bold { font-weight: 700; color: #1a0a00; background: rgba(255,140,0,0.1); border-radius: 4px; }
         .ponto-table .hora-extra { background: rgba(40,167,69,0.1); color: #28a745; font-weight: 700; }
         .ponto-table .hora-extra-negative { background: rgba(220,53,69,0.1); color: #dc3545; font-weight: 700; }
-        .ponto-table .e1, .ponto-table .s1, .ponto-table .e2, .ponto-table .s2 {
-            background: #f9f9f9;
-            cursor: not-allowed;
-        }
-
-        /* MODAIS */
         .modal {
             display: none;
             position: fixed;
@@ -363,6 +349,7 @@
         .modal-sm { max-width: 700px; }
         .modal-md { max-width: 900px; }
         .modal-cartao-content { max-width: 1200px; }
+        .modal-cadastro-content { max-width: 1100px; }
         @keyframes modalFadeIn {
             from { opacity: 0; transform: translateY(-20px) scale(0.95); }
             to { opacity: 1; transform: translateY(0) scale(1); }
@@ -386,7 +373,6 @@
             padding: 0 10px;
         }
         .modal-close:hover { color: #dc3545; }
-
         .editor-layout {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -423,7 +409,6 @@
             top: 0;
             left: 0;
         }
-
         .imagem-container {
             border: 1px solid #ddd;
             border-radius: 12px;
@@ -457,7 +442,6 @@
         }
         .btn-zoom { background: none; border: none; padding: 8px; cursor: pointer; font-size: 16px; color: #7a3a00; }
         .btn-zoom:hover { background: #f0f0f0; border-radius: 4px; }
-
         .status-ocr {
             padding: 8px 12px;
             border-radius: 8px;
@@ -474,7 +458,6 @@
             transition: width 0.3s;
             margin-top: 4px;
         }
-
         .editor-grade { display: flex; flex-direction: column; gap: 6px; }
         .grade-header {
             display: flex;
@@ -531,7 +514,6 @@
         .linha-grid input.preenchido-ocr { background: #e8f5e9; border-color: #4CAF50; }
         .linha-grid input.preenchido-manual { background: #fff3e0; border-color: #FF8C00; }
         .linha-grid input.erro-marcacao { background: #ffebee; border-color: #dc3545; }
-
         .modal-actions {
             display: flex;
             gap: 8px;
@@ -561,8 +543,6 @@
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-
-        .modal-cadastro-content { max-width: 1100px; }
         .filtros-cadastro {
             background: #f8f9fa;
             padding: 15px;
@@ -604,7 +584,6 @@
         .btn-selecionar { color: #28a745; }
         .btn-editar { color: #FF8C00; }
         .btn-excluir { color: #dc3545; }
-
         .form-cadastro-novo {
             background: #f8f9fa;
             padding: 20px;
@@ -652,7 +631,6 @@
             grid-template-columns: 1fr 1fr;
             gap: 15px;
         }
-
         .ajuste-item {
             display: grid;
             grid-template-columns: 50px 90px 90px 90px 90px;
@@ -691,7 +669,6 @@
             padding: 4px 6px;
             background: #fafafa;
         }
-
         .erro-item {
             display: flex;
             justify-content: space-between;
@@ -703,7 +680,6 @@
         .erro-item .erro-msg { font-size: 13px; }
         .erro-item .erro-msg i { margin-right: 8px; }
         .erro-item .erro-msg .highlight { font-weight: 600; color: #dc3545; }
-
         .filtro-empresa-principal {
             display: flex;
             align-items: center;
@@ -730,7 +706,6 @@
             background: rgba(255,255,255,0.6);
             outline: none;
         }
-
         .resumo-horas-extra {
             background: rgba(255,255,255,0.3);
             border-radius: 10px;
@@ -758,7 +733,6 @@
         }
         .resumo-horas-extra .item-resumo .valor.positivo { color: #28a745; }
         .resumo-horas-extra .item-resumo .valor.negativo { color: #dc3545; }
-
         .filtro-relatorio {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
@@ -775,7 +749,6 @@
             font-family: 'Poppins', sans-serif;
             color: #000000;
         }
-
         .cartao-filtros {
             display: flex;
             gap: 15px;
@@ -799,7 +772,6 @@
             font-family: 'Poppins', sans-serif;
             color: #000000;
         }
-
         .cartao-container {
             display: grid;
             grid-template-columns: 1fr 1.2fr;
@@ -863,7 +835,6 @@
             padding: 40px 0;
         }
         .cartao-imagem-area .sem-imagem i { font-size: 48px; margin-bottom: 15px; color: #ddd; }
-
         .cartao-marcacoes-area {
             background: #fff;
             border-radius: 12px;
@@ -919,7 +890,6 @@
         }
         .cartao-header .info-cartao h2 { margin: 0; font-size: 18px; color: #000000; }
         .cartao-header .info-cartao p { margin: 2px 0 0; color: #000000; font-size: 13px; }
-
         .cartao-resumo {
             margin-top: 12px;
             display: flex;
@@ -932,11 +902,6 @@
         }
         .cartao-resumo div { font-size: 13px; color: #000000; }
         .cartao-resumo strong { color: #000000; }
-
-        @media print {
-            body { background: #fff; }
-            .main-header, .sidebar, .sidebar-toggle, .data-form, .action-bar, .table-section, .page-title { display: none !important; }
-        }
         @media (max-width: 900px) {
             .cartao-container { grid-template-columns: 1fr; }
             .editor-layout { grid-template-columns: 1fr; }
@@ -992,6 +957,9 @@
         <button class="sidebar-btn" onclick="abrirModalCartao(); toggleSidebarMobile()">
             <i class="fas fa-id-card"></i> Visualizar Cartão de Ponto
         </button>
+        <button class="sidebar-btn" onclick="syncWithSupabase(); toggleSidebarMobile()" style="background:rgba(40,167,69,0.15);color:#28a745;margin-top:8px;border-top:1px solid rgba(255,255,255,0.05);padding-top:12px;">
+            <i class="fas fa-sync"></i> Sincronizar
+        </button>
     </nav>
 
     <!-- ===== MODAL CADASTRO ===== -->
@@ -1016,6 +984,9 @@
                         </select>
                     </div>
                     <button class="btn-action btn-secondary" onclick="limparFiltroEmpresa()"><i class="fas fa-times"></i> Limpar Filtro</button>
+                    <button class="btn-action btn-success" onclick="syncWithSupabase()" style="margin-left:auto;">
+                        <i class="fas fa-sync"></i> Sincronizar
+                    </button>
                 </div>
                 <h3 style="margin-bottom: 10px; font-size: 15px; color: #000000;"><i class="fas fa-list"></i> Funcionários Cadastrados</h3>
                 <div class="lista-funcionarios">
@@ -1248,18 +1219,12 @@
                         <div class="form-group">
                             <label>Mês</label>
                             <select id="filtroRelMes">
-                                <option value="Janeiro">Janeiro</option>
-                                <option value="Fevereiro">Fevereiro</option>
-                                <option value="Março">Março</option>
-                                <option value="Abril">Abril</option>
-                                <option value="Maio">Maio</option>
-                                <option value="Junho">Junho</option>
-                                <option value="Julho">Julho</option>
-                                <option value="Agosto">Agosto</option>
-                                <option value="Setembro">Setembro</option>
-                                <option value="Outubro">Outubro</option>
-                                <option value="Novembro">Novembro</option>
-                                <option value="Dezembro">Dezembro</option>
+                                <option value="Janeiro">Janeiro</option><option value="Fevereiro">Fevereiro</option>
+                                <option value="Março">Março</option><option value="Abril">Abril</option>
+                                <option value="Maio">Maio</option><option value="Junho">Junho</option>
+                                <option value="Julho">Julho</option><option value="Agosto">Agosto</option>
+                                <option value="Setembro">Setembro</option><option value="Outubro">Outubro</option>
+                                <option value="Novembro">Novembro</option><option value="Dezembro">Dezembro</option>
                             </select>
                         </div>
                     </div>
@@ -1318,18 +1283,12 @@
                     <div class="form-group">
                         <label>Mês</label>
                         <select id="selectCartaoMes" onchange="gerarCartaoPonto()">
-                            <option value="Janeiro">Janeiro</option>
-                            <option value="Fevereiro">Fevereiro</option>
-                            <option value="Março">Março</option>
-                            <option value="Abril">Abril</option>
-                            <option value="Maio">Maio</option>
-                            <option value="Junho">Junho</option>
-                            <option value="Julho">Julho</option>
-                            <option value="Agosto">Agosto</option>
-                            <option value="Setembro">Setembro</option>
-                            <option value="Outubro">Outubro</option>
-                            <option value="Novembro">Novembro</option>
-                            <option value="Dezembro">Dezembro</option>
+                            <option value="Janeiro">Janeiro</option><option value="Fevereiro">Fevereiro</option>
+                            <option value="Março">Março</option><option value="Abril">Abril</option>
+                            <option value="Maio">Maio</option><option value="Junho">Junho</option>
+                            <option value="Julho">Julho</option><option value="Agosto">Agosto</option>
+                            <option value="Setembro">Setembro</option><option value="Outubro">Outubro</option>
+                            <option value="Novembro">Novembro</option><option value="Dezembro">Dezembro</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -1353,6 +1312,7 @@
         <nav class="nav-menu">
             <a href="#"><i class="fas fa-arrow-left"></i> Voltar</a>
             <a href="#"><i class="fas fa-th-large"></i> Dashboard</a>
+            <a href="#" onclick="syncWithSupabase()" style="color:#28a745;"><i class="fas fa-sync"></i> Sincronizar</a>
         </nav>
     </header>
 
@@ -1419,11 +1379,15 @@
             </div>
             <div class="action-bar">
                 <button class="btn-action btn-danger" onclick="limparTudo()"><i class="fas fa-trash"></i> Limpar</button>
+                <button class="btn-action btn-success" onclick="syncWithSupabase()"><i class="fas fa-sync"></i> Sincronizar</button>
             </div>
         </div>
         <div class="table-section">
             <div class="table-header">
                 <h3><i class="fas fa-table"></i> Folha de Ponto <span class="badge-count" id="totalRegistros">0</span></h3>
+                <button class="btn-action btn-success" onclick="syncWithSupabase()" style="font-size:10px;padding:4px 12px;">
+                    <i class="fas fa-sync"></i> Sincronizar
+                </button>
             </div>
             <div class="ponto-table-wrapper">
                 <table class="ponto-table" id="tabelaPonto">
@@ -1463,72 +1427,322 @@
     </div>
 
     <script>
-        // ========== ESTRUTURA DE DADOS ==========
-        let funcionariosCadastrados = JSON.parse(localStorage.getItem('funcionarios')) || [];
-        let pontosPorFuncionario = JSON.parse(localStorage.getItem('pontosPorFuncionario')) || {};
-        let imagemCartaoPorFuncionario = JSON.parse(localStorage.getItem('imagemCartaoPorFuncionario')) || {};
+        // ============================================================
+        // CONFIGURAÇÃO SUPABASE
+        // ============================================================
+        const SUPABASE_URL = 'https://rkwsOtfEMpic9PsiExxC.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_rkwsOtfEMpic9PsiExxC_w_rzYqZNRs';
+        
+        // Inicializa o cliente Supabase
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        console.log('🔑 Supabase inicializado');
+        console.log('📡 URL:', SUPABASE_URL);
+
+        // ============================================================
+        // VARIÁVEIS GLOBAIS
+        // ============================================================
+        let funcionariosCadastrados = [];
+        let pontosPorFuncionario = {};
+        let imagemCartaoPorFuncionario = {};
         let funcionarioAtual = null;
+        let dadosHorarios = {};
         let fotoAtualCadastro = "";
         let indexEditando = -1;
-        let dadosHorarios = {};
         let imagemCartaoAtual = null;
-
-        const JORNADA_PADRAO_MINUTOS = 480;
-        const JORNADA_PADRAO = "08:00";
-
         let imagemDataURL = null;
         let isProcessing = false;
-        let ocrExecutado = false;
         let escalaAtual = 1;
         let isDragging = false;
         let startX, startY, translateX = 0, translateY = 0;
 
+        const JORNADA_PADRAO_MINUTOS = 480;
+        const JORNADA_PADRAO = "08:00";
+        const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
         const imgDisplay = document.getElementById('imgDisplay');
 
-        if (funcionariosCadastrados.length === 0) {
-            funcionariosCadastrados = [
-                { nome: "Alexsander da Cruz Silva", cpf: "145.261.297-80", unidade: "Spoleto", admissao: "15/03/2021", aso: "08/08/2026", aniversario: "10/05/1985", foto: "" },
-                { nome: "Ana Paula Gama da Silva", cpf: "130.815.567-08", unidade: "Spoleto", admissao: "02/05/2018", aso: "05/05/2026", aniversario: "22/11/1990", foto: "" },
-                { nome: "Célia Regina Costa Pessanha", cpf: "094.151.467-61", unidade: "Copaenergia", admissao: "06/11/2025", aso: "07/11/2026", aniversario: "15/08/1982", foto: "" },
-                { nome: "Eufary Lorosa", cpf: "023.023.167-54", unidade: "Copaenergia", admissao: "14/11/2025", aso: "27/01/2027", aniversario: "03/03/1995", foto: "" }
-            ];
+        // ============================================================
+        // FUNÇÕES SUPABASE
+        // ============================================================
+
+        async function testarConexaoSupabase() {
+            try {
+                console.log('🔄 Testando conexão com Supabase...');
+                const { data, error } = await supabaseClient
+                    .from('funcionarios')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    console.error('❌ Erro na conexão:', error);
+                    mostrarToast('❌ Erro ao conectar com Supabase: ' + error.message);
+                    return false;
+                }
+                
+                console.log('✅ Conexão com Supabase estabelecida!');
+                mostrarToast('✅ Conectado ao Supabase!');
+                return true;
+            } catch (e) {
+                console.error('❌ Erro:', e);
+                mostrarToast('❌ Erro ao conectar: ' + e.message);
+                return false;
+            }
         }
 
-        function salvarFuncionariosStorage() { localStorage.setItem('funcionarios', JSON.stringify(funcionariosCadastrados)); }
-        function salvarPontosStorage() { localStorage.setItem('pontosPorFuncionario', JSON.stringify(pontosPorFuncionario)); }
-        function salvarImagemCartaoStorage() { localStorage.setItem('imagemCartaoPorFuncionario', JSON.stringify(imagemCartaoPorFuncionario)); }
+        async function loadFromSupabase() {
+            try {
+                mostrarToast('🔄 Carregando dados do Supabase...');
+                
+                const { data: funcionarios, error: errFunc } = await supabaseClient
+                    .from('funcionarios')
+                    .select('*')
+                    .order('nome');
 
-        window.onload = function() {
-            const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-            const mesAtual = new Date().getMonth();
-            document.getElementById('mes').value = meses[mesAtual];
-            document.getElementById('ano').value = new Date().getFullYear();
+                if (errFunc) throw new Error('Erro ao carregar funcionários: ' + errFunc.message);
 
-            gerarTabela();
-            carregarDatalist();
-            renderizarTabelaCadastrados();
-            atualizarBadgeErros();
-            if (window.innerWidth <= 768) {
-                document.getElementById('sidebar').classList.add('collapsed');
-                document.getElementById('sidebarToggle').classList.add('collapsed');
+                if (funcionarios && funcionarios.length > 0) {
+                    funcionariosCadastrados = funcionarios;
+                    salvarFuncionariosStorage();
+                    console.log(`✅ ${funcionarios.length} funcionários carregados`);
+                } else {
+                    console.log('ℹ️ Nenhum funcionário encontrado no Supabase');
+                    carregarDadosLocal();
+                }
+
+                const { data: marcacoes, error: errMarc } = await supabaseClient
+                    .from('marcacoes')
+                    .select('*');
+
+                if (errMarc) throw new Error('Erro ao carregar marcações: ' + errMarc.message);
+
+                pontosPorFuncionario = {};
+                if (marcacoes && marcacoes.length > 0) {
+                    marcacoes.forEach(m => {
+                        const func = funcionariosCadastrados.find(f => f.id === m.funcionario_id);
+                        if (func) {
+                            if (!pontosPorFuncionario[func.nome]) {
+                                pontosPorFuncionario[func.nome] = {};
+                            }
+                            pontosPorFuncionario[func.nome][m.dia] = {
+                                e1: m.e1 || '',
+                                s1: m.s1 || '',
+                                e2: m.e2 || '',
+                                s2: m.s2 || '',
+                                _origem: m.origem || 'manual',
+                                _id: m.id
+                            };
+                        }
+                    });
+                    salvarPontosStorage();
+                    console.log(`✅ ${marcacoes.length} marcações carregadas`);
+                }
+
+                const { data: imagens, error: errImg } = await supabaseClient
+                    .from('imagens_cartao')
+                    .select('*');
+
+                if (errImg) throw new Error('Erro ao carregar imagens: ' + errImg.message);
+
+                imagemCartaoPorFuncionario = {};
+                if (imagens && imagens.length > 0) {
+                    imagens.forEach(img => {
+                        const func = funcionariosCadastrados.find(f => f.id === img.funcionario_id);
+                        if (func) {
+                            imagemCartaoPorFuncionario[func.nome] = img.imagem_url;
+                        }
+                    });
+                    salvarImagemCartaoStorage();
+                    console.log(`✅ ${imagens.length} imagens carregadas`);
+                }
+
+                renderizarTabelaCadastrados();
+                carregarDatalist();
+                carregarSelectCartao();
+                atualizarContador();
+                atualizarBadgeErros();
+
+                if (funcionarioAtual) {
+                    dadosHorarios = pontosPorFuncionario[funcionarioAtual] || {};
+                    gerarTabela();
+                }
+
+                mostrarToast('✅ Dados sincronizados com Sucesso!');
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar do Supabase:', error);
+                mostrarToast('⚠️ Usando dados locais. Erro: ' + error.message);
+                carregarDadosLocal();
+                renderizarTabelaCadastrados();
+                carregarDatalist();
+                carregarSelectCartao();
+            }
+        }
+
+        async function syncWithSupabase() {
+            try {
+                mostrarToast('🔄 Sincronizando com Supabase...');
+                
+                const conectado = await testarConexaoSupabase();
+                if (!conectado) {
+                    mostrarToast('⚠️ Não foi possível sincronizar. Verifique a conexão.');
+                    return;
+                }
+
+                for (const func of funcionariosCadastrados) {
+                    const funcData = {
+                        nome: func.nome,
+                        cpf: func.cpf || null,
+                        unidade: func.unidade || null,
+                        admissao: func.admissao || null,
+                        aso: func.aso || null,
+                        aniversario: func.aniversario || null,
+                        foto: func.foto || null,
+                        updated_at: new Date().toISOString()
+                    };
+
+                    if (func.id) {
+                        const { error } = await supabaseClient
+                            .from('funcionarios')
+                            .update(funcData)
+                            .eq('id', func.id);
+                        if (error) throw new Error('Erro ao atualizar funcionário: ' + error.message);
+                    } else {
+                        const { data, error } = await supabaseClient
+                            .from('funcionarios')
+                            .insert(funcData)
+                            .select();
+                        if (error) throw new Error('Erro ao inserir funcionário: ' + error.message);
+                        if (data && data[0]) {
+                            func.id = data[0].id;
+                        }
+                    }
+                }
+
+                const mes = document.getElementById('mes').value;
+                const ano = parseInt(document.getElementById('ano').value);
+
+                for (const [nome, pontos] of Object.entries(pontosPorFuncionario)) {
+                    const func = funcionariosCadastrados.find(f => f.nome === nome);
+                    if (!func || !func.id) continue;
+
+                    for (const [dia, dados] of Object.entries(pontos)) {
+                        const marcacaoData = {
+                            funcionario_id: func.id,
+                            dia: parseInt(dia),
+                            mes: mes,
+                            ano: ano,
+                            e1: dados.e1 || null,
+                            s1: dados.s1 || null,
+                            e2: dados.e2 || null,
+                            s2: dados.s2 || null,
+                            origem: dados._origem || 'manual',
+                            updated_at: new Date().toISOString()
+                        };
+
+                        if (dados._id) {
+                            const { error } = await supabaseClient
+                                .from('marcacoes')
+                                .update(marcacaoData)
+                                .eq('id', dados._id);
+                            if (error) console.error('Erro ao atualizar marcação:', error);
+                        } else {
+                            const { data, error } = await supabaseClient
+                                .from('marcacoes')
+                                .insert(marcacaoData)
+                                .select();
+                            if (error) {
+                                console.error('Erro ao inserir marcação:', error);
+                            } else if (data && data[0]) {
+                                pontosPorFuncionario[nome][dia]._id = data[0].id;
+                            }
+                        }
+                    }
+                }
+
+                for (const [nome, imagem] of Object.entries(imagemCartaoPorFuncionario)) {
+                    const func = funcionariosCadastrados.find(f => f.nome === nome);
+                    if (!func || !func.id) continue;
+
+                    const { data: existing } = await supabaseClient
+                        .from('imagens_cartao')
+                        .select('id')
+                        .eq('funcionario_id', func.id)
+                        .eq('mes', mes)
+                        .eq('ano', ano)
+                        .maybeSingle();
+
+                    const imgData = {
+                        funcionario_id: func.id,
+                        mes: mes,
+                        ano: ano,
+                        imagem_url: imagem,
+                        uploaded_at: new Date().toISOString()
+                    };
+
+                    if (existing) {
+                        const { error } = await supabaseClient
+                            .from('imagens_cartao')
+                            .update(imgData)
+                            .eq('id', existing.id);
+                        if (error) console.error('Erro ao atualizar imagem:', error);
+                    } else {
+                        const { error } = await supabaseClient
+                            .from('imagens_cartao')
+                            .insert(imgData);
+                        if (error) console.error('Erro ao inserir imagem:', error);
+                    }
+                }
+
+                salvarFuncionariosStorage();
+                salvarPontosStorage();
+                salvarImagemCartaoStorage();
+
+                mostrarToast('✅ Dados sincronizados com Sucesso!');
+
+            } catch (error) {
+                console.error('❌ Erro ao sincronizar:', error);
+                mostrarToast('❌ Erro ao sincronizar: ' + error.message);
+            }
+        }
+
+        // ============================================================
+        // FUNÇÕES DE STORAGE (fallback local)
+        // ============================================================
+
+        function salvarFuncionariosStorage() {
+            localStorage.setItem('funcionarios', JSON.stringify(funcionariosCadastrados));
+        }
+
+        function salvarPontosStorage() {
+            localStorage.setItem('pontosPorFuncionario', JSON.stringify(pontosPorFuncionario));
+        }
+
+        function salvarImagemCartaoStorage() {
+            localStorage.setItem('imagemCartaoPorFuncionario', JSON.stringify(imagemCartaoPorFuncionario));
+        }
+
+        function carregarDadosLocal() {
+            const stored = localStorage.getItem('funcionarios');
+            if (stored) {
+                funcionariosCadastrados = JSON.parse(stored);
             }
 
-            document.getElementById('filtroRelMes').value = meses[mesAtual];
-            document.getElementById('selectCartaoMes').value = meses[mesAtual];
-            document.getElementById('selectCartaoAno').value = new Date().getFullYear();
-
-            carregarSelectCartao();
-        };
-
-        window.addEventListener('resize', function() {
-            if (window.innerWidth <= 768) {
-                document.getElementById('sidebar').classList.add('collapsed');
-                document.getElementById('sidebarToggle').classList.add('collapsed');
+            const pontos = localStorage.getItem('pontosPorFuncionario');
+            if (pontos) {
+                pontosPorFuncionario = JSON.parse(pontos);
             }
-        });
 
-        // ===== SIDEBAR =====
+            const imagens = localStorage.getItem('imagemCartaoPorFuncionario');
+            if (imagens) {
+                imagemCartaoPorFuncionario = JSON.parse(imagens);
+            }
+        }
+
+        // ============================================================
+        // FUNÇÕES DA INTERFACE
+        // ============================================================
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const toggle = document.getElementById('sidebarToggle');
@@ -1549,7 +1763,246 @@
             }
         }
 
-        // ===== FILTRO POR EMPRESA =====
+        function mostrarToast(msg) {
+            const toast = document.getElementById('toastSucesso');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.textContent = msg;
+            toast.style.display = 'block';
+            toast.classList.remove('error');
+            if (msg.includes('⚠️') || msg.includes('Erro') || msg.includes('❌')) toast.classList.add('error');
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        // ============================================================
+        // FUNÇÕES DE CADASTRO
+        // ============================================================
+
+        function abrirModalCadastro() {
+            document.getElementById('modalCadastro').classList.add('active');
+            limparFormCadastro();
+            renderizarTabelaCadastrados();
+        }
+
+        function fecharModalCadastro() {
+            document.getElementById('modalCadastro').classList.remove('active');
+        }
+
+        function limparFormCadastro() {
+            indexEditando = -1;
+            document.getElementById('tituloFormCadastro').innerHTML = '<i class="fas fa-user-plus"></i> Adicionar Novo Funcionário';
+            document.getElementById('cadNome').value = '';
+            document.getElementById('cadCPF').value = '';
+            document.getElementById('cadUnidade').value = 'Spoleto';
+            document.getElementById('cadAdmissao').value = '';
+            document.getElementById('cadASO').value = '';
+            document.getElementById('cadAniversario').value = '';
+            document.getElementById('previewFoto').src = "https://via.placeholder.com/120";
+            fotoAtualCadastro = "";
+            document.getElementById('btnCancelarEdicao').style.display = 'none';
+        }
+
+        function carregarFoto(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    fotoAtualCadastro = e.target.result;
+                    document.getElementById('previewFoto').src = fotoAtualCadastro;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function abrirEdicao(index) {
+            indexEditando = index;
+            const func = funcionariosCadastrados[index];
+            document.getElementById('tituloFormCadastro').innerHTML = '<i class="fas fa-edit"></i> Editando: ' + func.nome;
+            document.getElementById('cadNome').value = func.nome;
+            document.getElementById('cadCPF').value = func.cpf || '';
+            document.getElementById('cadUnidade').value = func.unidade || 'Spoleto';
+            document.getElementById('cadAdmissao').value = func.admissao || '';
+            document.getElementById('cadASO').value = func.aso || '';
+            document.getElementById('cadAniversario').value = func.aniversario || '';
+            document.getElementById('previewFoto').src = func.foto || 'https://via.placeholder.com/120';
+            fotoAtualCadastro = func.foto || "";
+            document.getElementById('btnCancelarEdicao').style.display = 'inline-flex';
+            document.getElementById('formCadastroNovo').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function salvarFuncionario() {
+            const nome = document.getElementById('cadNome').value;
+            if (!nome) { mostrarToast('⚠️ Preencha o Nome!'); return; }
+
+            const dadosFunc = {
+                nome: nome,
+                cpf: document.getElementById('cadCPF').value,
+                unidade: document.getElementById('cadUnidade').value,
+                admissao: document.getElementById('cadAdmissao').value,
+                aso: document.getElementById('cadASO').value,
+                aniversario: document.getElementById('cadAniversario').value,
+                foto: fotoAtualCadastro
+            };
+
+            try {
+                if (indexEditando === -1) {
+                    const { data, error } = await supabaseClient
+                        .from('funcionarios')
+                        .insert(dadosFunc)
+                        .select();
+
+                    if (error) throw error;
+                    if (data && data[0]) {
+                        funcionariosCadastrados.push(data[0]);
+                    }
+                } else {
+                    const func = funcionariosCadastrados[indexEditando];
+                    const { error } = await supabaseClient
+                        .from('funcionarios')
+                        .update({ ...dadosFunc, updated_at: new Date().toISOString() })
+                        .eq('id', func.id);
+
+                    if (error) throw error;
+                    funcionariosCadastrados[indexEditando] = { ...func, ...dadosFunc };
+                    indexEditando = -1;
+                }
+
+                salvarFuncionariosStorage();
+                renderizarTabelaCadastrados();
+                carregarDatalist();
+                carregarSelectCartao();
+                limparFormCadastro();
+                mostrarToast('✅ Funcionário salvo com sucesso!');
+
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                mostrarToast('❌ Erro ao salvar: ' + error.message);
+            }
+        }
+
+        async function excluirFuncionario(index) {
+            if (confirm("Deseja excluir este funcionário e todos os dados dele?")) {
+                const func = funcionariosCadastrados[index];
+                try {
+                    const { error } = await supabaseClient
+                        .from('funcionarios')
+                        .delete()
+                        .eq('id', func.id);
+
+                    if (error) throw error;
+
+                    funcionariosCadastrados.splice(index, 1);
+                    delete pontosPorFuncionario[func.nome];
+                    delete imagemCartaoPorFuncionario[func.nome];
+
+                    salvarFuncionariosStorage();
+                    salvarPontosStorage();
+                    salvarImagemCartaoStorage();
+
+                    renderizarTabelaCadastrados();
+                    carregarDatalist();
+                    carregarSelectCartao();
+                    atualizarContador();
+
+                    if (funcionarioAtual === func.nome) {
+                        document.getElementById('funcionario').value = '';
+                        document.getElementById('empresa').value = '';
+                        document.getElementById('matricula').value = '';
+                        document.getElementById('fotoFuncionario').style.display = 'none';
+                        funcionarioAtual = null;
+                        dadosHorarios = {};
+                        imagemCartaoAtual = null;
+                        gerarTabela();
+                    }
+
+                    mostrarToast('✅ Funcionário excluído!');
+
+                } catch (error) {
+                    console.error('Erro ao excluir:', error);
+                    mostrarToast('❌ Erro ao excluir: ' + error.message);
+                }
+            }
+        }
+
+        function renderizarTabelaCadastrados() {
+            const tbody = document.getElementById('tbodyCadastrados');
+            tbody.innerHTML = '';
+            const filtroEmpresa = document.getElementById('filtroEmpresaCadastro').value;
+
+            funcionariosCadastrados.forEach((func, index) => {
+                if (filtroEmpresa && func.unidade !== filtroEmpresa) return;
+                const tr = document.createElement('tr');
+                const fotoHtml = func.foto ?
+                    `<img src="${func.foto}" class="foto-mini" onerror="this.src='https://via.placeholder.com/40'">` :
+                    `<div style="width:40px;height:40px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:18px;color:#999;"><i class="fas fa-user"></i></div>`;
+                tr.innerHTML = `
+                    <td>${fotoHtml}</td>
+                    <td><strong>${func.nome}</strong></td>
+                    <td>${func.cpf || '-'}</td>
+                    <td>${func.unidade || '-'}</td>
+                    <td style="text-align: center;">
+                        <button class="btn-acao-tabela btn-selecionar" onclick="selecionarFuncionario(${index})" title="Selecionar"><i class="fas fa-check-circle"></i></button>
+                        <button class="btn-acao-tabela btn-editar" onclick="abrirEdicao(${index})" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn-acao-tabela btn-excluir" onclick="excluirFuncionario(${index})" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function selecionarFuncionario(index) {
+            const func = funcionariosCadastrados[index];
+            document.getElementById('funcionario').value = func.nome;
+            document.getElementById('empresa').value = func.unidade || '';
+            document.getElementById('matricula').value = func.cpf || '';
+            funcionarioAtual = func.nome;
+            dadosHorarios = pontosPorFuncionario[func.nome] || {};
+            imagemCartaoAtual = imagemCartaoPorFuncionario[func.nome] || null;
+
+            const fotoDiv = document.getElementById('fotoFuncionario');
+            const fotoContainer = document.getElementById('fotoContainer');
+            const fotoNome = document.getElementById('fotoNome');
+            const fotoEmpresa = document.getElementById('fotoEmpresa');
+
+            if (func.foto) {
+                fotoContainer.innerHTML = `<img id="fotoSelecionada" src="${func.foto}" alt="Foto" onerror="this.parentElement.innerHTML='<div class=\\'sem-foto\\'><i class=\\'fas fa-user\\'></i></div>'">`;
+            } else {
+                fotoContainer.innerHTML = `<div class="sem-foto"><i class="fas fa-user"></i></div>`;
+            }
+            fotoNome.textContent = func.nome;
+            fotoEmpresa.textContent = func.unidade || 'Empresa não informada';
+            fotoDiv.style.display = 'flex';
+
+            gerarTabela();
+            fecharModalCadastro();
+            mostrarToast('✅ Funcionário selecionado! Pontos carregados.');
+        }
+
+        function limparFiltroEmpresa() {
+            document.getElementById('filtroEmpresaCadastro').value = "";
+            renderizarTabelaCadastrados();
+        }
+
+        // ============================================================
+        // FUNÇÕES DE BUSCA E FILTRO
+        // ============================================================
+
+        function carregarDatalist() {
+            const datalist = document.getElementById('listaFuncionarios');
+            datalist.innerHTML = '';
+            const empresaFiltro = document.getElementById('filtroEmpresaPrincipal').value;
+
+            let funcionariosFiltrados = funcionariosCadastrados;
+            if (empresaFiltro) {
+                funcionariosFiltrados = funcionariosCadastrados.filter(f => f.unidade === empresaFiltro);
+            }
+
+            funcionariosFiltrados.forEach(func => {
+                const option = document.createElement('option');
+                option.value = func.nome;
+                datalist.appendChild(option);
+            });
+        }
+
         function filtrarFuncionariosPorEmpresa() {
             const empresaFiltro = document.getElementById('filtroEmpresaPrincipal').value;
             const datalist = document.getElementById('listaFuncionarios');
@@ -1584,7 +2037,6 @@
             }
         }
 
-        // ===== BUSCA AUTOMÁTICA =====
         function buscarDadosAutomatico() {
             const nomeBusca = document.getElementById('funcionario').value;
             if (!nomeBusca) {
@@ -1599,8 +2051,8 @@
 
             const func = funcionariosCadastrados.find(f => f.nome.toLowerCase() === nomeBusca.toLowerCase());
             if (func) {
-                document.getElementById('empresa').value = func.unidade;
-                document.getElementById('matricula').value = func.cpf;
+                document.getElementById('empresa').value = func.unidade || '';
+                document.getElementById('matricula').value = func.cpf || '';
                 funcionarioAtual = func.nome;
                 dadosHorarios = pontosPorFuncionario[func.nome] || {};
                 imagemCartaoAtual = imagemCartaoPorFuncionario[func.nome] || null;
@@ -1616,7 +2068,7 @@
                     fotoContainer.innerHTML = `<div class="sem-foto"><i class="fas fa-user"></i></div>`;
                 }
                 fotoNome.textContent = func.nome;
-                fotoEmpresa.textContent = func.unidade;
+                fotoEmpresa.textContent = func.unidade || 'Empresa não informada';
                 fotoDiv.style.display = 'flex';
 
                 gerarTabela();
@@ -1632,202 +2084,10 @@
             }
         }
 
-        // ===== DATALIST =====
-        function carregarDatalist() {
-            const datalist = document.getElementById('listaFuncionarios');
-            datalist.innerHTML = '';
-            const empresaFiltro = document.getElementById('filtroEmpresaPrincipal').value;
+        // ============================================================
+        // FUNÇÕES DO EDITOR
+        // ============================================================
 
-            let funcionariosFiltrados = funcionariosCadastrados;
-            if (empresaFiltro) {
-                funcionariosFiltrados = funcionariosCadastrados.filter(f => f.unidade === empresaFiltro);
-            }
-
-            funcionariosFiltrados.forEach(func => {
-                const option = document.createElement('option');
-                option.value = func.nome;
-                datalist.appendChild(option);
-            });
-        }
-
-        // ===== SELECT CARTÃO =====
-        function carregarSelectCartao() {
-            const select = document.getElementById('selectCartaoFuncionario');
-            select.innerHTML = '<option value="">-- Selecione --</option>';
-            funcionariosCadastrados.sort((a, b) => a.nome.localeCompare(b.nome)).forEach(func => {
-                const option = document.createElement('option');
-                option.value = func.nome;
-                option.textContent = func.nome;
-                select.appendChild(option);
-            });
-        }
-
-        // ===== FILTRO =====
-        function limparFiltroEmpresa() {
-            document.getElementById('filtroEmpresaCadastro').value = "";
-            renderizarTabelaCadastrados();
-        }
-
-        // ===== TABELA CADASTRADOS =====
-        function renderizarTabelaCadastrados() {
-            const tbody = document.getElementById('tbodyCadastrados');
-            tbody.innerHTML = '';
-            const filtroEmpresa = document.getElementById('filtroEmpresaCadastro').value;
-
-            funcionariosCadastrados.forEach((func, index) => {
-                if (filtroEmpresa && func.unidade !== filtroEmpresa) return;
-                const tr = document.createElement('tr');
-                const fotoHtml = func.foto ?
-                    `<img src="${func.foto}" class="foto-mini" onerror="this.src='https://via.placeholder.com/40'">` :
-                    `<div style="width:40px;height:40px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:18px;color:#999;"><i class="fas fa-user"></i></div>`;
-                tr.innerHTML = `
-                        <td>${fotoHtml}</td>
-                        <td><strong>${func.nome}</strong></td>
-                        <td>${func.cpf}</td>
-                        <td>${func.unidade}</td>
-                        <td style="text-align: center;">
-                            <button class="btn-acao-tabela btn-selecionar" onclick="selecionarFuncionario(${index})" title="Selecionar"><i class="fas fa-check-circle"></i></button>
-                            <button class="btn-acao-tabela btn-editar" onclick="abrirEdicao(${index})" title="Editar"><i class="fas fa-edit"></i></button>
-                            <button class="btn-acao-tabela btn-excluir" onclick="excluirFuncionario(${index})" title="Excluir"><i class="fas fa-trash"></i></button>
-                        </td>
-                    `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function selecionarFuncionario(index) {
-            const func = funcionariosCadastrados[index];
-            document.getElementById('funcionario').value = func.nome;
-            document.getElementById('empresa').value = func.unidade;
-            document.getElementById('matricula').value = func.cpf;
-            funcionarioAtual = func.nome;
-            dadosHorarios = pontosPorFuncionario[func.nome] || {};
-            imagemCartaoAtual = imagemCartaoPorFuncionario[func.nome] || null;
-
-            const fotoDiv = document.getElementById('fotoFuncionario');
-            const fotoContainer = document.getElementById('fotoContainer');
-            const fotoNome = document.getElementById('fotoNome');
-            const fotoEmpresa = document.getElementById('fotoEmpresa');
-
-            if (func.foto) {
-                fotoContainer.innerHTML = `<img id="fotoSelecionada" src="${func.foto}" alt="Foto" onerror="this.parentElement.innerHTML='<div class=\\'sem-foto\\'><i class=\\'fas fa-user\\'></i></div>'">`;
-            } else {
-                fotoContainer.innerHTML = `<div class="sem-foto"><i class="fas fa-user"></i></div>`;
-            }
-            fotoNome.textContent = func.nome;
-            fotoEmpresa.textContent = func.unidade;
-            fotoDiv.style.display = 'flex';
-
-            gerarTabela();
-            fecharModalCadastro();
-            mostrarToast('✅ Funcionário selecionado! Pontos carregados.');
-        }
-
-        function abrirEdicao(index) {
-            indexEditando = index;
-            const func = funcionariosCadastrados[index];
-            document.getElementById('tituloFormCadastro').innerHTML = '<i class="fas fa-edit"></i> Editando: ' + func.nome;
-            document.getElementById('cadNome').value = func.nome;
-            document.getElementById('cadCPF').value = func.cpf;
-            document.getElementById('cadUnidade').value = func.unidade;
-            document.getElementById('cadAdmissao').value = func.admissao || '';
-            document.getElementById('cadASO').value = func.aso || '';
-            document.getElementById('cadAniversario').value = func.aniversario || '';
-            document.getElementById('previewFoto').src = func.foto || 'https://via.placeholder.com/120';
-            fotoAtualCadastro = func.foto || "";
-            document.getElementById('btnCancelarEdicao').style.display = 'inline-flex';
-            document.getElementById('formCadastroNovo').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function limparFormCadastro() {
-            indexEditando = -1;
-            document.getElementById('tituloFormCadastro').innerHTML = '<i class="fas fa-user-plus"></i> Adicionar Novo Funcionário';
-            document.getElementById('cadNome').value = '';
-            document.getElementById('cadCPF').value = '';
-            document.getElementById('cadUnidade').value = 'Spoleto';
-            document.getElementById('cadAdmissao').value = '';
-            document.getElementById('cadASO').value = '';
-            document.getElementById('cadAniversario').value = '';
-            document.getElementById('previewFoto').src = "https://via.placeholder.com/120";
-            fotoAtualCadastro = "";
-            document.getElementById('btnCancelarEdicao').style.display = 'none';
-        }
-
-        function excluirFuncionario(index) {
-            if (confirm("Deseja excluir este funcionário e todos os pontos dele?")) {
-                const nome = funcionariosCadastrados[index].nome;
-                funcionariosCadastrados.splice(index, 1);
-                delete pontosPorFuncionario[nome];
-                delete imagemCartaoPorFuncionario[nome];
-                salvarFuncionariosStorage();
-                salvarPontosStorage();
-                salvarImagemCartaoStorage();
-                renderizarTabelaCadastrados();
-                carregarDatalist();
-                carregarSelectCartao();
-                atualizarContador();
-                if (funcionarioAtual === nome) {
-                    document.getElementById('funcionario').value = '';
-                    document.getElementById('empresa').value = '';
-                    document.getElementById('matricula').value = '';
-                    document.getElementById('fotoFuncionario').style.display = 'none';
-                    funcionarioAtual = null;
-                    dadosHorarios = {};
-                    imagemCartaoAtual = null;
-                    gerarTabela();
-                }
-            }
-        }
-
-        function abrirModalCadastro() {
-            document.getElementById('modalCadastro').classList.add('active');
-            limparFormCadastro();
-            renderizarTabelaCadastrados();
-        }
-
-        function fecharModalCadastro() {
-            document.getElementById('modalCadastro').classList.remove('active');
-        }
-
-        function carregarFoto(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    fotoAtualCadastro = e.target.result;
-                    document.getElementById('previewFoto').src = fotoAtualCadastro;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function salvarFuncionario() {
-            const nome = document.getElementById('cadNome').value;
-            if (!nome) { mostrarToast('⚠️ Preencha o Nome!'); return; }
-            const dadosFunc = {
-                nome: nome,
-                cpf: document.getElementById('cadCPF').value,
-                unidade: document.getElementById('cadUnidade').value,
-                admissao: document.getElementById('cadAdmissao').value,
-                aso: document.getElementById('cadASO').value,
-                aniversario: document.getElementById('cadAniversario').value,
-                foto: fotoAtualCadastro
-            };
-            if (indexEditando === -1) {
-                funcionariosCadastrados.push(dadosFunc);
-            } else {
-                funcionariosCadastrados[indexEditando] = dadosFunc;
-                indexEditando = -1;
-            }
-            salvarFuncionariosStorage();
-            renderizarTabelaCadastrados();
-            carregarDatalist();
-            carregarSelectCartao();
-            limparFormCadastro();
-            mostrarToast('✅ Funcionário salvo com sucesso!');
-        }
-
-        // ===== EDITOR =====
         function abrirModal() {
             if (!funcionarioAtual) {
                 mostrarToast('⚠️ Selecione um funcionário antes de abrir o editor!');
@@ -1853,10 +2113,10 @@
         function montarGrade() {
             const container = document.getElementById('gridContainer');
             container.innerHTML = `
-                    <div class="linha-grid header">
-                        <span>Dia</span><span>Entrada 1</span><span>Saída 1</span><span>Entrada 2</span><span>Saída 2</span>
-                    </div>
-                `;
+                <div class="linha-grid header">
+                    <span>Dia</span><span>Entrada 1</span><span>Saída 1</span><span>Entrada 2</span><span>Saída 2</span>
+                </div>
+            `;
             for (let dia = 1; dia <= 31; dia++) {
                 const dados = dadosHorarios[dia] || { e1: '', s1: '', e2: '', s2: '' };
                 const div = document.createElement('div');
@@ -1869,12 +2129,12 @@
                 const clsS2 = dados.s2 && dados._origem === 'ocr' ? 'preenchido-ocr' : (dados.s2 ? 'preenchido-manual' : '');
 
                 div.innerHTML = `
-                        <span class="dia-label">${String(dia).padStart(2, '0')}</span>
-                        <input type="time" class="ed-e1 ${clsE1}" value="${dados.e1 || ''}" oninput="marcarManual(this)">
-                        <input type="time" class="ed-s1 ${clsS1}" value="${dados.s1 || ''}" oninput="marcarManual(this)">
-                        <input type="time" class="ed-e2 ${clsE2}" value="${dados.e2 || ''}" oninput="marcarManual(this)">
-                        <input type="time" class="ed-s2 ${clsS2}" value="${dados.s2 || ''}" oninput="marcarManual(this)">
-                    `;
+                    <span class="dia-label">${String(dia).padStart(2, '0')}</span>
+                    <input type="time" class="ed-e1 ${clsE1}" value="${dados.e1 || ''}" oninput="marcarManual(this)">
+                    <input type="time" class="ed-s1 ${clsS1}" value="${dados.s1 || ''}" oninput="marcarManual(this)">
+                    <input type="time" class="ed-e2 ${clsE2}" value="${dados.e2 || ''}" oninput="marcarManual(this)">
+                    <input type="time" class="ed-s2 ${clsS2}" value="${dados.s2 || ''}" oninput="marcarManual(this)">
+                `;
                 container.appendChild(div);
             }
         }
@@ -1924,7 +2184,10 @@
             } catch { return 0; }
         }
 
-        // ===== UPLOAD IMAGEM =====
+        // ============================================================
+        // FUNÇÕES DE IMAGEM E OCR
+        // ============================================================
+
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
 
@@ -1957,7 +2220,6 @@
             imgDisplay.style.backgroundImage = 'none';
             document.getElementById('statusOcr').classList.remove('visible');
             fileInput.value = '';
-            ocrExecutado = false;
             document.querySelectorAll('.linha-grid input').forEach(inp => inp.classList.remove('preenchido-ocr'));
             document.querySelectorAll('.linha-grid').forEach(linha => delete linha.dataset.origem);
             if (funcionarioAtual) {
@@ -1967,7 +2229,6 @@
             }
         }
 
-        // ===== ZOOM =====
         function zoomIn() { if (escalaAtual < 3) { escalaAtual += 0.2; aplicarTransformacao(); } }
         function zoomOut() { if (escalaAtual > 0.5) { escalaAtual -= 0.2; aplicarTransformacao(); } }
         function aplicarTransformacao() { imgDisplay.style.transform = `scale(${escalaAtual}) translate(${translateX}px, ${translateY}px)`; imgDisplay.style.transformOrigin = 'center center'; }
@@ -1976,7 +2237,6 @@
         window.addEventListener('mousemove', (e) => { if (!isDragging) return; translateX = e.clientX - startX; translateY = e.clientY - startY; aplicarTransformacao(); });
         window.addEventListener('mouseup', () => isDragging = false);
 
-        // ===== OCR =====
         async function executarOCR() {
             if (!imagemDataURL) { mostrarToast('⚠️ Nenhuma imagem carregada.'); return; }
             if (isProcessing) return;
@@ -2063,45 +2323,10 @@
             mostrarToast(`✅ ${adicionados} dias preenchidos.`);
         }
 
-        // ===== APLICAR EDITOR =====
-        function aplicarEditor() {
-            if (!funcionarioAtual) { mostrarToast('⚠️ Nenhum funcionário selecionado!'); return; }
+        // ============================================================
+        // FUNÇÕES DE CÁLCULO
+        // ============================================================
 
-            let novosPontos = {};
-            document.querySelectorAll('.linha-grid[data-dia]').forEach(el => {
-                const dia = parseInt(el.dataset.dia);
-                const e1 = el.querySelector('.ed-e1').value;
-                const s1 = el.querySelector('.ed-s1').value;
-                const e2 = el.querySelector('.ed-e2').value;
-                const s2 = el.querySelector('.ed-s2').value;
-
-                if (e1 || s1 || e2 || s2) {
-                    const origem = el.dataset.origem || 'manual';
-                    novosPontos[dia] = { e1, s1, e2, s2, _origem: origem };
-                }
-            });
-
-            pontosPorFuncionario[funcionarioAtual] = novosPontos;
-            dadosHorarios = novosPontos;
-            salvarPontosStorage();
-
-            if (imagemDataURL) {
-                imagemCartaoPorFuncionario[funcionarioAtual] = imagemDataURL;
-                salvarImagemCartaoStorage();
-            }
-
-            gerarTabela();
-            document.getElementById('funcionario').value = document.getElementById('editNome').value;
-            document.getElementById('empresa').value = document.getElementById('editEmpresa').value;
-            document.getElementById('matricula').value = document.getElementById('editMatricula').value;
-
-            atualizarContador();
-            atualizarBadgeErros();
-            mostrarToast('✅ Ponto salvo para ' + funcionarioAtual + '!');
-            fecharModal();
-        }
-
-        // ===== FUNÇÕES DE CÁLCULO DE HORAS =====
         function timeToMinutes(timeStr) {
             if (!timeStr) return 0;
             try {
@@ -2118,11 +2343,23 @@
             return `${sinal}${String(horas).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
         }
 
+        function calcularDiferencaMinutos(inicio, fim) {
+            try {
+                const i = new Date(`1970-01-01T${inicio}:00`);
+                let f = new Date(`1970-01-01T${fim}:00`);
+                if (f < i) f.setDate(f.getDate() + 1);
+                return (f - i) / 1000 / 60;
+            } catch { return 0; }
+        }
+
         function calcularHoraExtra(totalDiaMinutos) {
             return totalDiaMinutos - JORNADA_PADRAO_MINUTOS;
         }
 
-        // ===== TABELA PRINCIPAL =====
+        // ============================================================
+        // FUNÇÕES DA TABELA PRINCIPAL
+        // ============================================================
+
         function gerarTabela() {
             const tbody = document.getElementById('corpoTabela');
             tbody.innerHTML = '';
@@ -2132,16 +2369,16 @@
                 tr.dataset.dia = i;
                 const dados = dadosHorarios[i] || {};
                 tr.innerHTML = `
-                        <td><strong>${String(i).padStart(2, '0')}</strong></td>
-                        <td><input type="time" class="e1" data-dia="${i}" value="${dados.e1 || ''}" readonly></td>
-                        <td><input type="time" class="s1" data-dia="${i}" value="${dados.s1 || ''}" readonly></td>
-                        <td><input type="text" class="t1 total-bold" readonly placeholder="00:00"></td>
-                        <td><input type="time" class="e2" data-dia="${i}" value="${dados.e2 || ''}" readonly></td>
-                        <td><input type="time" class="s2" data-dia="${i}" value="${dados.s2 || ''}" readonly></td>
-                        <td><input type="text" class="t2 total-bold" readonly placeholder="00:00"></td>
-                        <td><input type="text" class="tg total-bold" readonly placeholder="00:00"></td>
-                        <td><input type="text" class="he total-bold" readonly placeholder="00:00"></td>
-                    `;
+                    <td><strong>${String(i).padStart(2, '0')}</strong></td>
+                    <td><input type="time" class="e1" data-dia="${i}" value="${dados.e1 || ''}" readonly></td>
+                    <td><input type="time" class="s1" data-dia="${i}" value="${dados.s1 || ''}" readonly></td>
+                    <td><input type="text" class="t1 total-bold" readonly placeholder="00:00"></td>
+                    <td><input type="time" class="e2" data-dia="${i}" value="${dados.e2 || ''}" readonly></td>
+                    <td><input type="time" class="s2" data-dia="${i}" value="${dados.s2 || ''}" readonly></td>
+                    <td><input type="text" class="t2 total-bold" readonly placeholder="00:00"></td>
+                    <td><input type="text" class="tg total-bold" readonly placeholder="00:00"></td>
+                    <td><input type="text" class="he total-bold" readonly placeholder="00:00"></td>
+                `;
                 tbody.appendChild(tr);
             }
 
@@ -2205,15 +2442,6 @@
             }
         }
 
-        function calcularDiferencaMinutos(inicio, fim) {
-            try {
-                const i = new Date(`1970-01-01T${inicio}:00`);
-                let f = new Date(`1970-01-01T${fim}:00`);
-                if (f < i) f.setDate(f.getDate() + 1);
-                return (f - i) / 1000 / 60;
-            } catch { return 0; }
-        }
-
         function atualizarContador() {
             let c = 0;
             document.querySelectorAll('#corpoTabela tr').forEach(tr => {
@@ -2222,11 +2450,226 @@
             document.getElementById('totalRegistros').textContent = c;
         }
 
-        // ===== FUNÇÕES DA FICHA CADASTRAL =====
+        // ============================================================
+        // FUNÇÕES DE ERROS
+        // ============================================================
+
+        function atualizarBadgeErros() {
+            const erros = detectarErros();
+            const badge = document.getElementById('badgeErros');
+            badge.textContent = erros.length;
+            badge.style.display = erros.length > 0 ? 'inline' : 'none';
+        }
+
+        function detectarErros() {
+            const erros = [];
+            for (let dia = 1; dia <= 31; dia++) {
+                const dados = dadosHorarios[dia] || {};
+                const e1 = dados.e1 || '', s1 = dados.s1 || '', e2 = dados.e2 || '', s2 = dados.s2 || '';
+
+                if (e1 && !s1) erros.push({ dia, tipo: 'sem_saida1', msg: 'Entrada 1 sem Saída 1', icone: 'clock' });
+                if (e2 && !s2) erros.push({ dia, tipo: 'sem_saida2', msg: 'Entrada 2 sem Saída 2', icone: 'clock' });
+                if (!e1 && s1) erros.push({ dia, tipo: 'sem_entrada1', msg: 'Saída 1 sem Entrada 1', icone: 'clock' });
+                if (!e2 && s2) erros.push({ dia, tipo: 'sem_entrada2', msg: 'Saída 2 sem Entrada 2', icone: 'clock' });
+                if (e1 && s1 && compararHoras(e1, s1) > 0) {
+                    erros.push({ dia, tipo: 'invertido1', msg: `Entrada (${e1}) posterior à Saída (${s1})`, icone: 'arrow-up' });
+                }
+                if (e2 && s2 && compararHoras(e2, s2) > 0) {
+                    erros.push({ dia, tipo: 'invertido2', msg: `Entrada (${e2}) posterior à Saída (${s2})`, icone: 'arrow-up' });
+                }
+            }
+            return erros;
+        }
+
+        function abrirErros() {
+            if (!funcionarioAtual) {
+                mostrarToast('⚠️ Selecione um funcionário primeiro!');
+                return;
+            }
+            document.getElementById('modalErros').classList.add('active');
+            renderizarErros();
+        }
+
+        function fecharErros() {
+            document.getElementById('modalErros').classList.remove('active');
+        }
+
+        function renderizarErros() {
+            const container = document.getElementById('errosContainer');
+            const erros = detectarErros();
+            container.innerHTML = '';
+
+            if (erros.length === 0) {
+                container.innerHTML = '<p style="text-align:center;color:#999;padding:30px 0;"><i class="fas fa-check-circle" style="color:#28a745;font-size:24px;display:block;margin-bottom:10px;"></i>✅ Nenhum erro detectado!</p>';
+                return;
+            }
+
+            erros.forEach(erro => {
+                const div = document.createElement('div');
+                div.className = 'erro-item';
+                div.innerHTML = `
+                    <span class="erro-msg">
+                        <i class="fas fa-${erro.icone || 'exclamation-circle'}" style="color:#dc3545;"></i>
+                        <strong>Dia ${erro.dia}</strong> — 
+                        <span class="highlight">${erro.msg}</span>
+                    </span>
+                    <button class="btn-action btn-outline-primary" style="padding:2px 10px;font-size:10px;" onclick="corrigirErro(${erro.dia}, '${erro.tipo}')">
+                        <i class="fas fa-wrench"></i> Corrigir
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function corrigirErro(dia, tipo) {
+            const dados = dadosHorarios[dia] || {};
+            let e1 = dados.e1 || '', s1 = dados.s1 || '', e2 = dados.e2 || '', s2 = dados.s2 || '';
+
+            switch (tipo) {
+                case 'sem_saida1':
+                    if (e1) { s1 = '12:00'; mostrarToast(`✅ Saída 1 definida para 12:00 no dia ${dia}`); }
+                    break;
+                case 'sem_entrada1':
+                    if (s1) { e1 = '08:00'; mostrarToast(`✅ Entrada 1 definida para 08:00 no dia ${dia}`); }
+                    break;
+                case 'sem_saida2':
+                    if (e2) { s2 = '17:00'; mostrarToast(`✅ Saída 2 definida para 17:00 no dia ${dia}`); }
+                    break;
+                case 'sem_entrada2':
+                    if (s2) { e2 = '13:00'; mostrarToast(`✅ Entrada 2 definida para 13:00 no dia ${dia}`); }
+                    break;
+                case 'invertido1':
+                    if (e1 && s1) { const temp = e1; e1 = s1; s1 = temp; mostrarToast(`✅ Horários do 1º turno invertidos no dia ${dia}`); }
+                    break;
+                case 'invertido2':
+                    if (e2 && s2) { const temp = e2; e2 = s2; s2 = temp; mostrarToast(`✅ Horários do 2º turno invertidos no dia ${dia}`); }
+                    break;
+            }
+
+            dadosHorarios[dia] = { e1, s1, e2, s2, _origem: 'manual' };
+            if (funcionarioAtual) {
+                pontosPorFuncionario[funcionarioAtual] = dadosHorarios;
+                salvarPontosStorage();
+                gerarTabela();
+                renderizarErros();
+                atualizarBadgeErros();
+            }
+        }
+
+        function corrigirErros() {
+            const erros = detectarErros();
+            if (erros.length === 0) {
+                mostrarToast('✅ Nenhum erro para corrigir!');
+                return;
+            }
+            erros.forEach(erro => corrigirErro(erro.dia, erro.tipo));
+            mostrarToast(`✅ ${erros.length} erros corrigidos automaticamente!`);
+            fecharErros();
+        }
+
+        // ============================================================
+        // FUNÇÕES DE AJUSTES
+        // ============================================================
+
+        function abrirAjustes() {
+            if (!funcionarioAtual) {
+                mostrarToast('⚠️ Selecione um funcionário primeiro!');
+                return;
+            }
+            document.getElementById('modalAjustes').classList.add('active');
+            const container = document.getElementById('ajusteContainer');
+            container.innerHTML = `
+                <div class="ajuste-item header">
+                    <span>Dia</span><span>Entrada 1</span><span>Saída 1</span><span>Entrada 2</span><span>Saída 2</span>
+                </div>
+            `;
+            for (let dia = 1; dia <= 31; dia++) {
+                const dados = dadosHorarios[dia] || { e1: '', s1: '', e2: '', s2: '' };
+                const div = document.createElement('div');
+                div.className = 'ajuste-item';
+                div.dataset.dia = dia;
+                div.innerHTML = `
+                    <span>${String(dia).padStart(2, '0')}</span>
+                    <input type="time" class="aj-e1" value="${dados.e1 || ''}">
+                    <input type="time" class="aj-s1" value="${dados.s1 || ''}">
+                    <input type="time" class="aj-e2" value="${dados.e2 || ''}">
+                    <input type="time" class="aj-s2" value="${dados.s2 || ''}">
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function fecharAjustes() {
+            document.getElementById('modalAjustes').classList.remove('active');
+        }
+
+        function salvarAjustes() {
+            let novosPontos = {};
+            document.querySelectorAll('.ajuste-item[data-dia]').forEach(el => {
+                const dia = parseInt(el.dataset.dia);
+                const e1 = el.querySelector('.aj-e1').value;
+                const s1 = el.querySelector('.aj-s1').value;
+                const e2 = el.querySelector('.aj-e2').value;
+                const s2 = el.querySelector('.aj-s2').value;
+                if (e1 || s1 || e2 || s2) {
+                    novosPontos[dia] = { e1, s1, e2, s2, _origem: 'manual' };
+                }
+            });
+
+            if (funcionarioAtual) {
+                pontosPorFuncionario[funcionarioAtual] = novosPontos;
+                dadosHorarios = novosPontos;
+                salvarPontosStorage();
+                gerarTabela();
+                atualizarBadgeErros();
+                mostrarToast('✅ Ajustes salvos com sucesso!');
+            }
+            fecharAjustes();
+        }
+
+        // ============================================================
+        // FUNÇÕES DE RELATÓRIOS
+        // ============================================================
+
+        function abrirRelatorios() {
+            document.getElementById('modalRelatorios').classList.add('active');
+            carregarRelFuncionarios();
+            document.getElementById('filtroPontoContainer').style.display = 'none';
+            document.getElementById('filtroFichaContainer').style.display = 'none';
+        }
+
+        function fecharModalRelatorios() {
+            document.getElementById('modalRelatorios').classList.remove('active');
+        }
+
+        function mostrarFiltroPonto() {
+            document.getElementById('filtroPontoContainer').style.display = 'block';
+            document.getElementById('filtroFichaContainer').style.display = 'none';
+            carregarRelFuncionarios();
+        }
+
         function mostrarFiltroFicha() {
             document.getElementById('filtroPontoContainer').style.display = 'none';
             document.getElementById('filtroFichaContainer').style.display = 'block';
             carregarFichaFuncionarios();
+        }
+
+        function carregarRelFuncionarios() {
+            const empresaFiltro = document.getElementById('filtroRelEmpresa').value;
+            const select = document.getElementById('filtroRelFuncionario');
+            select.innerHTML = '<option value="">Selecione</option>';
+
+            let funcionariosFiltrados = funcionariosCadastrados;
+            if (empresaFiltro) {
+                funcionariosFiltrados = funcionariosCadastrados.filter(f => f.unidade === empresaFiltro);
+            }
+
+            funcionariosFiltrados.sort((a, b) => a.nome.localeCompare(b.nome)).forEach(func => {
+                const option = document.createElement('option');
+                option.value = func.nome;
+                option.textContent = func.nome;
+                select.appendChild(option);
+            });
         }
 
         function carregarFichaFuncionarios() {
@@ -2247,7 +2690,10 @@
             });
         }
 
-        // ===== GERAR RELATÓRIO PONTO DIRETO - CORRIGIDO DEFINITIVAMENTE =====
+        // ============================================================
+        // FUNÇÕES DE PDF
+        // ============================================================
+
         function gerarRelatorioPontoDireto() {
             const nomeFuncionario = document.getElementById('filtroRelFuncionario').value;
             if (!nomeFuncionario) {
@@ -2266,20 +2712,14 @@
             const dadosPonto = pontosPorFuncionario[nomeFuncionario] || {};
 
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({
-                unit: 'mm',
-                format: 'a4',
-                orientation: 'portrait'
-            });
+            const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
 
             const PAGE_WIDTH = 210;
             const PAGE_HEIGHT = 297;
             const MARGIN = 8;
-            const AVAILABLE_WIDTH = PAGE_WIDTH - (MARGIN * 2);
 
             let y = MARGIN;
 
-            // ===== TÍTULO =====
             doc.setFontSize(16);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(0, 0, 0);
@@ -2300,33 +2740,20 @@
             doc.line(MARGIN, y, PAGE_WIDTH - MARGIN, y);
             y += 4;
 
-            // ===== INFORMAÇÕES DO FUNCIONÁRIO =====
             doc.setFontSize(7);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(0, 0, 0);
-            const infoLinha1 = `CPF: ${func.cpf || '-'}  |  Admissão: ${func.admissao || '-'}  |  Jornada: ${JORNADA_PADRAO}`;
-            doc.text(infoLinha1, MARGIN, y);
+            doc.text(`CPF: ${func.cpf || '-'}  |  Admissão: ${func.admissao || '-'}  |  Jornada: ${JORNADA_PADRAO}`, MARGIN, y);
             y += 3.5;
-
-            const infoLinha2 = `ASO: ${func.aso || '-'}  |  Aniversário: ${func.aniversario || '-'}  |  Emitido em: ${new Date().toLocaleDateString('pt-BR')}`;
-            doc.text(infoLinha2, MARGIN, y);
+            doc.text(`ASO: ${func.aso || '-'}  |  Aniversário: ${func.aniversario || '-'}  |  Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, MARGIN, y);
             y += 4;
-
             doc.setDrawColor(200, 200, 200);
             doc.line(MARGIN, y, PAGE_WIDTH - MARGIN, y);
             y += 3;
 
-            // ===== CABEÇALHO DA TABELA =====
             const headers = ['Dia', 'Entrada 1', 'Saída 1', 'Total 1', 'Entrada 2', 'Saída 2', 'Total 2', 'Total Dia', 'Hora Extra'];
             const colWidths = [10, 18, 18, 18, 18, 18, 18, 22, 22];
 
-            const totalLargura = colWidths.reduce((a, b) => a + b, 0);
-            if (totalLargura > AVAILABLE_WIDTH) {
-                mostrarToast('⚠️ Ajuste as larguras das colunas.');
-                return;
-            }
-
-            // ===== CABEÇALHO - APENAS TEXTO, SEM RETÂNGULO PRETO =====
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(6);
             doc.setTextColor(0, 0, 0);
@@ -2334,16 +2761,13 @@
             let x = MARGIN;
             headers.forEach((header, i) => {
                 const w = colWidths[i];
-                // Desenha apenas o texto, sem retângulo de fundo
                 doc.text(header, x + (w / 2), y + 2.5, { align: 'center' });
-                // Desenha uma linha fina abaixo do cabeçalho
                 doc.setDrawColor(200, 200, 200);
                 doc.line(x, y + 3.5, x + w, y + 3.5);
                 x += w;
             });
             y += 5;
 
-            // ===== DADOS DA TABELA =====
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(6);
             doc.setTextColor(0, 0, 0);
@@ -2378,7 +2802,6 @@
                     temDados ? minutesToTime(heMin) : ''
                 ];
 
-                // Desenha linha horizontal entre as linhas
                 if (rowCount > 0) {
                     doc.setDrawColor(230, 230, 230);
                     doc.line(MARGIN, y, PAGE_WIDTH - MARGIN, y);
@@ -2387,9 +2810,7 @@
                 x = MARGIN;
                 row.forEach((text, i) => {
                     const w = colWidths[i];
-                    // Apenas texto, sem retângulo de fundo
                     doc.text(text, x + (w / 2), y + 2.5, { align: 'center' });
-                    // Desenha bordas verticais suaves
                     if (i === 0) {
                         doc.setDrawColor(200, 200, 200);
                         doc.line(x, y - 1, x, y + 5);
@@ -2401,13 +2822,10 @@
                 y += 5;
                 rowCount++;
 
-                // Quebra de página
                 if (y > PAGE_HEIGHT - MARGIN - 20) {
                     doc.addPage();
                     y = MARGIN + 5;
                     rowCount = 0;
-
-                    // Redesenha cabeçalho na nova página
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(6);
                     doc.setTextColor(0, 0, 0);
@@ -2426,32 +2844,25 @@
                 }
             }
 
-            // ===== LINHA FINAL =====
             doc.setDrawColor(0, 0, 0);
             doc.line(MARGIN, y, PAGE_WIDTH - MARGIN, y);
             y += 3;
 
-            // ===== RESUMO DE HORAS EXTRAS =====
             doc.setFontSize(7);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(0, 0, 0);
-            const resumoText = `Total de Horas Extras: ${minutesToTime(totalHEMinutos)}  |  Dias com HE: ${diasComHE}  |  Saldo: ${minutesToTime(totalHEMinutos)}`;
-            doc.text(resumoText, MARGIN, y);
+            doc.text(`Total de Horas Extras: ${minutesToTime(totalHEMinutos)}  |  Dias com HE: ${diasComHE}  |  Saldo: ${minutesToTime(totalHEMinutos)}`, MARGIN, y);
             y += 5;
 
-            // ===== RODAPÉ =====
             doc.setFontSize(5);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(120, 120, 120);
             doc.text('Documento gerado eletronicamente • Válido para fins de controle de ponto', PAGE_WIDTH / 2, PAGE_HEIGHT - 5, { align: 'center' });
 
-            // ===== SALVAR PDF =====
-            const fileName = `Relatorio_Ponto_${func.nome.replace(/\s+/g, '_')}_${mes}_${ano}.pdf`;
-            doc.save(fileName);
+            doc.save(`Relatorio_Ponto_${func.nome.replace(/\s+/g, '_')}_${mes}_${ano}.pdf`);
             mostrarToast('✅ Relatório PDF gerado com sucesso!');
         }
 
-        // ===== GERAR FICHA CADASTRAL DIRETO - COM FOTO APENAS SE EXISTIR =====
         function gerarFichaCadastralDireto() {
             const nomeFuncionario = document.getElementById('filtroFichaFuncionario').value;
             if (!nomeFuncionario) {
@@ -2466,11 +2877,7 @@
             }
 
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({
-                unit: 'mm',
-                format: 'a4',
-                orientation: 'portrait'
-            });
+            const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
 
             const PAGE_WIDTH = 210;
             const PAGE_HEIGHT = 297;
@@ -2479,28 +2886,21 @@
 
             let y = MARGIN;
 
-            // ===== TÍTULO =====
             doc.setFontSize(20);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(0, 0, 0);
             doc.text('FICHA CADASTRAL', PAGE_WIDTH / 2, y, { align: 'center' });
             y += 8;
 
-            // ===== FOTO DO FUNCIONÁRIO (APENAS SE EXISTIR) =====
             if (func.foto && func.foto.startsWith('data:image')) {
                 try {
-                    // Centraliza a foto no topo
                     const fotoX = (PAGE_WIDTH - 40) / 2;
                     const fotoY = y;
                     doc.addImage(func.foto, 'JPEG', fotoX, fotoY, 40, 40);
                     y += 48;
-                } catch (e) {
-                    // Se falhar ao carregar a imagem, continua sem foto
-                    y += 0;
-                }
+                } catch (e) {}
             }
 
-            // ===== NOME DO FUNCIONÁRIO =====
             doc.setFontSize(14);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(0, 0, 0);
@@ -2518,17 +2918,13 @@
             y += 8;
             doc.setTextColor(0, 0, 0);
 
-            // ===== FUNÇÃO PARA DESENHAR BLOCOS =====
             function desenharBloco(titulo, dados, xPos, largura) {
                 const altura = 26;
-                
-                // Fundo do bloco
                 doc.setDrawColor(200, 200, 200);
                 doc.setFillColor(248, 248, 248);
                 doc.rect(xPos, y, largura, altura, 'FD');
                 doc.setFillColor(255, 255, 255);
 
-                // Título do bloco
                 doc.setFontSize(8);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(0, 0, 0);
@@ -2536,7 +2932,6 @@
                 doc.setDrawColor(200, 200, 200);
                 doc.line(xPos + 2, y + 5.5, xPos + largura - 2, y + 5.5);
 
-                // Dados do bloco
                 doc.setFontSize(7);
                 doc.setFont('helvetica', 'normal');
                 let dataY = y + 9;
@@ -2551,7 +2946,6 @@
                 return altura;
             }
 
-            // ===== BLOCO 1: DADOS PESSOAIS =====
             const blocoLargura = (AVAILABLE_WIDTH / 2) - 3;
             const dadosPessoais = [
                 ['Nome Completo', func.nome],
@@ -2561,7 +2955,6 @@
             ];
             const altura1 = desenharBloco('DADOS PESSOAIS', dadosPessoais, MARGIN, blocoLargura);
 
-            // ===== BLOCO 2: DADOS FUNCIONAIS =====
             const dadosFuncionais = [
                 ['Admissão', func.admissao || '-'],
                 ['Validade ASO', func.aso || '-'],
@@ -2573,7 +2966,6 @@
 
             y += altura1 + 4;
 
-            // ===== BLOCO 3: CONTATO =====
             const dadosContato = [
                 ['Telefone', '-'],
                 ['E-mail', '-'],
@@ -2582,7 +2974,6 @@
             ];
             const altura3 = desenharBloco('CONTATO', dadosContato, MARGIN, blocoLargura);
 
-            // ===== BLOCO 4: DADOS PROFISSIONAIS =====
             const dadosProfissionais = [
                 ['Cargo', '-'],
                 ['Setor', '-'],
@@ -2593,7 +2984,6 @@
 
             y += altura3 + 6;
 
-            // ===== RODAPÉ =====
             doc.setFontSize(6);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(150, 150, 150);
@@ -2603,35 +2993,14 @@
             mostrarToast('✅ Ficha cadastral gerada com sucesso!');
         }
 
-        // ===== RELATÓRIOS =====
-        function abrirRelatorios() {
-            document.getElementById('modalRelatorios').classList.add('active');
-            carregarRelFuncionarios();
-            document.getElementById('filtroPontoContainer').style.display = 'none';
-            document.getElementById('filtroFichaContainer').style.display = 'none';
-        }
+        // ============================================================
+        // FUNÇÕES DO CARTÃO DE PONTO
+        // ============================================================
 
-        function fecharModalRelatorios() {
-            document.getElementById('modalRelatorios').classList.remove('active');
-        }
-
-        function mostrarFiltroPonto() {
-            document.getElementById('filtroPontoContainer').style.display = 'block';
-            document.getElementById('filtroFichaContainer').style.display = 'none';
-            carregarRelFuncionarios();
-        }
-
-        function carregarRelFuncionarios() {
-            const empresaFiltro = document.getElementById('filtroRelEmpresa').value;
-            const select = document.getElementById('filtroRelFuncionario');
-            select.innerHTML = '<option value="">Selecione</option>';
-
-            let funcionariosFiltrados = funcionariosCadastrados;
-            if (empresaFiltro) {
-                funcionariosFiltrados = funcionariosCadastrados.filter(f => f.unidade === empresaFiltro);
-            }
-
-            funcionariosFiltrados.sort((a, b) => a.nome.localeCompare(b.nome)).forEach(func => {
+        function carregarSelectCartao() {
+            const select = document.getElementById('selectCartaoFuncionario');
+            select.innerHTML = '<option value="">-- Selecione --</option>';
+            funcionariosCadastrados.sort((a, b) => a.nome.localeCompare(b.nome)).forEach(func => {
                 const option = document.createElement('option');
                 option.value = func.nome;
                 option.textContent = func.nome;
@@ -2639,13 +3008,9 @@
             });
         }
 
-        // ===== VISUALIZAR CARTÃO =====
-        let zoomCartaoAtual = 1;
-
         function abrirModalCartao() {
             document.getElementById('modalCartao').classList.add('active');
             carregarSelectCartao();
-            zoomCartaoAtual = 1;
             if (funcionarioAtual) {
                 document.getElementById('selectCartaoFuncionario').value = funcionarioAtual;
                 gerarCartaoPonto();
@@ -2662,6 +3027,8 @@
         function fecharModalCartao() {
             document.getElementById('modalCartao').classList.remove('active');
         }
+
+        let zoomCartaoAtual = 1;
 
         function toggleZoomCartao(img) {
             img.classList.toggle('zoomed');
@@ -2830,178 +3197,53 @@
             document.getElementById('cartaoPontoContainer').innerHTML = html;
         }
 
-        // ===== AJUSTES =====
-        function abrirAjustes() {
+        // ============================================================
+        // FUNÇÃO APLICAR EDITOR (salva e sincroniza)
+        // ============================================================
+
+        async function aplicarEditor() {
             if (!funcionarioAtual) {
-                mostrarToast('⚠️ Selecione um funcionário primeiro!');
+                mostrarToast('⚠️ Nenhum funcionário selecionado!');
                 return;
             }
-            document.getElementById('modalAjustes').classList.add('active');
-            const container = document.getElementById('ajusteContainer');
-            container.innerHTML = `
-                    <div class="ajuste-item header">
-                        <span>Dia</span><span>Entrada 1</span><span>Saída 1</span><span>Entrada 2</span><span>Saída 2</span>
-                    </div>
-                `;
-            for (let dia = 1; dia <= 31; dia++) {
-                const dados = dadosHorarios[dia] || { e1: '', s1: '', e2: '', s2: '' };
-                const div = document.createElement('div');
-                div.className = 'ajuste-item';
-                div.dataset.dia = dia;
-                div.innerHTML = `
-                        <span>${String(dia).padStart(2, '0')}</span>
-                        <input type="time" class="aj-e1" value="${dados.e1 || ''}">
-                        <input type="time" class="aj-s1" value="${dados.s1 || ''}">
-                        <input type="time" class="aj-e2" value="${dados.e2 || ''}">
-                        <input type="time" class="aj-s2" value="${dados.s2 || ''}">
-                    `;
-                container.appendChild(div);
-            }
-        }
 
-        function fecharAjustes() {
-            document.getElementById('modalAjustes').classList.remove('active');
-        }
-
-        function salvarAjustes() {
             let novosPontos = {};
-            document.querySelectorAll('.ajuste-item[data-dia]').forEach(el => {
+            document.querySelectorAll('.linha-grid[data-dia]').forEach(el => {
                 const dia = parseInt(el.dataset.dia);
-                const e1 = el.querySelector('.aj-e1').value;
-                const s1 = el.querySelector('.aj-s1').value;
-                const e2 = el.querySelector('.aj-e2').value;
-                const s2 = el.querySelector('.aj-s2').value;
+                const e1 = el.querySelector('.ed-e1').value;
+                const s1 = el.querySelector('.ed-s1').value;
+                const e2 = el.querySelector('.ed-e2').value;
+                const s2 = el.querySelector('.ed-s2').value;
+
                 if (e1 || s1 || e2 || s2) {
-                    novosPontos[dia] = { e1, s1, e2, s2, _origem: 'manual' };
+                    const origem = el.dataset.origem || 'manual';
+                    novosPontos[dia] = { e1, s1, e2, s2, _origem: origem };
                 }
             });
 
-            if (funcionarioAtual) {
-                pontosPorFuncionario[funcionarioAtual] = novosPontos;
-                dadosHorarios = novosPontos;
-                salvarPontosStorage();
-                gerarTabela();
-                atualizarBadgeErros();
-                mostrarToast('✅ Ajustes salvos com sucesso!');
-            }
-            fecharAjustes();
-        }
+            pontosPorFuncionario[funcionarioAtual] = novosPontos;
+            dadosHorarios = novosPontos;
+            salvarPontosStorage();
 
-        // ===== ERROS =====
-        function abrirErros() {
-            if (!funcionarioAtual) {
-                mostrarToast('⚠️ Selecione um funcionário primeiro!');
-                return;
-            }
-            document.getElementById('modalErros').classList.add('active');
-            renderizarErros();
-        }
-
-        function fecharErros() {
-            document.getElementById('modalErros').classList.remove('active');
-        }
-
-        function renderizarErros() {
-            const container = document.getElementById('errosContainer');
-            const erros = detectarErros();
-            container.innerHTML = '';
-
-            if (erros.length === 0) {
-                container.innerHTML = '<p style="text-align:center;color:#999;padding:30px 0;"><i class="fas fa-check-circle" style="color:#28a745;font-size:24px;display:block;margin-bottom:10px;"></i>✅ Nenhum erro detectado!</p>';
-                return;
+            if (imagemDataURL) {
+                imagemCartaoPorFuncionario[funcionarioAtual] = imagemDataURL;
+                salvarImagemCartaoStorage();
             }
 
-            erros.forEach(erro => {
-                const div = document.createElement('div');
-                div.className = 'erro-item';
-                div.innerHTML = `
-                        <span class="erro-msg">
-                            <i class="fas fa-${erro.icone || 'exclamation-circle'}" style="color:#dc3545;"></i>
-                            <strong>Dia ${erro.dia}</strong> — 
-                            <span class="highlight">${erro.msg}</span>
-                        </span>
-                        <button class="btn-action btn-outline-primary" style="padding:2px 10px;font-size:10px;" onclick="corrigirErro(${erro.dia}, '${erro.tipo}')">
-                            <i class="fas fa-wrench"></i> Corrigir
-                        </button>
-                    `;
-                container.appendChild(div);
-            });
+            gerarTabela();
+            atualizarContador();
+            atualizarBadgeErros();
+
+            await syncWithSupabase();
+
+            mostrarToast('✅ Ponto salvo para ' + funcionarioAtual + '!');
+            fecharModal();
         }
 
-        function detectarErros() {
-            const erros = [];
-            for (let dia = 1; dia <= 31; dia++) {
-                const dados = dadosHorarios[dia] || {};
-                const e1 = dados.e1 || '', s1 = dados.s1 || '', e2 = dados.e2 || '', s2 = dados.s2 || '';
+        // ============================================================
+        // FUNÇÃO LIMPAR
+        // ============================================================
 
-                if (e1 && !s1) erros.push({ dia, tipo: 'sem_saida1', msg: 'Entrada 1 sem Saída 1', icone: 'clock' });
-                if (e2 && !s2) erros.push({ dia, tipo: 'sem_saida2', msg: 'Entrada 2 sem Saída 2', icone: 'clock' });
-                if (!e1 && s1) erros.push({ dia, tipo: 'sem_entrada1', msg: 'Saída 1 sem Entrada 1', icone: 'clock' });
-                if (!e2 && s2) erros.push({ dia, tipo: 'sem_entrada2', msg: 'Saída 2 sem Entrada 2', icone: 'clock' });
-                if (e1 && s1 && compararHoras(e1, s1) > 0) {
-                    erros.push({ dia, tipo: 'invertido1', msg: `Entrada (${e1}) posterior à Saída (${s1})`, icone: 'arrow-up' });
-                }
-                if (e2 && s2 && compararHoras(e2, s2) > 0) {
-                    erros.push({ dia, tipo: 'invertido2', msg: `Entrada (${e2}) posterior à Saída (${s2})`, icone: 'arrow-up' });
-                }
-            }
-            return erros;
-        }
-
-        function atualizarBadgeErros() {
-            const erros = detectarErros();
-            const badge = document.getElementById('badgeErros');
-            badge.textContent = erros.length;
-            badge.style.display = erros.length > 0 ? 'inline' : 'none';
-        }
-
-        function corrigirErro(dia, tipo) {
-            const dados = dadosHorarios[dia] || {};
-            let e1 = dados.e1 || '', s1 = dados.s1 || '', e2 = dados.e2 || '', s2 = dados.s2 || '';
-
-            switch (tipo) {
-                case 'sem_saida1':
-                    if (e1) { s1 = '12:00'; mostrarToast(`✅ Saída 1 definida para 12:00 no dia ${dia}`); }
-                    break;
-                case 'sem_entrada1':
-                    if (s1) { e1 = '08:00'; mostrarToast(`✅ Entrada 1 definida para 08:00 no dia ${dia}`); }
-                    break;
-                case 'sem_saida2':
-                    if (e2) { s2 = '17:00'; mostrarToast(`✅ Saída 2 definida para 17:00 no dia ${dia}`); }
-                    break;
-                case 'sem_entrada2':
-                    if (s2) { e2 = '13:00'; mostrarToast(`✅ Entrada 2 definida para 13:00 no dia ${dia}`); }
-                    break;
-                case 'invertido1':
-                    if (e1 && s1) { const temp = e1; e1 = s1; s1 = temp; mostrarToast(`✅ Horários do 1º turno invertidos no dia ${dia}`); }
-                    break;
-                case 'invertido2':
-                    if (e2 && s2) { const temp = e2; e2 = s2; s2 = temp; mostrarToast(`✅ Horários do 2º turno invertidos no dia ${dia}`); }
-                    break;
-            }
-
-            dadosHorarios[dia] = { e1, s1, e2, s2, _origem: 'manual' };
-            if (funcionarioAtual) {
-                pontosPorFuncionario[funcionarioAtual] = dadosHorarios;
-                salvarPontosStorage();
-                gerarTabela();
-                renderizarErros();
-                atualizarBadgeErros();
-            }
-        }
-
-        function corrigirErros() {
-            const erros = detectarErros();
-            if (erros.length === 0) {
-                mostrarToast('✅ Nenhum erro para corrigir!');
-                return;
-            }
-            erros.forEach(erro => corrigirErro(erro.dia, erro.tipo));
-            mostrarToast(`✅ ${erros.length} erros corrigidos automaticamente!`);
-            fecharErros();
-        }
-
-        // ===== LIMPAR =====
         function limparTudo() {
             document.querySelectorAll('#corpoTabela tr').forEach(tr => tr.querySelectorAll('input').forEach(inp => inp.value = ''));
             document.getElementById('funcionario').value = '';
@@ -3017,16 +3259,38 @@
             mostrarToast('🧹 Dados limpos.');
         }
 
-        // ===== TOAST =====
-        function mostrarToast(msg) {
-            const toast = document.getElementById('toastSucesso');
-            const toastMsg = document.getElementById('toastMsg');
-            toastMsg.textContent = msg;
-            toast.style.display = 'block';
-            toast.classList.remove('error');
-            if (msg.includes('⚠️') || msg.includes('Erro') || msg.includes('❌')) toast.classList.add('error');
-            setTimeout(() => { toast.style.display = 'none'; }, 3000);
-        }
+        // ============================================================
+        // INICIALIZAÇÃO
+        // ============================================================
+
+        window.onload = function() {
+            const mesAtual = new Date().getMonth();
+            
+            document.getElementById('mes').value = MESES[mesAtual];
+            document.getElementById('ano').value = new Date().getFullYear();
+
+            carregarDadosLocal();
+            
+            // Carregar do Supabase
+            loadFromSupabase();
+
+            // Testar conexão após 1 segundo
+            setTimeout(() => testarConexaoSupabase(), 1000);
+
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.add('collapsed');
+                document.getElementById('sidebarToggle').classList.add('collapsed');
+            }
+
+            document.getElementById('filtroRelMes').value = MESES[mesAtual];
+            document.getElementById('selectCartaoMes').value = MESES[mesAtual];
+            document.getElementById('selectCartaoAno').value = new Date().getFullYear();
+
+            gerarTabela();
+        };
+
+        console.log('✅ Sistema inicializado com Supabase!');
+        console.log('🔑 Chave usada:', SUPABASE_KEY.substring(0, 20) + '...');
     </script>
 </body>
 </html>
