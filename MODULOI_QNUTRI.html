@@ -1669,7 +1669,7 @@
         });
 
         // ============================================================
-        // SISTEMA DE AUTENTICAÇÃO E PERFIS
+        // SISTEMA DE AUTENTICAÇÃO E PERFIS - CORREÇÃO DEFINITIVA
         // ============================================================
         const STORAGE_KEY = 'usuarios_sistema';
 
@@ -1693,7 +1693,7 @@
             'admin': '#dc3545'
         };
 
-        // USUÁRIOS PADRÃO
+        // USUÁRIOS PADRÃO - DEFINITIVOS
         const USUARIOS_PADRAO = [
             { id: 'admin_1', nome: 'admin', senha: 'admin123', role: 'admin' },
             { id: 'user_1', nome: 'usuario', senha: '1234', role: 'user' },
@@ -1701,7 +1701,7 @@
         ];
 
         // ============================================================
-        // FUNÇÕES DE USUÁRIOS - CORRIGIDAS
+        // FUNÇÕES DE USUÁRIOS - CORREÇÃO DEFINITIVA
         // ============================================================
         function carregarUsuarios() {
             try {
@@ -1717,31 +1717,19 @@
                 console.error('Erro ao carregar usuários:', e);
             }
             
-            // Se não houver usuários no localStorage, criar os padrão
+            // Se não houver usuários ou estiver corrompido, cria os padrão
             console.log('🔧 Criando usuários padrão...');
             return criarUsuariosPadrao();
         }
 
         function criarUsuariosPadrao() {
             try {
-                // Verifica se já existe no localStorage
-                const existing = localStorage.getItem(STORAGE_KEY);
-                if (existing) {
-                    try {
-                        const parsed = JSON.parse(existing);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            console.log('✅ Usuários já existem no localStorage');
-                            return parsed;
-                        }
-                    } catch (e) {}
-                }
-                
-                // Cria os usuários padrão
+                // SEMPRE sobrescreve com os usuários padrão para garantir que existam
                 salvarUsuarios(USUARIOS_PADRAO);
-                console.log('✅ Usuários padrão criados e salvos:', USUARIOS_PADRAO.length);
+                console.log('✅ Usuários padrão criados/sincronizados:', USUARIOS_PADRAO.length);
                 return USUARIOS_PADRAO;
             } catch (e) {
-                console.error('Erro ao criar usuários padrão:', e);
+                console.error('❌ Erro ao criar usuários padrão:', e);
                 return USUARIOS_PADRAO;
             }
         }
@@ -1759,22 +1747,22 @@
 
         function inicializarUsuarios() {
             console.log('🔐 Inicializando sistema de usuários...');
-            const usuarios = carregarUsuarios();
+            // SEMPRE garante que os usuários padrão existam
+            const usuarios = criarUsuariosPadrao();
             console.log('📋 Total de usuários:', usuarios.length);
             return usuarios;
         }
 
         // ============================================================
-        // FUNÇÃO AUTENTICAR - CORRIGIDA
+        // FUNÇÃO AUTENTICAR
         // ============================================================
         function autenticar(nome, senha) {
             console.log('🔍 Tentando autenticar:', nome);
             
-            // Carrega os usuários do localStorage
+            // SEMPRE carrega os usuários (garantindo que os padrão existam)
             const usuarios = carregarUsuarios();
             console.log('📋 Usuários disponíveis para autenticação:', usuarios.map(u => u.nome));
             
-            // Busca o usuário pelo nome (case insensitive) e senha
             const usuario = usuarios.find(u => 
                 u.nome.toLowerCase() === nome.toLowerCase() && 
                 u.senha === senha
@@ -1902,7 +1890,7 @@
         }
 
         // ============================================================
-        // FUNÇÕES DE LOGIN - CORRIGIDAS
+        // FUNÇÕES DE LOGIN
         // ============================================================
         function carregarUsuariosLogin() {
             console.log('🔄 carregarUsuariosLogin() chamada');
@@ -1912,6 +1900,7 @@
                 return;
             }
             
+            // SEMPRE carrega os usuários (garantindo que os padrão existam)
             const usuarios = carregarUsuarios();
             console.log('📋 Carregando usuários no select:', usuarios);
             
@@ -1990,11 +1979,12 @@
         }
 
         // ============================================================
-        // INIT AUTH - CORRIGIDO
+        // INIT AUTH - CORREÇÃO DEFINITIVA
         // ============================================================
         function initAuth() {
             console.log('🔐 Inicializando autenticação...');
             
+            // SEMPRE inicializa os usuários padrão
             const usuarios = inicializarUsuarios();
             console.log('📋 Usuários disponíveis:', usuarios);
             
