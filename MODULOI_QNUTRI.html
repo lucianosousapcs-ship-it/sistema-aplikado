@@ -1924,7 +1924,6 @@
             document.body.style.height = 'auto';
             document.body.style.margin = '0';
             document.body.style.padding = '0';
-            document.body.style.background = 'linear-gradient(135deg, #ffe0b0 0%, #ffb84d 30%, #FF8C00 60%, #e07000 100%)';
             
             // VERIFICAR USUÁRIO
             if (!usuarioAtual || !usuarioAtual.nome || usuarioAtual.nome === 'Visitante') {
@@ -2062,7 +2061,7 @@
         }
 
         // ============================================================
-        // FUNÇÃO INIT AUTH - CORRIGIDA
+        // FUNÇÃO INIT AUTH - CORRIGIDA DEFINITIVAMENTE
         // ============================================================
         function initAuth() {
             console.log('🔐 Inicializando autenticação...');
@@ -2080,16 +2079,27 @@
                         usuarioAtual = found;
                         console.log('✅ Sessão restaurada para:', usuarioAtual.nome);
                         
-                        // Fechar modal e abrir sistema
+                        // ===================================================
+                        // FECHAR MODAL E ABRIR SISTEMA - CORREÇÃO AQUI
+                        // ===================================================
                         const modalLogin = document.getElementById('modalLogin');
                         if (modalLogin) {
                             modalLogin.style.display = 'none';
-                            modalLogin.classList.remove('active');
+                            modalLogin.classList.remove('active', 'modal-login', 'show');
                             modalLogin.style.visibility = 'hidden';
                             modalLogin.style.opacity = '0';
                             modalLogin.style.pointerEvents = 'none';
+                            modalLogin.style.position = 'fixed';
                             modalLogin.style.zIndex = '-1';
                         }
+                        
+                        // Remover overlays
+                        document.querySelectorAll('.modal-backdrop, .modal-overlay, .overlay, .backdrop').forEach(el => {
+                            if (el && el.parentNode) {
+                                el.parentNode.removeChild(el);
+                            }
+                        });
+                        
                         const mainContainer = document.getElementById('mainContainer');
                         if (mainContainer) {
                             mainContainer.style.display = 'block';
@@ -2099,11 +2109,13 @@
                             mainContainer.style.position = 'relative';
                             mainContainer.style.zIndex = '1';
                         }
+                        
                         document.body.style.overflow = 'auto';
                         document.body.style.position = 'static';
                         document.body.style.height = 'auto';
                         
                         atualizarUI();
+                        
                         setTimeout(() => {
                             carregarDadosCompletosComFallback();
                             setTimeout(() => {
@@ -2147,7 +2159,6 @@
             
             carregarUsuariosLogin();
             
-            // Definir usuário visitante temporário
             usuarioAtual = { 
                 id: 'visitante_' + Date.now(), 
                 nome: 'Visitante', 
@@ -2157,7 +2168,6 @@
             atualizarUI();
             console.log('👤 Modo visitante ativado (aguardando login)');
             
-            // Carregar dados em background
             setTimeout(() => {
                 carregarDadosCompletosComFallback();
             }, 500);
@@ -4312,8 +4322,10 @@
         window.onload = function() {
             console.log('🚀 Inicializando sistema...');
             
+            // Inicializar autenticação
             initAuth();
             
+            // Configurar datas
             const mesAtual = new Date().getMonth();
             const anoAtual = new Date().getFullYear();
             
@@ -4323,15 +4335,18 @@
             document.getElementById('selectCartaoMes').value = MESES[mesAtual];
             document.getElementById('selectCartaoAno').value = anoAtual;
 
+            // Carregar dados
             setTimeout(() => {
                 carregarDadosCompletosComFallback();
             }, 500);
 
+            // Sidebar mobile
             if (window.innerWidth <= 768) {
                 document.getElementById('sidebar').classList.add('collapsed');
                 document.getElementById('sidebarToggle').classList.add('collapsed');
             }
 
+            // Gerar tabela
             gerarTabela();
             
             console.log('✅ Sistema inicializado!');
