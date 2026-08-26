@@ -1115,7 +1115,7 @@
     <div class="toast" id="toastSucesso"><i class="fas fa-check-circle"></i> <span id="toastMsg">Salvo!</span></div>
 
     <!-- ===== MODAL LOGIN - CORRIGIDO ===== -->
-    <div class="modal modal-login" id="modalLogin">
+    <div class="modal modal-login active" id="modalLogin" style="display:flex !important;">
         <div class="modal-content">
             <div class="modal-header">
                 <h2><i class="fas fa-lock" style="color:#FF8C00;"></i> Acesso ao Sistema</h2>
@@ -1603,7 +1603,7 @@
     </header>
 
     <!-- CONTEÚDO PRINCIPAL -->
-    <div class="container with-sidebar" id="mainContainer">
+    <div class="container with-sidebar" id="mainContainer" style="display:none; visibility:hidden; opacity:0;">
         <div class="page-title">
             <h1><i class="fas fa-clock"></i> Controle de Ponto</h1>
             <p>Selecione um funcionário para visualizar a folha de ponto</p>
@@ -2038,6 +2038,7 @@
             
             carregarUsuariosLogin();
             
+            // Modo visitante temporário
             usuarioAtual = { 
                 id: 'visitante_' + Date.now(), 
                 nome: 'Visitante', 
@@ -2045,6 +2046,15 @@
             };
             salvarSessao();
             atualizarUI();
+            
+            // Ocultar conteúdo principal até login
+            const mainContainer = document.getElementById('mainContainer');
+            if (mainContainer) {
+                mainContainer.style.display = 'none';
+                mainContainer.style.visibility = 'hidden';
+                mainContainer.style.opacity = '0';
+            }
+            
             console.log('👤 Modo visitante ativado (aguardando login)');
         }
 
@@ -2587,10 +2597,8 @@
                 if (toggle) toggle.classList.add('collapsed');
             }
             
-            // Carregar dados
-            setTimeout(() => {
-                carregarDadosCompletosComFallback();
-            }, 500);
+            // Renderizar perfis
+            renderizarPerfis();
             
             console.log('✅ Sistema inicializado!');
             console.log('📡 URL Supabase:', SUPABASE_URL);
