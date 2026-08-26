@@ -937,6 +937,51 @@
         .cartao-resumo div { font-size: 13px; color: #000000; }
         .cartao-resumo strong { color: #000000; }
 
+        /* MODAL LOGIN */
+        .modal-login {
+            display: flex !important;
+            z-index: 10000;
+            background: rgba(0,0,0,0.85);
+        }
+        .modal-login .modal-content {
+            max-width: 400px;
+        }
+        .modal-login .modal-header {
+            border-bottom: 2px solid #FF8C00;
+            justify-content: center;
+        }
+        .modal-login .modal-header h2 {
+            text-align: center;
+            font-size: 22px;
+        }
+        .modal-login .login-icon {
+            text-align: center;
+            font-size: 48px;
+            color: #FF8C00;
+            margin-bottom: 10px;
+        }
+        .modal-login .login-sub {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+        .modal-login .login-info {
+            margin-top: 12px;
+            font-size: 11px;
+            color: #999;
+            text-align: center;
+            border-top: 1px solid #eee;
+            padding-top: 12px;
+        }
+        .modal-login .login-erro {
+            color: #dc3545;
+            font-size: 13px;
+            text-align: center;
+            display: none;
+            margin-bottom: 10px;
+        }
+
         /* MODAL SENHA */
         .modal-senha {
             max-width: 420px;
@@ -1023,6 +1068,41 @@
 </head>
 <body>
     <div class="toast" id="toastSucesso"><i class="fas fa-check-circle"></i> <span id="toastMsg">Salvo!</span></div>
+
+    <!-- MODAL LOGIN -->
+    <div class="modal modal-login" id="modalLogin">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-lock" style="color:#FF8C00;"></i> Acesso ao Sistema</h2>
+            </div>
+            <div class="modal-body">
+                <div class="login-icon">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <p class="login-sub">Faça login para acessar o sistema de ponto</p>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="font-size:11px;font-weight:600;color:#333;">Usuário</label>
+                    <select id="loginUsuario" style="width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:8px;font-size:14px;font-family:'Poppins',sans-serif;">
+                        <option value="">-- Selecione um usuário --</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:15px;">
+                    <label style="font-size:11px;font-weight:600;color:#333;">Senha</label>
+                    <input type="password" id="loginSenha" placeholder="Digite sua senha" style="width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:8px;font-size:14px;font-family:'Poppins',sans-serif;" onkeydown="if(event.key==='Enter') fazerLogin()">
+                </div>
+                <div class="login-erro" id="loginErro">❌ Usuário ou senha incorretos!</div>
+                <button class="btn-action btn-primary" onclick="fazerLogin()" style="width:100%;padding:12px;font-size:16px;justify-content:center;">
+                    <i class="fas fa-sign-in-alt"></i> Entrar
+                </button>
+                <div class="login-info">
+                    <i class="fas fa-info-circle"></i> 
+                    <strong>Admin:</strong> admin / admin123 | 
+                    <strong>Usuário:</strong> usuario / 1234 | 
+                    <strong>Visualizador:</strong> visitante / 1234
+                </div>
+            </div>
+        </div>
+    </div>
 
     <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
         <i class="fas fa-chevron-right"></i>
@@ -1631,14 +1711,11 @@
         // ============================================================
         // SISTEMA DE AUTENTICAÇÃO E PERFIS
         // ============================================================
-        const SENHA_SISTEMA = 'admin123'; // Senha mestre do sistema (apenas para criar admin)
+        const SENHA_SISTEMA = 'admin123';
         const STORAGE_KEY = 'usuarios_sistema';
 
         let usuarioAtual = null;
-        let acaoPendente = null;
-        let acaoPendenteArgs = null;
 
-        // Perfis disponíveis
         const ROLES = {
             VIEWER: 'viewer',
             USER: 'user',
@@ -1655,13 +1732,6 @@
             'viewer': '#6c757d',
             'user': '#28a745',
             'admin': '#dc3545'
-        };
-
-        // Níveis de permissão (quanto maior, mais permissões)
-        const ROLE_LEVEL = {
-            'viewer': 1,
-            'user': 2,
-            'admin': 3
         };
 
         function carregarUsuarios() {
@@ -1681,13 +1751,11 @@
         function inicializarUsuarios() {
             let usuarios = carregarUsuarios();
             if (usuarios.length === 0) {
-                // Criar usuário admin padrão
-                usuarios = [{
-                    id: 'admin_' + Date.now(),
-                    nome: 'Administrador',
-                    senha: 'admin123',
-                    role: 'admin'
-                }];
+                usuarios = [
+                    { id: 'admin_1', nome: 'admin', senha: 'admin123', role: 'admin' },
+                    { id: 'user_1', nome: 'usuario', senha: '1234', role: 'user' },
+                    { id: 'viewer_1', nome: 'visitante', senha: '1234', role: 'viewer' }
+                ];
                 salvarUsuarios(usuarios);
             }
             return usuarios;
@@ -1703,16 +1771,30 @@
             const usuario = usuarios.find(u => u.nome.toLowerCase() === nome.toLowerCase() && u.senha === senha);
             if (usuario) {
                 usuarioAtual = { ...usuario };
+                salvarSessao();
                 atualizarUI();
                 return true;
             }
             return false;
         }
 
+        function salvarSessao() {
+            if (usuarioAtual) {
+                sessionStorage.setItem('usuarioAtual', JSON.stringify(usuarioAtual));
+            }
+        }
+
         function logout() {
-            usuarioAtual = null;
-            atualizarUI();
-            mostrarToast('👋 Logout realizado com sucesso!');
+            if (confirm('Deseja realmente sair?')) {
+                usuarioAtual = null;
+                sessionStorage.removeItem('usuarioAtual');
+                atualizarUI();
+                mostrarToast('👋 Logout realizado com sucesso!');
+                document.getElementById('modalLogin').style.display = 'flex';
+                carregarUsuariosLogin();
+                document.getElementById('loginSenha').value = '';
+                document.getElementById('loginErro').style.display = 'none';
+            }
         }
 
         function atualizarUI() {
@@ -1725,10 +1807,7 @@
             document.getElementById('headerUserName').textContent = nome;
             document.getElementById('headerUserRole').textContent = roleLabel;
 
-            // Atualizar visibilidade de botões baseado no perfil
-            const isAdmin = usuarioAtual && usuarioAtual.role === 'admin';
             const isUser = usuarioAtual && (usuarioAtual.role === 'user' || usuarioAtual.role === 'admin');
-            const isViewer = !usuarioAtual || usuarioAtual.role === 'viewer';
 
             // Botões de edição
             const botoesEdicao = [
@@ -1743,7 +1822,6 @@
                 }
             });
 
-            // Upload de imagem
             const uploadArea = document.getElementById('uploadArea');
             if (uploadArea) {
                 if (isUser) {
@@ -1755,31 +1833,71 @@
                 }
             }
 
-            // Botões de ação na tabela de cadastro
             document.querySelectorAll('.btn-acao-tabela.btn-editar, .btn-acao-tabela.btn-excluir').forEach(el => {
                 el.disabled = !isUser;
             });
 
-            // Botão Limpar
             document.querySelectorAll('.action-bar .btn-danger').forEach(el => {
                 el.disabled = !isUser;
             });
 
-            // Atualizar mensagem no editor
             const modoMsg = document.getElementById('editorModoMsg');
             if (modoMsg) {
                 modoMsg.textContent = isUser ? 'Modo: Edição' : 'Modo: Visualização';
                 modoMsg.style.color = isUser ? '#28a745' : '#ffc107';
             }
 
-            // Desabilitar inputs na grade se for viewer
             document.querySelectorAll('.linha-grid input').forEach(el => {
                 el.disabled = !isUser;
             });
         }
 
         // ============================================================
-        // MODAL DE SENHA
+        // FUNÇÕES DE LOGIN
+        // ============================================================
+        function carregarUsuariosLogin() {
+            const select = document.getElementById('loginUsuario');
+            const usuarios = carregarUsuarios();
+            select.innerHTML = '<option value="">-- Selecione um usuário --</option>';
+            usuarios.forEach(u => {
+                const option = document.createElement('option');
+                option.value = u.nome;
+                option.textContent = u.nome + ' (' + ROLE_LABELS[u.role] + ')';
+                select.appendChild(option);
+            });
+        }
+
+        function fazerLogin() {
+            const nome = document.getElementById('loginUsuario').value;
+            const senha = document.getElementById('loginSenha').value;
+            const erro = document.getElementById('loginErro');
+
+            if (!nome) {
+                erro.textContent = '⚠️ Selecione um usuário!';
+                erro.style.display = 'block';
+                return;
+            }
+
+            if (!senha) {
+                erro.textContent = '⚠️ Digite a senha!';
+                erro.style.display = 'block';
+                return;
+            }
+
+            if (autenticar(nome, senha)) {
+                document.getElementById('modalLogin').style.display = 'none';
+                mostrarToast('✅ Bem-vindo, ' + nome + '! (' + ROLE_LABELS[usuarioAtual.role] + ')');
+                carregarDadosCompletos();
+            } else {
+                erro.textContent = '❌ Usuário ou senha incorretos!';
+                erro.style.display = 'block';
+                document.getElementById('loginSenha').value = '';
+                document.getElementById('loginSenha').focus();
+            }
+        }
+
+        // ============================================================
+        // MODAL SENHA
         // ============================================================
         let acaoAtual = null;
 
@@ -1798,15 +1916,15 @@
 
         function validarSenhaAcao() {
             const senha = document.getElementById('senhaInput').value;
-            const usuario = getUsuarioByNome('Administrador'); // Admin padrão
+            const usuarios = carregarUsuarios();
+            const usuario = usuarios.find(u => u.nome === 'admin' && u.senha === senha);
 
-            if (usuario && usuario.senha === senha) {
-                // Autenticar como admin
+            if (usuario) {
                 usuarioAtual = { ...usuario };
+                salvarSessao();
                 atualizarUI();
                 fecharModalSenha();
                 
-                // Executar ação pendente
                 if (acaoAtual) {
                     const { acao, args } = acaoAtual;
                     acaoAtual = null;
@@ -1824,26 +1942,9 @@
         }
 
         // ============================================================
-        // FUNÇÃO PARA EXECUTAR AÇÕES COM SENHA
-        // ============================================================
-        function executarComSenha(nomeFuncao, ...args) {
-            // Se já está autenticado como admin ou user, executa direto
-            if (usuarioAtual && (usuarioAtual.role === 'admin' || usuarioAtual.role === 'user')) {
-                if (typeof window[nomeFuncao] === 'function') {
-                    window[nomeFuncao](...args);
-                }
-                return;
-            }
-
-            // Se não, pede senha
-            abrirModalSenha(nomeFuncao, args);
-        }
-
-        // ============================================================
         // MODAL PERFIS
         // ============================================================
         function abrirModalPerfis() {
-            // Verificar se é admin
             if (!usuarioAtual || usuarioAtual.role !== 'admin') {
                 if (usuarioAtual) {
                     mostrarToast('⚠️ Apenas administradores podem acessar esta área!', 'warning');
@@ -1877,7 +1978,7 @@
 
             usuarios.forEach((u, index) => {
                 const isCurrentUser = usuarioAtual && usuarioAtual.id === u.id;
-                const podeEditar = !isCurrentUser; // Não pode editar o próprio perfil
+                const podeEditar = !isCurrentUser;
                 const roleLabel = ROLE_LABELS[u.role] || 'Visualizador';
                 const roleColor = ROLE_COLORS[u.role] || '#6c757d';
 
@@ -1908,7 +2009,6 @@
         }
 
         function alterarPerfil(index, novoRole) {
-            // Verificar se é admin
             if (!usuarioAtual || usuarioAtual.role !== 'admin') {
                 mostrarToast('⚠️ Apenas administradores podem alterar perfis!', 'warning');
                 return;
@@ -1917,7 +2017,6 @@
             const usuarios = carregarUsuarios();
             if (index >= usuarios.length) return;
 
-            // Não permitir alterar o próprio perfil
             if (usuarioAtual && usuarios[index].id === usuarioAtual.id) {
                 mostrarToast('⚠️ Você não pode alterar seu próprio perfil!', 'warning');
                 return;
@@ -1938,7 +2037,6 @@
             const usuarios = carregarUsuarios();
             if (index >= usuarios.length) return;
 
-            // Não permitir remover o próprio perfil
             if (usuarioAtual && usuarios[index].id === usuarioAtual.id) {
                 mostrarToast('⚠️ Você não pode remover seu próprio perfil!', 'warning');
                 return;
@@ -1975,7 +2073,7 @@
             usuarios.push({
                 id: 'user_' + Date.now(),
                 nome: nome,
-                senha: '1234', // Senha padrão
+                senha: '1234',
                 role: role,
                 email: ''
             });
@@ -1987,12 +2085,11 @@
         }
 
         // ============================================================
-        // INICIALIZAÇÃO DO SISTEMA DE AUTENTICAÇÃO
+        // INICIALIZAÇÃO
         // ============================================================
         function initAuth() {
             inicializarUsuarios();
             
-            // Verificar se há usuário salvo na sessão
             const sessionUser = sessionStorage.getItem('usuarioAtual');
             if (sessionUser) {
                 try {
@@ -2001,23 +2098,17 @@
                     const found = usuarios.find(u => u.id === user.id);
                     if (found) {
                         usuarioAtual = found;
+                        document.getElementById('modalLogin').style.display = 'none';
                         atualizarUI();
+                        return;
                     }
                 } catch (e) {}
             }
-
-            // Se não tiver usuário, setar como viewer anônimo
-            if (!usuarioAtual) {
-                usuarioAtual = { nome: 'Visitante', role: 'viewer' };
-                atualizarUI();
-            }
-        }
-
-        // Salvar sessão ao mudar usuário
-        function salvarSessao() {
-            if (usuarioAtual) {
-                sessionStorage.setItem('usuarioAtual', JSON.stringify(usuarioAtual));
-            }
+            
+            document.getElementById('modalLogin').style.display = 'flex';
+            carregarUsuariosLogin();
+            usuarioAtual = { nome: 'Visitante', role: 'viewer' };
+            atualizarUI();
         }
 
         // ============================================================
@@ -2177,14 +2268,13 @@
         }
 
         // ============================================================
-        // FUNÇÕES DE CADASTRO (com proteção)
+        // FUNÇÕES DE CADASTRO
         // ============================================================
         function abrirModalCadastro() {
             document.getElementById('modalCadastro').classList.add('active');
             limparFormCadastro();
             renderizarTabelaCadastrados();
             
-            // Desabilitar campos se não for usuário
             const isUser = usuarioAtual && (usuarioAtual.role === 'user' || usuarioAtual.role === 'admin');
             document.querySelectorAll('#formCadastroNovo input, #formCadastroNovo select').forEach(el => {
                 if (el.id !== 'inputFoto') {
@@ -2225,7 +2315,6 @@
         }
 
         function abrirEdicao(index) {
-            // Verificar permissão
             if (!usuarioAtual || (usuarioAtual.role !== 'user' && usuarioAtual.role !== 'admin')) {
                 mostrarToast('⚠️ Você não tem permissão para editar!', 'warning');
                 return;
@@ -2247,7 +2336,6 @@
         }
 
         async function salvarFuncionario() {
-            // Verificar permissão
             if (!usuarioAtual || (usuarioAtual.role !== 'user' && usuarioAtual.role !== 'admin')) {
                 mostrarToast('⚠️ Você não tem permissão para salvar!', 'warning');
                 return;
@@ -2302,7 +2390,6 @@
         }
 
         async function excluirFuncionario(index) {
-            // Verificar permissão
             if (!usuarioAtual || (usuarioAtual.role !== 'user' && usuarioAtual.role !== 'admin')) {
                 mostrarToast('⚠️ Você não tem permissão para excluir!', 'warning');
                 return;
@@ -2526,14 +2613,12 @@
             document.getElementById('editEmpresa').value = document.getElementById('empresa').value;
             document.getElementById('editMatricula').value = document.getElementById('matricula').value;
             
-            // Atualizar modo
             const isUser = usuarioAtual && (usuarioAtual.role === 'user' || usuarioAtual.role === 'admin');
             document.getElementById('editorModoMsg').textContent = isUser ? 'Modo: Edição' : 'Modo: Visualização';
             document.getElementById('editorModoMsg').style.color = isUser ? '#28a745' : '#ffc107';
             
             montarGrade();
             
-            // Desabilitar inputs se não for usuário
             document.querySelectorAll('.linha-grid input').forEach(el => {
                 el.disabled = !isUser;
             });
@@ -2601,6 +2686,51 @@
             }
         }
 
+        function marcarManual(input) {
+            if (input.value) {
+                input.classList.remove('preenchido-ocr');
+                input.classList.add('preenchido-manual');
+            } else {
+                input.classList.remove('preenchido-ocr', 'preenchido-manual');
+            }
+            const linha = input.closest('.linha-grid');
+            if (linha) linha.dataset.origem = 'manual';
+            marcarErrosGrade();
+        }
+
+        function marcarErrosGrade() {
+            document.querySelectorAll('.linha-grid[data-dia]').forEach(el => {
+                const e1 = el.querySelector('.ed-e1').value;
+                const s1 = el.querySelector('.ed-s1').value;
+                const e2 = el.querySelector('.ed-e2').value;
+                const s2 = el.querySelector('.ed-s2').value;
+
+                el.querySelectorAll('input').forEach(inp => inp.classList.remove('erro-marcacao'));
+
+                if (e1 && s1 && compararHoras(e1, s1) > 0) {
+                    el.querySelector('.ed-e1').classList.add('erro-marcacao');
+                    el.querySelector('.ed-s1').classList.add('erro-marcacao');
+                }
+                if (e2 && s2 && compararHoras(e2, s2) > 0) {
+                    el.querySelector('.ed-e2').classList.add('erro-marcacao');
+                    el.querySelector('.ed-s2').classList.add('erro-marcacao');
+                }
+                if (e1 && !s1) el.querySelector('.ed-s1').classList.add('erro-marcacao');
+                if (s1 && !e1) el.querySelector('.ed-e1').classList.add('erro-marcacao');
+                if (e2 && !s2) el.querySelector('.ed-s2').classList.add('erro-marcacao');
+                if (s2 && !e2) el.querySelector('.ed-e2').classList.add('erro-marcacao');
+            });
+            atualizarBadgeErros();
+        }
+
+        function compararHoras(inicio, fim) {
+            try {
+                const i = new Date(`1970-01-01T${inicio}:00`), f = new Date(`1970-01-01T${fim}:00`);
+                if (f < i) f.setDate(f.getDate() + 1);
+                return (f - i) < 0 ? 1 : 0;
+            } catch { return 0; }
+        }
+
         // ============================================================
         // FUNÇÕES DE IMAGEM E OCR
         // ============================================================
@@ -2646,6 +2776,112 @@
             if (funcionarioAtual) {
                 delete imagemCartaoPorFuncionario[funcionarioAtual];
             }
+        }
+
+        function zoomIn() { if (escalaAtual < 3) { escalaAtual += 0.2; aplicarTransformacao(); } }
+        function zoomOut() { if (escalaAtual > 0.5) { escalaAtual -= 0.2; aplicarTransformacao(); } }
+        function aplicarTransformacao() { imgDisplay.style.transform = `scale(${escalaAtual}) translate(${translateX}px, ${translateY}px)`; imgDisplay.style.transformOrigin = 'center center'; }
+
+        imgDisplay.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX - translateX; startY = e.clientY - translateY; });
+        window.addEventListener('mousemove', (e) => { if (!isDragging) return; translateX = e.clientX - startX; translateY = e.clientY - startY; aplicarTransformacao(); });
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        async function executarOCR() {
+            const isUser = usuarioAtual && (usuarioAtual.role === 'user' || usuarioAtual.role === 'admin');
+            if (!isUser) {
+                mostrarToast('⚠️ Você não tem permissão para executar OCR!', 'warning');
+                return;
+            }
+
+            if (!imagemDataURL) { mostrarToast('⚠️ Nenhuma imagem carregada.', 'warning'); return; }
+            if (isProcessing) return;
+            isProcessing = true;
+
+            const statusDiv = document.getElementById('statusOcr');
+            const statusText = document.getElementById('statusOcrText');
+            const progressBar = document.getElementById('progressBar');
+            statusDiv.classList.add('visible');
+            statusText.textContent = '🔄 Lendo imagem com OCR...';
+            progressBar.style.width = '30%';
+
+            try {
+                const img = new Image();
+                img.src = imagemDataURL;
+                await new Promise(resolve => img.onload = resolve);
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width * 2;
+                canvas.height = img.height * 2;
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                progressBar.style.width = '60%';
+                statusText.textContent = '🔍 Analisando números...';
+
+                const result = await Tesseract.recognize(canvas, 'por', { tessedit_pageseg_mode: '6', tessedit_char_whitelist: '0123456789:.- ' });
+
+                progressBar.style.width = '90%';
+                const texto = result.data.text;
+                const linhas = texto.split('\n');
+                let encontrados = 0;
+
+                document.querySelectorAll('.linha-grid input').forEach(inp => inp.classList.remove('preenchido-ocr'));
+
+                for (let linha of linhas) {
+                    const match = linha.match(/(\d{1,2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})/);
+                    if (match) {
+                        const dia = parseInt(match[1]);
+                        if (dia >= 1 && dia <= 31) {
+                            const linhaEl = document.querySelector(`.linha-grid[data-dia="${dia}"]`);
+                            if (linhaEl) {
+                                const inpE1 = linhaEl.querySelector('.ed-e1');
+                                const inpS1 = linhaEl.querySelector('.ed-s1');
+                                const inpE2 = linhaEl.querySelector('.ed-e2');
+                                const inpS2 = linhaEl.querySelector('.ed-s2');
+
+                                if (!inpE1.value) { inpE1.value = match[2].replace('.', ':'); inpE1.classList.add('preenchido-ocr'); }
+                                if (!inpS1.value) { inpS1.value = match[3].replace('.', ':'); inpS1.classList.add('preenchido-ocr'); }
+                                if (!inpE2.value) { inpE2.value = match[4].replace('.', ':'); inpE2.classList.add('preenchido-ocr'); }
+                                if (!inpS2.value) { inpS2.value = match[5].replace('.', ':'); inpS2.classList.add('preenchido-ocr'); }
+
+                                linhaEl.dataset.origem = 'ocr';
+                                encontrados++;
+                            }
+                        }
+                    }
+                }
+
+                progressBar.style.width = '100%';
+                statusText.textContent = `✅ OCR concluído! ${encontrados} horários reconhecidos.`;
+                mostrarToast(`OCR identificou ${encontrados} dias`);
+                marcarErrosGrade();
+                setTimeout(() => statusDiv.classList.remove('visible'), 3000);
+
+            } catch (error) {
+                statusText.textContent = '❌ Erro no OCR: ' + error.message;
+            } finally { isProcessing = false; }
+        }
+
+        function preencherDiasVazios() {
+            const isUser = usuarioAtual && (usuarioAtual.role === 'user' || usuarioAtual.role === 'admin');
+            if (!isUser) {
+                mostrarToast('⚠️ Você não tem permissão para preencher!', 'warning');
+                return;
+            }
+
+            let adicionados = 0;
+            document.querySelectorAll('.linha-grid[data-dia]').forEach(el => {
+                if (!el.querySelector('.ed-e1').value) {
+                    el.querySelector('.ed-e1').value = '08:00';
+                    el.querySelector('.ed-s1').value = '12:00';
+                    el.querySelector('.ed-e2').value = '13:00';
+                    el.querySelector('.ed-s2').value = '17:00';
+                    el.querySelectorAll('input').forEach(inp => { inp.classList.remove('preenchido-ocr'); inp.classList.add('preenchido-manual'); });
+                    adicionados++;
+                }
+            });
+            marcarErrosGrade();
+            mostrarToast(`✅ ${adicionados} dias preenchidos.`);
         }
 
         // ============================================================
@@ -3704,160 +3940,6 @@
         }
 
         // ============================================================
-        // FUNÇÕES DE OCR E ZOOM
-        // ============================================================
-        function marcarManual(input) {
-            if (input.value) {
-                input.classList.remove('preenchido-ocr');
-                input.classList.add('preenchido-manual');
-            } else {
-                input.classList.remove('preenchido-ocr', 'preenchido-manual');
-            }
-            const linha = input.closest('.linha-grid');
-            if (linha) linha.dataset.origem = 'manual';
-            marcarErrosGrade();
-        }
-
-        function marcarErrosGrade() {
-            document.querySelectorAll('.linha-grid[data-dia]').forEach(el => {
-                const e1 = el.querySelector('.ed-e1').value;
-                const s1 = el.querySelector('.ed-s1').value;
-                const e2 = el.querySelector('.ed-e2').value;
-                const s2 = el.querySelector('.ed-s2').value;
-
-                el.querySelectorAll('input').forEach(inp => inp.classList.remove('erro-marcacao'));
-
-                if (e1 && s1 && compararHoras(e1, s1) > 0) {
-                    el.querySelector('.ed-e1').classList.add('erro-marcacao');
-                    el.querySelector('.ed-s1').classList.add('erro-marcacao');
-                }
-                if (e2 && s2 && compararHoras(e2, s2) > 0) {
-                    el.querySelector('.ed-e2').classList.add('erro-marcacao');
-                    el.querySelector('.ed-s2').classList.add('erro-marcacao');
-                }
-                if (e1 && !s1) el.querySelector('.ed-s1').classList.add('erro-marcacao');
-                if (s1 && !e1) el.querySelector('.ed-e1').classList.add('erro-marcacao');
-                if (e2 && !s2) el.querySelector('.ed-s2').classList.add('erro-marcacao');
-                if (s2 && !e2) el.querySelector('.ed-e2').classList.add('erro-marcacao');
-            });
-            atualizarBadgeErros();
-        }
-
-        function compararHoras(inicio, fim) {
-            try {
-                const i = new Date(`1970-01-01T${inicio}:00`), f = new Date(`1970-01-01T${fim}:00`);
-                if (f < i) f.setDate(f.getDate() + 1);
-                return (f - i) < 0 ? 1 : 0;
-            } catch { return 0; }
-        }
-
-        function zoomIn() { if (escalaAtual < 3) { escalaAtual += 0.2; aplicarTransformacao(); } }
-        function zoomOut() { if (escalaAtual > 0.5) { escalaAtual -= 0.2; aplicarTransformacao(); } }
-        function aplicarTransformacao() { imgDisplay.style.transform = `scale(${escalaAtual}) translate(${translateX}px, ${translateY}px)`; imgDisplay.style.transformOrigin = 'center center'; }
-
-        imgDisplay.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX - translateX; startY = e.clientY - translateY; });
-        window.addEventListener('mousemove', (e) => { if (!isDragging) return; translateX = e.clientX - startX; translateY = e.clientY - startY; aplicarTransformacao(); });
-        window.addEventListener('mouseup', () => isDragging = false);
-
-        async function executarOCR() {
-            const isUser = usuarioAtual && (usuarioAtual.role === 'user' || usuarioAtual.role === 'admin');
-            if (!isUser) {
-                mostrarToast('⚠️ Você não tem permissão para executar OCR!', 'warning');
-                return;
-            }
-
-            if (!imagemDataURL) { mostrarToast('⚠️ Nenhuma imagem carregada.', 'warning'); return; }
-            if (isProcessing) return;
-            isProcessing = true;
-
-            const statusDiv = document.getElementById('statusOcr');
-            const statusText = document.getElementById('statusOcrText');
-            const progressBar = document.getElementById('progressBar');
-            statusDiv.classList.add('visible');
-            statusText.textContent = '🔄 Lendo imagem com OCR...';
-            progressBar.style.width = '30%';
-
-            try {
-                const img = new Image();
-                img.src = imagemDataURL;
-                await new Promise(resolve => img.onload = resolve);
-
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = img.width * 2;
-                canvas.height = img.height * 2;
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                progressBar.style.width = '60%';
-                statusText.textContent = '🔍 Analisando números...';
-
-                const result = await Tesseract.recognize(canvas, 'por', { tessedit_pageseg_mode: '6', tessedit_char_whitelist: '0123456789:.- ' });
-
-                progressBar.style.width = '90%';
-                const texto = result.data.text;
-                const linhas = texto.split('\n');
-                let encontrados = 0;
-
-                document.querySelectorAll('.linha-grid input').forEach(inp => inp.classList.remove('preenchido-ocr'));
-
-                for (let linha of linhas) {
-                    const match = linha.match(/(\d{1,2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})\s+(\d{1,2}[:.]\d{2})/);
-                    if (match) {
-                        const dia = parseInt(match[1]);
-                        if (dia >= 1 && dia <= 31) {
-                            const linhaEl = document.querySelector(`.linha-grid[data-dia="${dia}"]`);
-                            if (linhaEl) {
-                                const inpE1 = linhaEl.querySelector('.ed-e1');
-                                const inpS1 = linhaEl.querySelector('.ed-s1');
-                                const inpE2 = linhaEl.querySelector('.ed-e2');
-                                const inpS2 = linhaEl.querySelector('.ed-s2');
-
-                                if (!inpE1.value) { inpE1.value = match[2].replace('.', ':'); inpE1.classList.add('preenchido-ocr'); }
-                                if (!inpS1.value) { inpS1.value = match[3].replace('.', ':'); inpS1.classList.add('preenchido-ocr'); }
-                                if (!inpE2.value) { inpE2.value = match[4].replace('.', ':'); inpE2.classList.add('preenchido-ocr'); }
-                                if (!inpS2.value) { inpS2.value = match[5].replace('.', ':'); inpS2.classList.add('preenchido-ocr'); }
-
-                                linhaEl.dataset.origem = 'ocr';
-                                encontrados++;
-                            }
-                        }
-                    }
-                }
-
-                progressBar.style.width = '100%';
-                statusText.textContent = `✅ OCR concluído! ${encontrados} horários reconhecidos.`;
-                mostrarToast(`OCR identificou ${encontrados} dias`);
-                marcarErrosGrade();
-                setTimeout(() => statusDiv.classList.remove('visible'), 3000);
-
-            } catch (error) {
-                statusText.textContent = '❌ Erro no OCR: ' + error.message;
-            } finally { isProcessing = false; }
-        }
-
-        function preencherDiasVazios() {
-            const isUser = usuarioAtual && (usuarioAtual.role === 'user' || usuarioAtual.role === 'admin');
-            if (!isUser) {
-                mostrarToast('⚠️ Você não tem permissão para preencher!', 'warning');
-                return;
-            }
-
-            let adicionados = 0;
-            document.querySelectorAll('.linha-grid[data-dia]').forEach(el => {
-                if (!el.querySelector('.ed-e1').value) {
-                    el.querySelector('.ed-e1').value = '08:00';
-                    el.querySelector('.ed-s1').value = '12:00';
-                    el.querySelector('.ed-e2').value = '13:00';
-                    el.querySelector('.ed-s2').value = '17:00';
-                    el.querySelectorAll('input').forEach(inp => { inp.classList.remove('preenchido-ocr'); inp.classList.add('preenchido-manual'); });
-                    adicionados++;
-                }
-            });
-            marcarErrosGrade();
-            mostrarToast(`✅ ${adicionados} dias preenchidos.`);
-        }
-
-        // ============================================================
         // FUNÇÃO LIMPAR
         // ============================================================
         function limparTudo() {
@@ -3940,7 +4022,6 @@
 
             gerarTabela();
             
-            // Salvar sessão
             salvarSessao();
             
             mostrarToast('ℹ️ Sistema iniciado. Carregando dados do Supabase...');
@@ -3951,8 +4032,7 @@
         console.log('📋 Tabelas: funcionarios, marcacoes, imagens_cartao');
         console.log('🔐 Sistema de autenticação ativo!');
         console.log('👤 Perfis: viewer (visualização), user (edição), admin (tudo)');
-        console.log('🔑 Senha padrão admin: admin123');
-        console.log('🔑 Senha padrão usuário: 1234');
+        console.log('🔑 Senhas padrão: admin/admin123, usuario/1234, visitante/1234');
     </script>
 </body>
 </html>
