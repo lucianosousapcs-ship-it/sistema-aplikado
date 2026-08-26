@@ -1304,7 +1304,7 @@
         <nav class="nav-menu">
             <a href="CLIENT_QNUTRI.html"><i class="fas fa-arrow-left"></i> Voltar</a>
             <a href="CLIENT_QNUTRI.html"><i class="fas fa-th-large"></i> Dashboard</a>
-            <a href="#" onclick="syncWithSupabase()" style="color:#28a745;"><i class="fas fa-sync"></i> Sincronizar</a>
+            <a href="#" onclick="carregarDadosCompletos()" style="color:#28a745;"><i class="fas fa-sync"></i> Recarregar</a>
         </nav>
     </header>
 
@@ -1333,7 +1333,7 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="mes">Mês</label>
-                    <select id="mes">
+                    <select id="mes" onchange="recarregarDadosAtuais()">
                         <option value="Janeiro">Janeiro</option><option value="Fevereiro">Fevereiro</option>
                         <option value="Março">Março</option><option value="Abril">Abril</option>
                         <option value="Maio">Maio</option><option value="Junho">Junho</option>
@@ -1344,7 +1344,7 @@
                 </div>
                 <div class="form-group">
                     <label for="ano">Ano</label>
-                    <input type="number" id="ano" value="2026" min="2020" max="2030">
+                    <input type="number" id="ano" value="2026" min="2020" max="2030" onchange="recarregarDadosAtuais()">
                 </div>
                 <div class="form-group" style="justify-content:flex-end; gap: 10px; flex-direction: row; align-items: center;">
                     <div class="filtro-empresa-principal">
@@ -1422,8 +1422,6 @@
         const SUPABASE_KEY = 'sb_publishable_rkwsOtfEMpic9PsiExxC_w_rzYqZNRs';
         
         console.log('🚀 Inicializando Supabase...');
-        console.log('📡 URL:', SUPABASE_URL);
-        console.log('🔑 Chave:', SUPABASE_KEY.substring(0, 30) + '...');
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
             auth: {
@@ -1432,8 +1430,6 @@
                 detectSessionInUrl: false
             }
         });
-
-        console.log('✅ Cliente Supabase criado!');
 
         // ============================================================
         // VARIÁVEIS GLOBAIS
@@ -1445,12 +1441,12 @@
         let dadosHorarios = {};
         let fotoAtualCadastro = "";
         let indexEditando = -1;
-        let imagemCartaoAtual = null;
         let imagemDataURL = null;
         let isProcessing = false;
         let escalaAtual = 1;
         let isDragging = false;
         let startX, startY, translateX = 0, translateY = 0;
+        let funcionarioIdAtual = null;
 
         const JORNADA_PADRAO_MINUTOS = 480;
         const JORNADA_PADRAO = "08:00";
@@ -1459,240 +1455,43 @@
         const imgDisplay = document.getElementById('imgDisplay');
 
         // ============================================================
-        // FUNÇÃO DE SINCRONIZAÇÃO CORRIGIDA
+        // FUNÇÕES DE CARREGAMENTO DE DADOS DO SUPABASE
         // ============================================================
-        async function syncWithSupabase() {
-            try {
-                mostrarToast('🔄 Sincronizando com Supabase...');
-                
-                const conectado = await testarConexaoSupabase();
-                if (!conectado) {
-                    mostrarToast('⚠️ Não foi possível sincronizar.');
-                    return;
-                }
-
-                const mes = document.getElementById('mes').value;
-                const ano = parseInt(document.getElementById('ano').value);
-
-                console.log('📤 Sincronizando dados para:', mes, ano);
-
-                // 1. Sincronizar funcionários
-                for (const func of funcionariosCadastrados) {
-                    const funcData = {
-                        nome: func.nome,
-                        cpf: func.cpf || null,
-                        unidade: func.unidade || null,
-                        admissao: func.admissao || null,
-                        aso: func.aso || null,
-                        aniversario: func.aniversario || null,
-                        foto: func.foto || null,
-                        updated_at: new Date().toISOString()
-                    };
-
-                    if (func.id) {
-                        await supabaseClient.from('funcionarios').update(funcData).eq('id', func.id);
-                        console.log('✅ Funcionário atualizado:', func.nome);
-                    } else {
-                        const { data } = await supabaseClient.from('funcionarios').insert(funcData).select();
-                        if (data && data[0]) {
-                            func.id = data[0].id;
-                            console.log('✅ Funcionário inserido:', func.nome);
-                        }
-                    }
-                }
-
-                // 2. Sincronizar marcações de ponto
-                console.log('📤 Sincronizando marcações...');
-                
-                // Buscar marcações existentes
-                const { data: existing } = await supabaseClient
-                    .from('marcacoes')
-                    .select('*')
-                    .eq('mes', mes)
-                    .eq('ano', ano);
-
-                const existingMap = {};
-                if (existing) {
-                    existing.forEach(m => {
-                        existingMap[`${m.funcionario_id}_${m.dia}`] = m;
-                    });
-                }
-
-                // Percorrer funcionários e suas marcações
-                for (const [nome, pontos] of Object.entries(pontosPorFuncionario)) {
-                    const func = funcionariosCadastrados.find(f => f.nome === nome);
-                    if (!func || !func.id) continue;
-
-                    for (const [dia, dados] of Object.entries(pontos)) {
-                        const marcacaoData = {
-                            funcionario_id: func.id,
-                            dia: parseInt(dia),
-                            mes: mes,
-                            ano: ano,
-                            e1: dados.e1 || null,
-                            s1: dados.s1 || null,
-                            e2: dados.e2 || null,
-                            s2: dados.s2 || null,
-                            origem: dados._origem || 'manual',
-                            updated_at: new Date().toISOString()
-                        };
-
-                        const key = `${func.id}_${dia}`;
-                        const existingMarc = existingMap[key];
-
-                        try {
-                            if (existingMarc) {
-                                await supabaseClient
-                                    .from('marcacoes')
-                                    .update(marcacaoData)
-                                    .eq('id', existingMarc.id);
-                                console.log(`✅ Marcação dia ${dia} atualizada para ${nome}`);
-                            } else {
-                                const { data } = await supabaseClient
-                                    .from('marcacoes')
-                                    .insert(marcacaoData)
-                                    .select();
-                                if (data && data[0]) {
-                                    pontos[dia]._id = data[0].id;
-                                    console.log(`✅ Marcação dia ${dia} inserida para ${nome}`);
-                                }
-                            }
-                        } catch (error) {
-                            console.error(`❌ Erro ao salvar marcação dia ${dia}:`, error);
-                        }
-                    }
-                }
-
-                // 3. Sincronizar imagens
-                console.log('📤 Sincronizando imagens...');
-                
-                const { data: existingImgs } = await supabaseClient
-                    .from('imagens_cartao')
-                    .select('*')
-                    .eq('mes', mes)
-                    .eq('ano', ano);
-
-                const imgMap = {};
-                if (existingImgs) {
-                    existingImgs.forEach(img => {
-                        imgMap[img.funcionario_id] = img;
-                    });
-                }
-
-                for (const [nome, imagem] of Object.entries(imagemCartaoPorFuncionario)) {
-                    if (!imagem) continue;
-                    
-                    const func = funcionariosCadastrados.find(f => f.nome === nome);
-                    if (!func || !func.id) continue;
-
-                    const imgData = {
-                        funcionario_id: func.id,
-                        mes: mes,
-                        ano: ano,
-                        imagem_url: imagem,
-                        uploaded_at: new Date().toISOString()
-                    };
-
-                    try {
-                        if (imgMap[func.id]) {
-                            await supabaseClient
-                                .from('imagens_cartao')
-                                .update(imgData)
-                                .eq('id', imgMap[func.id].id);
-                            console.log(`✅ Imagem atualizada para ${nome}`);
-                        } else {
-                            await supabaseClient.from('imagens_cartao').insert(imgData);
-                            console.log(`✅ Imagem inserida para ${nome}`);
-                        }
-                    } catch (error) {
-                        console.error(`❌ Erro ao salvar imagem para ${nome}:`, error);
-                    }
-                }
-
-                salvarFuncionariosStorage();
-                salvarPontosStorage();
-                salvarImagemCartaoStorage();
-
-                console.log('✅ Sincronização concluída!');
-                mostrarToast('✅ Dados sincronizados com sucesso!');
-
-            } catch (error) {
-                console.error('❌ Erro ao sincronizar:', error);
-                mostrarToast('❌ Erro: ' + error.message);
-            }
-        }
-
-        // ============================================================
-        // TESTE DE CONEXÃO
-        // ============================================================
-        async function testarConexaoSupabase() {
-            try {
-                console.log('🔄 Testando conexão com Supabase...');
-                
-                const { error } = await supabaseClient
-                    .from('funcionarios')
-                    .select('count', { count: 'exact', head: true });
-                
-                if (error) {
-                    console.error('❌ Erro na conexão:', error);
-                    mostrarToast('❌ Erro ao conectar: ' + error.message);
-                    return false;
-                }
-                
-                console.log('✅ Conexão com Supabase estabelecida!');
-                mostrarToast('✅ Conectado ao Supabase!');
-                return true;
-                
-            } catch (error) {
-                console.error('❌ Erro inesperado:', error);
-                mostrarToast('❌ Erro: ' + error.message);
-                return false;
-            }
-        }
-
-        // ============================================================
-        // CARREGAR DADOS DO SUPABASE
-        // ============================================================
-        async function loadFromSupabase() {
+        async function carregarDadosCompletos() {
             try {
                 mostrarToast('🔄 Carregando dados do Supabase...');
                 
-                const conectado = await testarConexaoSupabase();
-                if (!conectado) {
-                    mostrarToast('⚠️ Usando dados locais (offline)');
-                    carregarDadosLocal();
-                    renderizarTabelaCadastrados();
-                    carregarDatalist();
-                    carregarSelectCartao();
-                    return;
-                }
-
                 const mes = document.getElementById('mes').value;
                 const ano = parseInt(document.getElementById('ano').value);
 
                 // 1. Carregar funcionários
-                const { data: funcionarios } = await supabaseClient
+                const { data: funcionarios, error: funcError } = await supabaseClient
                     .from('funcionarios')
                     .select('*')
                     .order('nome');
 
+                if (funcError) throw funcError;
+
                 if (funcionarios && funcionarios.length > 0) {
                     funcionariosCadastrados = funcionarios;
-                    salvarFuncionariosStorage();
                     console.log(`✅ ${funcionarios.length} funcionários carregados`);
                 } else {
-                    carregarDadosLocal();
+                    funcionariosCadastrados = [];
+                    console.log('⚠️ Nenhum funcionário encontrado');
                 }
 
-                // 2. Carregar marcações
-                const { data: marcacoes } = await supabaseClient
+                // 2. Carregar marcações do mês/ano atual
+                const { data: marcacoes, error: marcError } = await supabaseClient
                     .from('marcacoes')
                     .select('*')
                     .eq('mes', mes)
                     .eq('ano', ano);
 
+                if (marcError) throw marcError;
+
+                // Montar objeto de pontos
+                pontosPorFuncionario = {};
                 if (marcacoes && marcacoes.length > 0) {
-                    pontosPorFuncionario = {};
                     marcacoes.forEach(m => {
                         const func = funcionariosCadastrados.find(f => f.id === m.funcionario_id);
                         if (func) {
@@ -1709,81 +1508,70 @@
                             };
                         }
                     });
-                    salvarPontosStorage();
                     console.log(`✅ ${marcacoes.length} marcações carregadas`);
                 }
 
-                // 3. Carregar imagens
-                const { data: imagens } = await supabaseClient
+                // 3. Carregar imagens do mês/ano atual
+                const { data: imagens, error: imgError } = await supabaseClient
                     .from('imagens_cartao')
                     .select('*')
                     .eq('mes', mes)
                     .eq('ano', ano);
 
+                if (imgError) throw imgError;
+
+                imagemCartaoPorFuncionario = {};
                 if (imagens && imagens.length > 0) {
-                    imagemCartaoPorFuncionario = {};
                     imagens.forEach(img => {
                         const func = funcionariosCadastrados.find(f => f.id === img.funcionario_id);
                         if (func) {
                             imagemCartaoPorFuncionario[func.nome] = img.imagem_url;
                         }
                     });
-                    salvarImagemCartaoStorage();
                     console.log(`✅ ${imagens.length} imagens carregadas`);
                 }
 
+                // Atualizar UI
                 renderizarTabelaCadastrados();
                 carregarDatalist();
                 carregarSelectCartao();
                 atualizarContador();
                 atualizarBadgeErros();
 
+                // Se tiver funcionário selecionado, atualizar dados
                 if (funcionarioAtual) {
-                    dadosHorarios = pontosPorFuncionario[funcionarioAtual] || {};
-                    gerarTabela();
+                    const func = funcionariosCadastrados.find(f => f.nome === funcionarioAtual);
+                    if (func) {
+                        funcionarioIdAtual = func.id;
+                        dadosHorarios = pontosPorFuncionario[funcionarioAtual] || {};
+                        gerarTabela();
+                    } else {
+                        funcionarioAtual = null;
+                        dadosHorarios = {};
+                        gerarTabela();
+                    }
                 }
 
                 mostrarToast('✅ Dados carregados do Supabase!');
 
             } catch (error) {
-                console.error('❌ Erro ao carregar:', error);
-                mostrarToast('⚠️ Usando dados locais. Erro: ' + error.message);
-                carregarDadosLocal();
+                console.error('❌ Erro ao carregar dados:', error);
+                mostrarToast('❌ Erro: ' + error.message);
+                funcionariosCadastrados = [];
+                pontosPorFuncionario = {};
                 renderizarTabelaCadastrados();
                 carregarDatalist();
                 carregarSelectCartao();
             }
         }
 
-        // ============================================================
-        // FUNÇÕES DE STORAGE
-        // ============================================================
-        function salvarFuncionariosStorage() {
-            localStorage.setItem('funcionarios', JSON.stringify(funcionariosCadastrados));
-        }
-
-        function salvarPontosStorage() {
-            localStorage.setItem('pontosPorFuncionario', JSON.stringify(pontosPorFuncionario));
-        }
-
-        function salvarImagemCartaoStorage() {
-            localStorage.setItem('imagemCartaoPorFuncionario', JSON.stringify(imagemCartaoPorFuncionario));
-        }
-
-        function carregarDadosLocal() {
-            const stored = localStorage.getItem('funcionarios');
-            if (stored) {
-                funcionariosCadastrados = JSON.parse(stored);
-            }
-
-            const pontos = localStorage.getItem('pontosPorFuncionario');
-            if (pontos) {
-                pontosPorFuncionario = JSON.parse(pontos);
-            }
-
-            const imagens = localStorage.getItem('imagemCartaoPorFuncionario');
-            if (imagens) {
-                imagemCartaoPorFuncionario = JSON.parse(imagens);
+        function recarregarDadosAtuais() {
+            if (funcionarioAtual) {
+                const func = funcionariosCadastrados.find(f => f.nome === funcionarioAtual);
+                if (func) {
+                    dadosHorarios = pontosPorFuncionario[funcionarioAtual] || {};
+                    gerarTabela();
+                }
             }
         }
 
@@ -1843,7 +1631,7 @@
         }
 
         async function salvarFuncionario() {
-            const nome = document.getElementById('cadNome').value;
+            const nome = document.getElementById('cadNome').value.trim();
             if (!nome) { mostrarToast('⚠️ Preencha o Nome!'); return; }
 
             const dadosFunc = {
@@ -1853,28 +1641,37 @@
                 admissao: document.getElementById('cadAdmissao').value || null,
                 aso: document.getElementById('cadASO').value || null,
                 aniversario: document.getElementById('cadAniversario').value || null,
-                foto: fotoAtualCadastro || null
+                foto: fotoAtualCadastro || null,
+                updated_at: new Date().toISOString()
             };
 
             try {
                 if (indexEditando === -1) {
-                    const { data } = await supabaseClient.from('funcionarios').insert(dadosFunc).select();
+                    const { data, error } = await supabaseClient.from('funcionarios').insert(dadosFunc).select();
+                    if (error) throw error;
                     if (data && data[0]) {
                         funcionariosCadastrados.push(data[0]);
+                        mostrarToast('✅ Funcionário cadastrado!');
                     }
                 } else {
                     const func = funcionariosCadastrados[indexEditando];
-                    await supabaseClient.from('funcionarios').update({ ...dadosFunc, updated_at: new Date().toISOString() }).eq('id', func.id);
-                    funcionariosCadastrados[indexEditando] = { ...func, ...dadosFunc };
+                    const { data, error } = await supabaseClient
+                        .from('funcionarios')
+                        .update(dadosFunc)
+                        .eq('id', func.id)
+                        .select();
+                    if (error) throw error;
+                    if (data && data[0]) {
+                        funcionariosCadastrados[indexEditando] = data[0];
+                        mostrarToast('✅ Funcionário atualizado!');
+                    }
                     indexEditando = -1;
                 }
 
-                salvarFuncionariosStorage();
                 renderizarTabelaCadastrados();
                 carregarDatalist();
                 carregarSelectCartao();
                 limparFormCadastro();
-                mostrarToast('✅ Funcionário salvo!');
 
             } catch (error) {
                 console.error('Erro ao salvar:', error);
@@ -1887,15 +1684,12 @@
             
             const func = funcionariosCadastrados[index];
             try {
-                await supabaseClient.from('funcionarios').delete().eq('id', func.id);
+                const { error } = await supabaseClient.from('funcionarios').delete().eq('id', func.id);
+                if (error) throw error;
 
                 funcionariosCadastrados.splice(index, 1);
                 delete pontosPorFuncionario[func.nome];
                 delete imagemCartaoPorFuncionario[func.nome];
-
-                salvarFuncionariosStorage();
-                salvarPontosStorage();
-                salvarImagemCartaoStorage();
 
                 renderizarTabelaCadastrados();
                 carregarDatalist();
@@ -1908,8 +1702,8 @@
                     document.getElementById('matricula').value = '';
                     document.getElementById('fotoFuncionario').style.display = 'none';
                     funcionarioAtual = null;
+                    funcionarioIdAtual = null;
                     dadosHorarios = {};
-                    imagemCartaoAtual = null;
                     gerarTabela();
                 }
 
@@ -1953,8 +1747,8 @@
             document.getElementById('empresa').value = func.unidade || '';
             document.getElementById('matricula').value = func.cpf || '';
             funcionarioAtual = func.nome;
+            funcionarioIdAtual = func.id;
             dadosHorarios = pontosPorFuncionario[func.nome] || {};
-            imagemCartaoAtual = imagemCartaoPorFuncionario[func.nome] || null;
 
             const fotoDiv = document.getElementById('fotoFuncionario');
             const fotoContainer = document.getElementById('fotoContainer');
@@ -2025,6 +1819,7 @@
                     document.getElementById('matricula').value = '';
                     document.getElementById('fotoFuncionario').style.display = 'none';
                     funcionarioAtual = null;
+                    funcionarioIdAtual = null;
                     dadosHorarios = {};
                     gerarTabela();
                 }
@@ -2035,12 +1830,13 @@
         }
 
         function buscarDadosAutomatico() {
-            const nomeBusca = document.getElementById('funcionario').value;
+            const nomeBusca = document.getElementById('funcionario').value.trim();
             if (!nomeBusca) {
                 document.getElementById('empresa').value = '';
                 document.getElementById('matricula').value = '';
                 document.getElementById('fotoFuncionario').style.display = 'none';
                 funcionarioAtual = null;
+                funcionarioIdAtual = null;
                 dadosHorarios = {};
                 gerarTabela();
                 return;
@@ -2051,8 +1847,8 @@
                 document.getElementById('empresa').value = func.unidade || '';
                 document.getElementById('matricula').value = func.cpf || '';
                 funcionarioAtual = func.nome;
+                funcionarioIdAtual = func.id;
                 dadosHorarios = pontosPorFuncionario[func.nome] || {};
-                imagemCartaoAtual = imagemCartaoPorFuncionario[func.nome] || null;
 
                 const fotoDiv = document.getElementById('fotoFuncionario');
                 const fotoContainer = document.getElementById('fotoContainer');
@@ -2075,8 +1871,8 @@
                 document.getElementById('matricula').value = '';
                 document.getElementById('fotoFuncionario').style.display = 'none';
                 funcionarioAtual = null;
+                funcionarioIdAtual = null;
                 dadosHorarios = {};
-                imagemCartaoAtual = null;
                 gerarTabela();
             }
         }
@@ -2098,7 +1894,12 @@
             translateX = 0;
             translateY = 0;
             imgDisplay.style.transform = 'scale(1)';
-            if (imagemDataURL) mostrarImagem(imagemDataURL);
+            // Carregar imagem se existir
+            const imagem = imagemCartaoPorFuncionario[funcionarioAtual];
+            if (imagem) {
+                imagemDataURL = imagem;
+                mostrarImagem(imagem);
+            }
             marcarErrosGrade();
         }
 
@@ -2197,10 +1998,6 @@
                     imagemDataURL = ev.target.result;
                     mostrarImagem(imagemDataURL);
                     executarOCR();
-                    if (funcionarioAtual) {
-                        imagemCartaoPorFuncionario[funcionarioAtual] = imagemDataURL;
-                        salvarImagemCartaoStorage();
-                    }
                 };
                 reader.readAsDataURL(e.target.files[0]);
             }
@@ -2219,8 +2016,6 @@
             document.querySelectorAll('.linha-grid').forEach(linha => delete linha.dataset.origem);
             if (funcionarioAtual) {
                 delete imagemCartaoPorFuncionario[funcionarioAtual];
-                salvarImagemCartaoStorage();
-                imagemCartaoAtual = null;
             }
         }
 
@@ -2537,10 +2332,11 @@
             dadosHorarios[dia] = { e1, s1, e2, s2, _origem: 'manual' };
             if (funcionarioAtual) {
                 pontosPorFuncionario[funcionarioAtual] = dadosHorarios;
-                salvarPontosStorage();
                 gerarTabela();
                 renderizarErros();
                 atualizarBadgeErros();
+                // Salvar no Supabase
+                salvarMarcacoesNoSupabase(funcionarioAtual, dadosHorarios);
             }
         }
 
@@ -2606,16 +2402,184 @@
             if (funcionarioAtual) {
                 pontosPorFuncionario[funcionarioAtual] = novosPontos;
                 dadosHorarios = novosPontos;
-                salvarPontosStorage();
                 gerarTabela();
                 atualizarBadgeErros();
+                salvarMarcacoesNoSupabase(funcionarioAtual, novosPontos);
                 mostrarToast('✅ Ajustes salvos!');
             }
             fecharAjustes();
         }
 
         // ============================================================
-        // FUNÇÕES DE RELATÓRIOS (resumidas para manter o código menor)
+        // FUNÇÕES DE SALVAR NO SUPABASE
+        // ============================================================
+        async function salvarMarcacoesNoSupabase(nomeFuncionario, pontos) {
+            try {
+                const mes = document.getElementById('mes').value;
+                const ano = parseInt(document.getElementById('ano').value);
+                
+                const func = funcionariosCadastrados.find(f => f.nome === nomeFuncionario);
+                if (!func || !func.id) {
+                    console.error('❌ Funcionário não encontrado ou sem ID:', nomeFuncionario);
+                    mostrarToast('⚠️ Funcionário não está sincronizado com o Supabase.');
+                    return;
+                }
+
+                // Buscar marcações existentes
+                const { data: existing } = await supabaseClient
+                    .from('marcacoes')
+                    .select('*')
+                    .eq('funcionario_id', func.id)
+                    .eq('mes', mes)
+                    .eq('ano', ano);
+
+                const existingMap = {};
+                if (existing) {
+                    existing.forEach(m => {
+                        existingMap[m.dia] = m;
+                    });
+                }
+
+                // Salvar cada marcação
+                for (const [dia, dados] of Object.entries(pontos)) {
+                    const marcacaoData = {
+                        funcionario_id: func.id,
+                        dia: parseInt(dia),
+                        mes: mes,
+                        ano: ano,
+                        e1: dados.e1 || null,
+                        s1: dados.s1 || null,
+                        e2: dados.e2 || null,
+                        s2: dados.s2 || null,
+                        origem: dados._origem || 'manual',
+                        updated_at: new Date().toISOString()
+                    };
+
+                    try {
+                        if (existingMap[dia]) {
+                            await supabaseClient
+                                .from('marcacoes')
+                                .update(marcacaoData)
+                                .eq('id', existingMap[dia].id);
+                            console.log(`✅ Marcação dia ${dia} atualizada para ${nomeFuncionario}`);
+                        } else {
+                            const { data } = await supabaseClient
+                                .from('marcacoes')
+                                .insert(marcacaoData)
+                                .select();
+                            if (data && data[0]) {
+                                pontos[dia]._id = data[0].id;
+                            }
+                            console.log(`✅ Marcação dia ${dia} inserida para ${nomeFuncionario}`);
+                        }
+                    } catch (error) {
+                        console.error(`❌ Erro ao salvar marcação dia ${dia}:`, error);
+                    }
+                }
+
+                // Remover marcações deletadas
+                const diasAtuais = Object.keys(pontos).map(Number);
+                for (const existingMarc of (existing || [])) {
+                    if (!diasAtuais.includes(existingMarc.dia)) {
+                        await supabaseClient
+                            .from('marcacoes')
+                            .delete()
+                            .eq('id', existingMarc.id);
+                        console.log(`🗑️ Marcação dia ${existingMarc.dia} removida para ${nomeFuncionario}`);
+                    }
+                }
+
+                // Salvar imagem se houver
+                if (imagemDataURL) {
+                    await salvarImagemNoSupabase(func.id, imagemDataURL, mes, ano);
+                }
+
+                console.log('✅ Todas as marcações sincronizadas com o Supabase!');
+                mostrarToast('✅ Dados salvos no Supabase!');
+
+            } catch (error) {
+                console.error('❌ Erro ao sincronizar marcações:', error);
+                mostrarToast('⚠️ Erro ao salvar no Supabase: ' + error.message);
+            }
+        }
+
+        async function salvarImagemNoSupabase(funcionarioId, imagemData, mes, ano) {
+            try {
+                const { data: existing } = await supabaseClient
+                    .from('imagens_cartao')
+                    .select('*')
+                    .eq('funcionario_id', funcionarioId)
+                    .eq('mes', mes)
+                    .eq('ano', ano);
+
+                const imgData = {
+                    funcionario_id: funcionarioId,
+                    mes: mes,
+                    ano: ano,
+                    imagem_url: imagemData,
+                    uploaded_at: new Date().toISOString()
+                };
+
+                if (existing && existing.length > 0) {
+                    await supabaseClient
+                        .from('imagens_cartao')
+                        .update(imgData)
+                        .eq('id', existing[0].id);
+                    console.log('✅ Imagem atualizada no Supabase');
+                } else {
+                    await supabaseClient
+                        .from('imagens_cartao')
+                        .insert(imgData);
+                    console.log('✅ Imagem inserida no Supabase');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao salvar imagem:', error);
+            }
+        }
+
+        // ============================================================
+        // FUNÇÃO APLICAR EDITOR
+        // ============================================================
+        function aplicarEditor() {
+            if (!funcionarioAtual) {
+                mostrarToast('⚠️ Nenhum funcionário selecionado!');
+                return;
+            }
+
+            let novosPontos = {};
+            document.querySelectorAll('.linha-grid[data-dia]').forEach(el => {
+                const dia = parseInt(el.dataset.dia);
+                const e1 = el.querySelector('.ed-e1').value;
+                const s1 = el.querySelector('.ed-s1').value;
+                const e2 = el.querySelector('.ed-e2').value;
+                const s2 = el.querySelector('.ed-s2').value;
+
+                if (e1 || s1 || e2 || s2) {
+                    const origem = el.dataset.origem || 'manual';
+                    novosPontos[dia] = { e1, s1, e2, s2, _origem: origem };
+                }
+            });
+
+            pontosPorFuncionario[funcionarioAtual] = novosPontos;
+            dadosHorarios = novosPontos;
+
+            if (imagemDataURL) {
+                imagemCartaoPorFuncionario[funcionarioAtual] = imagemDataURL;
+            }
+
+            gerarTabela();
+            atualizarContador();
+            atualizarBadgeErros();
+
+            // Salvar no Supabase
+            salvarMarcacoesNoSupabase(funcionarioAtual, novosPontos);
+
+            mostrarToast('✅ Ponto salvo para ' + funcionarioAtual + '!');
+            fecharModal();
+        }
+
+        // ============================================================
+        // FUNÇÕES DE RELATÓRIOS
         // ============================================================
         function abrirRelatorios() {
             document.getElementById('modalRelatorios').classList.add('active');
@@ -2677,7 +2641,7 @@
         }
 
         // ============================================================
-        // FUNÇÕES DE PDF (resumidas)
+        // FUNÇÕES DE PDF
         // ============================================================
         function gerarRelatorioPontoDireto() {
             const nomeFuncionario = document.getElementById('filtroRelFuncionario').value;
@@ -3012,10 +2976,25 @@
             document.getElementById('modalCartao').classList.remove('active');
         }
 
-        let zoomCartaoAtual = 1;
-
         function toggleZoomCartao(img) {
             img.classList.toggle('zoomed');
+        }
+
+        function zoomCartaoIn(img) {
+            if (!img) return;
+            const current = parseFloat(img.style.transform.replace('scale(', '').replace(')', '')) || 1;
+            img.style.transform = `scale(${Math.min(current + 0.2, 3)})`;
+        }
+
+        function zoomCartaoOut(img) {
+            if (!img) return;
+            const current = parseFloat(img.style.transform.replace('scale(', '').replace(')', '')) || 1;
+            img.style.transform = `scale(${Math.max(current - 0.2, 0.5)})`;
+        }
+
+        function resetZoomCartao(img) {
+            if (!img) return;
+            img.style.transform = 'scale(1)';
         }
 
         function gerarCartaoPonto() {
@@ -3040,8 +3019,6 @@
             const ano = document.getElementById('selectCartaoAno').value;
             const dadosPonto = pontosPorFuncionario[nomeFuncionario] || {};
             const imagemCartao = imagemCartaoPorFuncionario[nomeFuncionario] || null;
-
-            zoomCartaoAtual = 1;
 
             let html = `
                 <div class="cartao-header">
@@ -3164,46 +3141,6 @@
         }
 
         // ============================================================
-        // FUNÇÃO APLICAR EDITOR
-        // ============================================================
-        function aplicarEditor() {
-            if (!funcionarioAtual) {
-                mostrarToast('⚠️ Nenhum funcionário selecionado!');
-                return;
-            }
-
-            let novosPontos = {};
-            document.querySelectorAll('.linha-grid[data-dia]').forEach(el => {
-                const dia = parseInt(el.dataset.dia);
-                const e1 = el.querySelector('.ed-e1').value;
-                const s1 = el.querySelector('.ed-s1').value;
-                const e2 = el.querySelector('.ed-e2').value;
-                const s2 = el.querySelector('.ed-s2').value;
-
-                if (e1 || s1 || e2 || s2) {
-                    const origem = el.dataset.origem || 'manual';
-                    novosPontos[dia] = { e1, s1, e2, s2, _origem: origem };
-                }
-            });
-
-            pontosPorFuncionario[funcionarioAtual] = novosPontos;
-            dadosHorarios = novosPontos;
-            salvarPontosStorage();
-
-            if (imagemDataURL) {
-                imagemCartaoPorFuncionario[funcionarioAtual] = imagemDataURL;
-                salvarImagemCartaoStorage();
-            }
-
-            gerarTabela();
-            atualizarContador();
-            atualizarBadgeErros();
-
-            mostrarToast('✅ Ponto salvo para ' + funcionarioAtual + '!');
-            fecharModal();
-        }
-
-        // ============================================================
         // FUNÇÃO LIMPAR
         // ============================================================
         function limparTudo() {
@@ -3213,8 +3150,8 @@
             document.getElementById('matricula').value = '';
             document.getElementById('fotoFuncionario').style.display = 'none';
             funcionarioAtual = null;
+            funcionarioIdAtual = null;
             dadosHorarios = {};
-            imagemCartaoAtual = null;
             atualizarContador();
             atualizarBadgeErros();
             document.getElementById('resumoHorasExtra').style.display = 'none';
@@ -3263,15 +3200,7 @@
             document.getElementById('mes').value = MESES[mesAtual];
             document.getElementById('ano').value = new Date().getFullYear();
 
-            carregarDadosLocal();
-            
-            setTimeout(() => {
-                loadFromSupabase();
-            }, 500);
-
-            setTimeout(() => {
-                testarConexaoSupabase();
-            }, 2000);
+            carregarDadosCompletos();
 
             if (window.innerWidth <= 768) {
                 document.getElementById('sidebar').classList.add('collapsed');
@@ -3284,13 +3213,12 @@
 
             gerarTabela();
             
-            mostrarToast('ℹ️ Sistema iniciado. Conectando ao Supabase...');
+            mostrarToast('ℹ️ Sistema iniciado. Carregando dados do Supabase...');
         };
 
         console.log('✅ Sistema inicializado!');
         console.log('📡 URL Supabase:', SUPABASE_URL);
-        console.log('🔑 Chave:', SUPABASE_KEY.substring(0, 30) + '...');
-        console.log('ℹ️ Clique em "Sincronizar" para conectar ao Supabase.');
+        console.log('📋 Tabelas: funcionarios, marcacoes, imagens_cartao');
     </script>
 </body>
 </html>
