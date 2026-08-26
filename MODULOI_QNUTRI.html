@@ -1709,9 +1709,8 @@
         });
 
         // ============================================================
-        // SISTEMA DE AUTENTICAÇÃO E PERFIS
+        // SISTEMA DE AUTENTICAÇÃO E PERFIS - CORRIGIDO
         // ============================================================
-        const SENHA_SISTEMA = 'admin123';
         const STORAGE_KEY = 'usuarios_sistema';
 
         let usuarioAtual = null;
@@ -1734,31 +1733,46 @@
             'admin': '#dc3545'
         };
 
+        // ============================================================
+        // FUNÇÕES DE USUÁRIOS - CORRIGIDAS
+        // ============================================================
         function carregarUsuarios() {
             try {
                 const data = localStorage.getItem(STORAGE_KEY);
                 if (data) {
-                    return JSON.parse(data);
+                    const parsed = JSON.parse(data);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        return parsed;
+                    }
                 }
-            } catch (e) {}
-            return [];
+            } catch (e) {
+                console.error('Erro ao carregar usuários:', e);
+            }
+            return criarUsuariosPadrao();
+        }
+
+        function criarUsuariosPadrao() {
+            const usuarios = [
+                { id: 'admin_1', nome: 'admin', senha: 'admin123', role: 'admin' },
+                { id: 'user_1', nome: 'usuario', senha: '1234', role: 'user' },
+                { id: 'viewer_1', nome: 'visitante', senha: '1234', role: 'viewer' }
+            ];
+            salvarUsuarios(usuarios);
+            console.log('✅ Usuários padrão criados:', usuarios.length);
+            return usuarios;
         }
 
         function salvarUsuarios(usuarios) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(usuarios));
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(usuarios));
+                console.log('✅ Usuários salvos:', usuarios.length);
+            } catch (e) {
+                console.error('Erro ao salvar usuários:', e);
+            }
         }
 
         function inicializarUsuarios() {
-            let usuarios = carregarUsuarios();
-            if (usuarios.length === 0) {
-                usuarios = [
-                    { id: 'admin_1', nome: 'admin', senha: 'admin123', role: 'admin' },
-                    { id: 'user_1', nome: 'usuario', senha: '1234', role: 'user' },
-                    { id: 'viewer_1', nome: 'visitante', senha: '1234', role: 'viewer' }
-                ];
-                salvarUsuarios(usuarios);
-            }
-            return usuarios;
+            return carregarUsuarios();
         }
 
         function getUsuarioByNome(nome) {
@@ -1768,19 +1782,28 @@
 
         function autenticar(nome, senha) {
             const usuarios = carregarUsuarios();
+            console.log('🔍 Tentando autenticar:', nome);
+            console.log('📋 Usuários disponíveis:', usuarios.map(u => u.nome));
+            
             const usuario = usuarios.find(u => u.nome.toLowerCase() === nome.toLowerCase() && u.senha === senha);
             if (usuario) {
                 usuarioAtual = { ...usuario };
                 salvarSessao();
                 atualizarUI();
+                console.log('✅ Usuário autenticado:', usuario.nome, 'Perfil:', usuario.role);
                 return true;
             }
+            console.log('❌ Falha na autenticação para:', nome);
             return false;
         }
 
         function salvarSessao() {
             if (usuarioAtual) {
-                sessionStorage.setItem('usuarioAtual', JSON.stringify(usuarioAtual));
+                try {
+                    sessionStorage.setItem('usuarioAtual', JSON.stringify(usuarioAtual));
+                } catch (e) {
+                    console.error('Erro ao salvar sessão:', e);
+                }
             }
         }
 
@@ -1858,13 +1881,30 @@
         function carregarUsuariosLogin() {
             const select = document.getElementById('loginUsuario');
             const usuarios = carregarUsuarios();
+            
+            console.log('📋 Carregando usuários no select:', usuarios);
+            
             select.innerHTML = '<option value="">-- Selecione um usuário --</option>';
-            usuarios.forEach(u => {
-                const option = document.createElement('option');
-                option.value = u.nome;
-                option.textContent = u.nome + ' (' + ROLE_LABELS[u.role] + ')';
-                select.appendChild(option);
-            });
+            
+            if (usuarios && usuarios.length > 0) {
+                usuarios.forEach(u => {
+                    const option = document.createElement('option');
+                    option.value = u.nome;
+                    option.textContent = u.nome + ' (' + ROLE_LABELS[u.role] + ')';
+                    select.appendChild(option);
+                });
+                console.log('✅ ' + usuarios.length + ' usuários carregados no select');
+            } else {
+                console.warn('⚠️ Nenhum usuário encontrado!');
+                // Criar usuários padrão se não houver nenhum
+                const novosUsuarios = criarUsuariosPadrao();
+                novosUsuarios.forEach(u => {
+                    const option = document.createElement('option');
+                    option.value = u.nome;
+                    option.textContent = u.nome + ' (' + ROLE_LABELS[u.role] + ')';
+                    select.appendChild(option);
+                });
+            }
         }
 
         function fazerLogin() {
@@ -1894,6 +1934,37 @@
                 document.getElementById('loginSenha').value = '';
                 document.getElementById('loginSenha').focus();
             }
+        }
+
+        function initAuth() {
+            // Garantir que os usuários existem
+            const usuarios = inicializarUsuarios();
+            console.log('📋 Usuários disponíveis:', usuarios);
+            
+            // Verificar sessão
+            const sessionUser = sessionStorage.getItem('usuarioAtual');
+            if (sessionUser) {
+                try {
+                    const user = JSON.parse(sessionUser);
+                    const found = usuarios.find(u => u.id === user.id);
+                    if (found) {
+                        usuarioAtual = found;
+                        document.getElementById('modalLogin').style.display = 'none';
+                        atualizarUI();
+                        console.log('✅ Sessão restaurada para:', usuarioAtual.nome);
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Erro ao restaurar sessão:', e);
+                }
+            }
+            
+            // Mostrar tela de login
+            document.getElementById('modalLogin').style.display = 'flex';
+            carregarUsuariosLogin();
+            usuarioAtual = { nome: 'Visitante', role: 'viewer' };
+            atualizarUI();
+            console.log('👤 Modo visitante ativado');
         }
 
         // ============================================================
