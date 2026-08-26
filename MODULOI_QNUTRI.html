@@ -10,7 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ===== ESTILOS COMPLETOS ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: linear-gradient(135deg, #ffe0b0 0%, #ffb84d 30%, #FF8C00 60%, #e07000 100%);
@@ -383,10 +382,11 @@
         .modal-close {
             background: none;
             border: none;
-            font-size: 26px;
+            font-size: 30px;
             cursor: pointer;
             color: #999;
             padding: 0 10px;
+            line-height: 1;
         }
         .modal-close:hover { color: #dc3545; }
         .modal-actions {
@@ -473,18 +473,16 @@
         .resumo-horas-extra .item-resumo .valor.positivo { color: #28a745; }
         .resumo-horas-extra .item-resumo .valor.negativo { color: #dc3545; }
 
-        /* MODAL LOGIN */
         .modal-login {
             display: flex !important;
             z-index: 10000;
             background: rgba(0,0,0,0.85);
         }
         .modal-login .modal-content {
-            max-width: 400px;
+            max-width: 420px;
         }
         .modal-login .modal-header {
             border-bottom: 2px solid #FF8C00;
-            justify-content: center;
         }
         .modal-login .modal-header h2 {
             text-align: center;
@@ -516,6 +514,53 @@
             text-align: center;
             display: none;
             margin-bottom: 10px;
+        }
+        .modal-login .btn-recarregar {
+            width: 100%;
+            margin-top: 6px;
+            padding: 6px;
+            font-size: 11px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.3s;
+            font-family: 'Poppins', sans-serif;
+        }
+        .modal-login .btn-recarregar:hover {
+            background: #f5f5f5;
+            border-color: #FF8C00;
+            color: #FF8C00;
+        }
+        .modal-login .btn-esqueci-senha {
+            display: block;
+            text-align: center;
+            font-size: 11px;
+            color: #FF8C00;
+            text-decoration: none;
+            margin-top: 6px;
+            cursor: pointer;
+        }
+        .modal-login .btn-esqueci-senha:hover {
+            text-decoration: underline;
+        }
+        .modal-login .login-botoes {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        .modal-login .login-botoes .btn-action {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            justify-content: center;
+        }
+        .modal-login .login-botoes .btn-action.btn-secondary {
+            flex: 0.6;
+        }
+        .modal-login .login-botoes .btn-action.btn-primary {
+            flex: 1.4;
         }
 
         .foto-mini {
@@ -624,9 +669,7 @@
             font-family: 'Poppins', sans-serif;
             color: #000000;
         }
-        .modal-md { max-width: 900px; }
 
-        /* EDITOR */
         .editor-layout {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -987,6 +1030,8 @@
             .campos-form { grid-template-columns: 1fr; }
             .filtro-relatorio { grid-template-columns: 1fr 1fr; }
             .cartao-header { flex-direction: column; text-align: center; }
+            .modal-login .login-botoes { flex-direction: column; }
+            .modal-login .login-botoes .btn-action { flex: 1; }
         }
         @media (max-width: 480px) {
             .linha-grid { grid-template-columns: 25px 50px 50px 50px 50px; font-size: 10px; }
@@ -1006,10 +1051,11 @@
     <div class="toast" id="toastSucesso"><i class="fas fa-check-circle"></i> <span id="toastMsg">Salvo!</span></div>
 
     <!-- MODAL LOGIN -->
-    <div class="modal modal-login" id="modalLogin">
+    <div class="modal modal-login active" id="modalLogin">
         <div class="modal-content">
             <div class="modal-header">
                 <h2><i class="fas fa-lock" style="color:#FF8C00;"></i> Acesso ao Sistema</h2>
+                <button class="modal-close" onclick="fecharLogin()" title="Fechar">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="login-icon">
@@ -1021,15 +1067,29 @@
                     <select id="loginUsuario" style="width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:8px;font-size:14px;font-family:'Poppins',sans-serif;">
                         <option value="">-- Selecione um usuário --</option>
                     </select>
+                    <button class="btn-recarregar" onclick="carregarUsuariosLogin()">
+                        <i class="fas fa-sync"></i> Recarregar usuários
+                    </button>
                 </div>
                 <div class="form-group" style="margin-bottom:15px;">
                     <label style="font-size:11px;font-weight:600;color:#333;">Senha</label>
                     <input type="password" id="loginSenha" placeholder="Digite sua senha" style="width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:8px;font-size:14px;font-family:'Poppins',sans-serif;" onkeydown="if(event.key==='Enter') fazerLogin()">
                 </div>
                 <div class="login-erro" id="loginErro">❌ Usuário ou senha incorretos!</div>
-                <button class="btn-action btn-primary" onclick="fazerLogin()" style="width:100%;padding:12px;font-size:16px;justify-content:center;">
-                    <i class="fas fa-sign-in-alt"></i> Entrar
-                </button>
+                
+                <div class="login-botoes">
+                    <button class="btn-action btn-secondary" onclick="fecharLogin()">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button class="btn-action btn-primary" onclick="fazerLogin()" id="btnEntrar">
+                        <i class="fas fa-sign-in-alt"></i> Entrar
+                    </button>
+                </div>
+                
+                <a href="#" class="btn-esqueci-senha" onclick="mostrarToast('ℹ️ Contate o administrador para redefinir sua senha.', 'warning')">
+                    <i class="fas fa-key"></i> Esqueci minha senha
+                </a>
+                
                 <div class="login-info">
                     <i class="fas fa-info-circle"></i> 
                     <strong>Admin:</strong> admin / admin123 | 
@@ -1338,7 +1398,7 @@
                     <p style="text-align:center;color:#999;padding:30px 0;" id="semErrosMsg">✅ Nenhum erro detectado!</p>
                 </div>
                 <div class="modal-actions">
-                    <button class="btn-action btn-outline-danger" onclick="corrigirErros()" id="btnCorrigirErros"><i class="fas fa-wrench"></i> Corrigir Automático</button>
+                    <button class="btn-action btn-outline-primary" onclick="corrigirErros()" id="btnCorrigirErros"><i class="fas fa-wrench"></i> Corrigir Automático</button>
                     <button class="btn-action btn-secondary" onclick="fecharErros()"><i class="fas fa-times"></i> Fechar</button>
                 </div>
             </div>
@@ -1475,7 +1535,7 @@
         <nav class="nav-menu">
             <a href="#"><i class="fas fa-arrow-left"></i> Voltar</a>
             <a href="#"><i class="fas fa-th-large"></i> Dashboard</a>
-            <a href="#" onclick="carregarDadosCompletos()" style="color:#28a745;"><i class="fas fa-sync"></i> Recarregar</a>
+            <a href="#" onclick="carregarDadosCompletosComFallback()" style="color:#28a745;"><i class="fas fa-sync"></i> Recarregar</a>
             <span class="user-info">
                 <i class="fas fa-user"></i>
                 <span id="headerUserName">Usuário</span>
@@ -1609,7 +1669,7 @@
         });
 
         // ============================================================
-        // SISTEMA DE AUTENTICAÇÃO E PERFIS - CORRIGIDO
+        // SISTEMA DE AUTENTICAÇÃO E PERFIS
         // ============================================================
         const STORAGE_KEY = 'usuarios_sistema';
 
@@ -1633,6 +1693,13 @@
             'admin': '#dc3545'
         };
 
+        // USUÁRIOS PADRÃO
+        const USUARIOS_PADRAO = [
+            { id: 'admin_1', nome: 'admin', senha: 'admin123', role: 'admin' },
+            { id: 'user_1', nome: 'usuario', senha: '1234', role: 'user' },
+            { id: 'viewer_1', nome: 'visitante', senha: '1234', role: 'viewer' }
+        ];
+
         // ============================================================
         // FUNÇÕES DE USUÁRIOS - CORRIGIDAS
         // ============================================================
@@ -1649,46 +1716,78 @@
             } catch (e) {
                 console.error('Erro ao carregar usuários:', e);
             }
+            
+            // Se não houver usuários no localStorage, criar os padrão
+            console.log('🔧 Criando usuários padrão...');
             return criarUsuariosPadrao();
         }
 
         function criarUsuariosPadrao() {
-            const usuarios = [
-                { id: 'admin_1', nome: 'admin', senha: 'admin123', role: 'admin' },
-                { id: 'user_1', nome: 'usuario', senha: '1234', role: 'user' },
-                { id: 'viewer_1', nome: 'visitante', senha: '1234', role: 'viewer' }
-            ];
-            salvarUsuarios(usuarios);
-            console.log('✅ Usuários padrão criados:', usuarios.length);
-            return usuarios;
+            try {
+                // Verifica se já existe no localStorage
+                const existing = localStorage.getItem(STORAGE_KEY);
+                if (existing) {
+                    try {
+                        const parsed = JSON.parse(existing);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            console.log('✅ Usuários já existem no localStorage');
+                            return parsed;
+                        }
+                    } catch (e) {}
+                }
+                
+                // Cria os usuários padrão
+                salvarUsuarios(USUARIOS_PADRAO);
+                console.log('✅ Usuários padrão criados e salvos:', USUARIOS_PADRAO.length);
+                return USUARIOS_PADRAO;
+            } catch (e) {
+                console.error('Erro ao criar usuários padrão:', e);
+                return USUARIOS_PADRAO;
+            }
         }
 
         function salvarUsuarios(usuarios) {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(usuarios));
-                console.log('✅ Usuários salvos:', usuarios.length);
+                console.log('✅ Usuários salvos no localStorage:', usuarios.length);
+                return true;
             } catch (e) {
-                console.error('Erro ao salvar usuários:', e);
+                console.error('❌ Erro ao salvar usuários:', e);
+                return false;
             }
         }
 
         function inicializarUsuarios() {
-            return carregarUsuarios();
+            console.log('🔐 Inicializando sistema de usuários...');
+            const usuarios = carregarUsuarios();
+            console.log('📋 Total de usuários:', usuarios.length);
+            return usuarios;
         }
 
+        // ============================================================
+        // FUNÇÃO AUTENTICAR - CORRIGIDA
+        // ============================================================
         function autenticar(nome, senha) {
-            const usuarios = carregarUsuarios();
             console.log('🔍 Tentando autenticar:', nome);
-            console.log('📋 Usuários disponíveis:', usuarios.map(u => u.nome));
             
-            const usuario = usuarios.find(u => u.nome.toLowerCase() === nome.toLowerCase() && u.senha === senha);
+            // Carrega os usuários do localStorage
+            const usuarios = carregarUsuarios();
+            console.log('📋 Usuários disponíveis para autenticação:', usuarios.map(u => u.nome));
+            
+            // Busca o usuário pelo nome (case insensitive) e senha
+            const usuario = usuarios.find(u => 
+                u.nome.toLowerCase() === nome.toLowerCase() && 
+                u.senha === senha
+            );
+            
             if (usuario) {
                 usuarioAtual = { ...usuario };
                 salvarSessao();
                 atualizarUI();
-                console.log('✅ Usuário autenticado:', usuario.nome, 'Perfil:', usuario.role);
+                console.log('✅ Usuário autenticado com sucesso:', usuario.nome, 'Perfil:', usuario.role);
                 return true;
             }
+            
             console.log('❌ Falha na autenticação para:', nome);
             return false;
         }
@@ -1697,6 +1796,7 @@
             if (usuarioAtual) {
                 try {
                     sessionStorage.setItem('usuarioAtual', JSON.stringify(usuarioAtual));
+                    console.log('💾 Sessão salva para:', usuarioAtual.nome);
                 } catch (e) {
                     console.error('Erro ao salvar sessão:', e);
                 }
@@ -1709,10 +1809,14 @@
                 sessionStorage.removeItem('usuarioAtual');
                 atualizarUI();
                 mostrarToast('👋 Logout realizado com sucesso!');
-                document.getElementById('modalLogin').style.display = 'flex';
+                
+                const modalLogin = document.getElementById('modalLogin');
+                modalLogin.style.display = 'flex';
+                modalLogin.classList.add('active');
                 carregarUsuariosLogin();
                 document.getElementById('loginSenha').value = '';
                 document.getElementById('loginErro').style.display = 'none';
+                console.log('🔓 Modal de login exibido');
             }
         }
 
@@ -1728,7 +1832,6 @@
 
             const isUser = usuarioAtual && (usuarioAtual.role === 'user' || usuarioAtual.role === 'admin');
 
-            // Botões de edição
             const botoesEdicao = [
                 'btnSalvarFuncionario', 'btnAplicarEditor', 'btnSalvarAjustes', 
                 'btnCorrigirErros', 'btnPreencher', 'btnOCR', 'btnLimparImagem'
@@ -1772,15 +1875,52 @@
         }
 
         // ============================================================
+        // FUNÇÃO FECHAR LOGIN
+        // ============================================================
+        function fecharLogin() {
+            console.log('🔒 fecharLogin() chamado');
+            
+            const modalLogin = document.getElementById('modalLogin');
+            modalLogin.style.display = 'none';
+            modalLogin.classList.remove('active');
+            
+            if (!usuarioAtual || !usuarioAtual.nome || usuarioAtual.nome === 'Visitante') {
+                usuarioAtual = { 
+                    id: 'visitante_1', 
+                    nome: 'Visitante', 
+                    role: 'viewer' 
+                };
+                salvarSessao();
+                atualizarUI();
+                mostrarToast('👤 Modo visitante ativado - Apenas visualização');
+                console.log('👤 Modo visitante ativado');
+            } else {
+                atualizarUI();
+            }
+            
+            carregarDadosCompletosComFallback();
+        }
+
+        // ============================================================
         // FUNÇÕES DE LOGIN - CORRIGIDAS
         // ============================================================
         function carregarUsuariosLogin() {
+            console.log('🔄 carregarUsuariosLogin() chamada');
             const select = document.getElementById('loginUsuario');
-            const usuarios = carregarUsuarios();
+            if (!select) {
+                console.error('❌ Elemento loginUsuario não encontrado!');
+                return;
+            }
             
+            const usuarios = carregarUsuarios();
             console.log('📋 Carregando usuários no select:', usuarios);
             
-            select.innerHTML = '<option value="">-- Selecione um usuário --</option>';
+            select.innerHTML = '';
+            
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = '-- Selecione um usuário --';
+            select.appendChild(defaultOption);
             
             if (usuarios && usuarios.length > 0) {
                 usuarios.forEach(u => {
@@ -1791,7 +1931,7 @@
                 });
                 console.log('✅ ' + usuarios.length + ' usuários carregados no select');
             } else {
-                console.warn('⚠️ Nenhum usuário encontrado!');
+                console.warn('⚠️ Nenhum usuário encontrado! Criando padrão...');
                 const novosUsuarios = criarUsuariosPadrao();
                 novosUsuarios.forEach(u => {
                     const option = document.createElement('option');
@@ -1803,7 +1943,10 @@
         }
 
         function fazerLogin() {
-            const nome = document.getElementById('loginUsuario').value;
+            console.log('🔑 fazerLogin() chamado');
+            
+            const select = document.getElementById('loginUsuario');
+            const nome = select ? select.value : '';
             const senha = document.getElementById('loginSenha').value;
             const erro = document.getElementById('loginErro');
 
@@ -1819,29 +1962,42 @@
                 return;
             }
 
-            console.log('🔑 Tentando login com:', nome, senha);
+            console.log('🔑 Tentando login com:', nome, 'senha:', senha);
 
             if (autenticar(nome, senha)) {
-                console.log('✅ Login bem-sucedido! Fechando modal...');
-                // Fechar o modal de login
-                document.getElementById('modalLogin').style.display = 'none';
+                console.log('✅ Login bem-sucedido!');
+                
+                const modalLogin = document.getElementById('modalLogin');
+                modalLogin.style.display = 'none';
+                modalLogin.classList.remove('active');
+                
+                atualizarUI();
                 mostrarToast('✅ Bem-vindo, ' + nome + '! (' + ROLE_LABELS[usuarioAtual.role] + ')');
-                // Carregar os dados
-                carregarDadosCompletos();
+                carregarDadosCompletosComFallback();
+                
+                erro.style.display = 'none';
+                document.getElementById('loginSenha').value = '';
+                
+                console.log('✅ Modal fechado e acesso liberado para:', nome);
+                
             } else {
                 erro.textContent = '❌ Usuário ou senha incorretos!';
                 erro.style.display = 'block';
                 document.getElementById('loginSenha').value = '';
                 document.getElementById('loginSenha').focus();
+                console.log('❌ Falha no login para:', nome);
             }
         }
 
+        // ============================================================
+        // INIT AUTH - CORRIGIDO
+        // ============================================================
         function initAuth() {
-            // Garantir que os usuários existem
+            console.log('🔐 Inicializando autenticação...');
+            
             const usuarios = inicializarUsuarios();
             console.log('📋 Usuários disponíveis:', usuarios);
             
-            // Verificar sessão
             const sessionUser = sessionStorage.getItem('usuarioAtual');
             if (sessionUser) {
                 try {
@@ -1849,218 +2005,150 @@
                     const found = usuarios.find(u => u.id === user.id);
                     if (found) {
                         usuarioAtual = found;
-                        document.getElementById('modalLogin').style.display = 'none';
+                        const modalLogin = document.getElementById('modalLogin');
+                        modalLogin.style.display = 'none';
+                        modalLogin.classList.remove('active');
                         atualizarUI();
                         console.log('✅ Sessão restaurada para:', usuarioAtual.nome);
-                        carregarDadosCompletos();
+                        setTimeout(() => {
+                            carregarDadosCompletosComFallback();
+                        }, 300);
                         return;
+                    } else {
+                        console.log('⚠️ Usuário da sessão não encontrado, removendo sessão');
+                        sessionStorage.removeItem('usuarioAtual');
                     }
                 } catch (e) {
                     console.error('Erro ao restaurar sessão:', e);
+                    sessionStorage.removeItem('usuarioAtual');
                 }
             }
             
-            // Mostrar tela de login
-            document.getElementById('modalLogin').style.display = 'flex';
-            carregarUsuariosLogin();
-            usuarioAtual = { nome: 'Visitante', role: 'viewer' };
-            atualizarUI();
-            console.log('👤 Modo visitante ativado');
-        }
-
-        // ============================================================
-        // MODAL PERFIS
-        // ============================================================
-        function abrirModalPerfis() {
-            if (!usuarioAtual || usuarioAtual.role !== 'admin') {
-                mostrarToast('⚠️ Apenas administradores podem acessar esta área!', 'warning');
-                return;
-            }
-            document.getElementById('modalPerfis').classList.add('active');
-            renderizarPerfis();
-        }
-
-        function fecharModalPerfis() {
-            document.getElementById('modalPerfis').classList.remove('active');
-        }
-
-        function renderizarPerfis() {
-            const container = document.getElementById('listaPerfis');
-            const usuarios = carregarUsuarios();
+            console.log('🔓 Nenhuma sessão ativa. Mostrando modal de login...');
             
-            if (usuarios.length === 0) {
-                container.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">Nenhum usuário cadastrado</p>';
-                return;
-            }
-
-            let html = '<div style="padding:10px;background:#f8f9fa;font-size:11px;font-weight:600;color:#000;display:flex;justify-content:space-between;border-bottom:1px solid #eee;">';
-            html += '<span>Usuário</span>';
-            html += '<span>Perfil</span>';
-            html += '<span>Ações</span>';
-            html += '</div>';
-
-            usuarios.forEach((u, index) => {
-                const isCurrentUser = usuarioAtual && usuarioAtual.id === u.id;
-                const podeEditar = !isCurrentUser;
-                const roleLabel = ROLE_LABELS[u.role] || 'Visualizador';
-                const roleColor = ROLE_COLORS[u.role] || '#6c757d';
-
-                html += `<div class="perfil-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #eee;">`;
-                html += `<div class="perfil-info" style="display:flex;flex-direction:column;">
-                            <span class="perfil-nome" style="font-weight:600;font-size:14px;">${u.nome} ${isCurrentUser ? ' (Você)' : ''}</span>
-                            <span class="perfil-email" style="font-size:12px;color:#666;">${u.email || 'sem email'}</span>
-                        </div>`;
-                html += `<span class="perfil-role ${u.role}" style="font-size:11px;font-weight:600;padding:2px 12px;border-radius:12px;background:${roleColor};color:#fff;">${roleLabel}</span>`;
-                html += `<div>
-                            ${podeEditar ? `
-                                <select onchange="alterarPerfil(${index}, this.value)" style="padding:3px 6px;border-radius:4px;border:1px solid #ddd;font-size:11px;">
-                                    <option value="viewer" ${u.role === 'viewer' ? 'selected' : ''}>Visualizador</option>
-                                    <option value="user" ${u.role === 'user' ? 'selected' : ''}>Usuário</option>
-                                    <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Administrador</option>
-                                </select>
-                                <button class="btn-action btn-danger" style="padding:2px 8px;font-size:10px;" onclick="removerPerfil(${index})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            ` : `
-                                <span style="font-size:11px;color:#999;"><i class="fas fa-lock"></i> Perfil atual</span>
-                            `}
-                        </div>`;
-                html += `</div>`;
-            });
-
-            container.innerHTML = html;
-        }
-
-        function alterarPerfil(index, novoRole) {
-            if (!usuarioAtual || usuarioAtual.role !== 'admin') {
-                mostrarToast('⚠️ Apenas administradores podem alterar perfis!', 'warning');
-                return;
-            }
-
-            const usuarios = carregarUsuarios();
-            if (index >= usuarios.length) return;
-
-            if (usuarioAtual && usuarios[index].id === usuarioAtual.id) {
-                mostrarToast('⚠️ Você não pode alterar seu próprio perfil!', 'warning');
-                return;
-            }
-
-            usuarios[index].role = novoRole;
-            salvarUsuarios(usuarios);
-            renderizarPerfis();
-            mostrarToast(`✅ Perfil de "${usuarios[index].nome}" alterado para ${ROLE_LABELS[novoRole]}`);
-        }
-
-        function removerPerfil(index) {
-            if (!usuarioAtual || usuarioAtual.role !== 'admin') {
-                mostrarToast('⚠️ Apenas administradores podem remover usuários!', 'warning');
-                return;
-            }
-
-            const usuarios = carregarUsuarios();
-            if (index >= usuarios.length) return;
-
-            if (usuarioAtual && usuarios[index].id === usuarioAtual.id) {
-                mostrarToast('⚠️ Você não pode remover seu próprio perfil!', 'warning');
-                return;
-            }
-
-            if (confirm(`Deseja remover o usuário "${usuarios[index].nome}"?`)) {
-                usuarios.splice(index, 1);
-                salvarUsuarios(usuarios);
-                renderizarPerfis();
-                mostrarToast('✅ Usuário removido!');
-            }
-        }
-
-        function adicionarPerfil() {
-            if (!usuarioAtual || usuarioAtual.role !== 'admin') {
-                mostrarToast('⚠️ Apenas administradores podem adicionar usuários!', 'warning');
-                return;
-            }
-
-            const nome = document.getElementById('novoPerfilNome').value.trim();
-            const role = document.getElementById('novoPerfilRole').value;
-
-            if (!nome) {
-                mostrarToast('⚠️ Digite o nome do usuário!', 'warning');
-                return;
-            }
-
-            const usuarios = carregarUsuarios();
-            if (usuarios.find(u => u.nome.toLowerCase() === nome.toLowerCase())) {
-                mostrarToast('⚠️ Usuário já existe!', 'warning');
-                return;
-            }
-
-            usuarios.push({
-                id: 'user_' + Date.now(),
-                nome: nome,
-                senha: '1234',
-                role: role,
-                email: ''
-            });
-
-            salvarUsuarios(usuarios);
-            document.getElementById('novoPerfilNome').value = '';
-            renderizarPerfis();
-            mostrarToast(`✅ Usuário "${nome}" adicionado como ${ROLE_LABELS[role]}!`);
+            const modalLogin = document.getElementById('modalLogin');
+            modalLogin.style.display = 'flex';
+            modalLogin.classList.add('active');
+            
+            carregarUsuariosLogin();
+            
+            usuarioAtual = { 
+                id: 'visitante_1', 
+                nome: 'Visitante', 
+                role: 'viewer' 
+            };
+            atualizarUI();
+            console.log('👤 Modo visitante ativado (aguardando login)');
+            
+            setTimeout(() => {
+                carregarDadosCompletosComFallback();
+            }, 500);
         }
 
         // ============================================================
-        // VARIÁVEIS GLOBAIS
+        // FUNÇÃO DE CARREGAMENTO COM FALLBACK
         // ============================================================
-        let funcionariosCadastrados = [];
-        let pontosPorFuncionario = {};
-        let imagemCartaoPorFuncionario = {};
-        let funcionarioAtual = null;
-        let dadosHorarios = {};
-        let fotoAtualCadastro = "";
-        let indexEditando = -1;
-        let imagemDataURL = null;
-        let isProcessing = false;
-        let escalaAtual = 1;
-        let isDragging = false;
-        let startX, startY, translateX = 0, translateY = 0;
-        let funcionarioIdAtual = null;
-        let mesAtual = "Janeiro";
-        let anoAtual = 2026;
-
-        const JORNADA_PADRAO_MINUTOS = 480;
-        const JORNADA_PADRAO = "08:00";
-        const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-
-        const imgDisplay = document.getElementById('imgDisplay');
+        async function carregarDadosCompletosComFallback() {
+            try {
+                await carregarDadosCompletos();
+            } catch (error) {
+                console.error('❌ Erro ao carregar dados, usando modo offline:', error);
+                mostrarToast('⚠️ Modo offline: Dados carregados localmente', 'warning');
+                
+                if (funcionariosCadastrados.length === 0) {
+                    try {
+                        const localData = localStorage.getItem('funcionarios_offline');
+                        if (localData) {
+                            const parsed = JSON.parse(localData);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                funcionariosCadastrados = parsed;
+                                console.log('📋 Dados carregados do localStorage:', funcionariosCadastrados.length);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Erro ao carregar dados locais:', e);
+                    }
+                }
+                
+                renderizarTabelaCadastrados();
+                carregarDatalist();
+                carregarSelectCartao();
+                atualizarContador();
+                atualizarBadgeErros();
+                
+                if (funcionarioAtual) {
+                    const func = funcionariosCadastrados.find(f => f.nome === funcionarioAtual);
+                    if (func) {
+                        funcionarioIdAtual = func.id;
+                        dadosHorarios = pontosPorFuncionario[funcionarioAtual] || {};
+                        gerarTabela();
+                    }
+                }
+            }
+        }
 
         // ============================================================
-        // FUNÇÕES DE CARREGAMENTO DE DADOS DO SUPABASE
+        // CARREGAR DADOS DO SUPABASE
         // ============================================================
         async function carregarDadosCompletos() {
             try {
-                mostrarToast('🔄 Carregando dados do Supabase...');
+                console.log('🔄 Carregando dados do Supabase...');
+                mostrarToast('🔄 Carregando dados...');
                 
                 const mes = document.getElementById('mes').value;
                 const ano = parseInt(document.getElementById('ano').value);
                 mesAtual = mes;
                 anoAtual = ano;
 
-                const { data: funcionarios, error: funcError } = await supabaseClient
-                    .from('funcionarios')
-                    .select('*')
-                    .order('nome');
+                try {
+                    const { data: funcData, error: funcError } = await supabaseClient
+                        .from('funcionarios')
+                        .select('*')
+                        .order('nome');
 
-                if (funcError) throw funcError;
+                    if (funcError) {
+                        console.warn('⚠️ Erro ao carregar funcionários:', funcError);
+                        throw new Error('Erro ao carregar funcionários: ' + funcError.message);
+                    }
 
-                if (funcionarios && funcionarios.length > 0) {
-                    funcionariosCadastrados = funcionarios;
-                    console.log(`✅ ${funcionarios.length} funcionários carregados`);
-                } else {
-                    funcionariosCadastrados = [];
-                    console.log('⚠️ Nenhum funcionário encontrado');
+                    if (funcData && funcData.length > 0) {
+                        funcionariosCadastrados = funcData;
+                        try {
+                            localStorage.setItem('funcionarios_offline', JSON.stringify(funcData));
+                        } catch (e) {}
+                        console.log(`✅ ${funcData.length} funcionários carregados`);
+                    } else {
+                        funcionariosCadastrados = [];
+                        console.log('⚠️ Nenhum funcionário encontrado no Supabase');
+                    }
+                } catch (funcError) {
+                    console.error('❌ Erro crítico ao carregar funcionários:', funcError);
+                    try {
+                        const localData = localStorage.getItem('funcionarios_offline');
+                        if (localData) {
+                            const parsed = JSON.parse(localData);
+                            if (parsed && parsed.length > 0) {
+                                funcionariosCadastrados = parsed;
+                                console.log('📋 Funcionários carregados do localStorage (fallback):', parsed.length);
+                            }
+                        }
+                    } catch (e) {}
+                    throw funcError;
                 }
 
-                await carregarMarcacoesDoMes(mes, ano);
-                await carregarImagensDoMes(mes, ano);
+                try {
+                    await carregarMarcacoesDoMes(mes, ano);
+                } catch (marcError) {
+                    console.warn('⚠️ Erro ao carregar marcações:', marcError);
+                    pontosPorFuncionario = {};
+                }
+
+                try {
+                    await carregarImagensDoMes(mes, ano);
+                } catch (imgError) {
+                    console.warn('⚠️ Erro ao carregar imagens:', imgError);
+                    imagemCartaoPorFuncionario = {};
+                }
 
                 renderizarTabelaCadastrados();
                 carregarDatalist();
@@ -2076,21 +2164,23 @@
                         gerarTabela();
                     } else {
                         funcionarioAtual = null;
+                        funcionarioIdAtual = null;
                         dadosHorarios = {};
                         gerarTabela();
                     }
                 }
 
-                mostrarToast('✅ Dados carregados do Supabase!');
+                mostrarToast('✅ Dados carregados!');
 
             } catch (error) {
                 console.error('❌ Erro ao carregar dados:', error);
-                mostrarToast('❌ Erro: ' + error.message, 'error');
-                funcionariosCadastrados = [];
-                pontosPorFuncionario = {};
+                mostrarToast('⚠️ ' + error.message, 'error');
+                
                 renderizarTabelaCadastrados();
                 carregarDatalist();
                 carregarSelectCartao();
+                atualizarContador();
+                atualizarBadgeErros();
             }
         }
 
@@ -2146,22 +2236,30 @@
             }
         }
 
-        function recarregarDadosAtuais() {
-            const mes = document.getElementById('mes').value;
-            const ano = parseInt(document.getElementById('ano').value);
-            
-            if (mes !== mesAtual || ano !== anoAtual) {
-                mesAtual = mes;
-                anoAtual = ano;
-                carregarDadosCompletos();
-            } else if (funcionarioAtual) {
-                const func = funcionariosCadastrados.find(f => f.nome === funcionarioAtual);
-                if (func) {
-                    dadosHorarios = pontosPorFuncionario[funcionarioAtual] || {};
-                    gerarTabela();
-                }
-            }
-        }
+        // ============================================================
+        // VARIÁVEIS GLOBAIS
+        // ============================================================
+        let funcionariosCadastrados = [];
+        let pontosPorFuncionario = {};
+        let imagemCartaoPorFuncionario = {};
+        let funcionarioAtual = null;
+        let dadosHorarios = {};
+        let fotoAtualCadastro = "";
+        let indexEditando = -1;
+        let imagemDataURL = null;
+        let isProcessing = false;
+        let escalaAtual = 1;
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
+        let funcionarioIdAtual = null;
+        let mesAtual = "Janeiro";
+        let anoAtual = 2026;
+
+        const JORNADA_PADRAO_MINUTOS = 480;
+        const JORNADA_PADRAO = "08:00";
+        const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+        const imgDisplay = document.getElementById('imgDisplay');
 
         // ============================================================
         // FUNÇÕES DE CADASTRO
@@ -2486,6 +2584,23 @@
                 funcionarioIdAtual = null;
                 dadosHorarios = {};
                 gerarTabela();
+            }
+        }
+
+        function recarregarDadosAtuais() {
+            const mes = document.getElementById('mes').value;
+            const ano = parseInt(document.getElementById('ano').value);
+            
+            if (mes !== mesAtual || ano !== anoAtual) {
+                mesAtual = mes;
+                anoAtual = ano;
+                carregarDadosCompletos();
+            } else if (funcionarioAtual) {
+                const func = funcionariosCadastrados.find(f => f.nome === funcionarioAtual);
+                if (func) {
+                    dadosHorarios = pontosPorFuncionario[funcionarioAtual] || {};
+                    gerarTabela();
+                }
             }
         }
 
@@ -3894,41 +4009,178 @@
         }
 
         // ============================================================
+        // MODAL PERFIS
+        // ============================================================
+        function abrirModalPerfis() {
+            if (!usuarioAtual || usuarioAtual.role !== 'admin') {
+                mostrarToast('⚠️ Apenas administradores podem acessar esta área!', 'warning');
+                return;
+            }
+            document.getElementById('modalPerfis').classList.add('active');
+            renderizarPerfis();
+        }
+
+        function fecharModalPerfis() {
+            document.getElementById('modalPerfis').classList.remove('active');
+        }
+
+        function renderizarPerfis() {
+            const container = document.getElementById('listaPerfis');
+            const usuarios = carregarUsuarios();
+            
+            if (usuarios.length === 0) {
+                container.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">Nenhum usuário cadastrado</p>';
+                return;
+            }
+
+            let html = '<div style="padding:10px;background:#f8f9fa;font-size:11px;font-weight:600;color:#000;display:flex;justify-content:space-between;border-bottom:1px solid #eee;">';
+            html += '<span>Usuário</span>';
+            html += '<span>Perfil</span>';
+            html += '<span>Ações</span>';
+            html += '</div>';
+
+            usuarios.forEach((u, index) => {
+                const isCurrentUser = usuarioAtual && usuarioAtual.id === u.id;
+                const podeEditar = !isCurrentUser;
+                const roleLabel = ROLE_LABELS[u.role] || 'Visualizador';
+                const roleColor = ROLE_COLORS[u.role] || '#6c757d';
+
+                html += `<div class="perfil-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #eee;">`;
+                html += `<div class="perfil-info" style="display:flex;flex-direction:column;">
+                            <span class="perfil-nome" style="font-weight:600;font-size:14px;">${u.nome} ${isCurrentUser ? ' (Você)' : ''}</span>
+                            <span class="perfil-email" style="font-size:12px;color:#666;">${u.email || 'sem email'}</span>
+                        </div>`;
+                html += `<span class="perfil-role ${u.role}" style="font-size:11px;font-weight:600;padding:2px 12px;border-radius:12px;background:${roleColor};color:#fff;">${roleLabel}</span>`;
+                html += `<div>
+                            ${podeEditar ? `
+                                <select onchange="alterarPerfil(${index}, this.value)" style="padding:3px 6px;border-radius:4px;border:1px solid #ddd;font-size:11px;">
+                                    <option value="viewer" ${u.role === 'viewer' ? 'selected' : ''}>Visualizador</option>
+                                    <option value="user" ${u.role === 'user' ? 'selected' : ''}>Usuário</option>
+                                    <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Administrador</option>
+                                </select>
+                                <button class="btn-action btn-danger" style="padding:2px 8px;font-size:10px;" onclick="removerPerfil(${index})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            ` : `
+                                <span style="font-size:11px;color:#999;"><i class="fas fa-lock"></i> Perfil atual</span>
+                            `}
+                        </div>`;
+                html += `</div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function alterarPerfil(index, novoRole) {
+            if (!usuarioAtual || usuarioAtual.role !== 'admin') {
+                mostrarToast('⚠️ Apenas administradores podem alterar perfis!', 'warning');
+                return;
+            }
+
+            const usuarios = carregarUsuarios();
+            if (index >= usuarios.length) return;
+
+            if (usuarioAtual && usuarios[index].id === usuarioAtual.id) {
+                mostrarToast('⚠️ Você não pode alterar seu próprio perfil!', 'warning');
+                return;
+            }
+
+            usuarios[index].role = novoRole;
+            salvarUsuarios(usuarios);
+            renderizarPerfis();
+            mostrarToast(`✅ Perfil de "${usuarios[index].nome}" alterado para ${ROLE_LABELS[novoRole]}`);
+        }
+
+        function removerPerfil(index) {
+            if (!usuarioAtual || usuarioAtual.role !== 'admin') {
+                mostrarToast('⚠️ Apenas administradores podem remover usuários!', 'warning');
+                return;
+            }
+
+            const usuarios = carregarUsuarios();
+            if (index >= usuarios.length) return;
+
+            if (usuarioAtual && usuarios[index].id === usuarioAtual.id) {
+                mostrarToast('⚠️ Você não pode remover seu próprio perfil!', 'warning');
+                return;
+            }
+
+            if (confirm(`Deseja remover o usuário "${usuarios[index].nome}"?`)) {
+                usuarios.splice(index, 1);
+                salvarUsuarios(usuarios);
+                renderizarPerfis();
+                mostrarToast('✅ Usuário removido!');
+            }
+        }
+
+        function adicionarPerfil() {
+            if (!usuarioAtual || usuarioAtual.role !== 'admin') {
+                mostrarToast('⚠️ Apenas administradores podem adicionar usuários!', 'warning');
+                return;
+            }
+
+            const nome = document.getElementById('novoPerfilNome').value.trim();
+            const role = document.getElementById('novoPerfilRole').value;
+
+            if (!nome) {
+                mostrarToast('⚠️ Digite o nome do usuário!', 'warning');
+                return;
+            }
+
+            const usuarios = carregarUsuarios();
+            if (usuarios.find(u => u.nome.toLowerCase() === nome.toLowerCase())) {
+                mostrarToast('⚠️ Usuário já existe!', 'warning');
+                return;
+            }
+
+            usuarios.push({
+                id: 'user_' + Date.now(),
+                nome: nome,
+                senha: '1234',
+                role: role,
+                email: ''
+            });
+
+            salvarUsuarios(usuarios);
+            document.getElementById('novoPerfilNome').value = '';
+            renderizarPerfis();
+            mostrarToast(`✅ Usuário "${nome}" adicionado como ${ROLE_LABELS[role]}!`);
+        }
+
+        // ============================================================
         // INICIALIZAÇÃO
         // ============================================================
         window.onload = function() {
-            // Inicializar autenticação
+            console.log('🚀 Inicializando sistema...');
+            
             initAuth();
             
             const mesAtual = new Date().getMonth();
+            const anoAtual = new Date().getFullYear();
             
             document.getElementById('mes').value = MESES[mesAtual];
-            document.getElementById('ano').value = new Date().getFullYear();
+            document.getElementById('ano').value = anoAtual;
+            document.getElementById('filtroRelMes').value = MESES[mesAtual];
+            document.getElementById('selectCartaoMes').value = MESES[mesAtual];
+            document.getElementById('selectCartaoAno').value = anoAtual;
 
-            carregarDadosCompletos();
+            setTimeout(() => {
+                carregarDadosCompletosComFallback();
+            }, 500);
 
             if (window.innerWidth <= 768) {
                 document.getElementById('sidebar').classList.add('collapsed');
                 document.getElementById('sidebarToggle').classList.add('collapsed');
             }
 
-            document.getElementById('filtroRelMes').value = MESES[mesAtual];
-            document.getElementById('selectCartaoMes').value = MESES[mesAtual];
-            document.getElementById('selectCartaoAno').value = new Date().getFullYear();
-
             gerarTabela();
             
-            salvarSessao();
-            
-            mostrarToast('ℹ️ Sistema iniciado. Carregando dados do Supabase...');
+            console.log('✅ Sistema inicializado!');
+            console.log('📡 URL Supabase:', SUPABASE_URL);
+            console.log('🔐 Sistema de autenticação ativo!');
+            console.log('👤 Perfis: viewer (visualização), user (edição), admin (tudo)');
+            console.log('🔑 Senhas padrão: admin/admin123, usuario/1234, visitante/1234');
         };
-
-        console.log('✅ Sistema inicializado!');
-        console.log('📡 URL Supabase:', SUPABASE_URL);
-        console.log('📋 Tabelas: funcionarios, marcacoes, imagens_cartao');
-        console.log('🔐 Sistema de autenticação ativo!');
-        console.log('👤 Perfis: viewer (visualização), user (edição), admin (tudo)');
-        console.log('🔑 Senhas padrão: admin/admin123, usuario/1234, visitante/1234');
     </script>
 </body>
 </html>
