@@ -1051,7 +1051,7 @@
     <div class="toast" id="toastSucesso"><i class="fas fa-check-circle"></i> <span id="toastMsg">Salvo!</span></div>
 
     <!-- MODAL LOGIN -->
-    <div class="modal modal-login active" id="modalLogin">
+    <div class="modal modal-login" id="modalLogin">
         <div class="modal-content">
             <div class="modal-header">
                 <h2><i class="fas fa-lock" style="color:#FF8C00;"></i> Acesso ao Sistema</h2>
@@ -1669,7 +1669,7 @@
         });
 
         // ============================================================
-        // SISTEMA DE AUTENTICAÇÃO E PERFIS - CORREÇÃO DEFINITIVA
+        // SISTEMA DE AUTENTICAÇÃO E PERFIS
         // ============================================================
         const STORAGE_KEY = 'usuarios_sistema';
 
@@ -1693,7 +1693,7 @@
             'admin': '#dc3545'
         };
 
-        // USUÁRIOS PADRÃO - DEFINITIVOS
+        // USUÁRIOS PADRÃO
         const USUARIOS_PADRAO = [
             { id: 'admin_1', nome: 'admin', senha: 'admin123', role: 'admin' },
             { id: 'user_1', nome: 'usuario', senha: '1234', role: 'user' },
@@ -1701,7 +1701,7 @@
         ];
 
         // ============================================================
-        // FUNÇÕES DE USUÁRIOS - CORREÇÃO DEFINITIVA
+        // FUNÇÕES DE USUÁRIOS
         // ============================================================
         function carregarUsuarios() {
             try {
@@ -1717,19 +1717,28 @@
                 console.error('Erro ao carregar usuários:', e);
             }
             
-            // Se não houver usuários ou estiver corrompido, cria os padrão
             console.log('🔧 Criando usuários padrão...');
             return criarUsuariosPadrao();
         }
 
         function criarUsuariosPadrao() {
             try {
-                // SEMPRE sobrescreve com os usuários padrão para garantir que existam
+                const existing = localStorage.getItem(STORAGE_KEY);
+                if (existing) {
+                    try {
+                        const parsed = JSON.parse(existing);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            console.log('✅ Usuários já existem no localStorage');
+                            return parsed;
+                        }
+                    } catch (e) {}
+                }
+                
                 salvarUsuarios(USUARIOS_PADRAO);
-                console.log('✅ Usuários padrão criados/sincronizados:', USUARIOS_PADRAO.length);
+                console.log('✅ Usuários padrão criados e salvos:', USUARIOS_PADRAO.length);
                 return USUARIOS_PADRAO;
             } catch (e) {
-                console.error('❌ Erro ao criar usuários padrão:', e);
+                console.error('Erro ao criar usuários padrão:', e);
                 return USUARIOS_PADRAO;
             }
         }
@@ -1747,8 +1756,7 @@
 
         function inicializarUsuarios() {
             console.log('🔐 Inicializando sistema de usuários...');
-            // SEMPRE garante que os usuários padrão existam
-            const usuarios = criarUsuariosPadrao();
+            const usuarios = carregarUsuarios();
             console.log('📋 Total de usuários:', usuarios.length);
             return usuarios;
         }
@@ -1759,7 +1767,6 @@
         function autenticar(nome, senha) {
             console.log('🔍 Tentando autenticar:', nome);
             
-            // SEMPRE carrega os usuários (garantindo que os padrão existam)
             const usuarios = carregarUsuarios();
             console.log('📋 Usuários disponíveis para autenticação:', usuarios.map(u => u.nome));
             
@@ -1801,6 +1808,12 @@
                 const modalLogin = document.getElementById('modalLogin');
                 modalLogin.style.display = 'flex';
                 modalLogin.classList.add('active');
+                modalLogin.style.visibility = 'visible';
+                modalLogin.style.opacity = '1';
+                modalLogin.style.pointerEvents = 'auto';
+                modalLogin.style.position = 'fixed';
+                modalLogin.style.zIndex = '9999';
+                
                 carregarUsuariosLogin();
                 document.getElementById('loginSenha').value = '';
                 document.getElementById('loginErro').style.display = 'none';
@@ -1863,30 +1876,291 @@
         }
 
         // ============================================================
-        // FUNÇÃO FECHAR LOGIN
+        // FUNÇÃO FECHAR LOGIN - CORRIGIDA DEFINITIVAMENTE
         // ============================================================
         function fecharLogin() {
             console.log('🔒 fecharLogin() chamado');
             
             const modalLogin = document.getElementById('modalLogin');
-            modalLogin.style.display = 'none';
-            modalLogin.classList.remove('active');
+            const mainContainer = document.getElementById('mainContainer');
             
-            if (!usuarioAtual || !usuarioAtual.nome || usuarioAtual.nome === 'Visitante') {
-                usuarioAtual = { 
-                    id: 'visitante_1', 
-                    nome: 'Visitante', 
-                    role: 'viewer' 
-                };
-                salvarSessao();
-                atualizarUI();
-                mostrarToast('👤 Modo visitante ativado - Apenas visualização');
-                console.log('👤 Modo visitante ativado');
-            } else {
-                atualizarUI();
+            // FECHAR O MODAL DE LOGIN COMPLETAMENTE
+            if (modalLogin) {
+                modalLogin.style.display = 'none';
+                modalLogin.classList.remove('active', 'modal-login', 'show');
+                modalLogin.style.visibility = 'hidden';
+                modalLogin.style.opacity = '0';
+                modalLogin.style.pointerEvents = 'none';
+                modalLogin.style.position = 'fixed';
+                modalLogin.style.zIndex = '-1';
             }
             
-            carregarDadosCompletosComFallback();
+            // REMOVER QUALQUER OVERLAY
+            document.querySelectorAll('.modal-backdrop, .modal-overlay, .overlay, .backdrop').forEach(el => {
+                if (el) {
+                    el.style.display = 'none';
+                    el.style.visibility = 'hidden';
+                    el.style.opacity = '0';
+                    el.style.pointerEvents = 'none';
+                    if (el.parentNode) {
+                        el.parentNode.removeChild(el);
+                    }
+                }
+            });
+            
+            // MOSTRAR O CONTAINER PRINCIPAL
+            if (mainContainer) {
+                mainContainer.style.display = 'block';
+                mainContainer.style.visibility = 'visible';
+                mainContainer.style.opacity = '1';
+                mainContainer.style.pointerEvents = 'auto';
+                mainContainer.style.position = 'relative';
+                mainContainer.style.zIndex = '1';
+            }
+            
+            // GARANTIR QUE O BODY ESTÁ NORMAL
+            document.body.style.overflow = 'auto';
+            document.body.style.position = 'static';
+            document.body.style.height = 'auto';
+            document.body.style.margin = '0';
+            document.body.style.padding = '0';
+            document.body.style.background = 'linear-gradient(135deg, #ffe0b0 0%, #ffb84d 30%, #FF8C00 60%, #e07000 100%)';
+            
+            // VERIFICAR USUÁRIO
+            if (!usuarioAtual || !usuarioAtual.nome || usuarioAtual.nome === 'Visitante') {
+                const sessionUser = sessionStorage.getItem('usuarioAtual');
+                if (sessionUser) {
+                    try {
+                        usuarioAtual = JSON.parse(sessionUser);
+                        console.log('✅ Sessão restaurada para:', usuarioAtual.nome);
+                    } catch (e) {
+                        usuarioAtual = { 
+                            id: 'visitante_' + Date.now(), 
+                            nome: 'Visitante', 
+                            role: 'viewer' 
+                        };
+                        salvarSessao();
+                    }
+                } else {
+                    usuarioAtual = { 
+                        id: 'visitante_' + Date.now(), 
+                        nome: 'Visitante', 
+                        role: 'viewer' 
+                    };
+                    salvarSessao();
+                }
+            }
+            
+            // ATUALIZAR UI
+            atualizarUI();
+            
+            // CARREGAR DADOS E SELECIONAR FUNCIONÁRIO
+            setTimeout(() => {
+                carregarDadosCompletosComFallback();
+                setTimeout(() => {
+                    if (funcionariosCadastrados && funcionariosCadastrados.length > 0 && !document.getElementById('funcionario').value) {
+                        const func = funcionariosCadastrados[0];
+                        document.getElementById('funcionario').value = func.nome;
+                        document.getElementById('empresa').value = func.unidade || '';
+                        document.getElementById('matricula').value = func.cpf || '';
+                        funcionarioAtual = func.nome;
+                        funcionarioIdAtual = func.id;
+                        dadosHorarios = pontosPorFuncionario[func.nome] || {};
+                        gerarTabela();
+                        mostrarToast('✅ Bem-vindo, ' + usuarioAtual.nome + '!');
+                    }
+                }, 300);
+            }, 200);
+            
+            console.log('✅ Modal fechado, interface liberada!');
+        }
+
+        // ============================================================
+        // FUNÇÃO FAZER LOGIN - CORRIGIDA
+        // ============================================================
+        function fazerLogin() {
+            console.log('🔑 fazerLogin() chamado');
+            
+            const select = document.getElementById('loginUsuario');
+            const nome = select ? select.value : '';
+            const senha = document.getElementById('loginSenha').value;
+            const erro = document.getElementById('loginErro');
+
+            if (!nome) {
+                erro.textContent = '⚠️ Selecione um usuário!';
+                erro.style.display = 'block';
+                return;
+            }
+
+            if (!senha) {
+                erro.textContent = '⚠️ Digite a senha!';
+                erro.style.display = 'block';
+                return;
+            }
+
+            console.log('🔑 Tentando login com:', nome, 'senha:', senha);
+
+            if (autenticar(nome, senha)) {
+                console.log('✅ Login bem-sucedido!');
+                
+                const modalLogin = document.getElementById('modalLogin');
+                const mainContainer = document.getElementById('mainContainer');
+                
+                // FECHAR MODAL COMPLETAMENTE
+                if (modalLogin) {
+                    modalLogin.style.display = 'none';
+                    modalLogin.classList.remove('active', 'modal-login', 'show');
+                    modalLogin.style.visibility = 'hidden';
+                    modalLogin.style.opacity = '0';
+                    modalLogin.style.pointerEvents = 'none';
+                    modalLogin.style.position = 'fixed';
+                    modalLogin.style.zIndex = '-1';
+                }
+                
+                // REMOVER OVERLAYS
+                document.querySelectorAll('.modal-backdrop, .modal-overlay, .overlay, .backdrop').forEach(el => {
+                    if (el && el.parentNode) {
+                        el.parentNode.removeChild(el);
+                    }
+                });
+                
+                // MOSTRAR CONTAINER
+                if (mainContainer) {
+                    mainContainer.style.display = 'block';
+                    mainContainer.style.visibility = 'visible';
+                    mainContainer.style.opacity = '1';
+                    mainContainer.style.pointerEvents = 'auto';
+                    mainContainer.style.position = 'relative';
+                    mainContainer.style.zIndex = '1';
+                }
+                
+                // GARANTIR BODY NORMAL
+                document.body.style.overflow = 'auto';
+                document.body.style.position = 'static';
+                document.body.style.height = 'auto';
+                
+                atualizarUI();
+                mostrarToast('✅ Bem-vindo, ' + nome + '! (' + ROLE_LABELS[usuarioAtual.role] + ')');
+                
+                erro.style.display = 'none';
+                document.getElementById('loginSenha').value = '';
+                
+                // CARREGAR DADOS
+                setTimeout(() => {
+                    carregarDadosCompletosComFallback();
+                }, 200);
+                
+                console.log('✅ Login concluído, interface aberta para:', nome);
+                
+            } else {
+                erro.textContent = '❌ Usuário ou senha incorretos!';
+                erro.style.display = 'block';
+                document.getElementById('loginSenha').value = '';
+                document.getElementById('loginSenha').focus();
+                console.log('❌ Falha no login para:', nome);
+            }
+        }
+
+        // ============================================================
+        // FUNÇÃO INIT AUTH - CORRIGIDA
+        // ============================================================
+        function initAuth() {
+            console.log('🔐 Inicializando autenticação...');
+            
+            const usuarios = inicializarUsuarios();
+            console.log('📋 Usuários disponíveis:', usuarios);
+            
+            // Tentar restaurar sessão
+            const sessionUser = sessionStorage.getItem('usuarioAtual');
+            if (sessionUser) {
+                try {
+                    const user = JSON.parse(sessionUser);
+                    const found = usuarios.find(u => u.id === user.id);
+                    if (found) {
+                        usuarioAtual = found;
+                        console.log('✅ Sessão restaurada para:', usuarioAtual.nome);
+                        
+                        // Fechar modal e abrir sistema
+                        const modalLogin = document.getElementById('modalLogin');
+                        if (modalLogin) {
+                            modalLogin.style.display = 'none';
+                            modalLogin.classList.remove('active');
+                            modalLogin.style.visibility = 'hidden';
+                            modalLogin.style.opacity = '0';
+                            modalLogin.style.pointerEvents = 'none';
+                            modalLogin.style.zIndex = '-1';
+                        }
+                        const mainContainer = document.getElementById('mainContainer');
+                        if (mainContainer) {
+                            mainContainer.style.display = 'block';
+                            mainContainer.style.visibility = 'visible';
+                            mainContainer.style.opacity = '1';
+                            mainContainer.style.pointerEvents = 'auto';
+                            mainContainer.style.position = 'relative';
+                            mainContainer.style.zIndex = '1';
+                        }
+                        document.body.style.overflow = 'auto';
+                        document.body.style.position = 'static';
+                        document.body.style.height = 'auto';
+                        
+                        atualizarUI();
+                        setTimeout(() => {
+                            carregarDadosCompletosComFallback();
+                            setTimeout(() => {
+                                if (funcionariosCadastrados && funcionariosCadastrados.length > 0 && !document.getElementById('funcionario').value) {
+                                    const func = funcionariosCadastrados[0];
+                                    document.getElementById('funcionario').value = func.nome;
+                                    document.getElementById('empresa').value = func.unidade || '';
+                                    document.getElementById('matricula').value = func.cpf || '';
+                                    funcionarioAtual = func.nome;
+                                    funcionarioIdAtual = func.id;
+                                    dadosHorarios = pontosPorFuncionario[func.nome] || {};
+                                    gerarTabela();
+                                    mostrarToast('✅ Bem-vindo de volta, ' + usuarioAtual.nome + '!');
+                                }
+                            }, 300);
+                        }, 200);
+                        return;
+                    } else {
+                        console.log('⚠️ Usuário da sessão não encontrado, removendo sessão');
+                        sessionStorage.removeItem('usuarioAtual');
+                    }
+                } catch (e) {
+                    console.error('Erro ao restaurar sessão:', e);
+                    sessionStorage.removeItem('usuarioAtual');
+                }
+            }
+            
+            // Se não tem sessão, mostrar login
+            console.log('🔓 Nenhuma sessão ativa. Mostrando modal de login...');
+            
+            const modalLogin = document.getElementById('modalLogin');
+            if (modalLogin) {
+                modalLogin.style.display = 'flex';
+                modalLogin.classList.add('active');
+                modalLogin.style.visibility = 'visible';
+                modalLogin.style.opacity = '1';
+                modalLogin.style.pointerEvents = 'auto';
+                modalLogin.style.position = 'fixed';
+                modalLogin.style.zIndex = '9999';
+            }
+            
+            carregarUsuariosLogin();
+            
+            // Definir usuário visitante temporário
+            usuarioAtual = { 
+                id: 'visitante_' + Date.now(), 
+                nome: 'Visitante', 
+                role: 'viewer' 
+            };
+            salvarSessao();
+            atualizarUI();
+            console.log('👤 Modo visitante ativado (aguardando login)');
+            
+            // Carregar dados em background
+            setTimeout(() => {
+                carregarDadosCompletosComFallback();
+            }, 500);
         }
 
         // ============================================================
@@ -1900,7 +2174,6 @@
                 return;
             }
             
-            // SEMPRE carrega os usuários (garantindo que os padrão existam)
             const usuarios = carregarUsuarios();
             console.log('📋 Carregando usuários no select:', usuarios);
             
@@ -1929,110 +2202,6 @@
                     select.appendChild(option);
                 });
             }
-        }
-
-        function fazerLogin() {
-            console.log('🔑 fazerLogin() chamado');
-            
-            const select = document.getElementById('loginUsuario');
-            const nome = select ? select.value : '';
-            const senha = document.getElementById('loginSenha').value;
-            const erro = document.getElementById('loginErro');
-
-            if (!nome) {
-                erro.textContent = '⚠️ Selecione um usuário!';
-                erro.style.display = 'block';
-                return;
-            }
-
-            if (!senha) {
-                erro.textContent = '⚠️ Digite a senha!';
-                erro.style.display = 'block';
-                return;
-            }
-
-            console.log('🔑 Tentando login com:', nome, 'senha:', senha);
-
-            if (autenticar(nome, senha)) {
-                console.log('✅ Login bem-sucedido!');
-                
-                const modalLogin = document.getElementById('modalLogin');
-                modalLogin.style.display = 'none';
-                modalLogin.classList.remove('active');
-                
-                atualizarUI();
-                mostrarToast('✅ Bem-vindo, ' + nome + '! (' + ROLE_LABELS[usuarioAtual.role] + ')');
-                carregarDadosCompletosComFallback();
-                
-                erro.style.display = 'none';
-                document.getElementById('loginSenha').value = '';
-                
-                console.log('✅ Modal fechado e acesso liberado para:', nome);
-                
-            } else {
-                erro.textContent = '❌ Usuário ou senha incorretos!';
-                erro.style.display = 'block';
-                document.getElementById('loginSenha').value = '';
-                document.getElementById('loginSenha').focus();
-                console.log('❌ Falha no login para:', nome);
-            }
-        }
-
-        // ============================================================
-        // INIT AUTH - CORREÇÃO DEFINITIVA
-        // ============================================================
-        function initAuth() {
-            console.log('🔐 Inicializando autenticação...');
-            
-            // SEMPRE inicializa os usuários padrão
-            const usuarios = inicializarUsuarios();
-            console.log('📋 Usuários disponíveis:', usuarios);
-            
-            const sessionUser = sessionStorage.getItem('usuarioAtual');
-            if (sessionUser) {
-                try {
-                    const user = JSON.parse(sessionUser);
-                    const found = usuarios.find(u => u.id === user.id);
-                    if (found) {
-                        usuarioAtual = found;
-                        const modalLogin = document.getElementById('modalLogin');
-                        modalLogin.style.display = 'none';
-                        modalLogin.classList.remove('active');
-                        atualizarUI();
-                        console.log('✅ Sessão restaurada para:', usuarioAtual.nome);
-                        setTimeout(() => {
-                            carregarDadosCompletosComFallback();
-                        }, 300);
-                        return;
-                    } else {
-                        console.log('⚠️ Usuário da sessão não encontrado, removendo sessão');
-                        sessionStorage.removeItem('usuarioAtual');
-                    }
-                } catch (e) {
-                    console.error('Erro ao restaurar sessão:', e);
-                    sessionStorage.removeItem('usuarioAtual');
-                }
-            }
-            
-            console.log('🔓 Nenhuma sessão ativa. Mostrando modal de login...');
-            
-            const modalLogin = document.getElementById('modalLogin');
-            modalLogin.style.display = 'flex';
-            modalLogin.classList.add('active');
-            
-            carregarUsuariosLogin();
-            
-            usuarioAtual = { 
-                id: 'visitante_1', 
-                nome: 'Visitante', 
-                role: 'viewer' 
-            };
-            atualizarUI();
-            console.log('👤 Modo visitante ativado (aguardando login)');
-            
-            setTimeout(() => {
-                carregarDadosCompletosComFallback();
-            }, 500);
         }
 
         // ============================================================
