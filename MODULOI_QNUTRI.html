@@ -939,7 +939,7 @@
             <i class="fas fa-users"></i> Cadastro
         </button>
         <button class="sidebar-btn" onclick="abrirModal(); toggleSidebarMobile()">
-            <i class="fas fa-edit"></i> Editor de Ponto
+            <i class="fas fa-edit"></i> Abrir Editor
         </button>
         <div class="sidebar-label"><i class="fas fa-tools"></i> Ferramentas</div>
         <button class="sidebar-btn" onclick="abrirRelatorios(); toggleSidebarMobile()">
@@ -1452,6 +1452,8 @@
         let isDragging = false;
         let startX, startY, translateX = 0, translateY = 0;
         let funcionarioIdAtual = null;
+        let mesAtual = "Janeiro";
+        let anoAtual = 2026;
 
         const JORNADA_PADRAO_MINUTOS = 480;
         const JORNADA_PADRAO = "08:00";
@@ -1468,6 +1470,8 @@
                 
                 const mes = document.getElementById('mes').value;
                 const ano = parseInt(document.getElementById('ano').value);
+                mesAtual = mes;
+                anoAtual = ano;
 
                 // 1. Carregar funcionários
                 const { data: funcionarios, error: funcError } = await supabaseClient
@@ -1486,55 +1490,10 @@
                 }
 
                 // 2. Carregar marcações do mês/ano atual
-                const { data: marcacoes, error: marcError } = await supabaseClient
-                    .from('marcacoes')
-                    .select('*')
-                    .eq('mes', mes)
-                    .eq('ano', ano);
-
-                if (marcError) throw marcError;
-
-                // Montar objeto de pontos
-                pontosPorFuncionario = {};
-                if (marcacoes && marcacoes.length > 0) {
-                    marcacoes.forEach(m => {
-                        const func = funcionariosCadastrados.find(f => f.id === m.funcionario_id);
-                        if (func) {
-                            if (!pontosPorFuncionario[func.nome]) {
-                                pontosPorFuncionario[func.nome] = {};
-                            }
-                            pontosPorFuncionario[func.nome][m.dia] = {
-                                e1: m.e1 || '',
-                                s1: m.s1 || '',
-                                e2: m.e2 || '',
-                                s2: m.s2 || '',
-                                _origem: m.origem || 'manual',
-                                _id: m.id
-                            };
-                        }
-                    });
-                    console.log(`✅ ${marcacoes.length} marcações carregadas`);
-                }
+                await carregarMarcacoesDoMes(mes, ano);
 
                 // 3. Carregar imagens do mês/ano atual
-                const { data: imagens, error: imgError } = await supabaseClient
-                    .from('imagens_cartao')
-                    .select('*')
-                    .eq('mes', mes)
-                    .eq('ano', ano);
-
-                if (imgError) throw imgError;
-
-                imagemCartaoPorFuncionario = {};
-                if (imagens && imagens.length > 0) {
-                    imagens.forEach(img => {
-                        const func = funcionariosCadastrados.find(f => f.id === img.funcionario_id);
-                        if (func) {
-                            imagemCartaoPorFuncionario[func.nome] = img.imagem_url;
-                        }
-                    });
-                    console.log(`✅ ${imagens.length} imagens carregadas`);
-                }
+                await carregarImagensDoMes(mes, ano);
 
                 // Atualizar UI
                 renderizarTabelaCadastrados();
@@ -1570,8 +1529,71 @@
             }
         }
 
+        async function carregarMarcacoesDoMes(mes, ano) {
+            const { data: marcacoes, error: marcError } = await supabaseClient
+                .from('marcacoes')
+                .select('*')
+                .eq('mes', mes)
+                .eq('ano', ano);
+
+            if (marcError) throw marcError;
+
+            pontosPorFuncionario = {};
+            if (marcacoes && marcacoes.length > 0) {
+                marcacoes.forEach(m => {
+                    const func = funcionariosCadastrados.find(f => f.id === m.funcionario_id);
+                    if (func) {
+                        if (!pontosPorFuncionario[func.nome]) {
+                            pontosPorFuncionario[func.nome] = {};
+                        }
+                        pontosPorFuncionario[func.nome][m.dia] = {
+                            e1: m.e1 || '',
+                            s1: m.s1 || '',
+                            e2: m.e2 || '',
+                            s2: m.s2 || '',
+                            _origem: m.origem || 'manual',
+                            _id: m.id
+                        };
+                    }
+                });
+                console.log(`✅ ${marcacoes.length} marcações carregadas para ${mes}/${ano}`);
+            } else {
+                console.log(`ℹ️ Nenhuma marcação para ${mes}/${ano}`);
+            }
+        }
+
+        async function carregarImagensDoMes(mes, ano) {
+            const { data: imagens, error: imgError } = await supabaseClient
+                .from('imagens_cartao')
+                .select('*')
+                .eq('mes', mes)
+                .eq('ano', ano);
+
+            if (imgError) throw imgError;
+
+            imagemCartaoPorFuncionario = {};
+            if (imagens && imagens.length > 0) {
+                imagens.forEach(img => {
+                    const func = funcionariosCadastrados.find(f => f.id === img.funcionario_id);
+                    if (func) {
+                        imagemCartaoPorFuncionario[func.nome] = img.imagem_url;
+                    }
+                });
+                console.log(`✅ ${imagens.length} imagens carregadas para ${mes}/${ano}`);
+            } else {
+                console.log(`ℹ️ Nenhuma imagem para ${mes}/${ano}`);
+            }
+        }
+
         function recarregarDadosAtuais() {
-            if (funcionarioAtual) {
+            const mes = document.getElementById('mes').value;
+            const ano = parseInt(document.getElementById('ano').value);
+            
+            if (mes !== mesAtual || ano !== anoAtual) {
+                mesAtual = mes;
+                anoAtual = ano;
+                carregarDadosCompletos();
+            } else if (funcionarioAtual) {
                 const func = funcionariosCadastrados.find(f => f.nome === funcionarioAtual);
                 if (func) {
                     dadosHorarios = pontosPorFuncionario[funcionarioAtual] || {};
@@ -1899,11 +1921,15 @@
             translateX = 0;
             translateY = 0;
             imgDisplay.style.transform = 'scale(1)';
-            // Carregar imagem se existir
+            
+            // Carregar imagem do mês atual
             const imagem = imagemCartaoPorFuncionario[funcionarioAtual];
             if (imagem) {
                 imagemDataURL = imagem;
                 mostrarImagem(imagem);
+            } else {
+                imagemDataURL = null;
+                imgDisplay.style.backgroundImage = 'none';
             }
             marcarErrosGrade();
         }
@@ -2340,7 +2366,6 @@
                 gerarTabela();
                 renderizarErros();
                 atualizarBadgeErros();
-                // Salvar no Supabase
                 salvarMarcacoesNoSupabase(funcionarioAtual, dadosHorarios);
             }
         }
@@ -2466,7 +2491,7 @@
                                 .from('marcacoes')
                                 .update(marcacaoData)
                                 .eq('id', existingMap[dia].id);
-                            console.log(`✅ Marcação dia ${dia} atualizada para ${nomeFuncionario}`);
+                            console.log(`✅ Marcação dia ${dia} atualizada para ${nomeFuncionario} (${mes}/${ano})`);
                         } else {
                             const { data } = await supabaseClient
                                 .from('marcacoes')
@@ -2475,7 +2500,7 @@
                             if (data && data[0]) {
                                 pontos[dia]._id = data[0].id;
                             }
-                            console.log(`✅ Marcação dia ${dia} inserida para ${nomeFuncionario}`);
+                            console.log(`✅ Marcação dia ${dia} inserida para ${nomeFuncionario} (${mes}/${ano})`);
                         }
                     } catch (error) {
                         console.error(`❌ Erro ao salvar marcação dia ${dia}:`, error);
@@ -2490,7 +2515,7 @@
                             .from('marcacoes')
                             .delete()
                             .eq('id', existingMarc.id);
-                        console.log(`🗑️ Marcação dia ${existingMarc.dia} removida para ${nomeFuncionario}`);
+                        console.log(`🗑️ Marcação dia ${existingMarc.dia} removida para ${nomeFuncionario} (${mes}/${ano})`);
                     }
                 }
 
@@ -2499,7 +2524,7 @@
                     await salvarImagemNoSupabase(func.id, imagemDataURL, mes, ano);
                 }
 
-                console.log('✅ Todas as marcações sincronizadas com o Supabase!');
+                console.log(`✅ Todas as marcações sincronizadas com o Supabase para ${mes}/${ano}!`);
                 mostrarToast('✅ Dados salvos no Supabase!');
 
             } catch (error) {
@@ -2530,12 +2555,12 @@
                         .from('imagens_cartao')
                         .update(imgData)
                         .eq('id', existing[0].id);
-                    console.log('✅ Imagem atualizada no Supabase');
+                    console.log(`✅ Imagem atualizada no Supabase para ${mes}/${ano}`);
                 } else {
                     await supabaseClient
                         .from('imagens_cartao')
                         .insert(imgData);
-                    console.log('✅ Imagem inserida no Supabase');
+                    console.log(`✅ Imagem inserida no Supabase para ${mes}/${ano}`);
                 }
             } catch (error) {
                 console.error('❌ Erro ao salvar imagem:', error);
@@ -2576,10 +2601,9 @@
             atualizarContador();
             atualizarBadgeErros();
 
-            // Salvar no Supabase
             salvarMarcacoesNoSupabase(funcionarioAtual, novosPontos);
 
-            mostrarToast('✅ Ponto salvo para ' + funcionarioAtual + '!');
+            mostrarToast('✅ Ponto salvo para ' + funcionarioAtual + ' (' + mesAtual + '/' + anoAtual + ')!');
             fecharModal();
         }
 
@@ -2663,6 +2687,8 @@
 
             const mes = document.getElementById('filtroRelMes').value;
             const ano = document.getElementById('ano').value;
+            
+            // Buscar dados do mês selecionado
             const dadosPonto = pontosPorFuncionario[nomeFuncionario] || {};
 
             const { jsPDF } = window.jspdf;
@@ -2964,6 +2990,9 @@
         function abrirModalCartao() {
             document.getElementById('modalCartao').classList.add('active');
             carregarSelectCartao();
+            // Sincronizar com o mês selecionado
+            document.getElementById('selectCartaoMes').value = document.getElementById('mes').value;
+            document.getElementById('selectCartaoAno').value = document.getElementById('ano').value;
             if (funcionarioAtual) {
                 document.getElementById('selectCartaoFuncionario').value = funcionarioAtual;
                 gerarCartaoPonto();
@@ -3004,6 +3033,9 @@
 
         function gerarCartaoPonto() {
             const nomeFuncionario = document.getElementById('selectCartaoFuncionario').value;
+            const mes = document.getElementById('selectCartaoMes').value;
+            const ano = parseInt(document.getElementById('selectCartaoAno').value);
+
             if (!nomeFuncionario) {
                 document.getElementById('cartaoPontoContainer').innerHTML = `
                     <p style="text-align:center;color:#999;padding:40px 0;">
@@ -3020,8 +3052,7 @@
                 return;
             }
 
-            const mes = document.getElementById('selectCartaoMes').value;
-            const ano = document.getElementById('selectCartaoAno').value;
+            // Buscar dados do mês selecionado
             const dadosPonto = pontosPorFuncionario[nomeFuncionario] || {};
             const imagemCartao = imagemCartaoPorFuncionario[nomeFuncionario] || null;
 
@@ -3044,7 +3075,7 @@
             html += `<div class="imagem-wrapper">`;
             if (imagemCartao) {
                 html += `
-                    <img id="imgCartaoZoom" src="${imagemCartao}" alt="Cartão de Ponto" 
+                    <img id="imgCartaoZoom" src="${imagemCartao}" alt="Cartão de Ponto - ${mes}/${ano}" 
                          onclick="toggleZoomCartao(this)" 
                          style="cursor:zoom-in; transition: transform 0.3s ease; max-width:100%; max-height:500px; object-fit:contain;">
                 `;
@@ -3052,7 +3083,7 @@
                 html += `
                     <div class="sem-imagem">
                         <i class="fas fa-image"></i>
-                        <p>Nenhum cartão anexado</p>
+                        <p>Nenhum cartão anexado para ${mes}/${ano}</p>
                         <p style="font-size:12px;color:#ccc;">Anexe uma imagem no Editor de Ponto</p>
                     </div>
                 `;
@@ -3138,7 +3169,7 @@
                     <div><strong>Dias com HE:</strong> ${diasHE}</div>
                     <div><strong>Total HE:</strong> <span>${minutesToTime(totalHE)}</span></div>
                     <div><strong>Jornada:</strong> ${JORNADA_PADRAO}</div>
-                    ${imagemCartao ? `<div><i class="fas fa-check-circle" style="color:#28a745;"></i> Cartão anexado</div>` : ''}
+                    ${imagemCartao ? `<div><i class="fas fa-check-circle" style="color:#28a745;"></i> Cartão anexado (${mes}/${ano})</div>` : ''}
                 </div>
             `;
 
@@ -3224,6 +3255,7 @@
         console.log('✅ Sistema inicializado!');
         console.log('📡 URL Supabase:', SUPABASE_URL);
         console.log('📋 Tabelas: funcionarios, marcacoes, imagens_cartao');
+        console.log('📌 Agora cada mês tem seus próprios dados!');
     </script>
 </body>
 </html>
