@@ -1114,7 +1114,7 @@
 <body>
     <div class="toast" id="toastSucesso"><i class="fas fa-check-circle"></i> <span id="toastMsg">Salvo!</span></div>
 
-    <!-- ===== MODAL LOGIN - CORRIGIDO ===== -->
+    <!-- ===== MODAL LOGIN - SEMPRE VISÍVEL AO CARREGAR ===== -->
     <div class="modal modal-login active" id="modalLogin" style="display:flex !important;">
         <div class="modal-content">
             <div class="modal-header">
@@ -1727,7 +1727,7 @@
         });
 
         // ============================================================
-        // SISTEMA DE AUTENTICAÇÃO - CORRIGIDO
+        // SISTEMA DE AUTENTICAÇÃO - SEM SESSÃO PERSISTENTE
         // ============================================================
         const STORAGE_KEY = 'usuarios_sistema';
         let usuarioAtual = null;
@@ -1808,7 +1808,7 @@
             );
             if (usuario) {
                 usuarioAtual = { ...usuario };
-                salvarSessao();
+                // NÃO SALVA SESSÃO - sempre pede login ao recarregar
                 atualizarUI();
                 console.log('✅ Usuário autenticado com sucesso:', usuario.nome, 'Perfil:', usuario.role);
                 return true;
@@ -1817,19 +1817,8 @@
             return false;
         }
 
-        function salvarSessao() {
-            if (usuarioAtual) {
-                try {
-                    sessionStorage.setItem('usuarioAtual', JSON.stringify(usuarioAtual));
-                    console.log('💾 Sessão salva para:', usuarioAtual.nome);
-                } catch (e) {
-                    console.error('Erro ao salvar sessão:', e);
-                }
-            }
-        }
-
         // ============================================================
-        // FUNÇÃO ATUALIZAR UI - CORRIGIDA COM VERIFICAÇÕES
+        // FUNÇÃO ATUALIZAR UI
         // ============================================================
         function atualizarUI() {
             console.log('🔄 Atualizando UI...');
@@ -1979,81 +1968,36 @@
         }
 
         // ============================================================
-        // FUNÇÃO INIT AUTH - CORRIGIDA
+        // FUNÇÃO INIT AUTH - SEMPRE MOSTRA LOGIN
         // ============================================================
         function initAuth() {
             console.log('🔐 Inicializando autenticação...');
             
-            const usuarios = carregarUsuarios();
-            console.log('📋 Usuários disponíveis:', usuarios);
-            
-            const sessionUser = sessionStorage.getItem('usuarioAtual');
-            if (sessionUser) {
-                try {
-                    const user = JSON.parse(sessionUser);
-                    const found = usuarios.find(u => u.id === user.id);
-                    if (found) {
-                        usuarioAtual = found;
-                        console.log('✅ Sessão restaurada para:', usuarioAtual.nome);
-                        
-                        const modalLogin = document.getElementById('modalLogin');
-                        if (modalLogin) {
-                            modalLogin.classList.remove('active');
-                            modalLogin.style.display = 'none';
-                        }
-                        
-                        const mainContainer = document.getElementById('mainContainer');
-                        if (mainContainer) {
-                            mainContainer.style.display = 'block';
-                            mainContainer.style.visibility = 'visible';
-                            mainContainer.style.opacity = '1';
-                        }
-                        
-                        document.body.style.overflow = 'auto';
-                        document.body.style.position = 'static';
-                        
-                        atualizarUI();
-                        
-                        setTimeout(() => {
-                            carregarDadosCompletosComFallback();
-                        }, 200);
-                        return;
-                    } else {
-                        console.log('⚠️ Usuário da sessão não encontrado');
-                        sessionStorage.removeItem('usuarioAtual');
-                    }
-                } catch (e) {
-                    console.error('Erro ao restaurar sessão:', e);
-                    sessionStorage.removeItem('usuarioAtual');
-                }
-            }
-            
-            console.log('🔓 Nenhuma sessão ativa. Mostrando modal de login...');
-            
+            // Sempre mostrar o modal de login independente de sessão anterior
             const modalLogin = document.getElementById('modalLogin');
             if (modalLogin) {
                 modalLogin.classList.add('active');
                 modalLogin.style.display = 'flex';
             }
             
-            carregarUsuariosLogin();
-            
-            // Modo visitante temporário
-            usuarioAtual = { 
-                id: 'visitante_' + Date.now(), 
-                nome: 'Visitante', 
-                role: 'viewer' 
-            };
-            salvarSessao();
-            atualizarUI();
-            
-            // Ocultar conteúdo principal até login
+            // Ocultar conteúdo principal
             const mainContainer = document.getElementById('mainContainer');
             if (mainContainer) {
                 mainContainer.style.display = 'none';
                 mainContainer.style.visibility = 'hidden';
                 mainContainer.style.opacity = '0';
             }
+            
+            // Carregar usuários no select
+            carregarUsuariosLogin();
+            
+            // Definir usuário como visitante até fazer login
+            usuarioAtual = { 
+                id: 'visitante_' + Date.now(), 
+                nome: 'Visitante', 
+                role: 'viewer' 
+            };
+            atualizarUI();
             
             console.log('👤 Modo visitante ativado (aguardando login)');
         }
@@ -2576,7 +2520,7 @@
         window.onload = function() {
             console.log('🚀 Inicializando sistema...');
             
-            // Inicializar autenticação
+            // Inicializar autenticação - SEMPRE MOSTRA LOGIN
             initAuth();
             
             // Configurar mês e ano
@@ -2604,6 +2548,7 @@
             console.log('📡 URL Supabase:', SUPABASE_URL);
             console.log('🔐 Sistema de autenticação ativo!');
             console.log('🔑 Senhas padrão: admin/admin123, usuario/1234, visitante/1234');
+            console.log('⚠️ Sempre solicita login ao carregar a página!');
         };
     </script>
 </body>
