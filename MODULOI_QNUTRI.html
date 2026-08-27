@@ -655,6 +655,13 @@
             top: 0;
         }
         .lista-funcionarios td { font-size: 13px; padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        .lista-funcionarios td .foto-tabela {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #FF8C00;
+        }
         .filtros-cadastro {
             background: #f8f9fa;
             padding: 15px;
@@ -698,6 +705,7 @@
             object-fit: cover;
             border-radius: 50%;
             margin-bottom: 10px;
+            border: 3px solid #FF8C00;
         }
         .foto-upload-cadastro:hover { border-color: #FF8C00; }
         .foto-upload-cadastro input {
@@ -1982,6 +1990,7 @@
         let dadosAjuste = {};
         let pontosPorFuncionario = {};
         let anexoAtual = null;
+        let fotoBase64Atual = null;
 
         // ============================================================
         // CONSTANTES
@@ -2022,8 +2031,40 @@
         }
 
         // ============================================================
-        // CADASTRO
+        // CADASTRO - FUNÇÕES DE FOTO
         // ============================================================
+        
+        function carregarFoto(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    mostrarToast('⚠️ Máximo 2MB para foto.', 'warning');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64 = e.target.result;
+                    fotoBase64Atual = base64;
+                    document.getElementById('previewFoto').src = base64;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function setFotoPreview(base64) {
+            if (base64) {
+                document.getElementById('previewFoto').src = base64;
+                fotoBase64Atual = base64;
+            } else {
+                document.getElementById('previewFoto').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e0e0'/%3E%3Ctext x='60' y='65' font-size='40' text-anchor='middle' fill='%23999' font-family='Arial'%3E%3F%3C/text%3E%3C/svg%3E";
+                fotoBase64Atual = null;
+            }
+        }
+
+        // ============================================================
+        // CADASTRO - FUNÇÕES PRINCIPAIS
+        // ============================================================
+        
         function abrirModalCadastro() { document.getElementById('modalCadastro').classList.add('active'); }
         function fecharModalCadastro() { document.getElementById('modalCadastro').classList.remove('active'); }
 
@@ -2035,8 +2076,11 @@
             filtrados.forEach((func, idx) => {
                 const realIndex = funcionariosCadastrados.indexOf(func);
                 const tr = document.createElement('tr');
+                const fotoHtml = func.foto ? 
+                    `<img src="${func.foto}" class="foto-tabela" alt="Foto">` : 
+                    `<div style="width:40px;height:40px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:18px;color:#999;"><i class="fas fa-user"></i></div>`;
                 tr.innerHTML = `
-                    <td><div style="width:40px;height:40px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:18px;color:#999;"><i class="fas fa-user"></i></div></td>
+                    <td>${fotoHtml}</td>
                     <td><strong>${func.nome}</strong></td>
                     <td>${func.cpf || '-'}</td>
                     <td>${func.unidade || '-'}</td>
@@ -2057,6 +2101,18 @@
             document.getElementById('empresa').value = func.unidade || '';
             document.getElementById('matricula').value = func.cpf || '';
             funcionarioAtual = func.nome;
+            
+            const fotoContainer = document.getElementById('fotoFuncionario');
+            const fotoImg = document.getElementById('fotoSelecionada');
+            if (func.foto) {
+                fotoContainer.style.display = 'flex';
+                fotoImg.src = func.foto;
+                document.getElementById('fotoNome').textContent = func.nome;
+                document.getElementById('fotoEmpresa').textContent = func.unidade || '';
+            } else {
+                fotoContainer.style.display = 'none';
+            }
+            
             mostrarToast('✅ Funcionário selecionado: ' + func.nome);
             fecharModalCadastro();
             buscarDadosAutomatico();
@@ -2070,6 +2126,14 @@
             document.getElementById('cadAdmissao').value = func.admissao || '';
             document.getElementById('cadASO').value = func.aso || '';
             document.getElementById('cadAniversario').value = func.aniversario || '';
+            
+            if (func.foto) {
+                document.getElementById('previewFoto').src = func.foto;
+                fotoBase64Atual = func.foto;
+            } else {
+                setFotoPreview(null);
+            }
+            
             document.getElementById('tituloFormCadastro').innerHTML = '<i class="fas fa-edit"></i> Editando: ' + func.nome;
             document.getElementById('btnSalvarFuncionario').innerHTML = '<i class="fas fa-save"></i> Atualizar';
             document.getElementById('btnSalvarFuncionario').dataset.editIndex = index;
@@ -2078,10 +2142,33 @@
         }
 
         function excluirFuncionario(index) {
-            if (confirm('Deseja excluir este funcionário?')) {
-                funcionariosCadastrados.splice(index, 1);
-                renderizarTabelaCadastrados();
-                mostrarToast('✅ Funcionário excluído!');
+            const func = funcionariosCadastrados[index];
+            if (!func) return;
+            
+            if (!confirm(`Deseja excluir ${func.nome}?`)) return;
+            
+            if (func.id) {
+                supabaseClient.from('funcionarios').delete().eq('id', func.id)
+                    .then(({ error }) => {
+                        if (error) {
+                            console.error('Erro ao excluir do Supabase:', error);
+                            mostrarToast('❌ Erro ao excluir!', 'error');
+                        } else {
+                            mostrarToast('✅ Funcionário excluído do Supabase!');
+                        }
+                    });
+            }
+            
+            funcionariosCadastrados.splice(index, 1);
+            renderizarTabelaCadastrados();
+            
+            if (funcionarioAtual === func.nome) {
+                funcionarioAtual = null;
+                document.getElementById('funcionario').value = '';
+                document.getElementById('empresa').value = '';
+                document.getElementById('matricula').value = '';
+                document.getElementById('fotoFuncionario').style.display = 'none';
+                limparTabela();
             }
         }
 
@@ -2090,72 +2177,70 @@
             renderizarTabelaCadastrados();
         }
 
-        function carregarFoto(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('previewFoto').src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
         function limparFormCadastro() {
             document.querySelectorAll('#formCadastroNovo input, #formCadastroNovo select').forEach(el => {
                 if (el.type !== 'file') el.value = '';
             });
-            document.getElementById('previewFoto').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e0e0'/%3E%3Ctext x='60' y='65' font-size='40' text-anchor='middle' fill='%23999' font-family='Arial'%3E%3F%3C/text%3E%3C/svg%3E";
+            setFotoPreview(null);
             document.getElementById('btnCancelarEdicao').style.display = 'none';
             document.getElementById('tituloFormCadastro').innerHTML = '<i class="fas fa-user-plus"></i> Adicionar Novo Funcionário';
             document.getElementById('btnSalvarFuncionario').innerHTML = '<i class="fas fa-save"></i> Salvar Cadastro';
             document.getElementById('btnSalvarFuncionario').dataset.editIndex = '';
+            document.getElementById('inputFoto').value = '';
         }
 
         async function salvarFuncionario() {
             const nome = document.getElementById('cadNome');
             const editIndex = document.getElementById('btnSalvarFuncionario').dataset.editIndex;
-            if (nome && nome.value.trim()) {
-                const dados = {
-                    nome: nome.value.trim(),
-                    cpf: document.getElementById('cadCPF').value || '',
-                    unidade: document.getElementById('cadUnidade').value || 'Spoleto',
-                    admissao: document.getElementById('cadAdmissao').value || '',
-                    aso: document.getElementById('cadASO').value || '',
-                    aniversario: document.getElementById('cadAniversario').value || ''
-                };
+            
+            if (!nome || !nome.value.trim()) {
+                mostrarToast('⚠️ Preencha o Nome!', 'warning');
+                return;
+            }
+            
+            const dados = {
+                nome: nome.value.trim(),
+                cpf: document.getElementById('cadCPF').value || '',
+                unidade: document.getElementById('cadUnidade').value || 'Spoleto',
+                admissao: document.getElementById('cadAdmissao').value || null,
+                aso: document.getElementById('cadASO').value || null,
+                aniversario: document.getElementById('cadAniversario').value || null,
+                foto: fotoBase64Atual || null
+            };
+            
+            try {
+                let result;
                 
-                try {
-                    if (editIndex !== undefined && editIndex !== '') {
-                        const func = funcionariosCadastrados[parseInt(editIndex)];
-                        if (func.id) {
-                            const { error } = await supabaseClient
-                                .from('funcionarios')
-                                .update(dados)
-                                .eq('id', func.id);
-                            if (error) throw error;
-                        }
-                        funcionariosCadastrados[parseInt(editIndex)] = { ...func, ...dados };
-                        mostrarToast('✅ Funcionário atualizado no Supabase!');
-                    } else {
-                        const { data, error } = await supabaseClient
-                            .from('funcionarios')
-                            .insert(dados)
-                            .select();
-                        if (error) throw error;
-                        if (data) funcionariosCadastrados.push(data[0]);
-                        mostrarToast('✅ Funcionário cadastrado no Supabase!');
+                if (editIndex !== undefined && editIndex !== '') {
+                    const func = funcionariosCadastrados[parseInt(editIndex)];
+                    if (!func.id) {
+                        mostrarToast('⚠️ Funcionário sem ID!', 'error');
+                        return;
                     }
-                } catch(error) {
-                    console.error('Erro:', error);
-                    mostrarToast('❌ Erro ao salvar no Supabase: ' + error.message, 'error');
-                    if (editIndex !== undefined && editIndex !== '') {
-                        funcionariosCadastrados[parseInt(editIndex)] = { ...funcionariosCadastrados[parseInt(editIndex)], ...dados };
-                    } else {
-                        dados.id = Date.now();
-                        funcionariosCadastrados.push(dados);
-                    }
-                    mostrarToast('💾 Salvo localmente!');
+                    
+                    result = await supabaseClient
+                        .from('funcionarios')
+                        .update(dados)
+                        .eq('id', func.id)
+                        .select();
+                    
+                    if (result.error) throw result.error;
+                    
+                    const updatedFunc = result.data[0];
+                    funcionariosCadastrados[parseInt(editIndex)] = updatedFunc;
+                    mostrarToast('✅ Funcionário atualizado no Supabase!');
+                    
+                } else {
+                    result = await supabaseClient
+                        .from('funcionarios')
+                        .insert(dados)
+                        .select();
+                    
+                    if (result.error) throw result.error;
+                    
+                    const newFunc = result.data[0];
+                    funcionariosCadastrados.push(newFunc);
+                    mostrarToast('✅ Funcionário cadastrado no Supabase!');
                 }
                 
                 renderizarTabelaCadastrados();
@@ -2163,8 +2248,10 @@
                 carregarSelectCartao();
                 carregarSelectAjustes();
                 limparFormCadastro();
-            } else {
-                mostrarToast('⚠️ Preencha o Nome!', 'warning');
+                
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                mostrarToast('❌ Erro ao salvar no Supabase: ' + error.message, 'error');
             }
         }
 
@@ -2218,17 +2305,46 @@
         // CARREGAR DADOS DO FUNCIONÁRIO
         // ============================================================
         async function carregarDadosDoFuncionario(nomeFuncionario, mes, ano) {
-            const func = funcionariosCadastrados.find(f => f.nome === nomeFuncionario);
-            if (!func) {
-                mostrarToast('⚠️ Funcionário não encontrado!', 'warning');
+            const { data: funcData, error } = await supabaseClient
+                .from('funcionarios')
+                .select('*')
+                .eq('nome', nomeFuncionario)
+                .maybeSingle();
+            
+            if (error || !funcData) {
+                const func = funcionariosCadastrados.find(f => f.nome === nomeFuncionario);
+                if (!func) {
+                    mostrarToast('⚠️ Funcionário não encontrado!', 'warning');
+                    return;
+                }
+                await carregarDadosComFunc(func, mes, ano);
                 return;
             }
             
+            const index = funcionariosCadastrados.findIndex(f => f.id === funcData.id);
+            if (index !== -1) {
+                funcionariosCadastrados[index] = funcData;
+            }
+            
+            await carregarDadosComFunc(funcData, mes, ano);
+        }
+
+        async function carregarDadosComFunc(func, mes, ano) {
             document.getElementById('empresa').value = func.unidade || '';
             document.getElementById('matricula').value = func.cpf || '';
             
-            let dadosPonto = {};
+            const fotoContainer = document.getElementById('fotoFuncionario');
+            const fotoImg = document.getElementById('fotoSelecionada');
+            if (func.foto) {
+                fotoContainer.style.display = 'flex';
+                fotoImg.src = func.foto;
+                document.getElementById('fotoNome').textContent = func.nome;
+                document.getElementById('fotoEmpresa').textContent = func.unidade || '';
+            } else {
+                fotoContainer.style.display = 'none';
+            }
             
+            let dadosPonto = {};
             if (func.id) {
                 const dadosSupabase = await buscarMarcacoesSupabase(func.id, mes, ano);
                 if (dadosSupabase && dadosSupabase.dados) {
@@ -2244,7 +2360,7 @@
             }
             
             if (Object.keys(dadosPonto).length === 0) {
-                const chave = `ponto_${nomeFuncionario}_${mes}_${ano}`;
+                const chave = `ponto_${func.nome}_${mes}_${ano}`;
                 try {
                     const saved = localStorage.getItem(chave);
                     if (saved) {
@@ -2254,7 +2370,7 @@
                 } catch(e) {}
             }
             
-            pontosPorFuncionario[nomeFuncionario] = dadosPonto;
+            pontosPorFuncionario[func.nome] = dadosPonto;
             
             const dias = obterDiasDoMes(mes, parseInt(ano));
             
@@ -2345,6 +2461,7 @@
             if (!nomeBusca) {
                 limparTabela();
                 funcionarioAtual = null;
+                document.getElementById('fotoFuncionario').style.display = 'none';
                 return;
             }
             
@@ -2354,11 +2471,6 @@
                 const mes = document.getElementById('mes').value;
                 const ano = document.getElementById('ano').value;
                 await carregarDadosDoFuncionario(func.nome, mes, ano);
-                
-                const fotoContainer = document.getElementById('fotoFuncionario');
-                fotoContainer.style.display = 'flex';
-                document.getElementById('fotoNome').textContent = func.nome;
-                document.getElementById('fotoEmpresa').textContent = func.unidade || '';
                 
                 if (document.getElementById('modalEditor').classList.contains('active')) {
                     inicializarEditor();
@@ -2377,7 +2489,7 @@
         // ============================================================
         async function carregarDadosCompletosComFallback() {
             try {
-                mostrarToast('🔄 Carregando dados...');
+                mostrarToast('🔄 Carregando dados do Supabase...');
                 
                 const { data: funcData, error: funcError } = await supabaseClient
                     .from('funcionarios')
@@ -2386,17 +2498,15 @@
                 
                 if (!funcError && funcData && funcData.length > 0) {
                     funcionariosCadastrados = funcData;
+                    mostrarToast(`✅ ${funcData.length} funcionários carregados do Supabase!`);
+                } else {
+                    mostrarToast('⚠️ Nenhum funcionário encontrado no Supabase.', 'warning');
                 }
                 
                 if (funcionarioAtual) {
                     const mes = document.getElementById('mes').value;
                     const ano = document.getElementById('ano').value;
                     await carregarDadosDoFuncionario(funcionarioAtual, mes, ano);
-                } else {
-                    const nomeBusca = document.getElementById('funcionario').value.trim();
-                    if (nomeBusca) {
-                        await buscarDadosAutomatico();
-                    }
                 }
                 
                 renderizarTabelaCadastrados();
@@ -2408,8 +2518,6 @@
                 if (document.getElementById('modalEditor').classList.contains('active')) {
                     inicializarEditor();
                 }
-                
-                mostrarToast('✅ Dados carregados!');
                 
             } catch (error) {
                 console.error('Erro ao carregar:', error);
@@ -2446,6 +2554,7 @@
             document.getElementById('funcionario').value = '';
             document.getElementById('empresa').value = '';
             document.getElementById('matricula').value = '';
+            document.getElementById('fotoFuncionario').style.display = 'none';
             funcionarioAtual = null;
             mostrarToast('🧹 Dados limpos.');
         }
@@ -3015,27 +3124,21 @@
             container.innerHTML = '';
             if (header) container.appendChild(header);
             
-            // CORREÇÃO: Extrair o dia da data selecionada corretamente
             const dia = new Date(data + 'T00:00:00').getDate();
+            const diaFinal = (isNaN(dia) || dia < 1 || dia > 31) ? new Date().getDate() : dia;
             
-            // Se a data for inválida, usa o dia atual
-            if (isNaN(dia) || dia < 1 || dia > 31) {
-                const hoje = new Date();
-                dia = hoje.getDate();
-            }
-            
-            const horarios = dadosAjuste[dia] || { e1: '', s1: '', e2: '', s2: '' };
+            const horarios = dadosAjuste[diaFinal] || { e1: '', s1: '', e2: '', s2: '' };
             const isUser = usuarioAtual && (usuarioAtual.role === 'user' || usuarioAtual.role === 'admin');
             
             const div = document.createElement('div');
             div.className = 'ajuste-item';
-            div.dataset.dia = dia;
+            div.dataset.dia = diaFinal;
             div.innerHTML = `
-                <span><strong>${String(dia).padStart(2, '0')}</strong></span>
-                <input type="time" id="aj_e1_${dia}" value="${horarios.e1 || ''}" ${!isUser ? 'disabled' : ''}>
-                <input type="time" id="aj_s1_${dia}" value="${horarios.s1 || ''}" ${!isUser ? 'disabled' : ''}>
-                <input type="time" id="aj_e2_${dia}" value="${horarios.e2 || ''}" ${!isUser ? 'disabled' : ''}>
-                <input type="time" id="aj_s2_${dia}" value="${horarios.s2 || ''}" ${!isUser ? 'disabled' : ''}>
+                <span><strong>${String(diaFinal).padStart(2, '0')}</strong></span>
+                <input type="time" id="aj_e1_${diaFinal}" value="${horarios.e1 || ''}" ${!isUser ? 'disabled' : ''}>
+                <input type="time" id="aj_s1_${diaFinal}" value="${horarios.s1 || ''}" ${!isUser ? 'disabled' : ''}>
+                <input type="time" id="aj_e2_${diaFinal}" value="${horarios.e2 || ''}" ${!isUser ? 'disabled' : ''}>
+                <input type="time" id="aj_s2_${diaFinal}" value="${horarios.s2 || ''}" ${!isUser ? 'disabled' : ''}>
             `;
             container.appendChild(div);
             if (isUser) {
@@ -3056,7 +3159,6 @@
             const nome = select.value;
             const data = dataInput.value;
             
-            // CORREÇÃO: Extrair o dia da data selecionada corretamente
             let dia = new Date(data + 'T00:00:00').getDate();
             if (isNaN(dia) || dia < 1 || dia > 31) {
                 const hoje = new Date();
@@ -3364,6 +3466,15 @@
             doc.text('FICHA CADASTRAL', PAGE_WIDTH / 2, y, { align: 'center' });
             y += 8;
 
+            if (func.foto) {
+                try {
+                    doc.addImage(func.foto, 'JPEG', PAGE_WIDTH / 2 - 20, y, 40, 40);
+                    y += 45;
+                } catch(e) {
+                    y += 5;
+                }
+            }
+
             doc.setFontSize(14);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(0, 0, 0);
@@ -3508,7 +3619,10 @@
             
             let html = `
                 <div class="cartao-header">
-                    <div class="foto-cartao-placeholder"><i class="fas fa-user"></i></div>
+                    ${func.foto ? 
+                        `<img src="${func.foto}" class="foto-cartao" alt="Foto de ${func.nome}">` :
+                        `<div class="foto-cartao-placeholder"><i class="fas fa-user"></i></div>`
+                    }
                     <div class="info-cartao">
                         <h2>${func.nome}</h2>
                         <p>${func.unidade || ''} • ${func.cpf || ''}</p>
