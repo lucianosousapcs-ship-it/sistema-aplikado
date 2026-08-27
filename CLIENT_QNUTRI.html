@@ -580,6 +580,7 @@
             font-weight: 500;
             font-size: 13px;
             letter-spacing: 0.2px;
+            cursor: pointer;
         }
 
         .manual-executive-link:hover {
@@ -610,13 +611,6 @@
         .manual-executive-link .label .title {
             font-weight: 600;
             font-size: 13px;
-        }
-
-        .manual-executive-link .label .sub {
-            font-weight: 400;
-            font-size: 11px;
-            opacity: 0.5;
-            display: none;
         }
 
         .manual-executive-link .badge-manual {
@@ -826,6 +820,71 @@
             font-weight: 600;
         }
 
+        /* ===== TOAST / NOTIFICAÇÃO ===== */
+        .toast-notification {
+            position: fixed;
+            bottom: 100px;
+            right: 28px;
+            background: rgba(10, 6, 2, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 140, 0, 0.2);
+            border-radius: 16px;
+            padding: 16px 24px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            color: #fff;
+            max-width: 380px;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            z-index: 3000;
+        }
+
+        .toast-notification.show {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .toast-notification .toast-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .toast-notification .toast-header i {
+            color: #FF8C00;
+            font-size: 20px;
+        }
+
+        .toast-notification .toast-header strong {
+            font-size: 14px;
+        }
+
+        .toast-notification .toast-body {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.4;
+            padding-left: 32px;
+        }
+
+        .toast-notification .toast-close {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+
+        .toast-notification .toast-close:hover {
+            color: #fff;
+        }
+
         /* ===== RESPONSIVE ===== */
         @media (max-width: 1024px) {
             .modules-grid {
@@ -871,6 +930,14 @@
             .manual-executive-link .badge-manual {
                 font-size: 9px;
                 padding: 1px 8px;
+            }
+
+            .toast-notification {
+                bottom: 80px;
+                right: 16px;
+                left: 16px;
+                max-width: none;
+                padding: 14px 18px;
             }
         }
 
@@ -1026,6 +1093,18 @@
         </div>
     </div>
 
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="toast-notification">
+        <button class="toast-close" id="toastClose">&times;</button>
+        <div class="toast-header">
+            <i class="fas fa-info-circle"></i>
+            <strong>Manual indisponível</strong>
+        </div>
+        <div class="toast-body">
+            O arquivo do manual não foi encontrado. Verifique se o arquivo <strong>"Manual Folha de ponto.html"</strong> está na pasta correta.
+        </div>
+    </div>
+
     <!-- Float Button -->
     <div class="float-button" id="floatBtn">
         <i class="fas fa-utensils"></i>
@@ -1073,11 +1152,51 @@
             window.location.href = 'MODULOI_QNUTRI.html';
         });
 
-        // ===== ÍCONE MANUAL DA FOLHA - ESTILO EXECUTIVO =====
-        document.getElementById('manualIconLink').addEventListener('click', function(e) {
+        // ===== ÍCONE MANUAL DA FOLHA - COM VERIFICAÇÃO =====
+        const manualLink = document.getElementById('manualIconLink');
+        const toast = document.getElementById('toastNotification');
+        const toastClose = document.getElementById('toastClose');
+
+        function showToast() {
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 6000);
+        }
+
+        toastClose.addEventListener('click', () => {
+            toast.classList.remove('show');
+        });
+
+        manualLink.addEventListener('click', function(e) {
             e.preventDefault();
-            // Abre o manual da folha de ponto (substitua pelo caminho correto)
-            window.open('Manual Folha de ponto.html', '_blank');
+
+            // Tenta abrir o manual
+            const manualWindow = window.open('Manual Folha de ponto.html', '_blank');
+
+            // Se a janela foi aberta mas o arquivo não existe, o navegador pode
+            // ou não mostrar erro. Usamos um timeout para verificar.
+            if (manualWindow) {
+                // Pequeno delay para verificar se a página carregou
+                setTimeout(() => {
+                    try {
+                        // Tenta acessar a URL da janela - se falhar, é porque deu erro
+                        const url = manualWindow.location.href;
+                        // Se a URL contém "404" ou é about:blank, provavelmente deu erro
+                        if (url.includes('404') || url === 'about:blank') {
+                            manualWindow.close();
+                            showToast();
+                        }
+                    } catch (e) {
+                        // Não é possível acessar cross-origin, então assume que funcionou
+                        // ou mostra o toast como fallback
+                        showToast();
+                    }
+                }, 500);
+            } else {
+                // Popup bloqueado ou erro
+                showToast();
+            }
         });
 
         // Modal
