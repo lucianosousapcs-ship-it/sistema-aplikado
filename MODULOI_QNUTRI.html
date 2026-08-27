@@ -3015,7 +3015,15 @@
             container.innerHTML = '';
             if (header) container.appendChild(header);
             
-            const dia = new Date(data).getDate();
+            // CORREÇÃO: Extrair o dia da data selecionada corretamente
+            const dia = new Date(data + 'T00:00:00').getDate();
+            
+            // Se a data for inválida, usa o dia atual
+            if (isNaN(dia) || dia < 1 || dia > 31) {
+                const hoje = new Date();
+                dia = hoje.getDate();
+            }
+            
             const horarios = dadosAjuste[dia] || { e1: '', s1: '', e2: '', s2: '' };
             const isUser = usuarioAtual && (usuarioAtual.role === 'user' || usuarioAtual.role === 'admin');
             
@@ -3047,7 +3055,13 @@
             }
             const nome = select.value;
             const data = dataInput.value;
-            const dia = new Date(data).getDate();
+            
+            // CORREÇÃO: Extrair o dia da data selecionada corretamente
+            let dia = new Date(data + 'T00:00:00').getDate();
+            if (isNaN(dia) || dia < 1 || dia > 31) {
+                const hoje = new Date();
+                dia = hoje.getDate();
+            }
             
             const func = funcionariosCadastrados.find(f => f.nome === nome);
             if (!func) {
