@@ -1514,10 +1514,10 @@
             </div>
             <div class="modal-body">
                 <div style="display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;">
-                    <button class="btn-action btn-primary" onclick="mostrarFiltroPonto()" style="flex:1;">
+                    <button class="btn-action btn-primary" onclick="mostrarFiltroPonto()" style="flex:1;background:#FF8C00;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;">
                         <i class="fas fa-clock"></i> Ponto por Funcionário
                     </button>
-                    <button class="btn-action btn-secondary" onclick="mostrarFiltroFicha()" style="flex:1;">
+                    <button class="btn-action btn-secondary" onclick="mostrarFiltroFicha()" style="flex:1;background:#6c757d;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;">
                         <i class="fas fa-id-card"></i> Ficha Cadastral
                     </button>
                 </div>
@@ -1555,7 +1555,9 @@
                         </div>
                     </div>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;">
-                        <button class="btn-action btn-pdf" onclick="gerarRelatorioPontoDireto()"><i class="fas fa-file-pdf"></i> Gerar PDF Ponto</button>
+                        <button class="btn-action btn-pdf" onclick="gerarRelatorioPontoDireto()" style="background:#dc3545;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;">
+                            <i class="fas fa-file-pdf"></i> Gerar PDF Ponto
+                        </button>
                     </div>
                 </div>
                 <div id="filtroFichaContainer" style="display:none;">
@@ -1581,7 +1583,9 @@
                         </div>
                     </div>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;">
-                        <button class="btn-action btn-pdf" onclick="gerarFichaCadastralDireto()"><i class="fas fa-file-pdf"></i> Gerar PDF Ficha</button>
+                        <button class="btn-action btn-pdf" onclick="gerarFichaCadastralDireto()" style="background:#dc3545;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;">
+                            <i class="fas fa-file-pdf"></i> Gerar PDF Ficha
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2687,126 +2691,344 @@
         }
 
         // ============================================================
-        // CORREÇÃO 5: RELATÓRIO PONTO POR FUNCIONÁRIO
+        // CORREÇÃO 5: RELATÓRIO PONTO POR FUNCIONÁRIO (PDF COMPLETO)
         // ============================================================
         function gerarRelatorioPontoDireto() {
             const select = document.getElementById('filtroRelFuncionario');
-            if (!select.value) { mostrarToast('⚠️ Selecione um funcionário.', 'warning'); return; }
+            const mesSelect = document.getElementById('filtroRelMes');
+            
+            if (!select || !select.value) {
+                mostrarToast('⚠️ Selecione um funcionário.', 'warning');
+                return;
+            }
+            
             const nome = select.value;
-            const mes = document.getElementById('filtroRelMes').value;
+            const mes = mesSelect ? mesSelect.value : document.getElementById('mes').value;
             const ano = document.getElementById('ano').value;
             
+            const func = funcionariosCadastrados.find(f => f.nome === nome);
             const chave = `ponto_${nome}_${mes}_${ano}`;
             let dados = {};
             try { const saved = localStorage.getItem(chave); if (saved) dados = JSON.parse(saved); } catch(e) {}
-            gerarPDFPonto(nome, mes, ano, dados);
+            
+            mostrarToast(`📄 Gerando relatório de ponto para ${nome} - ${mes}/${ano}...`);
+            gerarPDFPontoCompleto(nome, mes, ano, dados, func);
         }
 
-        function gerarPDFPonto(nome, mes, ano, dados) {
+        function gerarPDFPontoCompleto(nome, mes, ano, dados, func) {
             try {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
-                doc.setFontSize(16);
-                doc.text('RELATÓRIO DE PONTO', 105, 20, { align: 'center' });
-                doc.setFontSize(12);
-                doc.text(`Funcionário: ${nome}`, 20, 35);
-                doc.text(`Período: ${mes}/${ano}`, 20, 42);
-                doc.text(`Data: ${new Date().toLocaleDateString()}`, 20, 49);
                 
-                const headers = ['Dia', 'Entrada 1', 'Saída 1', 'Entrada 2', 'Saída 2', 'Total'];
-                let y = 60;
+                // CABEÇALHO
                 doc.setFillColor(255, 140, 0);
-                doc.rect(20, y - 4, 170, 8, 'F');
+                doc.rect(0, 0, 210, 12, 'F');
+                doc.setFontSize(10);
                 doc.setTextColor(255, 255, 255);
-                headers.forEach((h, i) => { doc.text(h, 20 + i * 28, y + 2); });
+                doc.text('ApliKado - Sistema de Controle de Ponto', 105, 8, { align: 'center' });
                 doc.setTextColor(0, 0, 0);
+                
+                // TÍTULO
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text('RELATÓRIO DE PONTO', 105, 25, { align: 'center' });
+                doc.setFont('helvetica', 'normal');
+                
+                // INFORMAÇÕES DO FUNCIONÁRIO
+                doc.setFontSize(11);
+                let y = 35;
+                doc.setDrawColor(200, 200, 200);
+                doc.setLineWidth(0.3);
+                doc.line(20, y - 2, 190, y - 2);
+                
+                const infoFunc = [
+                    ['Funcionário:', func ? func.nome : nome],
+                    ['Unidade:', func ? func.unidade || '-' : '-'],
+                    ['CPF:', func ? func.cpf || '-' : '-'],
+                    ['Período:', mes + ' / ' + ano]
+                ];
+                infoFunc.forEach(([label, valor]) => {
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(label, 25, y);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(valor, 75, y);
+                    y += 7;
+                });
+                y += 5;
+                doc.line(20, y - 2, 190, y - 2);
+                
+                // TABELA
+                const headers = ['Dia', 'Entrada 1', 'Saída 1', 'Total 1', 'Entrada 2', 'Saída 2', 'Total 2', 'Total Dia', 'Hora Extra'];
+                const colWidths = [12, 20, 20, 18, 20, 20, 18, 18, 18];
+                let x = 15;
+                y += 4;
+                
+                doc.setFillColor(255, 140, 0);
+                doc.rect(x, y - 3, 180, 8, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'bold');
+                let xPos = x;
+                headers.forEach((h, i) => {
+                    doc.text(h, xPos + colWidths[i] / 2, y + 2, { align: 'center' });
+                    xPos += colWidths[i];
+                });
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'normal');
                 y += 8;
                 
-                let totalHoras = 0, diasComDados = 0;
-                for (let i = 1; i <= 31; i++) {
+                // DADOS
+                let totalHoras = 0, totalHE = 0, diasComDados = 0, linhaAtual = 0;
+                const dias = obterDiasDoMes(mes, parseInt(ano));
+                
+                for (let i = 1; i <= dias; i++) {
                     const d = dados[i] || {};
-                    if (d.e1 || d.s1 || d.e2 || d.s2) {
-                        const total = calcularTotalHoras(d.e1, d.s1, d.e2, d.s2);
-                        totalHoras += converterParaMinutos(total);
-                        diasComDados++;
-                        if (y > 270) { doc.addPage(); y = 20; }
-                        const linha = [String(i).padStart(2,'0'), d.e1||'-', d.s1||'-', d.e2||'-', d.s2||'-', total];
-                        linha.forEach((texto, idx) => { doc.text(texto, 20 + idx * 28, y + 2); });
-                        y += 6;
+                    const temDado = d.e1 || d.s1 || d.e2 || d.s2;
+                    if (!temDado) continue;
+                    
+                    const diff1 = calcularDiferenca(d.e1 || '', d.s1 || '');
+                    const diff2 = calcularDiferenca(d.e2 || '', d.s2 || '');
+                    const total = somarHoras(diff1, diff2);
+                    const totalMin = converterParaMinutos(total);
+                    const extra = totalMin > 480 ? totalMin - 480 : 0;
+                    
+                    totalHoras += totalMin;
+                    totalHE += extra;
+                    diasComDados++;
+                    
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
+                        doc.setFillColor(255, 140, 0);
+                        doc.rect(x, y - 3, 180, 8, 'F');
+                        doc.setTextColor(255, 255, 255);
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'bold');
+                        xPos = x;
+                        headers.forEach((h, i) => {
+                            doc.text(h, xPos + colWidths[i] / 2, y + 2, { align: 'center' });
+                            xPos += colWidths[i];
+                        });
+                        doc.setTextColor(0, 0, 0);
+                        doc.setFont('helvetica', 'normal');
+                        y += 8;
                     }
+                    
+                    if (linhaAtual % 2 === 0) {
+                        doc.setFillColor(248, 248, 248);
+                        doc.rect(x, y - 2, 180, 6, 'F');
+                    }
+                    
+                    const linha = [
+                        String(i).padStart(2, '0'),
+                        d.e1 || '-', d.s1 || '-', diff1,
+                        d.e2 || '-', d.s2 || '-', diff2,
+                        total, extra > 0 ? formatarHoras(extra) : '-'
+                    ];
+                    
+                    xPos = x;
+                    linha.forEach((texto, idx) => {
+                        doc.setFontSize(8);
+                        if (idx === 8 && extra > 0) {
+                            doc.setTextColor(40, 167, 69);
+                            doc.setFont('helvetica', 'bold');
+                        } else {
+                            doc.setTextColor(0, 0, 0);
+                            doc.setFont('helvetica', 'normal');
+                        }
+                        doc.text(texto, xPos + colWidths[idx] / 2, y + 2, { align: 'center' });
+                        xPos += colWidths[idx];
+                    });
+                    y += 6;
+                    linhaAtual++;
                 }
+                
+                // RESUMO
+                y += 6;
+                doc.setDrawColor(200, 200, 200);
+                doc.line(20, y - 2, 190, y - 2);
+                y += 6;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.text('RESUMO DO PERÍODO', 105, y, { align: 'center' });
                 y += 8;
-                doc.text(`Total de dias trabalhados: ${diasComDados}`, 20, y);
-                doc.text(`Total de horas: ${formatarHoras(totalHoras)}`, 20, y + 7);
-                if (totalHoras > 480) {
-                    doc.setTextColor(40, 167, 69);
-                    doc.text(`Horas extras: ${formatarHoras(totalHoras - 480)}`, 20, y + 14);
-                    doc.setTextColor(0, 0, 0);
-                }
-                doc.setFontSize(8);
-                doc.text('Gerado pelo sistema ApliKado', 105, 285, { align: 'center' });
+                doc.setFont('helvetica', 'normal');
+                
+                const resumo = [
+                    ['Dias trabalhados:', String(diasComDados)],
+                    ['Total de horas trabalhadas:', formatarHoras(totalHoras)],
+                    ['Média diária:', diasComDados > 0 ? formatarHoras(Math.round(totalHoras / diasComDados)) : '00:00'],
+                    ['Horas extras:', formatarHoras(totalHE)],
+                    ['Saldo de horas:', formatarHoras(totalHE)]
+                ];
+                resumo.forEach(([label, valor]) => {
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(label, 40, y);
+                    doc.setFont('helvetica', 'normal');
+                    if (label.includes('Horas extras') || label.includes('Saldo')) {
+                        doc.setTextColor(40, 167, 69);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text(valor, 120, y);
+                        doc.setTextColor(0, 0, 0);
+                        doc.setFont('helvetica', 'normal');
+                    } else {
+                        doc.text(valor, 120, y);
+                    }
+                    y += 6;
+                });
+                
+                // RODAPÉ
+                y += 8;
+                doc.setFontSize(7);
+                doc.setTextColor(150, 150, 150);
+                doc.setFont('helvetica', 'italic');
+                doc.text(`Relatório gerado em: ${new Date().toLocaleString()}`, 105, 285, { align: 'center' });
+                doc.text('Sistema ApliKado - Todos os direitos reservados', 105, 290, { align: 'center' });
+                
                 doc.save(`Relatorio_Ponto_${nome}_${mes}_${ano}.pdf`);
-                mostrarToast('✅ PDF gerado!');
-            } catch(e) {
-                mostrarToast('❌ Erro ao gerar PDF.', 'error');
+                mostrarToast('✅ Relatório de ponto gerado com sucesso!');
+            } catch (e) {
+                console.error('Erro ao gerar PDF:', e);
+                mostrarToast('❌ Erro ao gerar relatório.', 'error');
             }
         }
 
-        function calcularTotalHoras(e1, s1, e2, s2) {
-            return somarHoras(calcularDiferenca(e1, s1), calcularDiferenca(e2, s2));
-        }
-
         // ============================================================
-        // CORREÇÃO 6: FICHA CADASTRAL
+        // CORREÇÃO 6: FICHA CADASTRAL (PDF COMPLETO)
         // ============================================================
         function gerarFichaCadastralDireto() {
             const select = document.getElementById('filtroFichaFuncionario');
-            if (!select.value) { mostrarToast('⚠️ Selecione um funcionário.', 'warning'); return; }
+            if (!select || !select.value) {
+                mostrarToast('⚠️ Selecione um funcionário.', 'warning');
+                return;
+            }
             const func = funcionariosCadastrados.find(f => f.nome === select.value);
-            if (!func) { mostrarToast('⚠️ Funcionário não encontrado.', 'warning'); return; }
-            gerarPDFFicha(func);
+            if (!func) {
+                mostrarToast('⚠️ Funcionário não encontrado.', 'warning');
+                return;
+            }
+            mostrarToast(`📄 Gerando ficha cadastral para ${func.nome}...`);
+            gerarPDFFichaCompleta(func);
         }
 
-        function gerarPDFFicha(func) {
+        function gerarPDFFichaCompleta(func) {
             try {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
-                doc.setFontSize(18);
-                doc.setTextColor(255, 140, 0);
-                doc.text('FICHA CADASTRAL', 105, 25, { align: 'center' });
+                
+                // CABEÇALHO
+                doc.setFillColor(255, 140, 0);
+                doc.rect(0, 0, 210, 12, 'F');
+                doc.setFontSize(10);
+                doc.setTextColor(255, 255, 255);
+                doc.text('ApliKado - Sistema de Controle de Ponto', 105, 8, { align: 'center' });
                 doc.setTextColor(0, 0, 0);
+                
+                // TÍTULO
+                doc.setFontSize(18);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(255, 140, 0);
+                doc.text('FICHA CADASTRAL', 105, 28, { align: 'center' });
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'normal');
                 doc.setDrawColor(255, 140, 0);
                 doc.setLineWidth(0.5);
-                doc.line(20, 30, 190, 30);
+                doc.line(30, 34, 180, 34);
                 
-                let y = 45;
-                const campos = [
-                    ['Nome Completo', func.nome || '-'],
-                    ['CPF', func.cpf || '-'],
-                    ['Unidade', func.unidade || '-'],
-                    ['Data de Admissão', func.admissao || '-'],
-                    ['Validade ASO', func.aso || '-'],
-                    ['Aniversário', func.aniversario || '-']
-                ];
-                campos.forEach(([label, valor]) => {
-                    doc.setFont('bold');
-                    doc.text(`${label}:`, 25, y);
-                    doc.setFont('normal');
-                    doc.text(valor, 80, y);
-                    y += 10;
-                });
-                y += 10;
-                doc.setFontSize(10);
-                doc.setTextColor(100, 100, 100);
-                doc.text(`Gerado em: ${new Date().toLocaleString()}`, 25, y);
+                // DADOS
+                let y = 48;
+                doc.setFontSize(11);
+                
+                // Foto placeholder
+                doc.setDrawColor(200, 200, 200);
+                doc.setLineWidth(0.3);
+                doc.rect(150, y - 5, 40, 40);
+                doc.setFontSize(20);
+                doc.setTextColor(200, 200, 200);
+                doc.text('📸', 170, y + 22, { align: 'center' });
                 doc.setTextColor(0, 0, 0);
                 doc.setFontSize(8);
+                doc.text('Foto', 170, y + 40, { align: 'center' });
+                
+                const campos = [
+                    ['NOME COMPLETO:', func.nome || '-'],
+                    ['CPF:', func.cpf || '-'],
+                    ['UNIDADE:', func.unidade || '-'],
+                    ['DATA DE ADMISSÃO:', func.admissao || '-'],
+                    ['VALIDADE ASO:', func.aso || '-'],
+                    ['ANIVERSÁRIO:', func.aniversario || '-'],
+                    ['DATA DE CADASTRO:', func.id ? new Date(func.id).toLocaleDateString() : '-']
+                ];
+                campos.forEach(([label, valor], index) => {
+                    if (index > 0) {
+                        doc.setDrawColor(240, 240, 240);
+                        doc.setLineWidth(0.2);
+                        doc.line(25, y - 2, 145, y - 2);
+                    }
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(80, 80, 80);
+                    doc.text(label, 30, y + 5);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(0, 0, 0);
+                    if (label === 'CPF:' || label === 'UNIDADE:') {
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(255, 140, 0);
+                        doc.text(valor, 110, y + 5);
+                        doc.setTextColor(0, 0, 0);
+                        doc.setFont('helvetica', 'normal');
+                    } else {
+                        doc.text(valor, 110, y + 5);
+                    }
+                    y += 12;
+                });
+                
+                // OBSERVAÇÕES
+                y += 10;
+                doc.setDrawColor(200, 200, 200);
+                doc.setLineWidth(0.3);
+                doc.line(25, y, 185, y);
+                y += 8;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(255, 140, 0);
+                doc.text('OBSERVAÇÕES', 30, y);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'normal');
+                y += 8;
+                doc.setFontSize(9);
                 doc.setTextColor(150, 150, 150);
-                doc.text('Sistema ApliKado - Controle de Ponto', 105, 285, { align: 'center' });
+                doc.text('________________________________________________________________________________', 30, y);
+                y += 6;
+                doc.text('________________________________________________________________________________', 30, y);
+                y += 6;
+                doc.text('________________________________________________________________________________', 30, y);
+                y += 6;
+                doc.text('________________________________________________________________________________', 30, y);
+                
+                // ASSINATURAS
+                y += 15;
+                doc.setDrawColor(100, 100, 100);
+                doc.setLineWidth(0.3);
+                doc.line(30, y, 85, y);
+                doc.line(125, y, 180, y);
+                y += 4;
+                doc.setFontSize(8);
+                doc.setTextColor(100, 100, 100);
+                doc.text('Assinatura do Funcionário', 57, y + 2, { align: 'center' });
+                doc.text('Assinatura do RH', 152, y + 2, { align: 'center' });
+                
+                // RODAPÉ
+                doc.setFontSize(7);
+                doc.setTextColor(150, 150, 150);
+                doc.setFont('helvetica', 'italic');
+                doc.text(`Ficha gerada em: ${new Date().toLocaleString()}`, 105, 285, { align: 'center' });
+                doc.text('Sistema ApliKado - Todos os direitos reservados', 105, 290, { align: 'center' });
+                
                 doc.save(`Ficha_Cadastral_${func.nome}.pdf`);
-                mostrarToast('✅ Ficha cadastral gerada!');
-            } catch(e) {
-                mostrarToast('❌ Erro ao gerar ficha.', 'error');
+                mostrarToast('✅ Ficha cadastral gerada com sucesso!');
+            } catch (e) {
+                console.error('Erro ao gerar ficha:', e);
+                mostrarToast('❌ Erro ao gerar ficha cadastral.', 'error');
             }
         }
 
@@ -2920,6 +3142,10 @@
             } catch(e) {
                 mostrarToast('❌ Erro ao baixar.', 'error');
             }
+        }
+
+        function calcularTotalHoras(e1, s1, e2, s2) {
+            return somarHoras(calcularDiferenca(e1, s1), calcularDiferenca(e2, s2));
         }
 
         // ============================================================
@@ -3082,7 +3308,7 @@
         }
 
         // ============================================================
-        // RELATÓRIOS
+        // RELATÓRIOS - FILTROS
         // ============================================================
         function mostrarFiltroPonto() {
             document.getElementById('filtroPontoContainer').style.display = 'block';
