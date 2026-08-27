@@ -337,7 +337,6 @@
         .ponto-table .hora-extra { background: rgba(40,167,69,0.1); color: #28a745; font-weight: 700; }
         .ponto-table .hora-extra-negative { background: rgba(220,53,69,0.1); color: #dc3545; font-weight: 700; }
         
-        /* ===== MODAL PADRÃO ===== */
         .modal {
             display: none;
             position: fixed;
@@ -366,7 +365,6 @@
             animation: modalFadeIn 0.3s ease;
         }
         
-        /* ===== MODAL LOGIN ===== */
         .modal-login {
             display: none !important;
             z-index: 10000;
@@ -1910,6 +1908,7 @@
         let nomeArquivoAnexado = null;
         let dadosAjuste = {};
         let pontosPorFuncionario = {};
+        let anexoAtual = null;
 
         // ============================================================
         // CONSTANTES
@@ -2248,6 +2247,7 @@
             const mesAtual = new Date().getMonth();
             document.getElementById('selectCartaoMes').value = MESES[mesAtual];
             document.getElementById('selectCartaoAno').value = new Date().getFullYear();
+            setTimeout(() => gerarCartaoPonto(), 300);
         }
         function fecharModalCartao() { document.getElementById('modalCartao').classList.remove('active'); }
 
@@ -2331,10 +2331,7 @@
             const chave = `ponto_${funcionarioAtual}_${mes}_${ano}`;
             try {
                 localStorage.setItem(chave, JSON.stringify(dadosParaSalvar));
-                
-                // Atualizar pontosPorFuncionario
                 pontosPorFuncionario[funcionarioAtual] = dadosParaSalvar;
-                
                 mostrarToast(`✅ ${totalPreenchidos} dias salvos!`);
                 
                 for (const dia in dadosParaSalvar) {
@@ -2451,15 +2448,15 @@
         }
 
         // ============================================================
-        // ANEXAR CARTÕES
+        // ANEXAR CARTÕES - CORRIGIDO PARA USAR SUPABASE
         // ============================================================
-        function handleFileUpload(event) {
+        async function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
             
             const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp'];
             if (!tiposPermitidos.includes(file.type)) {
-                mostrarToast('⚠️ Formato não suportado.', 'warning');
+                mostrarToast('⚠️ Formato não suportado. Use JPG, PNG ou WEBP.', 'warning');
                 return;
             }
             if (file.size > 5 * 1024 * 1024) {
@@ -2467,78 +2464,179 @@
                 return;
             }
             
-            arquivoAnexado = file;
-            nomeArquivoAnexado = file.name;
+            if (!funcionarioAtual) {
+                mostrarToast('⚠️ Selecione um funcionário primeiro!', 'warning');
+                return;
+            }
+
+            const mes = document.getElementById('mes').value;
+            const ano = document.getElementById('ano').value;
             
+            const func = funcionariosCadastrados.find(f => f.nome === funcionarioAtual);
+            if (!func) {
+                mostrarToast('⚠️ Funcionário não encontrado!', 'warning');
+                return;
+            }
+
+            if (!func.id) {
+                mostrarToast('⚠️ Funcionário sem ID! Salve o funcionário no Supabase primeiro.', 'error');
+                return;
+            }
+
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const imgDisplay = document.getElementById('imgDisplay');
-                imgDisplay.style.backgroundImage = `url(${e.target.result})`;
-                imgDisplay.style.backgroundSize = 'contain';
-                imgDisplay.style.backgroundPosition = 'center';
-                imgDisplay.style.backgroundRepeat = 'no-repeat';
+            reader.onload = async function(e) {
+                const base64Data = e.target.result;
+                anexoAtual = base64Data;
                 
-                const statusAnexo = document.getElementById('statusAnexo');
-                const statusTexto = document.getElementById('statusAnexoTexto');
-                statusAnexo.style.display = 'block';
-                statusAnexo.style.background = '#d4edda';
-                statusAnexo.style.padding = '6px 12px';
-                statusAnexo.style.borderRadius = '4px';
-                statusAnexo.style.border = '1px solid #28a745';
-                statusTexto.innerHTML = `📎 ${file.name} ✅`;
-                
-                document.getElementById('btnBaixarAnexo').style.display = 'inline-block';
-                
-                const chave = `anexo_${funcionarioAtual || 'geral'}_${document.getElementById('mes').value}_${document.getElementById('ano').value}`;
                 try {
-                    localStorage.setItem(chave, JSON.stringify({
-                        nome: file.name,
-                        tamanho: file.size,
-                        data: new Date().toISOString(),
-                        base64: e.target.result
-                    }));
-                } catch(err) {}
-                mostrarToast(`✅ Cartão anexado: ${file.name}`);
+                    // SALVAR NO SUPABASE - USANDO OS NOMES CORRETOS DAS COLUNAS
+                    const { data, error } = await supabaseClient
+                        .from('imagens_cartao')
+                        .upsert({
+                            funcionario_id: func.id,
+                            mes: mes,
+                            ano: parseInt(ano),
+                            imagem_url: base64Data,
+                            imagem_base64: base64Data,
+                            nome_arquivo: file.name,
+                            uploaded_at: new Date().toISOString()
+                        }, {
+                            onConflict: 'funcionario_id,mes,ano'
+                        })
+                        .select();
+                    
+                    if (error) {
+                        console.error('Erro no upsert:', error);
+                        mostrarToast(`❌ Erro: ${error.message}`, 'error');
+                        return;
+                    }
+                    
+                    console.log('✅ Salvo com sucesso:', data);
+                    mostrarToast('✅ Cartão salvo no Supabase!');
+                    
+                    // Atualizar visualização
+                    const imgDisplay = document.getElementById('imgDisplay');
+                    imgDisplay.style.backgroundImage = `url(${base64Data})`;
+                    imgDisplay.style.backgroundSize = 'contain';
+                    imgDisplay.style.backgroundPosition = 'center';
+                    imgDisplay.style.backgroundRepeat = 'no-repeat';
+                    
+                    const statusAnexo = document.getElementById('statusAnexo');
+                    const statusTexto = document.getElementById('statusAnexoTexto');
+                    statusAnexo.style.display = 'block';
+                    statusAnexo.style.background = '#d4edda';
+                    statusAnexo.style.padding = '6px 12px';
+                    statusAnexo.style.borderRadius = '4px';
+                    statusAnexo.style.border = '1px solid #28a745';
+                    statusTexto.innerHTML = `📎 ${file.name} ✅ (Salvo no Supabase)`;
+                    
+                    document.getElementById('btnBaixarAnexo').style.display = 'inline-block';
+                    
+                    // Salvar cache local
+                    const chaveLocal = `anexo_${funcionarioAtual}_${mes}_${ano}`;
+                    try {
+                        localStorage.setItem(chaveLocal, JSON.stringify({
+                            nome: file.name,
+                            tamanho: file.size,
+                            data: new Date().toISOString(),
+                            base64: base64Data
+                        }));
+                    } catch(err) {}
+                    
+                } catch (error) {
+                    console.error('Erro:', error);
+                    mostrarToast('❌ Erro ao salvar a imagem!', 'error');
+                }
             };
             reader.readAsDataURL(file);
         }
 
-        function baixarAnexo() {
-            if (!arquivoAnexado) {
-                const imgDisplay = document.getElementById('imgDisplay');
-                if (imgDisplay && imgDisplay.style.backgroundImage) {
-                    const bg = imgDisplay.style.backgroundImage;
-                    const url = bg.replace(/^url\(["']?/, '').replace(/["']?\)$/, '');
-                    if (url && url.startsWith('data:image')) {
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = 'cartao_ponto.jpg';
-                        link.click();
-                        mostrarToast('📥 Download iniciado!');
-                        return;
-                    }
+        // ============================================================
+        // BUSCAR ANEXO DO SUPABASE
+        // ============================================================
+        async function buscarAnexoDoSupabase(nomeFuncionario, mes, ano) {
+            try {
+                const func = funcionariosCadastrados.find(f => f.nome === nomeFuncionario);
+                if (!func) return null;
+                
+                const { data, error } = await supabaseClient
+                    .from('imagens_cartao')
+                    .select('*')
+                    .eq('funcionario_id', func.id)
+                    .eq('mes', mes)
+                    .eq('ano', parseInt(ano))
+                    .maybeSingle();
+                
+                if (error) {
+                    console.error('Erro ao buscar anexo:', error);
+                    return null;
                 }
-                mostrarToast('⚠️ Nenhum anexo disponível.', 'warning');
-                return;
+                
+                return data;
+            } catch (error) {
+                console.error('Erro:', error);
+                return null;
             }
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(arquivoAnexado);
-            link.download = arquivoAnexado.name;
-            link.click();
-            URL.revokeObjectURL(link.href);
-            mostrarToast('📥 Download iniciado!');
         }
 
+        // ============================================================
+        // BAIXAR ANEXO
+        // ============================================================
+        function baixarAnexo() {
+            const imgDisplay = document.getElementById('imgDisplay');
+            if (imgDisplay && imgDisplay.style.backgroundImage) {
+                const bg = imgDisplay.style.backgroundImage;
+                const url = bg.replace(/^url\(["']?/, '').replace(/["']?\)$/, '');
+                if (url && url.startsWith('data:image')) {
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'cartao_ponto.jpg';
+                    link.click();
+                    mostrarToast('📥 Download iniciado!');
+                    return;
+                }
+            }
+            mostrarToast('⚠️ Nenhum anexo disponível.', 'warning');
+        }
+
+        // ============================================================
+        // BAIXAR ANEXO DO SUPABASE
+        // ============================================================
+        async function baixarAnexoCartaoSupabase(nome, mes, ano) {
+            try {
+                const anexoData = await buscarAnexoDoSupabase(nome, mes, ano);
+                if (anexoData && anexoData.imagem_url) {
+                    const link = document.createElement('a');
+                    link.href = anexoData.imagem_url;
+                    link.download = anexoData.nome_arquivo || 'cartao_ponto.jpg';
+                    link.click();
+                    mostrarToast('📥 Download iniciado do Supabase!');
+                } else {
+                    mostrarToast('⚠️ Nenhum anexo encontrado no Supabase.', 'warning');
+                }
+            } catch (error) {
+                console.error('Erro ao baixar:', error);
+                mostrarToast('❌ Erro ao baixar o anexo.', 'error');
+            }
+        }
+
+        // ============================================================
+        // LIMPAR IMAGEM
+        // ============================================================
         function limparImagem() {
             document.getElementById('imgDisplay').style.backgroundImage = 'none';
             arquivoAnexado = null;
             nomeArquivoAnexado = null;
+            anexoAtual = null;
             document.getElementById('statusAnexo').style.display = 'none';
             document.getElementById('btnBaixarAnexo').style.display = 'none';
             document.getElementById('fileInput').value = '';
-            mostrarToast('🧹 Imagem removida');
+            mostrarToast('🧹 Imagem removida da visualização');
         }
 
+        // ============================================================
+        // OCR
+        // ============================================================
         function executarOCR() {
             const imgDisplay = document.getElementById('imgDisplay');
             if (!imgDisplay.style.backgroundImage || imgDisplay.style.backgroundImage === 'none') {
@@ -2680,7 +2778,6 @@
                 localStorage.setItem(chave, JSON.stringify(dadosAjuste));
                 mostrarToast('✅ Ajustes salvos!');
                 
-                // Atualizar tabela principal
                 const mes = document.getElementById('mes').value;
                 const ano = document.getElementById('ano').value;
                 const chavePonto = `ponto_${nome}_${mes}_${ano}`;
@@ -2689,8 +2786,6 @@
                     const dadosPonto = JSON.parse(pontoData);
                     dadosPonto[dia] = dadosAjuste[dia];
                     localStorage.setItem(chavePonto, JSON.stringify(dadosPonto));
-                    
-                    // Atualizar pontosPorFuncionario
                     pontosPorFuncionario[nome] = dadosPonto;
                 }
                 
@@ -2733,7 +2828,6 @@
             const mes = document.getElementById('filtroRelMes').value;
             const ano = document.getElementById('ano').value;
             
-            // Carregar dados do funcionário
             const chavePonto = `ponto_${nomeFuncionario}_${mes}_${ano}`;
             let dadosPonto = {};
             try {
@@ -2741,7 +2835,6 @@
                 if (saved) dadosPonto = JSON.parse(saved);
             } catch(e) {}
             
-            // Atualizar pontosPorFuncionario
             pontosPorFuncionario[nomeFuncionario] = dadosPonto;
 
             const { jsPDF } = window.jspdf;
@@ -3032,9 +3125,9 @@
         }
 
         // ============================================================
-        // CARTÃO DE PONTO
+        // CARTÃO DE PONTO - CORRIGIDO PARA BUSCAR DO SUPABASE
         // ============================================================
-        function gerarCartaoPonto() {
+        async function gerarCartaoPonto() {
             const select = document.getElementById('selectCartaoFuncionario');
             const mesSelect = document.getElementById('selectCartaoMes');
             const anoInput = document.getElementById('selectCartaoAno');
@@ -3053,31 +3146,58 @@
             }
             
             const func = funcionariosCadastrados.find(f => f.nome === nome);
+            if (!func) {
+                container.innerHTML = `<p style="text-align:center;color:#dc3545;padding:20px 0;">
+                    ⚠️ Funcionário não encontrado!
+                </p>`;
+                return;
+            }
+            
+            // Buscar dados do ponto (local)
             const chave = `ponto_${nome}_${mes}_${ano}`;
             let dados = {};
             try { const saved = localStorage.getItem(chave); if (saved) dados = JSON.parse(saved); } catch(e) {}
-            
-            // Atualizar pontosPorFuncionario
             pontosPorFuncionario[nome] = dados;
             
-            const chaveAnexo = `anexo_${nome}_${mes}_${ano}`;
-            let anexo = null;
-            try { const savedAnexo = localStorage.getItem(chaveAnexo); if (savedAnexo) anexo = JSON.parse(savedAnexo); } catch(e) {}
+            // BUSCAR ANEXO DO SUPABASE
+            const anexoData = await buscarAnexoDoSupabase(nome, mes, ano);
             
             let html = `
                 <div class="cartao-header">
                     <div class="foto-cartao-placeholder"><i class="fas fa-user"></i></div>
                     <div class="info-cartao">
-                        <h2>${func ? func.nome : nome}</h2>
-                        <p>${func ? func.unidade || '' : ''} • ${func ? func.cpf || '' : ''}</p>
+                        <h2>${func.nome}</h2>
+                        <p>${func.unidade || ''} • ${func.cpf || ''}</p>
                         <p style="font-size:12px;color:#666;">${mes} / ${ano}</p>
                     </div>
                     <div style="margin-left:auto;">
-                        <span class="status-anexado ${anexo ? 'sim' : 'nao'}">
-                            ${anexo ? '📎 Cartão anexado' : '📄 Sem cartão'}
+                        <span class="status-anexado ${anexoData ? 'sim' : 'nao'}">
+                            ${anexoData ? '📎 Cartão no Supabase' : '📄 Sem cartão'}
                         </span>
                     </div>
                 </div>
+            `;
+            
+            // Mostrar a imagem do Supabase se existir
+            if (anexoData && anexoData.imagem_url) {
+                html += `
+                    <div style="margin-bottom:15px;padding:12px;background:#e8f5e9;border-radius:8px;border:1px solid #4CAF50;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                            <i class="fas fa-paperclip" style="color:#28a745;"></i>
+                            <span><strong>Cartão anexado no Supabase:</strong> ${anexoData.nome_arquivo || 'imagem'}</span>
+                            <button onclick="baixarAnexoCartaoSupabase('${nome}', '${mes}', '${ano}')" class="btn-download-anexo">
+                                <i class="fas fa-download"></i> Baixar
+                            </button>
+                        </div>
+                        <div style="max-height:400px;overflow:auto;border:1px solid #ddd;border-radius:4px;background:#fff;text-align:center;">
+                            <img src="${anexoData.imagem_url}" style="max-width:100%;max-height:400px;object-fit:contain;" alt="Cartão de ponto">
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Tabela de marcações
+            html += `
                 <div class="cartao-marcacoes-area">
                     <table>
                         <thead><tr><th>Dia</th><th>Entrada 1</th><th>Saída 1</th><th>Entrada 2</th><th>Saída 2</th><th>Total</th></tr></thead>
@@ -3110,40 +3230,7 @@
                 </div>
             `;
             
-            if (anexo) {
-                html += `
-                    <div style="margin-top:15px;padding:12px;background:#e8f5e9;border-radius:8px;border:1px solid #4CAF50;display:flex;align-items:center;gap:10px;">
-                        <i class="fas fa-paperclip" style="color:#28a745;"></i>
-                        <span><strong>Cartão anexado:</strong> ${anexo.nome}</span>
-                        <span style="font-size:11px;color:#666;">(${(anexo.tamanho/1024).toFixed(1)} KB)</span>
-                        <button onclick="baixarAnexoCartao('${nome}', '${mes}', '${ano}')" class="btn-download-anexo">
-                            <i class="fas fa-download"></i> Baixar
-                        </button>
-                    </div>
-                `;
-            }
             container.innerHTML = html;
-        }
-
-        function baixarAnexoCartao(nome, mes, ano) {
-            const chave = `anexo_${nome}_${mes}_${ano}`;
-            try {
-                const data = localStorage.getItem(chave);
-                if (data) {
-                    const anexo = JSON.parse(data);
-                    if (anexo.base64) {
-                        const link = document.createElement('a');
-                        link.href = anexo.base64;
-                        link.download = anexo.nome || 'cartao_ponto.jpg';
-                        link.click();
-                        mostrarToast('📥 Download iniciado!');
-                        return;
-                    }
-                }
-                mostrarToast('⚠️ Arquivo não encontrado.', 'warning');
-            } catch(e) {
-                mostrarToast('❌ Erro ao baixar.', 'error');
-            }
         }
 
         function calcularTotalHoras(e1, s1, e2, s2) {
