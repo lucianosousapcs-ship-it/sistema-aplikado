@@ -1896,6 +1896,79 @@
             carregarUsuariosLogin();
             usuarioAtual = { id: 'visitante', nome: 'Visitante', role: 'viewer' };
             atualizarUI();
+            setTimeout(() => {
+                carregarDadosCompletosComFallback();
+            }, 500);
+        }
+
+        // ============================================================
+        // FUNÇÕES SUPABASE - MARCAÇÕES
+        // ============================================================
+        
+        async function buscarMarcacoesSupabase(funcionarioId, mes, ano) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('marcacoes_ponto')
+                    .select('*')
+                    .eq('funcionario_id', funcionarioId)
+                    .eq('mes', mes)
+                    .eq('ano', parseInt(ano))
+                    .maybeSingle();
+                
+                if (error) {
+                    console.error('Erro ao buscar marcações:', error);
+                    return null;
+                }
+                return data;
+            } catch (error) {
+                console.error('Erro:', error);
+                return null;
+            }
+        }
+
+        async function salvarMarcacoesSupabase(funcionarioId, mes, ano, dados) {
+            try {
+                const existente = await buscarMarcacoesSupabase(funcionarioId, mes, ano);
+                const dadosJSON = JSON.stringify(dados);
+                
+                if (existente) {
+                    const { data, error } = await supabaseClient
+                        .from('marcacoes_ponto')
+                        .update({
+                            dados: dadosJSON,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', existente.id)
+                        .select();
+                    
+                    if (error) {
+                        console.error('Erro ao atualizar:', error);
+                        return { success: false, error: error.message };
+                    }
+                    return { success: true, data: data };
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('marcacoes_ponto')
+                        .insert({
+                            funcionario_id: funcionarioId,
+                            mes: mes,
+                            ano: parseInt(ano),
+                            dados: dadosJSON,
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        })
+                        .select();
+                    
+                    if (error) {
+                        console.error('Erro ao inserir:', error);
+                        return { success: false, error: error.message };
+                    }
+                    return { success: true, data: data };
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                return { success: false, error: error.message };
+            }
         }
 
         // ============================================================
@@ -1986,7 +2059,7 @@
             funcionarioAtual = func.nome;
             mostrarToast('✅ Funcionário selecionado: ' + func.nome);
             fecharModalCadastro();
-            gerarTabela();
+            buscarDadosAutomatico();
         }
 
         function abrirEdicao(index) {
@@ -2039,7 +2112,7 @@
             document.getElementById('btnSalvarFuncionario').dataset.editIndex = '';
         }
 
-        function salvarFuncionario() {
+        async function salvarFuncionario() {
             const nome = document.getElementById('cadNome');
             const editIndex = document.getElementById('btnSalvarFuncionario').dataset.editIndex;
             if (nome && nome.value.trim()) {
@@ -2051,14 +2124,40 @@
                     aso: document.getElementById('cadASO').value || '',
                     aniversario: document.getElementById('cadAniversario').value || ''
                 };
-                if (editIndex !== undefined && editIndex !== '') {
-                    funcionariosCadastrados[parseInt(editIndex)] = { ...funcionariosCadastrados[parseInt(editIndex)], ...dados };
-                    mostrarToast('✅ Funcionário atualizado!');
-                } else {
-                    dados.id = Date.now();
-                    funcionariosCadastrados.push(dados);
-                    mostrarToast('✅ Funcionário cadastrado!');
+                
+                try {
+                    if (editIndex !== undefined && editIndex !== '') {
+                        const func = funcionariosCadastrados[parseInt(editIndex)];
+                        if (func.id) {
+                            const { error } = await supabaseClient
+                                .from('funcionarios')
+                                .update(dados)
+                                .eq('id', func.id);
+                            if (error) throw error;
+                        }
+                        funcionariosCadastrados[parseInt(editIndex)] = { ...func, ...dados };
+                        mostrarToast('✅ Funcionário atualizado no Supabase!');
+                    } else {
+                        const { data, error } = await supabaseClient
+                            .from('funcionarios')
+                            .insert(dados)
+                            .select();
+                        if (error) throw error;
+                        if (data) funcionariosCadastrados.push(data[0]);
+                        mostrarToast('✅ Funcionário cadastrado no Supabase!');
+                    }
+                } catch(error) {
+                    console.error('Erro:', error);
+                    mostrarToast('❌ Erro ao salvar no Supabase: ' + error.message, 'error');
+                    if (editIndex !== undefined && editIndex !== '') {
+                        funcionariosCadastrados[parseInt(editIndex)] = { ...funcionariosCadastrados[parseInt(editIndex)], ...dados };
+                    } else {
+                        dados.id = Date.now();
+                        funcionariosCadastrados.push(dados);
+                    }
+                    mostrarToast('💾 Salvo localmente!');
                 }
+                
                 renderizarTabelaCadastrados();
                 carregarDatalist();
                 carregarSelectCartao();
@@ -2101,23 +2200,103 @@
             });
         }
 
-        function buscarDadosAutomatico() {
-            const nomeBusca = document.getElementById('funcionario').value.trim();
-            const func = funcionariosCadastrados.find(f => f.nome.toLowerCase() === nomeBusca.toLowerCase());
-            if (func) {
-                document.getElementById('empresa').value = func.unidade || '';
-                document.getElementById('matricula').value = func.cpf || '';
-                funcionarioAtual = func.nome;
-                gerarTabela();
-            }
+        // ============================================================
+        // FUNÇÃO OBTER DIAS DO MÊS
+        // ============================================================
+        function obterDiasDoMes(mes, ano) {
+            const meses = {
+                'Janeiro': 0, 'Fevereiro': 1, 'Março': 2, 'Abril': 3,
+                'Maio': 4, 'Junho': 5, 'Julho': 6, 'Agosto': 7,
+                'Setembro': 8, 'Outubro': 9, 'Novembro': 10, 'Dezembro': 11
+            };
+            const mesIndex = meses[mes];
+            if (mesIndex === undefined) return 30;
+            return new Date(ano, mesIndex + 1, 0).getDate();
         }
 
-        function filtrarFuncionariosPorEmpresa() { carregarDatalist(); }
+        // ============================================================
+        // CARREGAR DADOS DO FUNCIONÁRIO
+        // ============================================================
+        async function carregarDadosDoFuncionario(nomeFuncionario, mes, ano) {
+            const func = funcionariosCadastrados.find(f => f.nome === nomeFuncionario);
+            if (!func) {
+                mostrarToast('⚠️ Funcionário não encontrado!', 'warning');
+                return;
+            }
+            
+            document.getElementById('empresa').value = func.unidade || '';
+            document.getElementById('matricula').value = func.cpf || '';
+            
+            let dadosPonto = {};
+            
+            if (func.id) {
+                const dadosSupabase = await buscarMarcacoesSupabase(func.id, mes, ano);
+                if (dadosSupabase && dadosSupabase.dados) {
+                    try {
+                        dadosPonto = typeof dadosSupabase.dados === 'string' ? 
+                            JSON.parse(dadosSupabase.dados) : dadosSupabase.dados;
+                        mostrarToast(`✅ Dados de ${func.nome} carregados do Supabase!`);
+                    } catch(e) {
+                        console.error('Erro ao parsear dados:', e);
+                        dadosPonto = {};
+                    }
+                }
+            }
+            
+            if (Object.keys(dadosPonto).length === 0) {
+                const chave = `ponto_${nomeFuncionario}_${mes}_${ano}`;
+                try {
+                    const saved = localStorage.getItem(chave);
+                    if (saved) {
+                        dadosPonto = JSON.parse(saved);
+                        mostrarToast(`📁 Dados de ${func.nome} carregados do cache local`);
+                    }
+                } catch(e) {}
+            }
+            
+            pontosPorFuncionario[nomeFuncionario] = dadosPonto;
+            
+            const dias = obterDiasDoMes(mes, parseInt(ano));
+            
+            for (let i = 1; i <= 31; i++) {
+                const linha = document.querySelector(`#corpoTabela tr:nth-child(${i})`);
+                if (linha) {
+                    const e1 = linha.querySelector('.e1');
+                    const s1 = linha.querySelector('.s1');
+                    const e2 = linha.querySelector('.e2');
+                    const s2 = linha.querySelector('.s2');
+                    if (e1) e1.value = '';
+                    if (s1) s1.value = '';
+                    if (e2) e2.value = '';
+                    if (s2) s2.value = '';
+                    calcularTotaisLinha(linha);
+                }
+            }
+            
+            for (const dia in dadosPonto) {
+                const d = dadosPonto[dia];
+                const linha = document.querySelector(`#corpoTabela tr:nth-child(${dia})`);
+                if (linha) {
+                    const e1 = linha.querySelector('.e1');
+                    const s1 = linha.querySelector('.s1');
+                    const e2 = linha.querySelector('.e2');
+                    const s2 = linha.querySelector('.s2');
+                    if (e1) e1.value = d.e1 || '';
+                    if (s1) s1.value = d.s1 || '';
+                    if (e2) e2.value = d.e2 || '';
+                    if (s2) s2.value = d.s2 || '';
+                    calcularTotaisLinha(linha);
+                }
+            }
+            
+            calcularResumo();
+            document.getElementById('totalRegistros').textContent = dias;
+        }
 
         // ============================================================
-        // CARREGAR DADOS
+        // RECARREGAR DADOS AO MUDAR MÊS
         // ============================================================
-        function recarregarDadosAtuais() {
+        async function recarregarDadosAtuais() {
             const mes = document.getElementById('mes').value;
             const ano = document.getElementById('ano').value;
             
@@ -2137,34 +2316,105 @@
                 modoMsg.style.color = '#000000';
             }
             
-            carregarDadosCompletosComFallback();
+            if (funcionarioAtual) {
+                await carregarDadosDoFuncionario(funcionarioAtual, mes, ano);
+            } else {
+                limparTabela();
+                mostrarToast('📅 Mês alterado para ' + mes + '/' + ano);
+            }
+            
+            if (document.getElementById('modalEditor').classList.contains('active')) {
+                inicializarEditor();
+            }
         }
 
+        // ============================================================
+        // LIMPAR TABELA
+        // ============================================================
+        function limparTabela() {
+            document.querySelectorAll('#corpoTabela input').forEach(inp => inp.value = '');
+            document.getElementById('totalRegistros').textContent = '0';
+            document.getElementById('resumoHorasExtra').style.display = 'none';
+        }
+
+        // ============================================================
+        // BUSCAR DADOS AUTOMÁTICO
+        // ============================================================
+        async function buscarDadosAutomatico() {
+            const nomeBusca = document.getElementById('funcionario').value.trim();
+            if (!nomeBusca) {
+                limparTabela();
+                funcionarioAtual = null;
+                return;
+            }
+            
+            const func = funcionariosCadastrados.find(f => f.nome.toLowerCase() === nomeBusca.toLowerCase());
+            if (func) {
+                funcionarioAtual = func.nome;
+                const mes = document.getElementById('mes').value;
+                const ano = document.getElementById('ano').value;
+                await carregarDadosDoFuncionario(func.nome, mes, ano);
+                
+                const fotoContainer = document.getElementById('fotoFuncionario');
+                fotoContainer.style.display = 'flex';
+                document.getElementById('fotoNome').textContent = func.nome;
+                document.getElementById('fotoEmpresa').textContent = func.unidade || '';
+                
+                if (document.getElementById('modalEditor').classList.contains('active')) {
+                    inicializarEditor();
+                }
+            } else {
+                document.getElementById('empresa').value = '';
+                document.getElementById('matricula').value = '';
+                document.getElementById('fotoFuncionario').style.display = 'none';
+                limparTabela();
+                funcionarioAtual = null;
+            }
+        }
+
+        // ============================================================
+        // CARREGAR DADOS COMPLETOS
+        // ============================================================
         async function carregarDadosCompletosComFallback() {
             try {
                 mostrarToast('🔄 Carregando dados...');
-                const { data: funcData, error } = await supabaseClient.from('funcionarios').select('*').order('nome');
-                if (!error && funcData && funcData.length > 0) {
+                
+                const { data: funcData, error: funcError } = await supabaseClient
+                    .from('funcionarios')
+                    .select('*')
+                    .order('nome');
+                
+                if (!funcError && funcData && funcData.length > 0) {
                     funcionariosCadastrados = funcData;
                 }
+                
+                if (funcionarioAtual) {
+                    const mes = document.getElementById('mes').value;
+                    const ano = document.getElementById('ano').value;
+                    await carregarDadosDoFuncionario(funcionarioAtual, mes, ano);
+                } else {
+                    const nomeBusca = document.getElementById('funcionario').value.trim();
+                    if (nomeBusca) {
+                        await buscarDadosAutomatico();
+                    }
+                }
+                
                 renderizarTabelaCadastrados();
                 carregarDatalist();
                 carregarSelectCartao();
                 carregarSelectAjustes();
                 atualizarPeriodoEditor();
+                
+                if (document.getElementById('modalEditor').classList.contains('active')) {
+                    inicializarEditor();
+                }
+                
                 mostrarToast('✅ Dados carregados!');
+                
             } catch (error) {
+                console.error('Erro ao carregar:', error);
                 mostrarToast('⚠️ ' + error.message, 'error');
             }
-        }
-
-        function atualizarPeriodoEditor() {
-            const mes = document.getElementById('mes').value;
-            const ano = document.getElementById('ano').value;
-            const editorMes = document.getElementById('editorMesAtual');
-            const editorGrade = document.getElementById('editorMesGrade');
-            if (editorMes) { editorMes.textContent = mes + ' ' + ano; editorMes.style.color = '#000000'; }
-            if (editorGrade) { editorGrade.textContent = mes + ' ' + ano; editorGrade.style.color = '#000000'; }
         }
 
         // ============================================================
@@ -2275,25 +2525,37 @@
             const dias = obterDiasDoMes(mes, ano);
             const isUser = usuarioAtual && (usuarioAtual.role === 'user' || usuarioAtual.role === 'admin');
             
+            let dadosExistentes = {};
+            if (funcionarioAtual) {
+                dadosExistentes = pontosPorFuncionario[funcionarioAtual] || {};
+                
+                if (Object.keys(dadosExistentes).length === 0) {
+                    const chave = `ponto_${funcionarioAtual}_${mes}_${ano}`;
+                    try {
+                        const saved = localStorage.getItem(chave);
+                        if (saved) dadosExistentes = JSON.parse(saved);
+                    } catch(e) {}
+                }
+            }
+            
             for (let i = 1; i <= dias; i++) {
                 const div = document.createElement('div');
                 div.className = 'linha-grid';
                 div.dataset.dia = i;
                 const diaStr = String(i).padStart(2, '0');
+                const dados = dadosExistentes[i] || {};
                 div.innerHTML = `
                     <span class="dia-label">${diaStr}</span>
-                    <input type="time" id="edit_e1_${i}" value="" onchange="marcarManual(${i})" ${!isUser ? 'disabled' : ''}>
-                    <input type="time" id="edit_s1_${i}" value="" onchange="marcarManual(${i})" ${!isUser ? 'disabled' : ''}>
-                    <input type="time" id="edit_e2_${i}" value="" onchange="marcarManual(${i})" ${!isUser ? 'disabled' : ''}>
-                    <input type="time" id="edit_s2_${i}" value="" onchange="marcarManual(${i})" ${!isUser ? 'disabled' : ''}>
+                    <input type="time" id="edit_e1_${i}" value="${dados.e1 || ''}" onchange="marcarManual(${i})" ${!isUser ? 'disabled' : ''}>
+                    <input type="time" id="edit_s1_${i}" value="${dados.s1 || ''}" onchange="marcarManual(${i})" ${!isUser ? 'disabled' : ''}>
+                    <input type="time" id="edit_e2_${i}" value="${dados.e2 || ''}" onchange="marcarManual(${i})" ${!isUser ? 'disabled' : ''}>
+                    <input type="time" id="edit_s2_${i}" value="${dados.s2 || ''}" onchange="marcarManual(${i})" ${!isUser ? 'disabled' : ''}>
                 `;
                 container.appendChild(div);
+                if (isUser) {
+                    div.querySelectorAll('input').forEach(el => el.classList.add('campo-editavel'));
+                }
             }
-        }
-
-        function obterDiasDoMes(mes, ano) {
-            const meses = {'Janeiro':0,'Fevereiro':1,'Março':2,'Abril':3,'Maio':4,'Junho':5,'Julho':6,'Agosto':7,'Setembro':8,'Outubro':9,'Novembro':10,'Dezembro':11};
-            return new Date(ano, meses[mes] + 1, 0).getDate();
         }
 
         function marcarManual(dia) {
@@ -2307,20 +2569,44 @@
             if (s2) s2.classList.add('preenchido-manual');
         }
 
-        function aplicarEditor() {
-            if (!funcionarioAtual) { mostrarToast('⚠️ Selecione um funcionário!', 'warning'); return; }
+        // ============================================================
+        // APLICAR EDITOR
+        // ============================================================
+        async function aplicarEditor() {
+            if (!funcionarioAtual) { 
+                mostrarToast('⚠️ Selecione um funcionário!', 'warning'); 
+                return;
+            }
+            
+            const func = funcionariosCadastrados.find(f => f.nome === funcionarioAtual);
+            if (!func) {
+                mostrarToast('⚠️ Funcionário não encontrado!', 'error');
+                return;
+            }
+            
+            if (!func.id) {
+                mostrarToast('⚠️ Funcionário sem ID! Salve o funcionário no Supabase primeiro.', 'error');
+                return;
+            }
+            
             const mes = document.getElementById('mes').value;
             const ano = document.getElementById('ano').value;
             let dadosParaSalvar = {};
             let totalPreenchidos = 0;
             
-            for (let i = 1; i <= 31; i++) {
+            const dias = obterDiasDoMes(mes, parseInt(ano));
+            for (let i = 1; i <= dias; i++) {
                 const e1 = document.getElementById(`edit_e1_${i}`);
                 const s1 = document.getElementById(`edit_s1_${i}`);
                 const e2 = document.getElementById(`edit_e2_${i}`);
                 const s2 = document.getElementById(`edit_s2_${i}`);
                 if (e1 || s1 || e2 || s2) {
-                    const dados = { e1: e1 ? e1.value : '', s1: s1 ? s1.value : '', e2: e2 ? e2.value : '', s2: s2 ? s2.value : '' };
+                    const dados = { 
+                        e1: e1 ? e1.value : '', 
+                        s1: s1 ? s1.value : '', 
+                        e2: e2 ? e2.value : '', 
+                        s2: s2 ? s2.value : '' 
+                    };
                     if (dados.e1 || dados.s1 || dados.e2 || dados.s2) {
                         dadosParaSalvar[i] = dados;
                         totalPreenchidos++;
@@ -2328,11 +2614,16 @@
                 }
             }
             
-            const chave = `ponto_${funcionarioAtual}_${mes}_${ano}`;
-            try {
-                localStorage.setItem(chave, JSON.stringify(dadosParaSalvar));
+            const resultado = await salvarMarcacoesSupabase(func.id, mes, ano, dadosParaSalvar);
+            
+            if (resultado.success) {
+                const chave = `ponto_${funcionarioAtual}_${mes}_${ano}`;
+                try {
+                    localStorage.setItem(chave, JSON.stringify(dadosParaSalvar));
+                } catch(e) {}
+                
                 pontosPorFuncionario[funcionarioAtual] = dadosParaSalvar;
-                mostrarToast(`✅ ${totalPreenchidos} dias salvos!`);
+                mostrarToast(`✅ ${totalPreenchidos} dias salvos no Supabase!`);
                 
                 for (const dia in dadosParaSalvar) {
                     const d = dadosParaSalvar[dia];
@@ -2358,8 +2649,8 @@
                     btn.innerHTML = '<i class="fas fa-check"></i> Aplicar Dados';
                     btn.style.background = '';
                 }, 2000);
-            } catch(e) {
-                mostrarToast('❌ Erro ao salvar!', 'error');
+            } else {
+                mostrarToast(`❌ Erro ao salvar: ${resultado.error}`, 'error');
             }
         }
 
@@ -2448,7 +2739,7 @@
         }
 
         // ============================================================
-        // ANEXAR CARTÕES - CORRIGIDO PARA USAR SUPABASE
+        // ANEXAR CARTÕES
         // ============================================================
         async function handleFileUpload(event) {
             const file = event.target.files[0];
@@ -2474,7 +2765,7 @@
             
             const func = funcionariosCadastrados.find(f => f.nome === funcionarioAtual);
             if (!func) {
-                mostrarToast('⚠️ Funcionário não encontrado!', 'warning');
+                mostrarToast('⚠️ Funcionário não encontrado!', 'error');
                 return;
             }
 
@@ -2489,7 +2780,6 @@
                 anexoAtual = base64Data;
                 
                 try {
-                    // SALVAR NO SUPABASE - USANDO OS NOMES CORRETOS DAS COLUNAS
                     const { data, error } = await supabaseClient
                         .from('imagens_cartao')
                         .upsert({
@@ -2511,10 +2801,8 @@
                         return;
                     }
                     
-                    console.log('✅ Salvo com sucesso:', data);
                     mostrarToast('✅ Cartão salvo no Supabase!');
                     
-                    // Atualizar visualização
                     const imgDisplay = document.getElementById('imgDisplay');
                     imgDisplay.style.backgroundImage = `url(${base64Data})`;
                     imgDisplay.style.backgroundSize = 'contain';
@@ -2532,17 +2820,6 @@
                     
                     document.getElementById('btnBaixarAnexo').style.display = 'inline-block';
                     
-                    // Salvar cache local
-                    const chaveLocal = `anexo_${funcionarioAtual}_${mes}_${ano}`;
-                    try {
-                        localStorage.setItem(chaveLocal, JSON.stringify({
-                            nome: file.name,
-                            tamanho: file.size,
-                            data: new Date().toISOString(),
-                            base64: base64Data
-                        }));
-                    } catch(err) {}
-                    
                 } catch (error) {
                     console.error('Erro:', error);
                     mostrarToast('❌ Erro ao salvar a imagem!', 'error');
@@ -2551,9 +2828,6 @@
             reader.readAsDataURL(file);
         }
 
-        // ============================================================
-        // BUSCAR ANEXO DO SUPABASE
-        // ============================================================
         async function buscarAnexoDoSupabase(nomeFuncionario, mes, ano) {
             try {
                 const func = funcionariosCadastrados.find(f => f.nome === nomeFuncionario);
@@ -2571,7 +2845,6 @@
                     console.error('Erro ao buscar anexo:', error);
                     return null;
                 }
-                
                 return data;
             } catch (error) {
                 console.error('Erro:', error);
@@ -2579,9 +2852,6 @@
             }
         }
 
-        // ============================================================
-        // BAIXAR ANEXO
-        // ============================================================
         function baixarAnexo() {
             const imgDisplay = document.getElementById('imgDisplay');
             if (imgDisplay && imgDisplay.style.backgroundImage) {
@@ -2599,30 +2869,6 @@
             mostrarToast('⚠️ Nenhum anexo disponível.', 'warning');
         }
 
-        // ============================================================
-        // BAIXAR ANEXO DO SUPABASE
-        // ============================================================
-        async function baixarAnexoCartaoSupabase(nome, mes, ano) {
-            try {
-                const anexoData = await buscarAnexoDoSupabase(nome, mes, ano);
-                if (anexoData && anexoData.imagem_url) {
-                    const link = document.createElement('a');
-                    link.href = anexoData.imagem_url;
-                    link.download = anexoData.nome_arquivo || 'cartao_ponto.jpg';
-                    link.click();
-                    mostrarToast('📥 Download iniciado do Supabase!');
-                } else {
-                    mostrarToast('⚠️ Nenhum anexo encontrado no Supabase.', 'warning');
-                }
-            } catch (error) {
-                console.error('Erro ao baixar:', error);
-                mostrarToast('❌ Erro ao baixar o anexo.', 'error');
-            }
-        }
-
-        // ============================================================
-        // LIMPAR IMAGEM
-        // ============================================================
         function limparImagem() {
             document.getElementById('imgDisplay').style.backgroundImage = 'none';
             arquivoAnexado = null;
@@ -2634,9 +2880,6 @@
             mostrarToast('🧹 Imagem removida da visualização');
         }
 
-        // ============================================================
-        // OCR
-        // ============================================================
         function executarOCR() {
             const imgDisplay = document.getElementById('imgDisplay');
             if (!imgDisplay.style.backgroundImage || imgDisplay.style.backgroundImage === 'none') {
@@ -2708,10 +2951,21 @@
             mostrarToast(`✅ ${preenchidos} campos preenchidos.`);
         }
 
+        function atualizarPeriodoEditor() {
+            const mes = document.getElementById('mes').value;
+            const ano = document.getElementById('ano').value;
+            const editorMes = document.getElementById('editorMesAtual');
+            const editorGrade = document.getElementById('editorMesGrade');
+            if (editorMes) { editorMes.textContent = mes + ' ' + ano; editorMes.style.color = '#000000'; }
+            if (editorGrade) { editorGrade.textContent = mes + ' ' + ano; editorGrade.style.color = '#000000'; }
+        }
+
+        function filtrarFuncionariosPorEmpresa() { carregarDatalist(); }
+
         // ============================================================
         // AJUSTE DE MARCAÇÕES
         // ============================================================
-        function carregarAjustes() {
+        async function carregarAjustes() {
             const select = document.getElementById('ajusteFuncionario');
             const dataInput = document.getElementById('ajusteData');
             if (!select.value) { mostrarToast('⚠️ Selecione um funcionário.', 'warning'); return; }
@@ -2719,11 +2973,37 @@
             
             const nome = select.value;
             const data = dataInput.value;
-            const chave = `ajuste_${nome}_${data}`;
+            
+            const func = funcionariosCadastrados.find(f => f.nome === nome);
+            if (!func) {
+                mostrarToast('⚠️ Funcionário não encontrado!', 'error');
+                return;
+            }
+            
+            const mes = document.getElementById('mes').value;
+            const ano = document.getElementById('ano').value;
+            const dadosSupabase = await buscarMarcacoesSupabase(func.id, mes, ano);
+            
+            let dadosCompletos = {};
+            if (dadosSupabase && dadosSupabase.dados) {
+                try {
+                    dadosCompletos = typeof dadosSupabase.dados === 'string' ? 
+                        JSON.parse(dadosSupabase.dados) : dadosSupabase.dados;
+                } catch(e) {
+                    dadosCompletos = {};
+                }
+            }
+            
+            const chaveLocal = `ajuste_${nome}_${data}`;
             try {
-                const saved = localStorage.getItem(chave);
-                dadosAjuste = saved ? JSON.parse(saved) : {};
-            } catch(e) { dadosAjuste = {}; }
+                const localData = localStorage.getItem(chaveLocal);
+                if (localData) {
+                    const parsed = JSON.parse(localData);
+                    dadosCompletos = { ...dadosCompletos, ...parsed };
+                }
+            } catch(e) {}
+            
+            dadosAjuste = dadosCompletos;
             renderizarAjustes(nome, data);
         }
 
@@ -2755,7 +3035,10 @@
             }
         }
 
-        function salvarAjustes() {
+        // ============================================================
+        // SALVAR AJUSTES
+        // ============================================================
+        async function salvarAjustes() {
             const select = document.getElementById('ajusteFuncionario');
             const dataInput = document.getElementById('ajusteData');
             if (!select.value || !dataInput.value) {
@@ -2765,6 +3048,12 @@
             const nome = select.value;
             const data = dataInput.value;
             const dia = new Date(data).getDate();
+            
+            const func = funcionariosCadastrados.find(f => f.nome === nome);
+            if (!func) {
+                mostrarToast('⚠️ Funcionário não encontrado!', 'error');
+                return;
+            }
             
             dadosAjuste[dia] = {
                 e1: document.getElementById(`aj_e1_${dia}`)?.value || '',
@@ -2776,18 +3065,43 @@
             const chave = `ajuste_${nome}_${data}`;
             try {
                 localStorage.setItem(chave, JSON.stringify(dadosAjuste));
-                mostrarToast('✅ Ajustes salvos!');
-                
-                const mes = document.getElementById('mes').value;
-                const ano = document.getElementById('ano').value;
-                const chavePonto = `ponto_${nome}_${mes}_${ano}`;
-                const pontoData = localStorage.getItem(chavePonto);
-                if (pontoData) {
-                    const dadosPonto = JSON.parse(pontoData);
-                    dadosPonto[dia] = dadosAjuste[dia];
-                    localStorage.setItem(chavePonto, JSON.stringify(dadosPonto));
-                    pontosPorFuncionario[nome] = dadosPonto;
+            } catch(e) {}
+            
+            const mes = document.getElementById('mes').value;
+            const ano = document.getElementById('ano').value;
+            
+            const dadosSupabase = await buscarMarcacoesSupabase(func.id, mes, ano);
+            let dadosCompletos = {};
+            
+            if (dadosSupabase && dadosSupabase.dados) {
+                try {
+                    dadosCompletos = typeof dadosSupabase.dados === 'string' ? 
+                        JSON.parse(dadosSupabase.dados) : dadosSupabase.dados;
+                } catch(e) {
+                    dadosCompletos = {};
                 }
+            }
+            
+            const chavePonto = `ponto_${nome}_${mes}_${ano}`;
+            try {
+                const saved = localStorage.getItem(chavePonto);
+                if (saved) {
+                    const localData = JSON.parse(saved);
+                    dadosCompletos = { ...dadosCompletos, ...localData };
+                }
+            } catch(e) {}
+            
+            dadosCompletos[dia] = dadosAjuste[dia];
+            
+            const resultado = await salvarMarcacoesSupabase(func.id, mes, ano, dadosCompletos);
+            
+            if (resultado.success) {
+                try {
+                    localStorage.setItem(chavePonto, JSON.stringify(dadosCompletos));
+                } catch(e) {}
+                pontosPorFuncionario[nome] = dadosCompletos;
+                
+                mostrarToast('✅ Ajustes salvos no Supabase!');
                 
                 if (funcionarioAtual === nome) {
                     const linha = document.querySelector(`#corpoTabela tr:nth-child(${dia})`);
@@ -2804,15 +3118,15 @@
                         calcularResumo();
                     }
                 }
-            } catch(e) {
-                mostrarToast('❌ Erro ao salvar!', 'error');
+            } else {
+                mostrarToast(`❌ Erro ao salvar: ${resultado.error}`, 'error');
             }
         }
 
         // ============================================================
-        // RELATÓRIO PONTO POR FUNCIONÁRIO (PDF COMPLETO)
+        // RELATÓRIO PONTO POR FUNCIONÁRIO (PDF)
         // ============================================================
-        function gerarRelatorioPontoDireto() {
+        async function gerarRelatorioPontoDireto() {
             const nomeFuncionario = document.getElementById('filtroRelFuncionario').value;
             if (!nomeFuncionario) {
                 mostrarToast('⚠️ Selecione um funcionário!');
@@ -2828,12 +3142,25 @@
             const mes = document.getElementById('filtroRelMes').value;
             const ano = document.getElementById('ano').value;
             
-            const chavePonto = `ponto_${nomeFuncionario}_${mes}_${ano}`;
             let dadosPonto = {};
-            try {
-                const saved = localStorage.getItem(chavePonto);
-                if (saved) dadosPonto = JSON.parse(saved);
-            } catch(e) {}
+            
+            if (func.id) {
+                const dadosSupabase = await buscarMarcacoesSupabase(func.id, mes, ano);
+                if (dadosSupabase && dadosSupabase.dados) {
+                    try {
+                        dadosPonto = typeof dadosSupabase.dados === 'string' ? 
+                            JSON.parse(dadosSupabase.dados) : dadosSupabase.dados;
+                    } catch(e) {}
+                }
+            }
+            
+            if (Object.keys(dadosPonto).length === 0) {
+                const chave = `ponto_${nomeFuncionario}_${mes}_${ano}`;
+                try {
+                    const saved = localStorage.getItem(chave);
+                    if (saved) dadosPonto = JSON.parse(saved);
+                } catch(e) {}
+            }
             
             pontosPorFuncionario[nomeFuncionario] = dadosPonto;
 
@@ -2992,7 +3319,7 @@
         }
 
         // ============================================================
-        // FICHA CADASTRAL (PDF COMPLETO)
+        // FICHA CADASTRAL (PDF)
         // ============================================================
         function gerarFichaCadastralDireto() {
             const nomeFuncionario = document.getElementById('filtroFichaFuncionario').value;
@@ -3022,15 +3349,6 @@
             doc.setTextColor(0, 0, 0);
             doc.text('FICHA CADASTRAL', PAGE_WIDTH / 2, y, { align: 'center' });
             y += 8;
-
-            if (func.foto && func.foto.startsWith('data:image')) {
-                try {
-                    const fotoX = (PAGE_WIDTH - 40) / 2;
-                    const fotoY = y;
-                    doc.addImage(func.foto, 'JPEG', fotoX, fotoY, 40, 40);
-                    y += 48;
-                } catch (e) {}
-            }
 
             doc.setFontSize(14);
             doc.setFont('helvetica', 'bold');
@@ -3125,7 +3443,7 @@
         }
 
         // ============================================================
-        // CARTÃO DE PONTO - CORRIGIDO PARA BUSCAR DO SUPABASE
+        // CARTÃO DE PONTO
         // ============================================================
         async function gerarCartaoPonto() {
             const select = document.getElementById('selectCartaoFuncionario');
@@ -3153,13 +3471,25 @@
                 return;
             }
             
-            // Buscar dados do ponto (local)
-            const chave = `ponto_${nome}_${mes}_${ano}`;
             let dados = {};
-            try { const saved = localStorage.getItem(chave); if (saved) dados = JSON.parse(saved); } catch(e) {}
+            
+            if (func.id) {
+                const dadosSupabase = await buscarMarcacoesSupabase(func.id, mes, ano);
+                if (dadosSupabase && dadosSupabase.dados) {
+                    try {
+                        dados = typeof dadosSupabase.dados === 'string' ? 
+                            JSON.parse(dadosSupabase.dados) : dadosSupabase.dados;
+                    } catch(e) {}
+                }
+            }
+            
+            if (Object.keys(dados).length === 0) {
+                const chave = `ponto_${nome}_${mes}_${ano}`;
+                try { const saved = localStorage.getItem(chave); if (saved) dados = JSON.parse(saved); } catch(e) {}
+            }
+            
             pontosPorFuncionario[nome] = dados;
             
-            // BUSCAR ANEXO DO SUPABASE
             const anexoData = await buscarAnexoDoSupabase(nome, mes, ano);
             
             let html = `
@@ -3178,7 +3508,6 @@
                 </div>
             `;
             
-            // Mostrar a imagem do Supabase se existir
             if (anexoData && anexoData.imagem_url) {
                 html += `
                     <div style="margin-bottom:15px;padding:12px;background:#e8f5e9;border-radius:8px;border:1px solid #4CAF50;">
@@ -3196,7 +3525,6 @@
                 `;
             }
             
-            // Tabela de marcações
             html += `
                 <div class="cartao-marcacoes-area">
                     <table>
@@ -3235,6 +3563,24 @@
 
         function calcularTotalHoras(e1, s1, e2, s2) {
             return somarHoras(calcularDiferenca(e1, s1), calcularDiferenca(e2, s2));
+        }
+
+        async function baixarAnexoCartaoSupabase(nome, mes, ano) {
+            try {
+                const anexoData = await buscarAnexoDoSupabase(nome, mes, ano);
+                if (anexoData && anexoData.imagem_url) {
+                    const link = document.createElement('a');
+                    link.href = anexoData.imagem_url;
+                    link.download = anexoData.nome_arquivo || 'cartao_ponto.jpg';
+                    link.click();
+                    mostrarToast('📥 Download iniciado do Supabase!');
+                } else {
+                    mostrarToast('⚠️ Nenhum anexo encontrado no Supabase.', 'warning');
+                }
+            } catch (error) {
+                console.error('Erro ao baixar:', error);
+                mostrarToast('❌ Erro ao baixar o anexo.', 'error');
+            }
         }
 
         // ============================================================
@@ -3454,7 +3800,6 @@
             }
             
             renderizarPerfis();
-            inicializarEditor();
             gerarTabela();
             console.log('✅ Sistema inicializado!');
         };
