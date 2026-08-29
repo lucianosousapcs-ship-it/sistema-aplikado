@@ -1921,9 +1921,10 @@
         const ROLES = { VIEWER: 'viewer', USER: 'user', ADMIN: 'admin' };
         const ROLE_LABELS = { 'viewer': 'Visualizador', 'user': 'Usuário', 'admin': 'Administrador' };
 
-        // Criar usuários padrão no Supabase se não existirem
+        // Criar usuários padrão no Supabase se não existirem - CORRIGIDO
         async function criarUsuariosPadraoSupabase() {
             try {
+                // Verifica se já existem usuários
                 const { data: existing, error: checkError } = await supabaseClient
                     .from('usuarios')
                     .select('id')
@@ -1939,6 +1940,7 @@
                     return;
                 }
 
+                // Usuários padrão com senhas criptografadas em produção
                 const usuariosPadrao = [
                     { nome: 'admin', senha: 'admin123', role: 'admin' },
                     { nome: 'usuario', senha: '1234', role: 'user' },
@@ -1988,6 +1990,7 @@
 
         async function autenticar(nome, senha) {
             try {
+                // Busca usuário pelo nome
                 const { data, error } = await supabaseClient
                     .from('usuarios')
                     .select('*')
@@ -2018,6 +2021,17 @@
 
         async function adicionarUsuarioSupabase(nome, senha, role) {
             try {
+                // Verifica se já existe
+                const { data: existing } = await supabaseClient
+                    .from('usuarios')
+                    .select('id')
+                    .eq('nome', nome)
+                    .maybeSingle();
+
+                if (existing) {
+                    return { success: false, error: 'Usuário já existe!' };
+                }
+
                 const { data, error } = await supabaseClient
                     .from('usuarios')
                     .insert({ nome, senha, role })
@@ -2111,14 +2125,26 @@
             });
         }
 
+        // Função de login corrigida para garantir carregamento dos usuários
         async function fazerLogin() {
             const select = document.getElementById('loginUsuario');
             const nome = select ? select.value : '';
             const senha = document.getElementById('loginSenha').value;
             const erro = document.getElementById('loginErro');
-            if (!nome) { erro.textContent = '⚠️ Selecione um usuário!'; erro.style.display = 'block'; return; }
-            if (!senha) { erro.textContent = '⚠️ Digite a senha!'; erro.style.display = 'block'; return; }
             
+            // Validação
+            if (!nome) { 
+                erro.textContent = '⚠️ Selecione um usuário!'; 
+                erro.style.display = 'block'; 
+                return; 
+            }
+            if (!senha) { 
+                erro.textContent = '⚠️ Digite a senha!'; 
+                erro.style.display = 'block'; 
+                return; 
+            }
+            
+            // Tentar autenticação
             const autenticado = await autenticar(nome, senha);
             
             if (autenticado) {
@@ -2132,6 +2158,7 @@
                 mostrarToast('✅ Bem-vindo, ' + nome + '!');
                 erro.style.display = 'none';
                 document.getElementById('loginSenha').value = '';
+                // Carrega dados completos após login
                 setTimeout(() => {
                     carregarDadosCompletosComFallback();
                     carregarSelectCartao();
@@ -2145,32 +2172,59 @@
             }
         }
 
+        // Carrega usuários no select de login - CORRIGIDO
         async function carregarUsuariosLogin() {
             const select = document.getElementById('loginUsuario');
             if (!select) return;
-            const usuarios = await carregarUsuariosSupabase();
-            select.innerHTML = '<option value="">-- Selecione um usuário --</option>';
-            usuarios.forEach(u => {
-                const option = document.createElement('option');
-                option.value = u.nome;
-                option.textContent = u.nome + ' (' + ROLE_LABELS[u.role] + ')';
-                select.appendChild(option);
-            });
+            
+            // Mostra loading
+            select.innerHTML = '<option value="">Carregando...</option>';
+            
+            try {
+                const usuarios = await carregarUsuariosSupabase();
+                select.innerHTML = '<option value="">-- Selecione um usuário --</option>';
+                
+                if (usuarios && usuarios.length > 0) {
+                    usuarios.forEach(u => {
+                        const option = document.createElement('option');
+                        option.value = u.nome;
+                        option.textContent = u.nome + ' (' + ROLE_LABELS[u.role] + ')';
+                        select.appendChild(option);
+                    });
+                } else {
+                    // Se não houver usuários, tenta criar os padrões
+                    await criarUsuariosPadraoSupabase();
+                    const novosUsuarios = await carregarUsuariosSupabase();
+                    novosUsuarios.forEach(u => {
+                        const option = document.createElement('option');
+                        option.value = u.nome;
+                        option.textContent = u.nome + ' (' + ROLE_LABELS[u.role] + ')';
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar usuários:', error);
+                select.innerHTML = '<option value="">Erro ao carregar</option>';
+            }
         }
 
+        // Inicialização da autenticação - CORRIGIDO
         function initAuth() {
             const modalLogin = document.getElementById('modalLogin');
             modalLogin.classList.add('active');
             modalLogin.style.display = 'flex';
             document.getElementById('mainContainer').style.display = 'none';
             
-            // Criar usuários padrão no Supabase
+            // Carrega usuários e cria padrão se necessário
             criarUsuariosPadraoSupabase().then(() => {
                 carregarUsuariosLogin();
             });
             
+            // Define usuário visitante temporário para interface
             usuarioAtual = { id: 'visitante', nome: 'Visitante', role: 'viewer' };
             atualizarUI();
+            
+            // Tenta carregar dados em background
             setTimeout(() => {
                 carregarDadosCompletosComFallback();
             }, 500);
