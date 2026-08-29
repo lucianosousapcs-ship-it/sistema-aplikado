@@ -1219,6 +1219,10 @@
         <button class="sidebar-btn" onclick="abrirModalCartao(); toggleSidebarMobile()">
             <i class="fas fa-id-card"></i> Visualizar Cartão de Ponto
         </button>
+        <!-- NOVO BOTÃO: Funcionários sem Cartão de Ponto -->
+        <button class="sidebar-btn" onclick="abrirFuncionariosSemCartao(); toggleSidebarMobile()">
+            <i class="fas fa-user-slash"></i> Funcionários sem Cartão
+        </button>
         <div class="sidebar-label"><i class="fas fa-users-cog"></i> Administração</div>
         <button class="sidebar-btn" onclick="abrirModalPerfis(); toggleSidebarMobile()">
             <i class="fas fa-user-shield"></i> Perfis de Usuário
@@ -1260,6 +1264,67 @@
                     </div>
                 </div>
                 <div id="listaPerfis" style="border:1px solid #eee;border-radius:10px;overflow:hidden;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR PERFIL DO USUÁRIO (CORREÇÃO) -->
+    <div class="modal" id="modalEditarPerfil">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-edit"></i> Editar Meu Perfil</h2>
+                <button class="modal-close" onclick="fecharModalEditarPerfil()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                    <div style="flex:0 0 150px;text-align:center;">
+                        <img id="editPerfilFotoPreview" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22%3E%3Crect width=%22120%22 height=%22120%22 fill=%22%23e0e0e0%22/%3E%3Ctext x=%2260%22 y=%2265%22 font-size=%2240%22 text-anchor=%22middle%22 fill=%22%23999%22 font-family=%22Arial%22%3E%3F%3C/text%3E%3C/svg%3E" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid #FF8C00;">
+                        <button class="btn-action btn-secondary" onclick="document.getElementById('editPerfilFotoInput').click()" style="margin-top:10px;font-size:11px;padding:4px 12px;">
+                            <i class="fas fa-camera"></i> Alterar Foto
+                        </button>
+                        <input type="file" id="editPerfilFotoInput" accept="image/*" style="display:none;" onchange="carregarFotoPerfil(event)">
+                    </div>
+                    <div style="flex:1;">
+                        <div class="form-group">
+                            <label>Nome Completo</label>
+                            <input type="text" id="editPerfilNome" class="campo-editavel">
+                        </div>
+                        <div class="form-group" style="margin-top:10px;">
+                            <label>Email</label>
+                            <input type="email" id="editPerfilEmail" class="campo-editavel">
+                        </div>
+                        <div class="form-group" style="margin-top:10px;">
+                            <label>Telefone</label>
+                            <input type="text" id="editPerfilTelefone" class="campo-editavel" placeholder="(00) 00000-0000">
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+                            <div class="form-group">
+                                <label>Empresa</label>
+                                <select id="editPerfilEmpresa" class="campo-editavel">
+                                    <option value="">Selecione</option>
+                                    <option value="Spoleto">Spoleto</option>
+                                    <option value="A2B">A2B</option>
+                                    <option value="Acço">Acço</option>
+                                    <option value="Copaenergia">Copaenergia</option>
+                                    <option value="INSS">INSS</option>
+                                    <option value="Qnutri">Qnutri</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Cargo</label>
+                                <input type="text" id="editPerfilCargo" class="campo-editavel" placeholder="Ex: Analista">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-action btn-success" onclick="salvarEdicaoPerfil()">
+                        <i class="fas fa-save"></i> Salvar Perfil
+                    </button>
+                    <button class="btn-action btn-secondary" onclick="fecharModalEditarPerfil()">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1642,12 +1707,88 @@
         </div>
     </div>
 
+    <!-- MODAL FUNCIONÁRIOS SEM CARTÃO DE PONTO (COM FILTRO DE MÊS) -->
+    <div class="modal" id="modalFuncionariosSemCartao">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-slash"></i> Funcionários sem Cartão de Ponto</h2>
+                <button class="modal-close" onclick="fecharFuncionariosSemCartao()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:13px;color:#666;margin-bottom:15px;">
+                    <i class="fas fa-info-circle" style="color:#FF8C00;"></i>
+                    Lista de funcionários que não possuem cartão de ponto cadastrado no sistema para o mês selecionado.
+                </p>
+                <div style="margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap;">
+                    <div class="form-group" style="flex:1;min-width:180px;">
+                        <label>Filtrar por Empresa</label>
+                        <select id="filtroSemCartaoEmpresa" onchange="carregarFuncionariosSemCartao()">
+                            <option value="">Todas as Empresas</option>
+                            <option value="Spoleto">Spoleto</option>
+                            <option value="A2B">A2B</option>
+                            <option value="Acço">Acço</option>
+                            <option value="Copaenergia">Copaenergia</option>
+                            <option value="INSS">INSS</option>
+                            <option value="Qnutri">Qnutri</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1;min-width:150px;">
+                        <label>Mês</label>
+                        <select id="filtroSemCartaoMes" onchange="carregarFuncionariosSemCartao()">
+                            <option value="Janeiro">Janeiro</option>
+                            <option value="Fevereiro">Fevereiro</option>
+                            <option value="Março">Março</option>
+                            <option value="Abril">Abril</option>
+                            <option value="Maio">Maio</option>
+                            <option value="Junho">Junho</option>
+                            <option value="Julho">Julho</option>
+                            <option value="Agosto">Agosto</option>
+                            <option value="Setembro">Setembro</option>
+                            <option value="Outubro">Outubro</option>
+                            <option value="Novembro">Novembro</option>
+                            <option value="Dezembro">Dezembro</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1;min-width:100px;">
+                        <label>Ano</label>
+                        <input type="number" id="filtroSemCartaoAno" value="2026" min="2020" max="2030" onchange="carregarFuncionariosSemCartao()" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+                    </div>
+                    <div class="form-group" style="justify-content:flex-end;display:flex;align-items:flex-end;">
+                        <button class="btn-action btn-primary" onclick="carregarFuncionariosSemCartao()" style="padding:8px 20px;">
+                            <i class="fas fa-sync"></i> Atualizar
+                        </button>
+                    </div>
+                </div>
+                <div id="listaSemCartaoContainer" style="border:1px solid #eee;border-radius:10px;overflow:hidden;max-height:500px;overflow-y:auto;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#f8f9fa;border-bottom:2px solid #FF8C00;">
+                                <th style="padding:10px;text-align:left;font-size:11px;">Foto</th>
+                                <th style="padding:10px;text-align:left;font-size:11px;">Nome</th>
+                                <th style="padding:10px;text-align:left;font-size:11px;">Empresa</th>
+                                <th style="padding:10px;text-align:left;font-size:11px;">Matrícula/CPF</th>
+                                <th style="padding:10px;text-align:center;font-size:11px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodySemCartao"></tbody>
+                    </table>
+                </div>
+                <div style="margin-top:10px;font-size:11px;color:#666;text-align:right;">
+                    <i class="fas fa-info-circle"></i> Mostrando funcionários sem cartão para o mês selecionado
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-action btn-secondary" onclick="fecharFuncionariosSemCartao()"><i class="fas fa-times"></i> Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- HEADER -->
     <header class="main-header">
         <div class="logo">Apli<span>kado</span></div>
         <nav class="nav-menu">
             <a href="CLIENT_QNUTRI.html"><i class="fas fa-arrow-left"></i> Voltar</a>
-            <a href="#"><i class="fas fa-th-large"></i> Dashboard</a>
+            <a href="#" onclick="abrirEdicaoPerfil()" style="color:#FF8C00;"><i class="fas fa-user-edit"></i> Meu Perfil</a>
             <a href="#" onclick="carregarDadosCompletosComFallback()" style="color:#28a745;"><i class="fas fa-sync"></i> Recarregar</a>
             <span class="user-info">
                 <i class="fas fa-user"></i>
@@ -1910,6 +2051,90 @@
         }
 
         // ============================================================
+        // FUNÇÕES SUPABASE - PERFIL DO USUÁRIO (CORREÇÃO)
+        // ============================================================
+        
+        async function salvarPerfilUsuario(usuarioId, dadosPerfil) {
+            try {
+                const { data: existente, error: buscarError } = await supabaseClient
+                    .from('perfis_usuarios')
+                    .select('*')
+                    .eq('usuario_id', usuarioId)
+                    .maybeSingle();
+                
+                if (buscarError && buscarError.code !== 'PGRST116') {
+                    console.error('Erro ao buscar perfil:', buscarError);
+                    return { success: false, error: buscarError.message };
+                }
+                
+                if (existente) {
+                    const { data, error } = await supabaseClient
+                        .from('perfis_usuarios')
+                        .update({
+                            nome: dadosPerfil.nome,
+                            email: dadosPerfil.email,
+                            telefone: dadosPerfil.telefone,
+                            empresa: dadosPerfil.empresa,
+                            cargo: dadosPerfil.cargo,
+                            foto: dadosPerfil.foto,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('usuario_id', usuarioId)
+                        .select();
+                    
+                    if (error) {
+                        console.error('Erro ao atualizar perfil:', error);
+                        return { success: false, error: error.message };
+                    }
+                    return { success: true, data: data };
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('perfis_usuarios')
+                        .insert({
+                            usuario_id: usuarioId,
+                            nome: dadosPerfil.nome,
+                            email: dadosPerfil.email,
+                            telefone: dadosPerfil.telefone,
+                            empresa: dadosPerfil.empresa,
+                            cargo: dadosPerfil.cargo,
+                            foto: dadosPerfil.foto,
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        })
+                        .select();
+                    
+                    if (error) {
+                        console.error('Erro ao criar perfil:', error);
+                        return { success: false, error: error.message };
+                    }
+                    return { success: true, data: data };
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function buscarPerfilUsuario(usuarioId) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('perfis_usuarios')
+                    .select('*')
+                    .eq('usuario_id', usuarioId)
+                    .maybeSingle();
+                
+                if (error && error.code !== 'PGRST116') {
+                    console.error('Erro ao buscar perfil:', error);
+                    return null;
+                }
+                return data;
+            } catch (error) {
+                console.error('Erro:', error);
+                return null;
+            }
+        }
+
+        // ============================================================
         // FUNÇÕES SUPABASE - MARCAÇÕES
         // ============================================================
         
@@ -1991,6 +2216,7 @@
         let pontosPorFuncionario = {};
         let anexoAtual = null;
         let fotoBase64Atual = null;
+        let fotoPerfilBase64 = null;
 
         // ============================================================
         // CONSTANTES
@@ -2051,6 +2277,23 @@
             }
         }
 
+        function carregarFotoPerfil(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    mostrarToast('⚠️ Máximo 2MB para foto.', 'warning');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64 = e.target.result;
+                    fotoPerfilBase64 = base64;
+                    document.getElementById('editPerfilFotoPreview').src = base64;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
         function setFotoPreview(base64) {
             if (base64) {
                 document.getElementById('previewFoto').src = base64;
@@ -2058,6 +2301,68 @@
             } else {
                 document.getElementById('previewFoto').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e0e0'/%3E%3Ctext x='60' y='65' font-size='40' text-anchor='middle' fill='%23999' font-family='Arial'%3E%3F%3C/text%3E%3C/svg%3E";
                 fotoBase64Atual = null;
+            }
+        }
+
+        // ============================================================
+        // PERFIL DO USUÁRIO - FUNÇÕES DE EDIÇÃO
+        // ============================================================
+        
+        function abrirEdicaoPerfil() {
+            if (!usuarioAtual) {
+                mostrarToast('⚠️ Faça login primeiro!', 'warning');
+                return;
+            }
+            
+            buscarPerfilUsuario(usuarioAtual.id).then(perfil => {
+                document.getElementById('editPerfilNome').value = perfil?.nome || usuarioAtual.nome || '';
+                document.getElementById('editPerfilEmail').value = perfil?.email || '';
+                document.getElementById('editPerfilTelefone').value = perfil?.telefone || '';
+                document.getElementById('editPerfilEmpresa').value = perfil?.empresa || '';
+                document.getElementById('editPerfilCargo').value = perfil?.cargo || '';
+                document.getElementById('editPerfilFotoPreview').src = perfil?.foto || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22%3E%3Crect width=%22120%22 height=%22120%22 fill=%22%23e0e0e0%22/%3E%3Ctext x=%2260%22 y=%2265%22 font-size=%2240%22 text-anchor=%22middle%22 fill=%22%23999%22 font-family=%22Arial%22%3E%3F%3C/text%3E%3C/svg%3E';
+                fotoPerfilBase64 = perfil?.foto || null;
+                document.getElementById('modalEditarPerfil').classList.add('active');
+            });
+        }
+
+        function fecharModalEditarPerfil() {
+            document.getElementById('modalEditarPerfil').classList.remove('active');
+            fotoPerfilBase64 = null;
+        }
+
+        async function salvarEdicaoPerfil() {
+            if (!usuarioAtual) {
+                mostrarToast('⚠️ Faça login primeiro!', 'warning');
+                return;
+            }
+
+            const dadosPerfil = {
+                nome: document.getElementById('editPerfilNome').value.trim(),
+                email: document.getElementById('editPerfilEmail').value.trim(),
+                telefone: document.getElementById('editPerfilTelefone').value.trim(),
+                empresa: document.getElementById('editPerfilEmpresa').value,
+                cargo: document.getElementById('editPerfilCargo').value.trim(),
+                foto: fotoPerfilBase64 || null
+            };
+
+            if (!dadosPerfil.nome) {
+                mostrarToast('⚠️ Nome é obrigatório!', 'warning');
+                return;
+            }
+
+            const resultado = await salvarPerfilUsuario(usuarioAtual.id, dadosPerfil);
+            
+            if (resultado.success) {
+                mostrarToast('✅ Perfil atualizado com sucesso!');
+                fecharModalEditarPerfil();
+                // Atualizar nome na sidebar se mudou
+                if (dadosPerfil.nome) {
+                    document.getElementById('sidebarUserName').textContent = dadosPerfil.nome;
+                    document.getElementById('headerUserName').textContent = dadosPerfil.nome;
+                }
+            } else {
+                mostrarToast('❌ Erro ao salvar perfil: ' + resultado.error, 'error');
             }
         }
 
@@ -2619,6 +2924,112 @@
             renderizarPerfis();
         }
         function fecharModalPerfis() { document.getElementById('modalPerfis').classList.remove('active'); }
+
+        // ============================================================
+        // FUNCIONÁRIOS SEM CARTÃO DE PONTO (COM FILTRO DE MÊS)
+        // ============================================================
+        
+        function abrirFuncionariosSemCartao() {
+            document.getElementById('modalFuncionariosSemCartao').classList.add('active');
+            // Definir mês e ano atuais
+            const mesAtual = new Date().getMonth();
+            document.getElementById('filtroSemCartaoMes').value = MESES[mesAtual];
+            document.getElementById('filtroSemCartaoAno').value = new Date().getFullYear();
+            carregarFuncionariosSemCartao();
+        }
+
+        function fecharFuncionariosSemCartao() {
+            document.getElementById('modalFuncionariosSemCartao').classList.remove('active');
+        }
+
+        async function carregarFuncionariosSemCartao() {
+            const tbody = document.getElementById('tbodySemCartao');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#999;">Carregando...</td></tr>';
+            
+            const filtroEmpresa = document.getElementById('filtroSemCartaoEmpresa').value;
+            const filtroMes = document.getElementById('filtroSemCartaoMes').value;
+            const filtroAno = parseInt(document.getElementById('filtroSemCartaoAno').value) || 2026;
+            
+            try {
+                // Buscar todos os funcionários
+                let query = supabaseClient.from('funcionarios').select('*');
+                if (filtroEmpresa) {
+                    query = query.eq('unidade', filtroEmpresa);
+                }
+                const { data: funcionarios, error: funcError } = await query.order('nome');
+                
+                if (funcError) {
+                    console.error('Erro ao buscar funcionários:', funcError);
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:#dc3545;">❌ Erro ao carregar dados</td></tr>`;
+                    return;
+                }
+                
+                if (!funcionarios || funcionarios.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:#999;">Nenhum funcionário cadastrado.</td></tr>`;
+                    return;
+                }
+                
+                // Para cada funcionário, verificar se tem cartão para o mês selecionado
+                const resultados = [];
+                for (const func of funcionarios) {
+                    // Buscar se existe imagem de cartão para este funcionário no mês/ano selecionado
+                    const { data: cartao, error: cartaoError } = await supabaseClient
+                        .from('imagens_cartao')
+                        .select('id')
+                        .eq('funcionario_id', func.id)
+                        .eq('mes', filtroMes)
+                        .eq('ano', filtroAno)
+                        .maybeSingle();
+                    
+                    if (cartaoError && cartaoError.code !== 'PGRST116') {
+                        console.error('Erro ao buscar cartão para', func.nome, cartaoError);
+                    }
+                    
+                    resultados.push({
+                        ...func,
+                        temCartao: !!cartao
+                    });
+                }
+                
+                // Filtrar apenas os que NÃO têm cartão para o mês selecionado
+                const semCartao = resultados.filter(f => !f.temCartao);
+                
+                if (semCartao.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:#28a745;">
+                        <i class="fas fa-check-circle" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+                        Todos os funcionários possuem cartão de ponto cadastrado para ${filtroMes}/${filtroAno}!
+                    </td></tr>`;
+                    return;
+                }
+                
+                // Renderizar lista
+                tbody.innerHTML = '';
+                semCartao.forEach(func => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid #eee';
+                    const fotoHtml = func.foto ? 
+                        `<img src="${func.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #FF8C00;">` : 
+                        `<div style="width:40px;height:40px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:18px;color:#999;"><i class="fas fa-user"></i></div>`;
+                    
+                    tr.innerHTML = `
+                        <td style="padding:8px 10px;">${fotoHtml}</td>
+                        <td style="padding:8px 10px;font-weight:600;">${func.nome}</td>
+                        <td style="padding:8px 10px;">${func.unidade || '-'}</td>
+                        <td style="padding:8px 10px;">${func.cpf || '-'}</td>
+                        <td style="padding:8px 10px;text-align:center;">
+                            <span class="status-anexado nao">
+                                <i class="fas fa-times-circle"></i> Sem cartão
+                            </span>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:#dc3545;">❌ Erro ao carregar dados</td></tr>`;
+            }
+        }
 
         // ============================================================
         // EDITOR DE PONTO
@@ -3712,7 +4123,7 @@
         }
 
         // ============================================================
-        // ERROS DE MARCAÇÃO
+        // ERROS DE MARCAÇÃO - COM NOVA REGRA DE HORÁRIO
         // ============================================================
         function carregarErros() {
             const container = document.getElementById('errosContainer');
@@ -3733,17 +4144,42 @@
             for (let i = 1; i <= dias; i++) {
                 const d = dados[i] || {};
                 const temE1 = !!d.e1, temS1 = !!d.s1, temE2 = !!d.e2, temS2 = !!d.s2;
+                
+                // Erro 1: Entrada sem saída
                 if ((temE1 && !temS1) || (!temE1 && temS1)) {
                     erros.push({ dia: i, msg: `Entrada/Saída incompleta no 1º turno` });
                 }
                 if ((temE2 && !temS2) || (!temE2 && temS2)) {
                     erros.push({ dia: i, msg: `Entrada/Saída incompleta no 2º turno` });
                 }
-                if (d.e1 && d.s1 && d.e1 >= d.s1) {
-                    erros.push({ dia: i, msg: `1º turno: Entrada (${d.e1}) > Saída (${d.s1})` });
+                
+                // Erro 2: Entrada posterior à saída (NOVA REGRA)
+                if (d.e1 && d.s1) {
+                    const [h1, m1] = d.e1.split(':').map(Number);
+                    const [h2, m2] = d.s1.split(':').map(Number);
+                    const totalMin1 = h1 * 60 + m1;
+                    const totalMin2 = h2 * 60 + m2;
+                    // Se entrada for maior que saída e não for jornada noturna (ex: 22:00 às 06:00)
+                    if (totalMin1 > totalMin2 && !(totalMin1 >= 1320 || totalMin2 <= 360)) {
+                        erros.push({ 
+                            dia: i, 
+                            msg: `1º turno: Entrada (${d.e1}) > Saída (${d.s1}) - Possível erro de digitação`,
+                            tipo: 'entrada_maior_saida'
+                        });
+                    }
                 }
-                if (d.e2 && d.s2 && d.e2 >= d.s2) {
-                    erros.push({ dia: i, msg: `2º turno: Entrada (${d.e2}) > Saída (${d.s2})` });
+                if (d.e2 && d.s2) {
+                    const [h1, m1] = d.e2.split(':').map(Number);
+                    const [h2, m2] = d.s2.split(':').map(Number);
+                    const totalMin1 = h1 * 60 + m1;
+                    const totalMin2 = h2 * 60 + m2;
+                    if (totalMin1 > totalMin2 && !(totalMin1 >= 1320 || totalMin2 <= 360)) {
+                        erros.push({ 
+                            dia: i, 
+                            msg: `2º turno: Entrada (${d.e2}) > Saída (${d.s2}) - Possível erro de digitação`,
+                            tipo: 'entrada_maior_saida'
+                        });
+                    }
                 }
             }
             
@@ -3760,12 +4196,14 @@
             
             let html = '';
             erros.forEach((erro) => {
+                const isEntradaMaiorSaida = erro.tipo === 'entrada_maior_saida';
                 html += `
                     <div class="erro-item">
                         <span class="erro-msg">
                             <i class="fas fa-exclamation-circle" style="color:#dc3545;"></i>
                             <strong>Dia ${String(erro.dia).padStart(2, '0')}:</strong>
                             <span class="highlight">${erro.msg}</span>
+                            ${isEntradaMaiorSaida ? ' ⚠️ Verifique se é jornada noturna' : ''}
                         </span>
                         <button class="btn-action btn-secondary" onclick="corrigirErroIndividual(${erro.dia})" style="padding:2px 10px;font-size:10px;">
                             <i class="fas fa-wrench"></i> Corrigir
@@ -3791,10 +4229,30 @@
                     const s1 = document.getElementById(`edit_s1_${dia}`);
                     const e2 = document.getElementById(`edit_e2_${dia}`);
                     const s2 = document.getElementById(`edit_s2_${dia}`);
+                    
+                    // Verificar se é erro de entrada > saída
+                    const isEntradaMaiorSaida = texto.includes('Possível erro de digitação');
+                    
                     if (e1 && !e1.value && s1 && s1.value) { e1.value = '08:00'; e1.classList.add('preenchido-manual'); corrigidos++; }
                     if (s1 && !s1.value && e1 && e1.value) { s1.value = '12:00'; s1.classList.add('preenchido-manual'); corrigidos++; }
                     if (e2 && !e2.value && s2 && s2.value) { e2.value = '13:00'; e2.classList.add('preenchido-manual'); corrigidos++; }
                     if (s2 && !s2.value && e2 && e2.value) { s2.value = '17:00'; s2.classList.add('preenchido-manual'); corrigidos++; }
+                    
+                    // Se for entrada > saída, inverter os valores
+                    if (isEntradaMaiorSaida) {
+                        if (e1 && s1 && e1.value && s1.value) {
+                            const temp = e1.value;
+                            e1.value = s1.value;
+                            s1.value = temp;
+                            corrigidos++;
+                        }
+                        if (e2 && s2 && e2.value && s2.value) {
+                            const temp = e2.value;
+                            e2.value = s2.value;
+                            s2.value = temp;
+                            corrigidos++;
+                        }
+                    }
                 }
             });
             if (corrigidos > 0) { mostrarToast(`✅ ${corrigidos} erros corrigidos!`); carregarErros(); }
@@ -3806,10 +4264,33 @@
             const s1 = document.getElementById(`edit_s1_${dia}`);
             const e2 = document.getElementById(`edit_e2_${dia}`);
             const s2 = document.getElementById(`edit_s2_${dia}`);
+            
+            // Verificar se há erro de entrada > saída
+            if (e1 && s1 && e1.value && s1.value) {
+                const [h1, m1] = e1.value.split(':').map(Number);
+                const [h2, m2] = s1.value.split(':').map(Number);
+                if (h1 * 60 + m1 > h2 * 60 + m2) {
+                    const temp = e1.value;
+                    e1.value = s1.value;
+                    s1.value = temp;
+                }
+            }
+            if (e2 && s2 && e2.value && s2.value) {
+                const [h1, m1] = e2.value.split(':').map(Number);
+                const [h2, m2] = s2.value.split(':').map(Number);
+                if (h1 * 60 + m1 > h2 * 60 + m2) {
+                    const temp = e2.value;
+                    e2.value = s2.value;
+                    s2.value = temp;
+                }
+            }
+            
+            // Preencher campos vazios
             if (e1 && !e1.value && s1 && s1.value) { e1.value = '08:00'; e1.classList.add('preenchido-manual'); }
             if (s1 && !s1.value && e1 && e1.value) { s1.value = '12:00'; s1.classList.add('preenchido-manual'); }
             if (e2 && !e2.value && s2 && s2.value) { e2.value = '13:00'; e2.classList.add('preenchido-manual'); }
             if (s2 && !s2.value && e2 && e2.value) { s2.value = '17:00'; s2.classList.add('preenchido-manual'); }
+            
             mostrarToast('✅ Erro corrigido!');
             carregarErros();
         }
