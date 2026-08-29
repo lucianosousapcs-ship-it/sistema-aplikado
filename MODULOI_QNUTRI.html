@@ -1219,7 +1219,6 @@
         <button class="sidebar-btn" onclick="abrirModalCartao(); toggleSidebarMobile()">
             <i class="fas fa-id-card"></i> Visualizar Cartão de Ponto
         </button>
-        <!-- NOVO BOTÃO: Funcionários sem Cartão de Ponto -->
         <button class="sidebar-btn" onclick="abrirFuncionariosSemCartao(); toggleSidebarMobile()">
             <i class="fas fa-user-slash"></i> Funcionários sem Cartão
         </button>
@@ -1268,7 +1267,7 @@
         </div>
     </div>
 
-    <!-- MODAL EDITAR PERFIL DO USUÁRIO (CORREÇÃO) -->
+    <!-- MODAL EDITAR PERFIL DO USUÁRIO -->
     <div class="modal" id="modalEditarPerfil">
         <div class="modal-content modal-md">
             <div class="modal-header">
@@ -1707,7 +1706,7 @@
         </div>
     </div>
 
-    <!-- MODAL FUNCIONÁRIOS SEM CARTÃO DE PONTO (COM FILTRO DE MÊS) -->
+    <!-- MODAL FUNCIONÁRIOS SEM CARTÃO DE PONTO -->
     <div class="modal" id="modalFuncionariosSemCartao">
         <div class="modal-content modal-md">
             <div class="modal-header">
@@ -1916,44 +1915,163 @@
         });
 
         // ============================================================
-        // AUTENTICAÇÃO
+        // AUTENTICAÇÃO COM SUPABASE
         // ============================================================
-        const STORAGE_KEY = 'usuarios_sistema';
         let usuarioAtual = null;
         const ROLES = { VIEWER: 'viewer', USER: 'user', ADMIN: 'admin' };
         const ROLE_LABELS = { 'viewer': 'Visualizador', 'user': 'Usuário', 'admin': 'Administrador' };
-        const USUARIOS_PADRAO = [
-            { id: 'admin_1', nome: 'admin', senha: 'admin123', role: 'admin' },
-            { id: 'user_1', nome: 'usuario', senha: '1234', role: 'user' },
-            { id: 'viewer_1', nome: 'visitante', senha: '1234', role: 'viewer' }
-        ];
 
-        function carregarUsuarios() {
+        // Criar usuários padrão no Supabase se não existirem
+        async function criarUsuariosPadraoSupabase() {
             try {
-                const data = localStorage.getItem(STORAGE_KEY);
-                if (data) { const parsed = JSON.parse(data); if (Array.isArray(parsed) && parsed.length > 0) return parsed; }
-            } catch(e) {}
-            return criarUsuariosPadrao();
+                const { data: existing, error: checkError } = await supabaseClient
+                    .from('usuarios')
+                    .select('id')
+                    .limit(1);
+
+                if (checkError) {
+                    console.error('Erro ao verificar usuários:', checkError);
+                    return;
+                }
+
+                if (existing && existing.length > 0) {
+                    console.log('Usuários já existem no Supabase.');
+                    return;
+                }
+
+                const usuariosPadrao = [
+                    { nome: 'admin', senha: 'admin123', role: 'admin' },
+                    { nome: 'usuario', senha: '1234', role: 'user' },
+                    { nome: 'visitante', senha: '1234', role: 'viewer' }
+                ];
+
+                for (const user of usuariosPadrao) {
+                    const { error: insertError } = await supabaseClient
+                        .from('usuarios')
+                        .insert({
+                            nome: user.nome,
+                            senha: user.senha,
+                            role: user.role
+                        });
+
+                    if (insertError) {
+                        console.error('Erro ao criar usuário:', user.nome, insertError);
+                    } else {
+                        console.log('Usuário criado:', user.nome);
+                    }
+                }
+
+                console.log('✅ Usuários padrão criados no Supabase!');
+            } catch (error) {
+                console.error('Erro ao criar usuários padrão:', error);
+            }
         }
 
-        function criarUsuariosPadrao() {
+        async function carregarUsuariosSupabase() {
             try {
-                const existing = localStorage.getItem(STORAGE_KEY);
-                if (existing) { try { const parsed = JSON.parse(existing); if (Array.isArray(parsed) && parsed.length > 0) return parsed; } catch(e) {} }
-                salvarUsuarios(USUARIOS_PADRAO);
-                return USUARIOS_PADRAO;
-            } catch(e) { return USUARIOS_PADRAO; }
+                const { data, error } = await supabaseClient
+                    .from('usuarios')
+                    .select('*')
+                    .order('nome');
+
+                if (error) {
+                    console.error('Erro ao carregar usuários:', error);
+                    return [];
+                }
+
+                return data || [];
+            } catch (error) {
+                console.error('Erro:', error);
+                return [];
+            }
         }
 
-        function salvarUsuarios(usuarios) {
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(usuarios)); return true; } catch(e) { return false; }
+        async function autenticar(nome, senha) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('usuarios')
+                    .select('*')
+                    .eq('nome', nome)
+                    .maybeSingle();
+
+                if (error) {
+                    console.error('Erro ao autenticar:', error);
+                    return false;
+                }
+
+                if (data && data.senha === senha) {
+                    usuarioAtual = { 
+                        id: data.id, 
+                        nome: data.nome, 
+                        role: data.role 
+                    };
+                    atualizarUI();
+                    return true;
+                }
+
+                return false;
+            } catch (error) {
+                console.error('Erro:', error);
+                return false;
+            }
         }
 
-        function autenticar(nome, senha) {
-            const usuarios = carregarUsuarios();
-            const usuario = usuarios.find(u => u.nome.toLowerCase() === nome.toLowerCase() && u.senha === senha);
-            if (usuario) { usuarioAtual = { ...usuario }; atualizarUI(); return true; }
-            return false;
+        async function adicionarUsuarioSupabase(nome, senha, role) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('usuarios')
+                    .insert({ nome, senha, role })
+                    .select();
+
+                if (error) {
+                    console.error('Erro ao adicionar usuário:', error);
+                    return { success: false, error: error.message };
+                }
+
+                return { success: true, data: data };
+            } catch (error) {
+                console.error('Erro:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function atualizarUsuarioSupabase(id, dados) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('usuarios')
+                    .update(dados)
+                    .eq('id', id)
+                    .select();
+
+                if (error) {
+                    console.error('Erro ao atualizar usuário:', error);
+                    return { success: false, error: error.message };
+                }
+
+                return { success: true, data: data };
+            } catch (error) {
+                console.error('Erro:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function excluirUsuarioSupabase(id) {
+            try {
+                const { error } = await supabaseClient
+                    .from('usuarios')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) {
+                    console.error('Erro ao excluir usuário:', error);
+                    return { success: false, error: error.message };
+                }
+
+                return { success: true };
+            } catch (error) {
+                console.error('Erro:', error);
+                return { success: false, error: error.message };
+            }
         }
 
         function atualizarUI() {
@@ -1993,14 +2111,17 @@
             });
         }
 
-        function fazerLogin() {
+        async function fazerLogin() {
             const select = document.getElementById('loginUsuario');
             const nome = select ? select.value : '';
             const senha = document.getElementById('loginSenha').value;
             const erro = document.getElementById('loginErro');
             if (!nome) { erro.textContent = '⚠️ Selecione um usuário!'; erro.style.display = 'block'; return; }
             if (!senha) { erro.textContent = '⚠️ Digite a senha!'; erro.style.display = 'block'; return; }
-            if (autenticar(nome, senha)) {
+            
+            const autenticado = await autenticar(nome, senha);
+            
+            if (autenticado) {
                 document.getElementById('modalLogin').classList.remove('active');
                 document.getElementById('modalLogin').style.display = 'none';
                 const main = document.getElementById('mainContainer');
@@ -2024,10 +2145,10 @@
             }
         }
 
-        function carregarUsuariosLogin() {
+        async function carregarUsuariosLogin() {
             const select = document.getElementById('loginUsuario');
             if (!select) return;
-            const usuarios = carregarUsuarios();
+            const usuarios = await carregarUsuariosSupabase();
             select.innerHTML = '<option value="">-- Selecione um usuário --</option>';
             usuarios.forEach(u => {
                 const option = document.createElement('option');
@@ -2042,7 +2163,12 @@
             modalLogin.classList.add('active');
             modalLogin.style.display = 'flex';
             document.getElementById('mainContainer').style.display = 'none';
-            carregarUsuariosLogin();
+            
+            // Criar usuários padrão no Supabase
+            criarUsuariosPadraoSupabase().then(() => {
+                carregarUsuariosLogin();
+            });
+            
             usuarioAtual = { id: 'visitante', nome: 'Visitante', role: 'viewer' };
             atualizarUI();
             setTimeout(() => {
@@ -2051,7 +2177,7 @@
         }
 
         // ============================================================
-        // FUNÇÕES SUPABASE - PERFIL DO USUÁRIO (CORREÇÃO)
+        // FUNÇÕES SUPABASE - PERFIL DO USUÁRIO
         // ============================================================
         
         async function salvarPerfilUsuario(usuarioId, dadosPerfil) {
@@ -2356,7 +2482,6 @@
             if (resultado.success) {
                 mostrarToast('✅ Perfil atualizado com sucesso!');
                 fecharModalEditarPerfil();
-                // Atualizar nome na sidebar se mudou
                 if (dadosPerfil.nome) {
                     document.getElementById('sidebarUserName').textContent = dadosPerfil.nome;
                     document.getElementById('headerUserName').textContent = dadosPerfil.nome;
@@ -2926,12 +3051,11 @@
         function fecharModalPerfis() { document.getElementById('modalPerfis').classList.remove('active'); }
 
         // ============================================================
-        // FUNCIONÁRIOS SEM CARTÃO DE PONTO (COM FILTRO DE MÊS)
+        // FUNCIONÁRIOS SEM CARTÃO DE PONTO
         // ============================================================
         
         function abrirFuncionariosSemCartao() {
             document.getElementById('modalFuncionariosSemCartao').classList.add('active');
-            // Definir mês e ano atuais
             const mesAtual = new Date().getMonth();
             document.getElementById('filtroSemCartaoMes').value = MESES[mesAtual];
             document.getElementById('filtroSemCartaoAno').value = new Date().getFullYear();
@@ -2951,7 +3075,6 @@
             const filtroAno = parseInt(document.getElementById('filtroSemCartaoAno').value) || 2026;
             
             try {
-                // Buscar todos os funcionários
                 let query = supabaseClient.from('funcionarios').select('*');
                 if (filtroEmpresa) {
                     query = query.eq('unidade', filtroEmpresa);
@@ -2969,10 +3092,8 @@
                     return;
                 }
                 
-                // Para cada funcionário, verificar se tem cartão para o mês selecionado
                 const resultados = [];
                 for (const func of funcionarios) {
-                    // Buscar se existe imagem de cartão para este funcionário no mês/ano selecionado
                     const { data: cartao, error: cartaoError } = await supabaseClient
                         .from('imagens_cartao')
                         .select('id')
@@ -2991,7 +3112,6 @@
                     });
                 }
                 
-                // Filtrar apenas os que NÃO têm cartão para o mês selecionado
                 const semCartao = resultados.filter(f => !f.temCartao);
                 
                 if (semCartao.length === 0) {
@@ -3002,7 +3122,6 @@
                     return;
                 }
                 
-                // Renderizar lista
                 tbody.innerHTML = '';
                 semCartao.forEach(func => {
                     const tr = document.createElement('tr');
@@ -4123,7 +4242,7 @@
         }
 
         // ============================================================
-        // ERROS DE MARCAÇÃO - COM NOVA REGRA DE HORÁRIO
+        // ERROS DE MARCAÇÃO
         // ============================================================
         function carregarErros() {
             const container = document.getElementById('errosContainer');
@@ -4145,7 +4264,6 @@
                 const d = dados[i] || {};
                 const temE1 = !!d.e1, temS1 = !!d.s1, temE2 = !!d.e2, temS2 = !!d.s2;
                 
-                // Erro 1: Entrada sem saída
                 if ((temE1 && !temS1) || (!temE1 && temS1)) {
                     erros.push({ dia: i, msg: `Entrada/Saída incompleta no 1º turno` });
                 }
@@ -4153,13 +4271,11 @@
                     erros.push({ dia: i, msg: `Entrada/Saída incompleta no 2º turno` });
                 }
                 
-                // Erro 2: Entrada posterior à saída (NOVA REGRA)
                 if (d.e1 && d.s1) {
                     const [h1, m1] = d.e1.split(':').map(Number);
                     const [h2, m2] = d.s1.split(':').map(Number);
                     const totalMin1 = h1 * 60 + m1;
                     const totalMin2 = h2 * 60 + m2;
-                    // Se entrada for maior que saída e não for jornada noturna (ex: 22:00 às 06:00)
                     if (totalMin1 > totalMin2 && !(totalMin1 >= 1320 || totalMin2 <= 360)) {
                         erros.push({ 
                             dia: i, 
@@ -4230,7 +4346,6 @@
                     const e2 = document.getElementById(`edit_e2_${dia}`);
                     const s2 = document.getElementById(`edit_s2_${dia}`);
                     
-                    // Verificar se é erro de entrada > saída
                     const isEntradaMaiorSaida = texto.includes('Possível erro de digitação');
                     
                     if (e1 && !e1.value && s1 && s1.value) { e1.value = '08:00'; e1.classList.add('preenchido-manual'); corrigidos++; }
@@ -4238,7 +4353,6 @@
                     if (e2 && !e2.value && s2 && s2.value) { e2.value = '13:00'; e2.classList.add('preenchido-manual'); corrigidos++; }
                     if (s2 && !s2.value && e2 && e2.value) { s2.value = '17:00'; s2.classList.add('preenchido-manual'); corrigidos++; }
                     
-                    // Se for entrada > saída, inverter os valores
                     if (isEntradaMaiorSaida) {
                         if (e1 && s1 && e1.value && s1.value) {
                             const temp = e1.value;
@@ -4265,7 +4379,6 @@
             const e2 = document.getElementById(`edit_e2_${dia}`);
             const s2 = document.getElementById(`edit_s2_${dia}`);
             
-            // Verificar se há erro de entrada > saída
             if (e1 && s1 && e1.value && s1.value) {
                 const [h1, m1] = e1.value.split(':').map(Number);
                 const [h2, m2] = s1.value.split(':').map(Number);
@@ -4285,7 +4398,6 @@
                 }
             }
             
-            // Preencher campos vazios
             if (e1 && !e1.value && s1 && s1.value) { e1.value = '08:00'; e1.classList.add('preenchido-manual'); }
             if (s1 && !s1.value && e1 && e1.value) { s1.value = '12:00'; s1.classList.add('preenchido-manual'); }
             if (e2 && !e2.value && s2 && s2.value) { e2.value = '13:00'; e2.classList.add('preenchido-manual'); }
@@ -4298,56 +4410,85 @@
         // ============================================================
         // PERFIS
         // ============================================================
-        function renderizarPerfis() {
+        async function renderizarPerfis() {
             const container = document.getElementById('listaPerfis');
-            const usuarios = carregarUsuarios();
-            container.innerHTML = usuarios.map((u, i) => `
+            const usuarios = await carregarUsuariosSupabase();
+            if (!usuarios || usuarios.length === 0) {
+                container.innerHTML = '<p style="text-align:center;color:#999;padding:20px 0;">Nenhum usuário cadastrado.</p>';
+                return;
+            }
+            
+            container.innerHTML = usuarios.map((u) => `
                 <div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #eee;align-items:center;">
                     <div><strong>${u.nome}</strong> <span style="margin-left:10px;font-size:12px;color:#666;">${ROLE_LABELS[u.role] || u.role}</span></div>
                     <div>
-                        <button class="btn-action btn-secondary" onclick="editarPerfil(${i})" style="padding:2px 10px;font-size:10px;"><i class="fas fa-edit"></i></button>
-                        <button class="btn-action btn-danger" onclick="excluirPerfil(${i})" style="padding:2px 10px;font-size:10px;"><i class="fas fa-trash"></i></button>
+                        <button class="btn-action btn-secondary" onclick="editarPerfilSupabase('${u.id}')" style="padding:2px 10px;font-size:10px;"><i class="fas fa-edit"></i></button>
+                        <button class="btn-action btn-danger" onclick="excluirPerfilSupabase('${u.id}')" style="padding:2px 10px;font-size:10px;"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
             `).join('');
         }
 
-        function adicionarPerfil() {
+        async function adicionarPerfil() {
             const nome = document.getElementById('novoPerfilNome');
             const role = document.getElementById('novoPerfilRole');
             if (nome && nome.value.trim()) {
-                const usuarios = carregarUsuarios();
-                usuarios.push({ id: 'user_' + Date.now(), nome: nome.value.trim(), senha: '1234', role: role.value });
-                salvarUsuarios(usuarios);
-                renderizarPerfis();
-                nome.value = '';
-                mostrarToast('✅ Usuário adicionado!');
+                const senha = prompt('Digite a senha para o novo usuário:', '1234');
+                if (senha === null) return;
+                
+                const result = await adicionarUsuarioSupabase(nome.value.trim(), senha, role.value);
+                if (result.success) {
+                    mostrarToast('✅ Usuário adicionado no Supabase!');
+                    document.getElementById('novoPerfilNome').value = '';
+                    renderizarPerfis();
+                    carregarUsuariosLogin();
+                } else {
+                    mostrarToast('❌ Erro ao adicionar: ' + result.error, 'error');
+                }
+            } else {
+                mostrarToast('⚠️ Digite um nome!', 'warning');
             }
         }
 
-        function editarPerfil(index) {
-            const usuarios = carregarUsuarios();
-            const user = usuarios[index];
+        async function editarPerfilSupabase(id) {
+            const usuarios = await carregarUsuariosSupabase();
+            const user = usuarios.find(u => u.id === id);
+            if (!user) return;
+            
             const novoNome = prompt('Nome:', user.nome);
             if (novoNome && novoNome.trim()) {
-                user.nome = novoNome.trim();
-                const novaSenha = prompt('Nova senha (deixe em branco):', '');
-                if (novaSenha !== null && novaSenha.trim()) user.senha = novaSenha.trim();
+                const novaSenha = prompt('Nova senha (deixe em branco para manter):', '');
                 const novoRole = prompt('Perfil (admin/user/viewer):', user.role);
-                if (novoRole && ['admin','user','viewer'].includes(novoRole.toLowerCase())) user.role = novoRole.toLowerCase();
-                salvarUsuarios(usuarios);
-                renderizarPerfis();
-                mostrarToast('✅ Perfil atualizado!');
+                
+                const dadosAtualizacao = { nome: novoNome.trim() };
+                if (novaSenha !== null && novaSenha.trim()) dadosAtualizacao.senha = novaSenha.trim();
+                if (novoRole && ['admin','user','viewer'].includes(novoRole.toLowerCase())) dadosAtualizacao.role = novoRole.toLowerCase();
+                
+                const result = await atualizarUsuarioSupabase(id, dadosAtualizacao);
+                if (result.success) {
+                    mostrarToast('✅ Usuário atualizado no Supabase!');
+                    renderizarPerfis();
+                    carregarUsuariosLogin();
+                } else {
+                    mostrarToast('❌ Erro ao atualizar: ' + result.error, 'error');
+                }
             }
         }
 
-        function excluirPerfil(index) {
-            if (confirm('Excluir este usuário?')) {
-                const usuarios = carregarUsuarios();
-                usuarios.splice(index, 1);
-                salvarUsuarios(usuarios);
-                renderizarPerfis();
-                mostrarToast('✅ Usuário excluído!');
+        async function excluirPerfilSupabase(id) {
+            const usuarios = await carregarUsuariosSupabase();
+            const user = usuarios.find(u => u.id === id);
+            if (!user) return;
+            
+            if (confirm(`Excluir o usuário "${user.nome}"?`)) {
+                const result = await excluirUsuarioSupabase(id);
+                if (result.success) {
+                    mostrarToast('✅ Usuário excluído do Supabase!');
+                    renderizarPerfis();
+                    carregarUsuariosLogin();
+                } else {
+                    mostrarToast('❌ Erro ao excluir: ' + result.error, 'error');
+                }
             }
         }
 
@@ -4408,7 +4549,6 @@
                 document.getElementById('sidebarToggle').classList.add('collapsed');
             }
             
-            renderizarPerfis();
             gerarTabela();
             console.log('✅ Sistema inicializado!');
         };
