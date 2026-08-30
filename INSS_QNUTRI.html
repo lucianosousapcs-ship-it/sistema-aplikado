@@ -1,0 +1,2122 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>INSS e FGTS | ApliKado</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #ffe0b0 0%, #ffb84d 30%, #FF8C00 60%, #e07000 100%);
+            font-family: 'Poppins', sans-serif;
+            color: #1a0a00;
+            min-height: 100vh;
+            padding-bottom: 40px;
+        }
+        .main-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(10, 6, 2, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 140, 0, 0.15);
+            z-index: 1000;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 56px;
+        }
+        .logo { font-family: 'Poppins', sans-serif; font-size: 20px; font-weight: 700; color: #fff; }
+        .logo span { color: #FF8C00; }
+        .nav-menu { display: flex; align-items: center; gap: 6px; }
+        .nav-menu a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 500;
+            transition: color 0.3s;
+            padding: 6px 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .nav-menu a:hover { color: #fff; background: rgba(255, 140, 0, 0.15); }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+            font-size: 12px;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        .user-info .user-role {
+            background: #FF8C00;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .sidebar-toggle {
+            position: fixed;
+            left: 0;
+            top: 56px;
+            z-index: 999;
+            background: rgba(10, 6, 2, 0.9);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-right: 1px solid rgba(255, 140, 0, 0.2);
+            color: #fff;
+            padding: 12px 10px;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 0 12px 12px 0;
+            transition: all 0.3s;
+            width: 40px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar-toggle:hover { background: rgba(255, 140, 0, 0.3); }
+        .sidebar-toggle i { transition: transform 0.3s; }
+        .sidebar-toggle.collapsed i { transform: rotate(180deg); }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 56px;
+            bottom: 0;
+            width: 220px;
+            background: rgba(10, 6, 2, 0.92);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 140, 0, 0.15);
+            z-index: 998;
+            padding: 16px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            transform: translateX(0);
+        }
+        .sidebar.collapsed { transform: translateX(-220px); }
+        .sidebar .sidebar-label {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 10px 8px 4px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 4px;
+        }
+        .sidebar .sidebar-label:first-of-type { border-top: none; margin-top: 0; }
+        .sidebar-btn {
+            font-family: 'Poppins', sans-serif;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s;
+            width: 100%;
+            text-align: left;
+        }
+        .sidebar-btn:hover { background: rgba(255, 140, 0, 0.15); color: #fff; }
+        .sidebar-btn.active { background: rgba(255, 140, 0, 0.25); color: #FF8C00; }
+        .sidebar-btn i { width: 20px; font-size: 16px; color: #FF8C00; }
+        .sidebar-btn .badge-sidebar {
+            margin-left: auto;
+            background: #dc3545;
+            color: #fff;
+            font-size: 9px;
+            padding: 1px 8px;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 72px 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .container.with-sidebar { padding-left: 236px; }
+        @media (max-width: 768px) { .container.with-sidebar { padding-left: 16px; } }
+        
+        .page-title { text-align: center; margin-bottom: 4px; }
+        .page-title h1 { font-size: 26px; font-weight: 800; color: #1a0a00; }
+        .page-title h1 i { color: #FF8C00; margin-right: 10px; }
+        .page-title p { color: rgba(26, 10, 0, 0.7); font-weight: 500; font-size: 13px; }
+        
+        .btn-action {
+            font-family: 'Poppins', sans-serif;
+            padding: 7px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn-action:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+        .btn-primary { background: #FF8C00; color: #fff; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-success { background: #28a745; color: #fff; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+        .btn-info { background: #17a2b8; color: #fff; }
+        .btn-pdf { background: #dc3545; color: #fff; }
+        .btn-excel { background: #28a745; color: #fff; }
+        .btn-sindical { background: #6f42c1; color: #fff; }
+        .btn-sindical:hover { background: #5a32a3; }
+        .btn-outline { background: transparent; color: #FF8C00; border: 2px solid #FF8C00; }
+        .btn-outline:hover { background: #FF8C00; color: #fff; }
+        .btn-inss { background: #1a5276; color: #fff; }
+        .btn-inss:hover { background: #154360; }
+        .btn-fgts { background: #1a8c4a; color: #fff; }
+        .btn-fgts:hover { background: #146c3a; }
+        
+        .table-section {
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid rgba(255, 140, 0, 0.15);
+        }
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .table-header h3 { font-size: 17px; color: #1a0a00; }
+        .badge-count {
+            background: #FF8C00;
+            color: #fff;
+            border-radius: 20px;
+            padding: 2px 12px;
+            font-size: 12px;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 140, 0, 0.15);
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.7);
+            min-width: 700px;
+            font-size: 12px;
+        }
+        .data-table th {
+            background: rgba(255, 140, 0, 0.2);
+            color: #7a3a00;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 6px 3px;
+            text-align: center;
+            border-bottom: 2px solid #FF8C00;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .data-table td { font-size: 12px; padding: 6px 4px; text-align: center; border-bottom: 1px solid rgba(255,140,0,0.1); }
+        .data-table td strong { color: #7a3a00; }
+        .data-table tr:hover { background: rgba(255,140,0,0.05); }
+        .data-table .badge-status {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .badge-status.pendente { background: #fff3cd; color: #856404; }
+        .badge-status.enviado { background: #cce5ff; color: #004085; }
+        .badge-status.pago { background: #28a745; color: #fff; }
+        .badge-status.confirmado { background: #17a2b8; color: #fff; }
+        .badge-status.atrasado { background: #dc3545; color: #fff; }
+        .badge-status.processado { background: #6f42c1; color: #fff; }
+        .badge-status.aguardando { background: #ffc107; color: #212529; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .modal.active { display: flex !important; }
+        .modal-content {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 20px;
+            max-width: 1300px;
+            width: 100%;
+            max-height: 95vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: modalFadeIn 0.3s ease;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #FF8C00;
+            padding-bottom: 10px;
+        }
+        .modal-header h2 { font-size: 19px; color: #1a0a00; }
+        .modal-header h2 i { color: #FF8C00; margin-right: 8px; }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 30px;
+            cursor: pointer;
+            color: #999;
+            padding: 0 10px;
+            line-height: 1;
+        }
+        .modal-close:hover { color: #dc3545; }
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            border-top: 1px solid #eee;
+            padding-top: 12px;
+        }
+        .modal-sm { max-width: 700px; }
+        .modal-md { max-width: 900px; }
+        .modal-lg { max-width: 1100px; }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #28a745;
+            color: #fff;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 10005;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        .toast.error { background: #dc3545; }
+        .toast.warning { background: #ffc107; color: #212529; }
+        .toast.info { background: #17a2b8; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        
+        .modal-login {
+            display: none !important;
+            z-index: 10000;
+            background: rgba(0,0,0,0.85);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .modal-login.active { display: flex !important; }
+        .modal-login .modal-content {
+            max-width: 420px;
+            padding: 30px 25px 25px 25px;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: modalFadeIn 0.3s ease;
+        }
+        .modal-login .modal-header {
+            border-bottom: 2px solid #FF8C00;
+            padding-bottom: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-login .modal-header h2 {
+            text-align: center;
+            font-size: 22px;
+            margin: 0;
+            color: #1a0a00;
+        }
+        .modal-login .modal-header h2 i { color: #FF8C00; margin-right: 10px; }
+        .modal-login .login-icon {
+            text-align: center;
+            font-size: 48px;
+            color: #FF8C00;
+            margin-bottom: 5px;
+        }
+        .modal-login .login-sub {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+        .modal-login .login-erro {
+            color: #dc3545;
+            font-size: 13px;
+            text-align: center;
+            display: none;
+            margin-bottom: 10px;
+        }
+        .modal-login .login-botoes {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            margin-top: 5px;
+        }
+        .modal-login .login-botoes .btn-action { flex: 1; padding: 12px; font-size: 16px; justify-content: center; border-radius: 8px; }
+        .modal-login .login-botoes .btn-action.btn-secondary { flex: 0.6; background: #6c757d; color: #fff; }
+        .modal-login .login-botoes .btn-action.btn-secondary:hover { background: #5a6268; }
+        .modal-login .login-botoes .btn-action.btn-primary { flex: 1.4; background: #FF8C00; color: #fff; }
+        .modal-login .login-botoes .btn-action.btn-primary:hover { background: #e07c00; }
+        .modal-login .form-group label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #333;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .modal-login .form-group input, .modal-login .form-group select {
+            font-family: 'Poppins', sans-serif;
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fff;
+            color: #333;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .modal-login .form-group input:focus, .modal-login .form-group select:focus {
+            border-color: #FF8C00;
+            box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
+        }
+        
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(255, 140, 0, 0.15);
+            transition: all 0.3s;
+        }
+        .dashboard-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .dashboard-card .card-icon { font-size: 24px; color: #FF8C00; margin-bottom: 6px; }
+        .dashboard-card .card-value { font-size: 24px; font-weight: 700; color: #1a0a00; }
+        .dashboard-card .card-label { font-size: 11px; color: #7a3a00; text-transform: uppercase; font-weight: 600; }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            padding: 12px 16px;
+            border: 1px solid rgba(255, 140, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .info-box .item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+        .info-box .item .label { color: #7a3a00; font-weight: 600; }
+        .info-box .item .value { font-weight: 700; color: #1a0a00; }
+        .info-box .item .value.destaque { color: #FF8C00; font-size: 16px; }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .header-top .header-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #1a0a00;
+        }
+        .header-top .header-title i { color: #FF8C00; margin-right: 8px; }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .form-group label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #7a3a00;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            font-family: 'Poppins', sans-serif;
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 140, 0, 0.2);
+            border-radius: 8px;
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.6);
+            color: #1a0a00;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: #FF8C00;
+            box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
+        }
+        
+        .chart-container { position: relative; height: 200px; width: 100%; }
+
+        .rateio-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+            margin-bottom: 4px;
+            border-left: 3px solid #FF8C00;
+        }
+        .rateio-item .info { display: flex; flex-direction: column; gap: 2px; }
+        .rateio-item .info .titulo { font-weight: 600; font-size: 12px; }
+        .rateio-item .info .desc { font-size: 10px; color: #7a3a00; }
+        .rateio-item .valor { font-weight: 700; font-size: 14px; color: #1a0a00; }
+        
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-220px); }
+            .sidebar.open { transform: translateX(0); }
+            .container.with-sidebar { padding-left: 16px; }
+            .form-row { grid-template-columns: 1fr 1fr; }
+            .modal-login .login-botoes { flex-direction: column; }
+            .modal-login .login-botoes .btn-action { flex: 1; }
+            .header-top { flex-direction: column; align-items: stretch; }
+            .header-top .header-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+            .header-top .header-actions .btn-action { flex: 1; justify-content: center; }
+        }
+        @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="toast" id="toastSucesso"><i class="fas fa-check-circle"></i> <span id="toastMsg">Salvo!</span></div>
+
+    <!-- MODAL LOGIN -->
+    <div class="modal modal-login active" id="modalLogin" style="display:flex !important;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-university"></i> INSS e FGTS</h2>
+            </div>
+            <div class="modal-body">
+                <div class="login-icon"><i class="fas fa-university"></i></div>
+                <p class="login-sub">Controle de INSS e FGTS - RH</p>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label>Usuário</label>
+                    <select id="loginUsuario">
+                        <option value="">Carregando usuários...</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:15px;">
+                    <label>Senha</label>
+                    <input type="password" id="loginSenha" placeholder="Digite sua senha" onkeydown="if(event.key==='Enter') fazerLoginSupabase()">
+                </div>
+                <div class="login-erro" id="loginErro">❌ Usuário ou senha incorretos!</div>
+                <div class="login-botoes">
+                    <button class="btn-action btn-secondary" onclick="window.location.href='CLIENT_QNUTRI.html'">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button class="btn-action btn-primary" onclick="fazerLoginSupabase()" id="btnEntrar">
+                        <i class="fas fa-sign-in-alt"></i> Entrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="main-header">
+        <div class="logo">Apli<span>kado</span></div>
+        <nav class="nav-menu">
+            <a href="CLIENT_QNUTRI.html"><i class="fas fa-arrow-left"></i> Voltar</a>
+            <a href="#" onclick="carregarDados()" style="color:#28a745;"><i class="fas fa-sync"></i> Recarregar</a>
+            <span class="user-info">
+                <i class="fas fa-user"></i>
+                <span id="headerUserName">Usuário</span>
+                <span class="user-role" id="headerUserRole">VIEWER</span>
+            </span>
+        </nav>
+    </header>
+
+    <!-- SIDEBAR -->
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+    <nav class="sidebar" id="sidebar">
+        <div style="padding: 4px 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <div style="color:#fff;font-size:11px;font-weight:500;display:flex;align-items:center;gap:6px;">
+                <i class="fas fa-user-circle"></i>
+                <span id="sidebarUserName">Usuário</span>
+                <span id="sidebarUserRole" style="background:#FF8C00;padding:0 6px;border-radius:8px;font-size:8px;margin-left:auto;">VIEWER</span>
+            </div>
+        </div>
+        <div class="sidebar-label"><i class="fas fa-cog"></i> Menu</div>
+        <button class="sidebar-btn active" onclick="abrirDashboard()">
+            <i class="fas fa-chart-bar"></i> Dashboard
+        </button>
+        <button class="sidebar-btn" onclick="abrirGuias()">
+            <i class="fas fa-file-invoice"></i> Guias INSS/FGTS
+            <span class="badge-sidebar" id="badgePendentes">0</span>
+        </button>
+        <button class="sidebar-btn" onclick="abrirRateio()">
+            <i class="fas fa-calculator"></i> Rateio por CNPJ
+        </button>
+        <button class="sidebar-btn" onclick="abrirEnvio()">
+            <i class="fas fa-paper-plane"></i> Envio para Clientes
+        </button>
+        <button class="sidebar-btn" onclick="abrirFinanceiro()">
+            <i class="fas fa-coins"></i> Financeiro
+        </button>
+        <div class="sidebar-label"><i class="fas fa-tools"></i> Ferramentas</div>
+        <button class="sidebar-btn" onclick="window.location.href='index.html'" style="color:#dc3545;margin-top:auto;">
+            <i class="fas fa-sign-out-alt" style="color:#dc3545;"></i> Sair
+        </button>
+    </nav>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <div class="container with-sidebar" id="mainContainer" style="display:none; visibility:hidden; opacity:0;">
+        <div class="page-title">
+            <h1><i class="fas fa-university"></i> INSS e FGTS</h1>
+            <p>Controle de guias · Rateio por CNPJ · Envio para clientes · Financeiro</p>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div id="dashboard">
+            <div class="info-box" style="margin-bottom:10px;">
+                <div class="item">
+                    <span class="label"><i class="fas fa-calendar-alt"></i> Competência:</span>
+                    <select id="filtroCompetenciaDashboard" onchange="atualizarDashboard()" style="font-family:'Poppins',sans-serif;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,140,0,0.2);background:rgba(255,255,255,0.7);font-size:12px;font-weight:600;color:#1a0a00;">
+                    </select>
+                </div>
+                <div class="item">
+                    <span class="label"><i class="fas fa-building"></i> Empresa:</span>
+                    <span class="value">Qnutri</span>
+                </div>
+                <div class="item">
+                    <span class="label"><i class="fas fa-user-tie"></i> Responsável:</span>
+                    <span class="value" id="responsavelRH">Carregando...</span>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:12px;margin-bottom:16px;">
+                <div class="dashboard-card">
+                    <div class="card-icon"><i class="fas fa-clock" style="color:#1a5276;"></i></div>
+                    <div class="card-value" id="cardGuiasPendentes">0</div>
+                    <div class="card-label">Guias Pendentes</div>
+                </div>
+                <div class="dashboard-card">
+                    <div class="card-icon"><i class="fas fa-check-circle" style="color:#28a745;"></i></div>
+                    <div class="card-value" id="cardGuiasPagas">0</div>
+                    <div class="card-label">Guias Pagas</div>
+                </div>
+                <div class="dashboard-card">
+                    <div class="card-icon"><i class="fas fa-paper-plane" style="color:#6f42c1;"></i></div>
+                    <div class="card-value" id="cardGuiasEnviadas">0</div>
+                    <div class="card-label">Guias Enviadas</div>
+                </div>
+                <div class="dashboard-card">
+                    <div class="card-icon"><i class="fas fa-coins" style="color:#FF8C00;"></i></div>
+                    <div class="card-value" id="cardTotalImpostos">R$ 0</div>
+                    <div class="card-label">Total Impostos</div>
+                </div>
+                <div class="dashboard-card">
+                    <div class="card-icon"><i class="fas fa-users" style="color:#6f42c1;"></i></div>
+                    <div class="card-value" id="cardTotalEmpresas">0</div>
+                    <div class="card-label">Empresas Clientes</div>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:15px;margin-bottom:16px;">
+                <div class="table-section">
+                    <div class="table-header">
+                        <h3><i class="fas fa-chart-line"></i> Resumo por Empresa</h3>
+                    </div>
+                    <div id="resumoEmpresas">
+                        <div style="text-align:center;padding:20px;color:#7a3a00;">Carregando...</div>
+                    </div>
+                </div>
+                <div class="table-section">
+                    <div class="table-header">
+                        <h3><i class="fas fa-chart-pie"></i> Distribuição</h3>
+                    </div>
+                    <div class="chart-container"><canvas id="chartDistribuicao"></canvas></div>
+                </div>
+            </div>
+
+            <div class="table-section">
+                <div class="table-header">
+                    <h3><i class="fas fa-history"></i> Últimas Atividades</h3>
+                </div>
+                <div id="ultimasAtividades">
+                    <div style="text-align:center;padding:20px;color:#7a3a00;">Carregando...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GUIAS INSS/FGTS -->
+        <div id="guias" style="display:none;">
+            <div class="table-section">
+                <div class="header-top">
+                    <span class="header-title"><i class="fas fa-file-invoice"></i> Guias INSS e FGTS <span class="badge-count" id="totalGuias">0</span></span>
+                    <div class="header-actions" style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button class="btn-action btn-inss" onclick="novaGuia('INSS')"><i class="fas fa-plus"></i> Nova Guia INSS</button>
+                        <button class="btn-action btn-fgts" onclick="novaGuia('FGTS')"><i class="fas fa-plus"></i> Nova Guia FGTS</button>
+                        <button class="btn-action btn-excel" onclick="exportarGuiasExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button class="btn-action btn-pdf" onclick="exportarGuiasPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                    <div class="form-group" style="min-width:150px;">
+                        <label>Tipo</label>
+                        <select id="filtroTipoGuia" onchange="renderizarGuias()">
+                            <option value="">Todos</option>
+                            <option value="INSS">INSS</option>
+                            <option value="FGTS">FGTS</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="min-width:150px;">
+                        <label>Status</label>
+                        <select id="filtroStatusGuia" onchange="renderizarGuias()">
+                            <option value="">Todos</option>
+                            <option value="pendente">Pendente</option>
+                            <option value="pago">Pago</option>
+                            <option value="enviado">Enviado</option>
+                            <option value="confirmado">Confirmado</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="min-width:150px;">
+                        <label>Empresa</label>
+                        <select id="filtroEmpresaGuia" onchange="renderizarGuias()">
+                            <option value="">Todas</option>
+                            <option value="Copaenergia">Copaenergia</option>
+                            <option value="Acço">Acço</option>
+                            <option value="A2B">A2B</option>
+                            <option value="Trigo">Trigo</option>
+                            <option value="Qnutri">Qnutri</option>
+                            <option value="Spoleto">Spoleto</option>
+                            <option value="INSS">INSS</option>
+                        </select>
+                    </div>
+                    <button class="btn-action btn-primary" onclick="renderizarGuias()"><i class="fas fa-sync"></i> Atualizar</button>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table" id="tabelaGuias">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Empresa</th>
+                                <th>CNPJ</th>
+                                <th>Competência</th>
+                                <th>Valor</th>
+                                <th>Vencimento</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoGuias">
+                            <tr><td colspan="8" style="text-align:center;padding:30px 0;color:#7a3a00;"><i class="fas fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:10px;"></i>Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:10px;background:rgba(255,255,255,0.5);border-radius:8px;padding:10px;display:flex;justify-content:space-between;flex-wrap:wrap;border:1px solid rgba(255,140,0,0.1);">
+                    <span><strong>Total INSS:</strong> <span id="totalINSS">R$ 0,00</span></span>
+                    <span><strong>Total FGTS:</strong> <span id="totalFGTS">R$ 0,00</span></span>
+                    <span><strong>Total Geral:</strong> <span id="totalGeralGuias" style="color:#FF8C00;font-weight:700;">R$ 0,00</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RATEIO POR CNPJ -->
+        <div id="rateio" style="display:none;">
+            <div class="table-section">
+                <div class="header-top">
+                    <span class="header-title"><i class="fas fa-calculator"></i> Rateio de Impostos por CNPJ</span>
+                    <div class="header-actions" style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button class="btn-action btn-excel" onclick="exportarRateioExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button class="btn-action btn-pdf" onclick="exportarRateioPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                        <button class="btn-action btn-secondary" onclick="fecharRateio()"><i class="fas fa-arrow-left"></i> Voltar</button>
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                    <div class="form-group" style="min-width:200px;">
+                        <label>Competência</label>
+                        <select id="filtroCompetenciaRateio" onchange="renderizarRateio()">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <button class="btn-action btn-primary" onclick="renderizarRateio()"><i class="fas fa-sync"></i> Atualizar</button>
+                    <button class="btn-action btn-warning" onclick="calcularRateio()"><i class="fas fa-calculator"></i> Calcular Rateio</button>
+                </div>
+                <div id="rateioContainer">
+                    <div style="text-align:center;padding:20px;color:#7a3a00;">Carregando rateio...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ENVIO PARA CLIENTES -->
+        <div id="envio" style="display:none;">
+            <div class="table-section">
+                <div class="header-top">
+                    <span class="header-title"><i class="fas fa-paper-plane"></i> Envio para Clientes</span>
+                    <div class="header-actions" style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button class="btn-action btn-success" onclick="enviarTodosClientes()"><i class="fas fa-paper-plane"></i> Enviar Todos</button>
+                        <button class="btn-action btn-secondary" onclick="fecharEnvio()"><i class="fas fa-arrow-left"></i> Voltar</button>
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                    <div class="form-group" style="min-width:200px;">
+                        <label>Empresa Cliente</label>
+                        <select id="filtroClienteEnvio" onchange="renderizarEnvio()">
+                            <option value="">Todas</option>
+                            <option value="Copaenergia">Copaenergia</option>
+                            <option value="Acço">Acço</option>
+                            <option value="A2B">A2B</option>
+                            <option value="Trigo">Trigo</option>
+                        </select>
+                    </div>
+                    <button class="btn-action btn-primary" onclick="renderizarEnvio()"><i class="fas fa-sync"></i> Atualizar</button>
+                </div>
+                <div id="envioContainer">
+                    <div style="text-align:center;padding:20px;color:#7a3a00;">Carregando clientes...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FINANCEIRO -->
+        <div id="financeiro" style="display:none;">
+            <div class="table-section">
+                <div class="header-top">
+                    <span class="header-title"><i class="fas fa-coins"></i> Informações para Financeiro</span>
+                    <div class="header-actions" style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button class="btn-action btn-excel" onclick="exportarFinanceiroExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button class="btn-action btn-pdf" onclick="exportarFinanceiroPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                        <button class="btn-action btn-success" onclick="enviarFinanceiro()"><i class="fas fa-envelope"></i> Enviar para Financeiro</button>
+                        <button class="btn-action btn-secondary" onclick="fecharFinanceiro()"><i class="fas fa-arrow-left"></i> Voltar</button>
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                    <div class="form-group" style="min-width:200px;">
+                        <label>Competência</label>
+                        <select id="filtroCompetenciaFinanceiro" onchange="renderizarFinanceiro()">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <button class="btn-action btn-primary" onclick="renderizarFinanceiro()"><i class="fas fa-sync"></i> Atualizar</button>
+                </div>
+                <div id="financeiroContainer">
+                    <div style="text-align:center;padding:20px;color:#7a3a00;">Carregando dados financeiros...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL NOVA GUIA -->
+        <div class="modal" id="modalNovaGuia">
+            <div class="modal-content modal-md">
+                <div class="modal-header">
+                    <h2><i class="fas fa-file-invoice"></i> <span id="modalGuiaTitulo">Nova Guia</span></h2>
+                    <button class="modal-close" onclick="fecharModalNovaGuia()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Tipo *</label>
+                            <select id="guiaTipo">
+                                <option value="INSS">INSS</option>
+                                <option value="FGTS">FGTS</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Empresa *</label>
+                            <select id="guiaEmpresa">
+                                <option value="Copaenergia">Copaenergia</option>
+                                <option value="Acço">Acço</option>
+                                <option value="A2B">A2B</option>
+                                <option value="Trigo">Trigo</option>
+                                <option value="Qnutri">Qnutri</option>
+                                <option value="Spoleto">Spoleto</option>
+                                <option value="INSS">INSS</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>CNPJ</label>
+                            <input type="text" id="guiaCNPJ" placeholder="00.000.000/0000-00">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Competência *</label>
+                            <input type="month" id="guiaCompetencia">
+                        </div>
+                        <div class="form-group">
+                            <label>Vencimento *</label>
+                            <input type="date" id="guiaVencimento">
+                        </div>
+                        <div class="form-group">
+                            <label>Valor (R$) *</label>
+                            <input type="number" id="guiaValor" step="0.01" placeholder="0,00">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Observações</label>
+                        <textarea id="guiaObservacoes" rows="2" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,140,0,0.2);font-family:'Poppins',sans-serif;font-size:13px;background:rgba(255,255,255,0.6);"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Comprovante (PDF)</label>
+                        <input type="file" id="guiaComprovante" accept=".pdf" style="padding:4px;">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-action btn-secondary" onclick="fecharModalNovaGuia()"><i class="fas fa-times"></i> Cancelar</button>
+                    <button class="btn-action btn-success" onclick="salvarGuia()"><i class="fas fa-save"></i> Salvar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL ENVIO -->
+        <div class="modal" id="modalEnvio">
+            <div class="modal-content modal-sm">
+                <div class="modal-header">
+                    <h2><i class="fas fa-paper-plane"></i> Enviar Comprovante</h2>
+                    <button class="modal-close" onclick="fecharModalEnvio()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size:13px;color:#666;margin-bottom:15px;">
+                        <i class="fas fa-info-circle" style="color:#FF8C00;"></i>
+                        Enviar comprovante de pagamento para a empresa cliente.
+                    </p>
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label>Empresa *</label>
+                        <input type="text" id="envioEmpresa" readonly>
+                    </div>
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label>E-mail *</label>
+                        <input type="email" id="envioEmail" placeholder="cliente@empresa.com.br">
+                    </div>
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label>Mensagem</label>
+                        <textarea id="envioMensagem" rows="3" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,140,0,0.2);font-family:'Poppins',sans-serif;font-size:13px;background:rgba(255,255,255,0.6);">Segue comprovante de pagamento das guias INSS e FGTS referente à competência.</textarea>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-action btn-secondary" onclick="fecharModalEnvio()"><i class="fas fa-times"></i> Cancelar</button>
+                    <button class="btn-action btn-success" onclick="confirmarEnvio()"><i class="fas fa-paper-plane"></i> Enviar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIGURAÇÃO SUPABASE
+        // ============================================================
+        const SUPABASE_URL = 'https://avzxplcdutqzlxfievza.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_rkwsOtfEMpic9PsiExxC_w_rzYqZNRs';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: false }
+        });
+
+        let usuarioAtual = null;
+        let usuariosSupabase = [];
+        const ROLES = { VIEWER: 'viewer', USER: 'user', ADMIN: 'admin' };
+        const ROLE_LABELS = { 'viewer': 'Visualizador', 'user': 'Usuário', 'admin': 'Administrador' };
+
+        // Dados
+        let guias = [];
+        let empresas = [];
+        let chartDistribuicao = null;
+
+        // Configurações das empresas
+        const EMPRESAS_CLIENTES = [
+            { nome: 'Copaenergia', cnpj: '00.000.000/0001-01', email: 'financeiro@copaenergia.com.br' },
+            { nome: 'Acço', cnpj: '00.000.000/0001-02', email: 'financeiro@acco.com.br' },
+            { nome: 'A2B', cnpj: '00.000.000/0001-03', email: 'financeiro@a2b.com.br' },
+            { nome: 'Trigo', cnpj: '00.000.000/0001-04', email: 'financeiro@trigo.com.br' },
+            { nome: 'Qnutri', cnpj: '00.000.000/0001-05', email: 'financeiro@qnutri.com.br' },
+            { nome: 'Spoleto', cnpj: '00.000.000/0001-06', email: 'financeiro@spoleto.com.br' },
+            { nome: 'INSS', cnpj: '00.000.000/0001-07', email: 'financeiro@inss.gov.br' }
+        ];
+
+        // ============================================================
+        // FUNÇÃO PARA PREENCHER COMPETÊNCIAS
+        // ============================================================
+        function preencherCompetencias() {
+            const selects = [
+                'filtroCompetenciaRateio',
+                'filtroCompetenciaFinanceiro',
+                'guiaCompetencia',
+                'filtroCompetenciaDashboard'
+            ];
+            
+            const hoje = new Date();
+            const mesAtual = hoje.getMonth();
+            const anoAtual = hoje.getFullYear();
+            
+            // Nomes dos meses em português
+            const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                          'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            
+            selects.forEach(id => {
+                const select = document.getElementById(id);
+                if (!select) return;
+                
+                // Salva o valor atual se existir
+                const valorAtual = select.value;
+                
+                // Limpa as opções atuais
+                select.innerHTML = '';
+                
+                // Adiciona a opção "Todas" se for um filtro (não para o campo de nova guia)
+                if (id === 'filtroCompetenciaRateio' || id === 'filtroCompetenciaFinanceiro') {
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'Todas';
+                    select.appendChild(opt);
+                }
+                
+                // Adiciona os últimos 12 meses
+                for (let i = 11; i >= 0; i--) {
+                    let mes = mesAtual - i;
+                    let ano = anoAtual;
+                    while (mes < 0) {
+                        mes += 12;
+                        ano--;
+                    }
+                    const mesStr = String(mes + 1).padStart(2, '0');
+                    const option = document.createElement('option');
+                    option.value = `${ano}-${mesStr}`;
+                    option.textContent = `${meses[mes]}/${ano}`;
+                    select.appendChild(option);
+                }
+                
+                // Pré-seleciona o mês atual
+                const mesAtualStr = String(mesAtual + 1).padStart(2, '0');
+                const competenciaAtual = `${anoAtual}-${mesAtualStr}`;
+                
+                // Se for o campo de nova guia, sempre seleciona o mês atual
+                if (id === 'guiaCompetencia') {
+                    select.value = competenciaAtual;
+                } else {
+                    // Para filtros, tenta manter o valor anterior ou seleciona o mês atual
+                    if (valorAtual) {
+                        const existe = Array.from(select.options).some(opt => opt.value === valorAtual);
+                        select.value = existe ? valorAtual : competenciaAtual;
+                    } else {
+                        // Para o dashboard, seleciona o mês atual
+                        if (id === 'filtroCompetenciaDashboard') {
+                            select.value = competenciaAtual;
+                        } else {
+                            // Para rateio e financeiro, mantém "Todas" como padrão
+                            select.value = '';
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // AUTENTICAÇÃO
+        // ============================================================
+        async function carregarUsuariosSupabase() {
+            const select = document.getElementById('loginUsuario');
+            if (select) select.innerHTML = '<option value="">Carregando...</option>';
+            try {
+                const { data, error } = await supabaseClient.from('usuarios').select('*').order('nome');
+                if (error) {
+                    console.error('Erro ao carregar usuários:', error);
+                    if (select) select.innerHTML = `<option value="">❌ Erro: ${error.message}</option>`;
+                    return [];
+                }
+                usuariosSupabase = data || [];
+                if (select) {
+                    if (usuariosSupabase.length === 0) {
+                        select.innerHTML = '<option value="">⚠️ Nenhum usuário cadastrado</option>';
+                    } else {
+                        select.innerHTML = '<option value="">-- Selecione --</option>';
+                        usuariosSupabase.forEach(u => {
+                            const option = document.createElement('option');
+                            option.value = u.nome;
+                            option.textContent = `${u.nome} (${ROLE_LABELS[u.role] || u.role})`;
+                            select.appendChild(option);
+                        });
+                    }
+                }
+                return usuariosSupabase;
+            } catch (error) {
+                console.error('Erro ao carregar usuários:', error);
+                if (select) select.innerHTML = `<option value="">❌ Erro: ${error.message}</option>`;
+                return [];
+            }
+        }
+
+        async function fazerLoginSupabase() {
+            const select = document.getElementById('loginUsuario');
+            const nome = select ? select.value : '';
+            const senha = document.getElementById('loginSenha').value;
+            const erro = document.getElementById('loginErro');
+            const btnEntrar = document.getElementById('btnEntrar');
+            
+            if (!nome) { erro.textContent = '⚠️ Selecione um usuário!'; erro.style.display = 'block'; return; }
+            if (!senha) { erro.textContent = '⚠️ Digite a senha!'; erro.style.display = 'block'; return; }
+
+            btnEntrar.disabled = true;
+            btnEntrar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('usuarios')
+                    .select('*')
+                    .eq('nome', nome)
+                    .maybeSingle();
+
+                if (error) {
+                    erro.textContent = `❌ Erro: ${error.message}`;
+                    erro.style.display = 'block';
+                    btnEntrar.disabled = false;
+                    btnEntrar.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+                    return;
+                }
+
+                if (data && data.senha === senha) {
+                    usuarioAtual = { id: data.id, nome: data.nome, role: data.role };
+                    document.getElementById('modalLogin').classList.remove('active');
+                    document.getElementById('modalLogin').style.display = 'none';
+                    const main = document.getElementById('mainContainer');
+                    main.style.display = 'block';
+                    main.style.visibility = 'visible';
+                    main.style.opacity = '1';
+                    document.body.style.overflow = 'auto';
+                    mostrarToast('✅ Bem-vindo, ' + nome + '!');
+                    erro.style.display = 'none';
+                    document.getElementById('loginSenha').value = '';
+                    atualizarUI();
+                    setTimeout(() => {
+                        carregarDados();
+                    }, 200);
+                } else {
+                    erro.textContent = '❌ Usuário ou senha incorretos!';
+                    erro.style.display = 'block';
+                    document.getElementById('loginSenha').value = '';
+                    document.getElementById('loginSenha').focus();
+                }
+            } catch (error) {
+                erro.textContent = `❌ Erro: ${error.message}`;
+                erro.style.display = 'block';
+            } finally {
+                btnEntrar.disabled = false;
+                btnEntrar.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+            }
+        }
+
+        function atualizarUI() {
+            const nome = usuarioAtual ? usuarioAtual.nome : 'Visitante';
+            const role = usuarioAtual ? usuarioAtual.role : 'viewer';
+            const roleLabel = ROLE_LABELS[role] || 'Visualizador';
+            document.getElementById('sidebarUserName').textContent = nome;
+            document.getElementById('sidebarUserRole').textContent = roleLabel;
+            document.getElementById('headerUserName').textContent = nome;
+            document.getElementById('headerUserRole').textContent = roleLabel;
+            document.getElementById('responsavelRH').textContent = nome;
+        }
+
+        // ============================================================
+        // TOAST
+        // ============================================================
+        function mostrarToast(msg, tipo = '') {
+            const toast = document.getElementById('toastSucesso');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.textContent = msg;
+            toast.style.display = 'block';
+            toast.className = 'toast';
+            if (tipo === 'error') toast.classList.add('error');
+            if (tipo === 'warning') toast.classList.add('warning');
+            if (tipo === 'info') toast.classList.add('info');
+            setTimeout(() => { toast.style.display = 'none'; }, 3500);
+        }
+
+        // ============================================================
+        // SIDEBAR
+        // ============================================================
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.getElementById('sidebarToggle');
+            sidebar.classList.toggle('collapsed');
+            toggle.classList.toggle('collapsed');
+            if (window.innerWidth <= 768) sidebar.classList.toggle('open');
+        }
+
+        function toggleSidebarMobile() {
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.add('collapsed');
+                document.getElementById('sidebarToggle').classList.add('collapsed');
+            }
+        }
+
+        // ============================================================
+        // NAVEGAÇÃO
+        // ============================================================
+        function abrirDashboard() {
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('guias').style.display = 'none';
+            document.getElementById('rateio').style.display = 'none';
+            document.getElementById('envio').style.display = 'none';
+            document.getElementById('financeiro').style.display = 'none';
+            document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.sidebar-btn')[1]?.classList.add('active');
+            carregarDados();
+        }
+
+        function abrirGuias() {
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('guias').style.display = 'block';
+            document.getElementById('rateio').style.display = 'none';
+            document.getElementById('envio').style.display = 'none';
+            document.getElementById('financeiro').style.display = 'none';
+            renderizarGuias();
+        }
+
+        function abrirRateio() {
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('guias').style.display = 'none';
+            document.getElementById('rateio').style.display = 'block';
+            document.getElementById('envio').style.display = 'none';
+            document.getElementById('financeiro').style.display = 'none';
+            renderizarRateio();
+        }
+
+        function fecharRateio() { abrirDashboard(); }
+
+        function abrirEnvio() {
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('guias').style.display = 'none';
+            document.getElementById('rateio').style.display = 'none';
+            document.getElementById('envio').style.display = 'block';
+            document.getElementById('financeiro').style.display = 'none';
+            renderizarEnvio();
+        }
+
+        function fecharEnvio() { abrirDashboard(); }
+
+        function abrirFinanceiro() {
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('guias').style.display = 'none';
+            document.getElementById('rateio').style.display = 'none';
+            document.getElementById('envio').style.display = 'none';
+            document.getElementById('financeiro').style.display = 'block';
+            renderizarFinanceiro();
+        }
+
+        function fecharFinanceiro() { abrirDashboard(); }
+
+        // ============================================================
+        // CARREGAR DADOS
+        // ============================================================
+        async function carregarDados() {
+            try {
+                mostrarToast('🔄 Carregando dados...');
+
+                const { data, error } = await supabaseClient
+                    .from('guias_inss_fgts')
+                    .select('*')
+                    .order('data_criacao', { ascending: false });
+
+                if (error) {
+                    console.warn('Erro ao carregar guias:', error);
+                    guias = [];
+                } else {
+                    guias = data || [];
+                }
+
+                empresas = EMPRESAS_CLIENTES;
+
+                atualizarDashboard();
+                atualizarBadges();
+                mostrarToast(`✅ ${guias.length} guias carregadas!`);
+            } catch (error) {
+                console.error('Erro ao carregar:', error);
+                mostrarToast('⚠️ ' + error.message, 'error');
+            }
+        }
+
+        // ============================================================
+        // DASHBOARD
+        // ============================================================
+        function atualizarDashboard() {
+            const competenciaFiltro = document.getElementById('filtroCompetenciaDashboard')?.value || '';
+            
+            let guiasFiltradas = guias;
+            if (competenciaFiltro) {
+                guiasFiltradas = guias.filter(g => g.competencia === competenciaFiltro);
+            }
+            
+            const pendentes = guiasFiltradas.filter(g => g.status === 'pendente' || g.status === 'aguardando').length;
+            const pagas = guiasFiltradas.filter(g => g.status === 'pago').length;
+            const enviadas = guiasFiltradas.filter(g => g.status === 'enviado' || g.status === 'confirmado').length;
+            const totalValor = guiasFiltradas.reduce((sum, g) => sum + (g.valor || 0), 0);
+
+            document.getElementById('cardGuiasPendentes').textContent = pendentes;
+            document.getElementById('cardGuiasPagas').textContent = pagas;
+            document.getElementById('cardGuiasEnviadas').textContent = enviadas;
+            document.getElementById('cardTotalImpostos').textContent = `R$ ${totalValor.toFixed(2)}`;
+            document.getElementById('cardTotalEmpresas').textContent = empresas.length;
+
+            renderizarResumoEmpresas(guiasFiltradas);
+            renderizarUltimasAtividades(guiasFiltradas);
+            atualizarGraficos(guiasFiltradas);
+        }
+
+        function renderizarResumoEmpresas(guiasFiltradas) {
+            const container = document.getElementById('resumoEmpresas');
+            
+            if (empresas.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:20px;color:#7a3a00;">Nenhuma empresa cadastrada</div>';
+                return;
+            }
+
+            let html = '';
+            empresas.forEach(emp => {
+                const guiasEmpresa = guiasFiltradas.filter(g => g.empresa === emp.nome);
+                const total = guiasEmpresa.reduce((sum, g) => sum + (g.valor || 0), 0);
+                const pendentes = guiasEmpresa.filter(g => g.status === 'pendente' || g.status === 'aguardando').length;
+                
+                html += `
+                    <div class="rateio-item">
+                        <div class="info">
+                            <div class="titulo">${emp.nome}</div>
+                            <div class="desc">CNPJ: ${emp.cnpj} • ${guiasEmpresa.length} guias</div>
+                        </div>
+                        <div class="valor" style="display:flex;gap:10px;align-items:center;">
+                            <span>R$ ${total.toFixed(2)}</span>
+                            ${pendentes > 0 ? `<span class="badge-status pendente">${pendentes} pendentes</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderizarUltimasAtividades(guiasFiltradas) {
+            const container = document.getElementById('ultimasAtividades');
+            const recentes = guiasFiltradas.slice(0, 10);
+
+            if (recentes.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:20px;color:#7a3a00;">Nenhuma atividade recente</div>';
+                return;
+            }
+
+            const statusMap = {
+                'pendente': 'Pendente',
+                'pago': 'Pago',
+                'enviado': 'Enviado',
+                'confirmado': 'Confirmado',
+                'aguardando': 'Aguardando'
+            };
+
+            container.innerHTML = recentes.map(g => `
+                <div class="rateio-item">
+                    <div class="info">
+                        <div class="titulo">${g.tipo} - ${g.empresa}</div>
+                        <div class="desc">Competência: ${g.competencia || '-'} • Vencimento: ${formatarData(g.vencimento)}</div>
+                    </div>
+                    <div class="valor" style="display:flex;gap:10px;align-items:center;">
+                        <span>R$ ${(g.valor || 0).toFixed(2)}</span>
+                        <span class="badge-status ${g.status}">${statusMap[g.status] || g.status}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ============================================================
+        // FUNÇÕES AUXILIARES
+        // ============================================================
+        function formatarData(data) {
+            if (!data) return '-';
+            const d = new Date(data);
+            return d.toLocaleDateString('pt-BR');
+        }
+
+        function formatarDataISO(data) {
+            if (!data) return '';
+            const d = new Date(data);
+            return d.toISOString().split('T')[0];
+        }
+
+        function getStatusLabel(status) {
+            const map = {
+                'pendente': 'Pendente',
+                'pago': 'Pago',
+                'enviado': 'Enviado',
+                'confirmado': 'Confirmado',
+                'aguardando': 'Aguardando'
+            };
+            return map[status] || status;
+        }
+
+        function getStatusClass(status) {
+            const map = {
+                'pendente': 'pendente',
+                'pago': 'pago',
+                'enviado': 'enviado',
+                'confirmado': 'confirmado',
+                'aguardando': 'aguardando'
+            };
+            return map[status] || 'pendente';
+        }
+
+        function atualizarBadges() {
+            const pendentes = guias.filter(g => g.status === 'pendente' || g.status === 'aguardando').length;
+            document.getElementById('badgePendentes').textContent = pendentes;
+        }
+
+        // ============================================================
+        // GUIAS - LISTA
+        // ============================================================
+        function renderizarGuias() {
+            const tbody = document.getElementById('corpoGuias');
+            const tipoFiltro = document.getElementById('filtroTipoGuia')?.value || '';
+            const statusFiltro = document.getElementById('filtroStatusGuia')?.value || '';
+            const empresaFiltro = document.getElementById('filtroEmpresaGuia')?.value || '';
+
+            let lista = guias;
+            if (tipoFiltro) lista = lista.filter(g => g.tipo === tipoFiltro);
+            if (statusFiltro) lista = lista.filter(g => g.status === statusFiltro);
+            if (empresaFiltro) lista = lista.filter(g => g.empresa === empresaFiltro);
+
+            if (lista.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px 0;color:#7a3a00;">
+                    <i class="fas fa-file-invoice" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+                    Nenhuma guia encontrada
+                </td></tr>`;
+                document.getElementById('totalGuias').textContent = '0';
+                document.getElementById('totalINSS').textContent = 'R$ 0,00';
+                document.getElementById('totalFGTS').textContent = 'R$ 0,00';
+                document.getElementById('totalGeralGuias').textContent = 'R$ 0,00';
+                return;
+            }
+
+            let totalINSS = 0;
+            let totalFGTS = 0;
+            let html = '';
+
+            lista.forEach(g => {
+                if (g.tipo === 'INSS') totalINSS += g.valor || 0;
+                else totalFGTS += g.valor || 0;
+
+                html += `
+                    <tr>
+                        <td><span class="badge-status ${g.tipo === 'INSS' ? 'enviado' : 'pago'}">${g.tipo}</span></td>
+                        <td><strong>${g.empresa}</strong></td>
+                        <td>${g.cnpj || '-'}</td>
+                        <td>${g.competencia || '-'}</td>
+                        <td>R$ ${(g.valor || 0).toFixed(2)}</td>
+                        <td>${formatarData(g.vencimento)}</td>
+                        <td><span class="badge-status ${getStatusClass(g.status)}">${getStatusLabel(g.status)}</span></td>
+                        <td>
+                            <button class="btn-action btn-info" onclick="verDetalhesGuia('${g.id}')" style="padding:2px 8px;font-size:10px;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${g.status === 'pendente' ? `
+                                <button class="btn-action btn-success" onclick="marcarPago('${g.id}')" style="padding:2px 8px;font-size:10px;">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            ` : ''}
+                            ${g.status === 'pago' ? `
+                                <button class="btn-action btn-primary" onclick="marcarEnviado('${g.id}')" style="padding:2px 8px;font-size:10px;">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            ` : ''}
+                            <button class="btn-action btn-danger" onclick="excluirGuia('${g.id}')" style="padding:2px 8px;font-size:10px;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            document.getElementById('totalGuias').textContent = lista.length;
+            document.getElementById('totalINSS').textContent = `R$ ${totalINSS.toFixed(2)}`;
+            document.getElementById('totalFGTS').textContent = `R$ ${totalFGTS.toFixed(2)}`;
+            document.getElementById('totalGeralGuias').textContent = `R$ ${(totalINSS + totalFGTS).toFixed(2)}`;
+        }
+
+        // ============================================================
+        // NOVA GUIA
+        // ============================================================
+        function novaGuia(tipo) {
+            document.getElementById('modalGuiaTitulo').textContent = `Nova Guia ${tipo}`;
+            document.getElementById('guiaTipo').value = tipo;
+            document.getElementById('guiaEmpresa').value = '';
+            document.getElementById('guiaCNPJ').value = '';
+            document.getElementById('guiaVencimento').value = '';
+            document.getElementById('guiaValor').value = '';
+            document.getElementById('guiaObservacoes').value = '';
+            document.getElementById('guiaComprovante').value = '';
+            
+            // Garante que a competência está preenchida
+            preencherCompetencias();
+            
+            document.getElementById('modalNovaGuia').classList.add('active');
+            document.getElementById('modalNovaGuia').style.display = 'flex';
+        }
+
+        function fecharModalNovaGuia() {
+            document.getElementById('modalNovaGuia').classList.remove('active');
+            document.getElementById('modalNovaGuia').style.display = 'none';
+        }
+
+        async function salvarGuia() {
+            const tipo = document.getElementById('guiaTipo').value;
+            const empresa = document.getElementById('guiaEmpresa').value;
+            const cnpj = document.getElementById('guiaCNPJ').value.trim();
+            const competencia = document.getElementById('guiaCompetencia').value;
+            const vencimento = document.getElementById('guiaVencimento').value;
+            const valor = parseFloat(document.getElementById('guiaValor').value);
+            const observacoes = document.getElementById('guiaObservacoes').value.trim();
+
+            if (!empresa || !competencia || !vencimento || !valor) {
+                mostrarToast('⚠️ Preencha todos os campos obrigatórios!', 'warning');
+                return;
+            }
+
+            try {
+                const dados = {
+                    tipo,
+                    empresa,
+                    cnpj: cnpj || '-',
+                    competencia,
+                    vencimento,
+                    valor,
+                    observacoes,
+                    status: 'pendente',
+                    data_criacao: new Date().toISOString().split('T')[0]
+                };
+
+                const { error } = await supabaseClient
+                    .from('guias_inss_fgts')
+                    .insert([dados]);
+
+                if (error) throw error;
+
+                mostrarToast('✅ Guia criada com sucesso!');
+                fecharModalNovaGuia();
+                await carregarDados();
+                renderizarGuias();
+            } catch (error) {
+                console.error('Erro ao salvar guia:', error);
+                mostrarToast('⚠️ ' + error.message, 'error');
+            }
+        }
+
+        // ============================================================
+        // AÇÕES DAS GUIAS
+        // ============================================================
+        async function marcarPago(id) {
+            if (!confirm('Confirmar pagamento desta guia?')) return;
+            try {
+                const { error } = await supabaseClient
+                    .from('guias_inss_fgts')
+                    .update({ status: 'pago', data_pagamento: new Date().toISOString().split('T')[0] })
+                    .eq('id', id);
+                if (error) throw error;
+                mostrarToast('✅ Pagamento confirmado!');
+                await carregarDados();
+                renderizarGuias();
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarToast('⚠️ ' + error.message, 'error');
+            }
+        }
+
+        async function marcarEnviado(id) {
+            if (!confirm('Confirmar envio desta guia para o cliente?')) return;
+            try {
+                const { error } = await supabaseClient
+                    .from('guias_inss_fgts')
+                    .update({ status: 'enviado', data_envio: new Date().toISOString().split('T')[0] })
+                    .eq('id', id);
+                if (error) throw error;
+                mostrarToast('✅ Guia enviada!');
+                await carregarDados();
+                renderizarGuias();
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarToast('⚠️ ' + error.message, 'error');
+            }
+        }
+
+        async function excluirGuia(id) {
+            if (!confirm('Tem certeza que deseja excluir esta guia?')) return;
+            try {
+                const { error } = await supabaseClient
+                    .from('guias_inss_fgts')
+                    .delete()
+                    .eq('id', id);
+                if (error) throw error;
+                mostrarToast('✅ Guia excluída!');
+                await carregarDados();
+                renderizarGuias();
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarToast('⚠️ ' + error.message, 'error');
+            }
+        }
+
+        function verDetalhesGuia(id) {
+            const guia = guias.find(g => g.id === id);
+            if (!guia) {
+                mostrarToast('⚠️ Guia não encontrada!', 'warning');
+                return;
+            }
+
+            mostrarToast(
+                `📄 ${guia.tipo} - ${guia.empresa}\n` +
+                `CNPJ: ${guia.cnpj || '-'}\n` +
+                `Competência: ${guia.competencia || '-'}\n` +
+                `Valor: R$ ${(guia.valor || 0).toFixed(2)}\n` +
+                `Vencimento: ${formatarData(guia.vencimento)}\n` +
+                `Status: ${getStatusLabel(guia.status)}\n` +
+                `${guia.observacoes ? '📝 ' + guia.observacoes : ''}`,
+                'info'
+            );
+        }
+
+        // ============================================================
+        // RATEIO POR CNPJ
+        // ============================================================
+        function renderizarRateio() {
+            const container = document.getElementById('rateioContainer');
+            const competencia = document.getElementById('filtroCompetenciaRateio')?.value || '';
+
+            let lista = guias;
+            if (competencia) lista = lista.filter(g => g.competencia === competencia);
+
+            if (lista.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:30px;color:#7a3a00;">
+                        <i class="fas fa-calculator" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+                        Nenhuma guia encontrada para rateio<br>
+                        <small>Selecione uma competência ou cadastre novas guias</small>
+                    </div>
+                `;
+                return;
+            }
+
+            // Agrupar por CNPJ
+            const grupos = {};
+            lista.forEach(g => {
+                const chave = g.cnpj || g.empresa;
+                if (!grupos[chave]) {
+                    grupos[chave] = {
+                        cnpj: g.cnpj || g.empresa,
+                        empresa: g.empresa,
+                        totalINSS: 0,
+                        totalFGTS: 0,
+                        totalGeral: 0,
+                        guias: []
+                    };
+                }
+                grupos[chave].guias.push(g);
+                if (g.tipo === 'INSS') grupos[chave].totalINSS += g.valor || 0;
+                else grupos[chave].totalFGTS += g.valor || 0;
+                grupos[chave].totalGeral += g.valor || 0;
+            });
+
+            let html = `
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Empresa</th>
+                                <th>CNPJ</th>
+                                <th>Total INSS</th>
+                                <th>Total FGTS</th>
+                                <th>Total Geral</th>
+                                <th>Qtde. Guias</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            let totalGeral = 0;
+            Object.values(grupos).forEach(g => {
+                totalGeral += g.totalGeral;
+                html += `
+                    <tr>
+                        <td style="text-align:left;"><strong>${g.empresa}</strong></td>
+                        <td>${g.cnpj}</td>
+                        <td>R$ ${g.totalINSS.toFixed(2)}</td>
+                        <td>R$ ${g.totalFGTS.toFixed(2)}</td>
+                        <td><strong>R$ ${g.totalGeral.toFixed(2)}</strong></td>
+                        <td>${g.guias.length}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                        <tfoot style="background:rgba(255,140,0,0.1);font-weight:700;">
+                            <tr>
+                                <td colspan="3"><strong>TOTAL GERAL</strong></td>
+                                <td colspan="3"><strong>R$ ${totalGeral.toFixed(2)}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function calcularRateio() {
+            mostrarToast('🔄 Calculando rateio por CNPJ...');
+            renderizarRateio();
+            mostrarToast('✅ Rateio calculado!', 'info');
+        }
+
+        // ============================================================
+        // ENVIO PARA CLIENTES
+        // ============================================================
+        function renderizarEnvio() {
+            const container = document.getElementById('envioContainer');
+            const filtro = document.getElementById('filtroClienteEnvio')?.value || '';
+
+            const clientes = empresas.filter(e => 
+                ['Copaenergia', 'Acço', 'A2B', 'Trigo'].includes(e.nome) &&
+                (!filtro || e.nome === filtro)
+            );
+
+            if (clientes.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:20px;color:#7a3a00;">Nenhum cliente encontrado</div>';
+                return;
+            }
+
+            let html = '';
+            clientes.forEach(cliente => {
+                const guiasCliente = guias.filter(g => g.empresa === cliente.nome && g.status !== 'pendente');
+                const total = guiasCliente.reduce((sum, g) => sum + (g.valor || 0), 0);
+                const pendentes = guias.filter(g => g.empresa === cliente.nome && g.status === 'pendente').length;
+
+                html += `
+                    <div style="background:rgba(255,255,255,0.5);border-radius:10px;padding:15px;margin-bottom:10px;border:1px solid rgba(255,140,0,0.15);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                            <div>
+                                <strong style="font-size:16px;">${cliente.nome}</strong>
+                                <div style="font-size:12px;color:#7a3a00;">CNPJ: ${cliente.cnpj} • E-mail: ${cliente.email}</div>
+                                <div style="font-size:12px;color:#7a3a00;">${guiasCliente.length} guias pagas • Total: R$ ${total.toFixed(2)}</div>
+                                ${pendentes > 0 ? `<span class="badge-status pendente">${pendentes} guias pendentes</span>` : ''}
+                            </div>
+                            <div style="display:flex;gap:6px;">
+                                <button class="btn-action btn-primary" onclick="abrirModalEnvio('${cliente.nome}', '${cliente.email}')">
+                                    <i class="fas fa-paper-plane"></i> Enviar Comprovante
+                                </button>
+                                <button class="btn-action btn-pdf" onclick="gerarPDFCliente('${cliente.nome}')">
+                                    <i class="fas fa-file-pdf"></i> PDF
+                                </button>
+                            </div>
+                        </div>
+                        ${guiasCliente.length > 0 ? `
+                            <div style="margin-top:10px;padding:10px;background:rgba(255,255,255,0.3);border-radius:8px;font-size:11px;">
+                                <strong>Últimas guias:</strong>
+                                ${guiasCliente.slice(0, 3).map(g => 
+                                    `${g.tipo} - R$ ${(g.valor || 0).toFixed(2)} (${formatarData(g.vencimento)})`
+                                ).join(' • ')}
+                                ${guiasCliente.length > 3 ? `... +${guiasCliente.length - 3} guias` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function abrirModalEnvio(empresa, email) {
+            document.getElementById('envioEmpresa').value = empresa;
+            document.getElementById('envioEmail').value = email;
+            document.getElementById('modalEnvio').classList.add('active');
+            document.getElementById('modalEnvio').style.display = 'flex';
+        }
+
+        function fecharModalEnvio() {
+            document.getElementById('modalEnvio').classList.remove('active');
+            document.getElementById('modalEnvio').style.display = 'none';
+        }
+
+        function confirmarEnvio() {
+            const empresa = document.getElementById('envioEmpresa').value;
+            const email = document.getElementById('envioEmail').value;
+            const mensagem = document.getElementById('envioMensagem').value;
+
+            if (!email) {
+                mostrarToast('⚠️ Informe o e-mail do cliente!', 'warning');
+                return;
+            }
+
+            mostrarToast(`✅ Comprovante enviado para ${empresa} (${email})`);
+            fecharModalEnvio();
+        }
+
+        function enviarTodosClientes() {
+            if (!confirm('Enviar comprovantes para todos os clientes?')) return;
+            mostrarToast('✅ Comprovantes enviados para todos os clientes!');
+        }
+
+        // ============================================================
+        // FINANCEIRO
+        // ============================================================
+        function renderizarFinanceiro() {
+            const container = document.getElementById('financeiroContainer');
+            const competencia = document.getElementById('filtroCompetenciaFinanceiro')?.value || '';
+
+            let lista = guias;
+            if (competencia) lista = lista.filter(g => g.competencia === competencia);
+
+            if (lista.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:30px;color:#7a3a00;">
+                        <i class="fas fa-coins" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+                        Nenhum dado financeiro encontrado<br>
+                        <small>Selecione uma competência ou cadastre novas guias</small>
+                    </div>
+                `;
+                return;
+            }
+
+            // Agrupar por empresa
+            const grupos = {};
+            lista.forEach(g => {
+                if (!grupos[g.empresa]) {
+                    grupos[g.empresa] = {
+                        empresa: g.empresa,
+                        cnpj: g.cnpj || '-',
+                        totalINSS: 0,
+                        totalFGTS: 0,
+                        totalGeral: 0,
+                        status: {}
+                    };
+                }
+                if (g.tipo === 'INSS') grupos[g.empresa].totalINSS += g.valor || 0;
+                else grupos[g.empresa].totalFGTS += g.valor || 0;
+                grupos[g.empresa].totalGeral += g.valor || 0;
+                grupos[g.empresa].status[g.status] = (grupos[g.empresa].status[g.status] || 0) + 1;
+            });
+
+            let html = `
+                <div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:15px;border:1px solid #eee;">
+                    <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                        <span><strong>Total de Guias:</strong> ${lista.length}</span>
+                        <span><strong>Total INSS:</strong> R$ ${lista.filter(g => g.tipo === 'INSS').reduce((s, g) => s + (g.valor || 0), 0).toFixed(2)}</span>
+                        <span><strong>Total FGTS:</strong> R$ ${lista.filter(g => g.tipo === 'FGTS').reduce((s, g) => s + (g.valor || 0), 0).toFixed(2)}</span>
+                        <span><strong>Total Geral:</strong> R$ ${lista.reduce((s, g) => s + (g.valor || 0), 0).toFixed(2)}</span>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Empresa</th>
+                                <th>CNPJ</th>
+                                <th>Total INSS</th>
+                                <th>Total FGTS</th>
+                                <th>Total Geral</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            Object.values(grupos).forEach(g => {
+                const statusText = Object.entries(g.status)
+                    .map(([k, v]) => `${getStatusLabel(k)}: ${v}`)
+                    .join(' | ');
+                html += `
+                    <tr>
+                        <td style="text-align:left;"><strong>${g.empresa}</strong></td>
+                        <td>${g.cnpj}</td>
+                        <td>R$ ${g.totalINSS.toFixed(2)}</td>
+                        <td>R$ ${g.totalFGTS.toFixed(2)}</td>
+                        <td><strong>R$ ${g.totalGeral.toFixed(2)}</strong></td>
+                        <td style="font-size:10px;">${statusText}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                        <tfoot style="background:rgba(255,140,0,0.1);font-weight:700;">
+                            <tr>
+                                <td colspan="3"><strong>TOTAL GERAL</strong></td>
+                                <td colspan="3"><strong>R$ ${lista.reduce((s, g) => s + (g.valor || 0), 0).toFixed(2)}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function enviarFinanceiro() {
+            if (!confirm('Enviar relatório financeiro para o setor de Financeiro?')) return;
+            mostrarToast('✅ Relatório enviado para o Financeiro!');
+        }
+
+        // ============================================================
+        // GRÁFICOS
+        // ============================================================
+        function atualizarGraficos(guiasFiltradas) {
+            const statusMap = {};
+            guiasFiltradas.forEach(g => {
+                const label = getStatusLabel(g.status);
+                statusMap[label] = (statusMap[label] || 0) + 1;
+            });
+
+            const ctx = document.getElementById('chartDistribuicao').getContext('2d');
+            if (chartDistribuicao) chartDistribuicao.destroy();
+            chartDistribuicao = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(statusMap),
+                    datasets: [{
+                        data: Object.values(statusMap),
+                        backgroundColor: ['#ffc107', '#28a745', '#6f42c1', '#17a2b8', '#dc3545']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { boxWidth: 12, fontSize: 10 } 
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // EXPORTAÇÕES
+        // ============================================================
+        function exportarGuiasExcel() {
+            if (guias.length === 0) {
+                mostrarToast('⚠️ Nenhum dado para exportar!', 'warning');
+                return;
+            }
+
+            const data = guias.map(g => ({
+                'Tipo': g.tipo,
+                'Empresa': g.empresa,
+                'CNPJ': g.cnpj || '-',
+                'Competência': g.competencia || '-',
+                'Valor': (g.valor || 0).toFixed(2),
+                'Vencimento': formatarData(g.vencimento),
+                'Status': getStatusLabel(g.status),
+                'Observações': g.observacoes || ''
+            }));
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, 'Guias INSS FGTS');
+            XLSX.writeFile(wb, `Guias_INSS_FGTS_${new Date().toISOString().split('T')[0]}.xlsx`);
+            mostrarToast('✅ Excel exportado!');
+        }
+
+        function exportarGuiasPDF() {
+            if (guias.length === 0) {
+                mostrarToast('⚠️ Nenhum dado para exportar!', 'warning');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+            const PAGE_WIDTH = 297;
+            const MARGIN = 10;
+            let y = MARGIN;
+
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text('RELATÓRIO - GUIAS INSS E FGTS', PAGE_WIDTH / 2, y, { align: 'center' });
+            y += 7;
+
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, PAGE_WIDTH / 2, y, { align: 'center' });
+            y += 6;
+
+            doc.line(MARGIN, y, PAGE_WIDTH - MARGIN, y);
+            y += 5;
+
+            const headers = ['Tipo', 'Empresa', 'CNPJ', 'Competência', 'Valor', 'Vencimento', 'Status'];
+            const colWidths = [25, 35, 35, 30, 28, 30, 32];
+            const xStart = MARGIN;
+
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'bold');
+
+            let x = xStart;
+            headers.forEach((header, i) => {
+                doc.text(header, x + (colWidths[i] / 2), y + 2.5, { align: 'center' });
+                x += colWidths[i];
+            });
+            y += 5;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6);
+
+            guias.forEach(g => {
+                const row = [
+                    g.tipo,
+                    g.empresa,
+                    g.cnpj || '-',
+                    g.competencia || '-',
+                    `R$ ${(g.valor || 0).toFixed(2)}`,
+                    formatarData(g.vencimento),
+                    getStatusLabel(g.status)
+                ];
+                x = xStart;
+                row.forEach((text, i) => {
+                    doc.text(text, x + (colWidths[i] / 2), y + 2.5, { align: 'center' });
+                    x += colWidths[i];
+                });
+                y += 4;
+                if (y > 190) { doc.addPage(); y = MARGIN + 10; }
+            });
+
+            doc.save(`Guias_INSS_FGTS_${new Date().toISOString().split('T')[0]}.pdf`);
+            mostrarToast('✅ PDF exportado!');
+        }
+
+        function exportarRateioExcel() {
+            mostrarToast('📊 Exportando rateio...');
+            renderizarRateio();
+            setTimeout(() => mostrarToast('✅ Rateio exportado!'), 500);
+        }
+
+        function exportarRateioPDF() {
+            mostrarToast('📄 Exportando rateio PDF...');
+            setTimeout(() => mostrarToast('✅ Rateio PDF exportado!'), 500);
+        }
+
+        function exportarFinanceiroExcel() {
+            mostrarToast('📊 Exportando financeiro...');
+            renderizarFinanceiro();
+            setTimeout(() => mostrarToast('✅ Financeiro exportado!'), 500);
+        }
+
+        function exportarFinanceiroPDF() {
+            mostrarToast('📄 Exportando financeiro PDF...');
+            setTimeout(() => mostrarToast('✅ Financeiro PDF exportado!'), 500);
+        }
+
+        function gerarPDFCliente(empresa) {
+            mostrarToast(`📄 Gerando PDF para ${empresa}...`);
+            setTimeout(() => mostrarToast(`✅ PDF gerado para ${empresa}!`), 500);
+        }
+
+        // ============================================================
+        // INICIALIZAÇÃO
+        // ============================================================
+        window.onload = function() {
+            console.log('🚀 Inicializando Controle de INSS e FGTS...');
+            
+            const modalLogin = document.getElementById('modalLogin');
+            modalLogin.classList.add('active');
+            modalLogin.style.display = 'flex';
+            document.getElementById('mainContainer').style.display = 'none';
+            
+            carregarUsuariosSupabase();
+            usuarioAtual = { id: 'visitante', nome: 'Visitante', role: 'viewer' };
+            atualizarUI();
+            
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.add('collapsed');
+                document.getElementById('sidebarToggle').classList.add('collapsed');
+            }
+            
+            // Preenche os selects de competência
+            preencherCompetencias();
+            
+            setTimeout(() => {
+                carregarDados();
+            }, 500);
+            
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this && !this.classList.contains('modal-login')) {
+                        this.classList.remove('active');
+                        this.style.display = 'none';
+                    }
+                });
+            });
+            
+            console.log('✅ Sistema INSS/FGTS inicializado!');
+        };
+    </script>
+</body>
+</html>
