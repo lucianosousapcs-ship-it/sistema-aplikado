@@ -70,6 +70,19 @@
         }
         /* ===== FIM DO BOTÃO VOLTAR ===== */
 
+        /* ===== AJUSTE SOLICITADO: BOTÃO RECARREGAR VERDE ===== */
+        .nav-menu a.btn-recarregar {
+            color: #00ff00; /* Fonte verde */
+        }
+        .nav-menu a.btn-recarregar:hover {
+            color: #00ff00;
+            background: rgba(0, 255, 0, 0.15);
+        }
+        .nav-menu a.btn-recarregar i {
+            color: #00ff00; /* Ícone verde */
+        }
+        /* ===== FIM DO AJUSTE ===== */
+
         .user-info {
             display: flex;
             align-items: center;
@@ -828,8 +841,13 @@
                 <i class="fas fa-arrow-left"></i> <span>Voltar</span>
             </a>
             
-            <a href="#" onclick="carregarDados()"><i class="fas fa-sync-alt"></i> Recarregar</a>
-            <a href="#" onclick="sincronizarSupabase()"><i class="fas fa-cloud-upload-alt"></i> Sincronizar</a>
+            <!-- BOTÃO RECARREGAR COM FONTE VERDE -->
+            <a href="#" onclick="carregarDados()" class="btn-recarregar">
+                <i class="fas fa-sync-alt"></i> Recarregar
+            </a>
+            
+            <!-- BOTÃO SINCRONIZAR FOI REMOVIDO -->
+            
             <span class="user-info">
                 <i class="fas fa-user-circle"></i>
                 <span id="headerUserName">RH</span>
@@ -1476,42 +1494,6 @@
             const roleLabel = ROLE_LABELS[role] || 'Visualizador';
             document.getElementById('sidebarUserName').textContent = nome;
             document.getElementById('headerUserName').textContent = nome;
-        }
-
-        // ============================================================
-        // SINCRONIZAR COM SUPABASE
-        // ============================================================
-        async function sincronizarSupabase() {
-            mostrarToast('🔄 Sincronizando com Supabase...', 'info');
-            try {
-                const { data, error } = await supabaseClient
-                    .from('folha_pagamento')
-                    .select('*')
-                    .order('codigo', { ascending: true });
-
-                if (error) throw error;
-
-                if (data && data.length > 0) {
-                    projecoes = data.map(item => ({
-                        ...item,
-                        rubricas: item.rubricas || [],
-                        totalVencimentos: item.total_vencimentos || 0,
-                        totalDescontos: item.total_descontos || 0,
-                        valorLiquido: item.valor_liquido || 0
-                    }));
-                    mostrarToast(`✅ ${projecoes.length} registros sincronizados do Supabase!`);
-                } else {
-                    carregarDados();
-                    mostrarToast('⚠️ Nenhum dado encontrado no Supabase. Usando dados locais.', 'warning');
-                }
-                atualizarDashboard();
-                renderizarProjecao();
-                document.getElementById('badgeProjecao').textContent = projecoes.filter(p => p.status === 'ativo').length;
-            } catch (err) {
-                console.error('Erro ao sincronizar:', err);
-                carregarDados();
-                mostrarToast('⚠️ Erro ao sincronizar. Usando dados locais.', 'warning');
-            }
         }
 
         // ============================================================
