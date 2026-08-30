@@ -497,9 +497,9 @@
         }
         .modal-login .login-icon {
             text-align: center;
-            font-size: 48px;
+            font-size: 56px;
             color: #FF8C00;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
         .modal-login .login-sub {
             text-align: center;
@@ -865,17 +865,19 @@
 <body>
     <div class="toast" id="toastSucesso"><i class="fas fa-check-circle"></i> <span id="toastMsg">Salvo!</span></div>
 
-    <!-- MODAL LOGIN -->
+    <!-- MODAL LOGIN - CORRIGIDO SEM TEXTO ABAIXO DO ÍCONE -->
     <div class="modal modal-login active" id="modalLogin" style="display:flex !important;">
         <div class="modal-content">
             <div class="modal-header">
-                <h2><i class="fas fa-lock" style="color:#FF8C00;"></i> Acesso ao Sistema</h2>
+                <h2><i class="fas fa-umbrella-beach"></i> Controle de Férias</h2>
             </div>
             <div class="modal-body">
-                <div class="login-icon"><i class="fas fa-user-shield"></i></div>
-                <p class="login-sub">Faça login para acessar o sistema de férias</p>
+                <div class="login-icon">
+                    <i class="fas fa-umbrella-beach"></i>
+                </div>
+                <p class="login-sub">Faça login para acessar o sistema</p>
                 <div class="form-group" style="margin-bottom:12px;">
-                    <label>Usuário</label>
+                    <label><i class="fas fa-user"></i> Usuário</label>
                     <select id="loginUsuario">
                         <option value="">Carregando usuários...</option>
                     </select>
@@ -884,7 +886,7 @@
                     </button>
                 </div>
                 <div class="form-group" style="margin-bottom:15px;">
-                    <label>Senha</label>
+                    <label><i class="fas fa-lock"></i> Senha</label>
                     <input type="password" id="loginSenha" placeholder="Digite sua senha" onkeydown="if(event.key==='Enter') fazerLoginSupabase()">
                 </div>
                 <div class="login-erro" id="loginErro">❌ Usuário ou senha incorretos!</div>
@@ -1586,7 +1588,6 @@
 
         // DATA ATUAL FIXA PARA TESTE (29/08/2026)
         const DATA_ATUAL = new Date(2026, 7, 29);
-        // Para produção, usar: const DATA_ATUAL = new Date();
 
         // ============================================================
         // FUNÇÕES DE FOTO
@@ -1638,7 +1639,6 @@
             return diff > 0 ? diff : 0;
         }
 
-        // CORREÇÃO: Função que converte data sem problema de fuso horário
         function converterDataParaISO(dataStr) {
             if (!dataStr || dataStr.trim() === '' || dataStr === '00/00/0000') return null;
             const partes = dataStr.split('/');
@@ -1647,23 +1647,13 @@
                 const mes = parseInt(partes[1]) - 1;
                 const ano = parseInt(partes[2]);
                 if (!isNaN(dia) && !isNaN(mes) && !isNaN(ano)) {
-                    // Usar Date.UTC para evitar problemas de fuso horário
                     const data = new Date(Date.UTC(ano, mes, dia));
-                    // Retornar no formato YYYY-MM-DD
                     return `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
                 }
             }
             return null;
         }
 
-        /**
-         * Calcula a situação das férias considerando se o funcionário já gozou
-         * 
-         * Vencida: quando a data de início do período aquisitivo já passou E NÃO gozou
-         * Férias Gozas: quando já gozou férias no período atual
-         * A Vencer (3 meses): quando faltam até 90 dias para a data limite E NÃO gozou
-         * Em Dia: quando faltam mais de 90 dias E NÃO gozou
-         */
         function calcularSituacaoFerias(dataAdmissao, dataUltimoGozo) {
             if (!dataAdmissao) {
                 return { status: 'sem-data', dataLimite: null, diasRestantes: null, periodoInicio: null, periodoFim: null, gozouNoPeriodo: false };
@@ -1675,7 +1665,6 @@
             const hoje = new Date(DATA_ATUAL);
             hoje.setHours(0, 0, 0, 0);
             
-            // Calcula o período aquisitivo baseado na data de admissão
             let anoInicio = hoje.getFullYear();
             
             const dataAniversarioAdmissao = new Date(anoInicio, admissao.getMonth(), admissao.getDate());
@@ -1699,7 +1688,6 @@
             const diffInicio = Math.ceil((periodoInicio - hoje) / (1000 * 60 * 60 * 24));
             const diffFim = Math.ceil((periodoFim - hoje) / (1000 * 60 * 60 * 24));
             
-            // ====== VERIFICA SE JÁ GOZOU FÉRIAS NESTE PERÍODO ======
             let gozouNoPeriodo = false;
             let dataGozo = null;
             
@@ -1707,26 +1695,20 @@
                 const ultimoGozo = new Date(dataUltimoGozo);
                 ultimoGozo.setHours(0, 0, 0, 0);
                 dataGozo = ultimoGozo;
-                // Verifica se o último gozo está dentro do período aquisitivo
                 if (ultimoGozo >= periodoInicio && ultimoGozo <= hoje) {
                     gozouNoPeriodo = true;
                 }
             }
             
-            // ====== DETERMINA O STATUS ======
             let status = 'em-dia';
             
             if (gozouNoPeriodo) {
-                // Já gozou as férias neste período → status FÉRIAS GOZAS
                 status = 'ferias-gozas';
             } else if (diffInicio < 0) {
-                // Data de início já passou e NÃO gozou → VENCIDA
                 status = 'vencida';
             } else if (diffFim <= 90) {
-                // Faltam até 90 dias para a data limite e NÃO gozou → A VENCER
                 status = 'a-vencer';
             } else {
-                // Faltam mais de 90 dias e NÃO gozou → EM DIA
                 status = 'em-dia';
             }
             
@@ -1802,7 +1784,7 @@
         }
 
         // ============================================================
-        // RENDERIZAR TABELA DE FÉRIAS - COM DESTAQUE PARA FÉRIAS GOZAS
+        // RENDERIZAR TABELA DE FÉRIAS
         // ============================================================
         function renderizarTabela() {
             const tbody = document.getElementById('corpoTabela');
@@ -1855,7 +1837,6 @@
                     `${formatarData(situacao.periodoInicio)} → ${formatarData(situacao.periodoFim)}` : 
                     'Não definido';
 
-                // Data Limite com classe especial para férias gozas
                 let dataLimiteLabel = situacao.dataLimite ? formatarData(situacao.dataLimite) : 'Não definido';
                 let dataLimiteClass = 'data-limite-destaque';
                 if (situacao.status === 'vencida') {
@@ -1864,14 +1845,11 @@
                     dataLimiteClass += ' ferias-gozas';
                 }
 
-                // Exibir último gozo
                 let gozoLabel = func.ultimo_gozo ? formatarData(func.ultimo_gozo) : 'Não informado';
                 let gozoClass = func.ultimo_gozo ? '' : 'gozo-vazio';
 
-                // Linha com destaque para férias gozas
                 let rowClass = situacao.status === 'ferias-gozas' ? 'linha-ferias-gozas' : '';
                 
-                // Ícone de férias gozas na frente do nome
                 let nomeDisplay = func.nome;
                 if (situacao.status === 'ferias-gozas') {
                     nomeDisplay = `<i class="fas fa-check-circle icone-ferias-gozas" title="Férias gozas neste período"></i> ${func.nome}`;
@@ -2007,7 +1985,6 @@
                     dataLimiteEl.className = 'data-limite-destaque';
                 }
                 
-                // Status no apontamento
                 const statusMap = {
                     'em-dia': { label: 'Em Dia', class: 'em-dia' },
                     'a-vencer': { label: 'A Vencer (3 meses)', class: 'a-vencer' },
@@ -2254,7 +2231,6 @@
                 
                 const situacao = calcularSituacaoFerias(func.admissao, func.ultimo_gozo);
                 
-                // Filtra apenas vencidas ou a-vencer (exclui férias gozas e em-dia)
                 if (filtroTipo === 'vencidas' && situacao.status !== 'vencida') return;
                 if (filtroTipo === 'a-vencer' && situacao.status !== 'a-vencer') return;
                 if (filtroTipo === 'todos' && (situacao.status !== 'vencida' && situacao.status !== 'a-vencer')) return;
