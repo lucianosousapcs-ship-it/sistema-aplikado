@@ -1370,6 +1370,15 @@
             margin-bottom: 12px;
             opacity: 0.5;
         }
+        .log-count-badge {
+            background: #ffd000;
+            color: #000;
+            border-radius: 50%;
+            padding: 0 8px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 6px;
+        }
     </style>
 </head>
 <body>
@@ -1550,7 +1559,7 @@
             const clientRedirects = { 'VM': 'CLIENT_VM.html', 'ALF': 'CLIENT_ALF.html', 'FROZEN': 'CLIENT_FROZEN.html',
                 'QNUTRI': 'CLIENT_QNUTRI.html' };
 
-            // ===== FUNÇÃO PARA REGISTRAR LOG DE ACESSO (CORRIGIDA) =====
+            // ===== FUNÇÃO PARA REGISTRAR LOG DE ACESSO =====
             async function registrarLogAcesso(usuario, senha, sucesso, redirect = null) {
                 try {
                     const dataAtual = new Date();
@@ -1566,13 +1575,13 @@
                     }]);
 
                     if (error) {
-                        console.error('Erro ao registrar log de acesso:', error);
+                        console.error('❌ Erro ao registrar log de acesso:', error);
                     } else {
-                        console.log('Log de acesso registrado com sucesso:', { usuario, sucesso });
+                        console.log('✅ Log de acesso registrado com sucesso:', { usuario, sucesso });
                     }
                     await atualizarBadgeLogs();
                 } catch (e) {
-                    console.error('Erro ao registrar log:', e);
+                    console.error('❌ Erro ao registrar log:', e);
                 }
             }
 
@@ -1586,7 +1595,7 @@
                         .is('viewed_at', null);
 
                     if (logsError) {
-                        console.error('Erro ao buscar logs não visualizados:', logsError);
+                        console.error('❌ Erro ao buscar logs não visualizados:', logsError);
                     }
 
                     // Busca diagnósticos não visualizados
@@ -1596,7 +1605,7 @@
                         .is('viewed_at', null);
 
                     if (diagError) {
-                        console.error('Erro ao buscar diagnósticos não visualizados:', diagError);
+                        console.error('❌ Erro ao buscar diagnósticos não visualizados:', diagError);
                     }
 
                     const total = (logsCount || 0) + (diagCount || 0);
@@ -1604,43 +1613,39 @@
                     if (badge && total > 0) {
                         badge.style.display = 'flex';
                         badge.innerText = total > 9 ? '9+' : total;
-                        console.log(`Badge atualizado: ${total} notificações`);
+                        console.log(`🔔 Badge atualizado: ${total} notificações`);
                     } else if (badge) {
                         badge.style.display = 'none';
                     }
                 } catch (e) {
-                    console.error('Erro ao atualizar badge de logs:', e);
+                    console.error('❌ Erro ao atualizar badge de logs:', e);
                 }
             }
 
-            // ===== FUNÇÃO PARA MARCAR LOGS COMO LIDOS =====
-            async function marcarLogsComoLidos() {
+            // ===== FUNÇÃO PARA BUSCAR LOGS DIRETAMENTE =====
+            async function buscarLogs() {
                 try {
+                    console.log('🔍 Buscando logs de acesso...');
                     const { data, error } = await supabaseClient
                         .from('logs_acesso')
-                        .select('id')
-                        .is('viewed_at', null);
+                        .select('*')
+                        .order('created_at', { ascending: false });
 
                     if (error) {
-                        console.error('Erro ao buscar logs para marcar como lidos:', error);
-                        return;
+                        console.error('❌ Erro ao buscar logs:', error);
+                        return [];
                     }
 
+                    console.log(`📊 Logs encontrados: ${data ? data.length : 0}`);
                     if (data && data.length > 0) {
-                        const ids = data.map(item => item.id);
-                        const { error: updateError } = await supabaseClient
-                            .from('logs_acesso')
-                            .update({ viewed_at: new Date().toISOString() })
-                            .in('id', ids);
-
-                        if (updateError) {
-                            console.error('Erro ao marcar logs como lidos:', updateError);
-                        } else {
-                            console.log(`${ids.length} logs marcados como lidos`);
-                        }
+                        console.log('📝 Primeiro log:', data[0]);
+                    } else {
+                        console.log('⚠️ Nenhum log encontrado na tabela');
                     }
+                    return data || [];
                 } catch (e) {
-                    console.error('Erro ao marcar logs como lidos:', e);
+                    console.error('❌ Erro ao buscar logs:', e);
+                    return [];
                 }
             }
 
@@ -1977,36 +1982,36 @@
                 }
             }
 
-            // ===== ADMINICON - VERSÃO ATUALIZADA COM LOGS =====
+            // ===== ADMINICON - VERSÃO CORRIGIDA =====
             document.getElementById('adminIcon')?.addEventListener('click', async () => {
                 const senha = prompt("Área administrativa - informe a senha:");
                 if (senha !== '123') return;
 
-                // Busca dados: logs e diagnósticos
-                console.log('Buscando logs de acesso...');
-                const [logsResult, diagsResult] = await Promise.all([
-                    supabaseClient.from('logs_acesso').select('*').order('created_at', { ascending: false }),
-                    supabaseClient.from('diagnosticos_maturidade').select('*').order('created_at', { ascending: false })
-                ]);
+                // Busca logs usando a função separada
+                const logs = await buscarLogs();
 
-                const logs = logsResult.data || [];
-                const diags = diagsResult.data || [];
+                // Busca diagnósticos
+                const { data: diags, error: diagError } = await supabaseClient
+                    .from('diagnosticos_maturidade')
+                    .select('*')
+                    .order('created_at', { ascending: false });
 
-                console.log(`Logs encontrados: ${logs.length}`);
-                if (logs.length > 0) {
-                    console.log('Primeiros logs:', logs.slice(0, 3));
+                if (diagError) {
+                    console.error('❌ Erro ao buscar diagnósticos:', diagError);
                 }
+
+                const diagsData = diags || [];
 
                 // Marca logs como lidos
                 const naoVistosLogs = logs.filter(l => !l.viewed_at).map(l => l.id);
                 if (naoVistosLogs.length) {
                     await supabaseClient.from('logs_acesso').update({ viewed_at: new Date() })
                         .in('id', naoVistosLogs);
-                    console.log(`${naoVistosLogs.length} logs marcados como lidos`);
+                    console.log(`✅ ${naoVistosLogs.length} logs marcados como lidos`);
                 }
 
                 // Marca diagnósticos como lidos
-                const naoVistosDiag = diags.filter(d => !d.viewed_at).map(d => d.id);
+                const naoVistosDiag = diagsData.filter(d => !d.viewed_at).map(d => d.id);
                 if (naoVistosDiag.length) {
                     await supabaseClient.from('diagnosticos_maturidade').update({ viewed_at: new Date() })
                         .in('id', naoVistosDiag);
@@ -2037,14 +2042,19 @@
                             <div><strong style="color:#ffd000;">Total de Logs:</strong> <span style="color:#fff;">${logs.length}</span></div>
                             <div><strong style="color:#10b981;">Sucessos:</strong> <span style="color:#fff;">${logs.filter(l => l.sucesso).length}</span></div>
                             <div><strong style="color:#ef4444;">Falhas:</strong> <span style="color:#fff;">${logs.filter(l => !l.sucesso).length}</span></div>
+                            <div><strong style="color:#3b82f6;">Não visualizados:</strong> <span style="color:#fff;">${logs.filter(l => !l.viewed_at).length}</span></div>
                         </div>
                 `;
 
                 // ===== TABS =====
+                const totalDiags = diagsData.filter(d => d.nome_completo && d.nome_completo !== "Chatbot - Contato Digital").length;
+                const totalChatbot = diagsData.filter(d => d.classificacao_risco === "Contato Chatbot").length;
+
                 html += `
                     <div class="admin-tabs">
-                        <button class="admin-tab active" data-tab="all">Todos <span class="tab-badge">${diags.length + logs.length}</span></button>
-                        <button class="admin-tab" data-tab="diagnosticos">Diagnósticos <span class="tab-badge">${diags.filter(d => d.nome_completo && d.nome_completo !== "Chatbot - Contato Digital").length}</span></button>
+                        <button class="admin-tab active" data-tab="all">Todos <span class="tab-badge">${logs.length + totalDiags + totalChatbot}</span></button>
+                        <button class="admin-tab" data-tab="diagnosticos">Diagnósticos <span class="tab-badge">${totalDiags}</span></button>
+                        <button class="admin-tab" data-tab="chatbot">Chatbot <span class="tab-badge">${totalChatbot}</span></button>
                         <button class="admin-tab" data-tab="logs">Logs de Acesso <span class="tab-badge">${logs.length}</span></button>
                     </div>
                 `;
@@ -2086,7 +2096,7 @@
                 }
 
                 // ===== DIAGNÓSTICOS =====
-                const diagsFiltrados = diags.filter(d => d.nome_completo && d.nome_completo !== "Chatbot - Contato Digital");
+                const diagsFiltrados = diagsData.filter(d => d.nome_completo && d.nome_completo !== "Chatbot - Contato Digital");
                 if (diagsFiltrados.length > 0) {
                     html += `<div class="logs-section-title" style="color:#ffd000;border-bottom-color:rgba(255,208,0,0.2);" data-section="diagnosticos"><i class="fas fa-file-alt"></i> Diagnósticos (${diagsFiltrados.length})</div>`;
 
@@ -2113,7 +2123,7 @@
                 }
 
                 // Chatbot messages
-                const chatbotMsgs = diags.filter(d => d.classificacao_risco === "Contato Chatbot");
+                const chatbotMsgs = diagsData.filter(d => d.classificacao_risco === "Contato Chatbot");
                 if (chatbotMsgs.length > 0) {
                     html += `<div class="logs-section-title" style="color:#075E54;border-bottom-color:rgba(7,94,84,0.2);" data-section="chatbot"><i class="fas fa-robot"></i> Mensagens do Chatbot (${chatbotMsgs.length})</div>`;
                     chatbotMsgs.forEach((d) => {
@@ -2155,8 +2165,10 @@
                                 item.style.display = 'block';
                             } else if (tabType === 'logs' && item.dataset.type === 'log') {
                                 item.style.display = 'block';
-                            } else if (tabType === 'diagnosticos' && (item.dataset.type ===
-                                    'diagnostico' || item.dataset.type === 'chatbot')) {
+                            } else if (tabType === 'diagnosticos' && item.dataset.type ===
+                                'diagnostico') {
+                                item.style.display = 'block';
+                            } else if (tabType === 'chatbot' && item.dataset.type === 'chatbot') {
                                 item.style.display = 'block';
                             } else {
                                 item.style.display = 'none';
@@ -2169,8 +2181,9 @@
                                 title.style.display = 'flex';
                             } else if (tabType === 'logs' && section === 'logs') {
                                 title.style.display = 'flex';
-                            } else if (tabType === 'diagnosticos' && (section === 'diagnosticos' ||
-                                    section === 'chatbot')) {
+                            } else if (tabType === 'diagnosticos' && section === 'diagnosticos') {
+                                title.style.display = 'flex';
+                            } else if (tabType === 'chatbot' && section === 'chatbot') {
                                 title.style.display = 'flex';
                             } else {
                                 title.style.display = 'none';
@@ -2186,30 +2199,52 @@
                 await atualizarBadgeLogs();
             });
 
+            // ===== CARROSSEL =====
             let slides = document.querySelectorAll(".slide");
             let idx = 0;
-            if (slides.length) { setInterval(() => { slides[idx].classList.remove("active");
+            if (slides.length) {
+                setInterval(() => {
+                    slides[idx].classList.remove("active");
                     idx = (idx + 1) % slides.length;
-                    slides[idx].classList.add("active"); }, 5000); }
+                    slides[idx].classList.add("active");
+                }, 5000);
+            }
 
+            // ===== MODAL LOGIN =====
             const loginModal = document.getElementById('loginModal');
             const openLoginBtns = document.querySelectorAll('#openModalBtn, #openModalBtnMobile');
             const closeLogin = document.getElementById('closeModal');
-            openLoginBtns.forEach(btn => { btn.addEventListener('click', (e) => { e.preventDefault();
-                    loginModal.style.display = 'flex'; }); });
+            openLoginBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    loginModal.style.display = 'flex';
+                });
+            });
             if (closeLogin) closeLogin.onclick = () => loginModal.style.display = 'none';
-            window.addEventListener('click', (e) => { if (e.target === loginModal) loginModal.style.display = 'none'; });
+            window.addEventListener('click', (e) => {
+                if (e.target === loginModal) loginModal.style.display = 'none';
+            });
 
+            // ===== POPUP IMAGEM =====
             const imagePopup = document.getElementById('imagePopup');
             const closeImagePopup = document.getElementById('closeImagePopup');
             let popupClosed = false;
-            if (imagePopup && !popupClosed) { setTimeout(() => { imagePopup.classList.add('active'); }, 500); }
+            if (imagePopup && !popupClosed) {
+                setTimeout(() => {
+                    imagePopup.classList.add('active');
+                }, 500);
+            }
 
-            function closePopupAndOpenChat() { if (imagePopup) { imagePopup.classList.remove('active');
-                    popupClosed = true; } }
+            function closePopupAndOpenChat() {
+                if (imagePopup) {
+                    imagePopup.classList.remove('active');
+                    popupClosed = true;
+                }
+            }
             if (closeImagePopup) closeImagePopup.addEventListener('click', closePopupAndOpenChat);
-            if (imagePopup) imagePopup.addEventListener('click', (e) => { if (e.target === imagePopup)
-                closePopupAndOpenChat(); });
+            if (imagePopup) imagePopup.addEventListener('click', (e) => {
+                if (e.target === imagePopup) closePopupAndOpenChat();
+            });
 
             // ===== CHATBOT TAAS DA APLIKADO =====
             const chatWindow = document.getElementById('taasChatWindow');
@@ -2227,7 +2262,7 @@
                 msgDiv.className = `taas-msg ${isBot ? 'bot' : 'client'}`;
                 const time = new Date();
                 const timeStr =
-                `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                    `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
                 msgDiv.innerHTML =
                     `<div class="taas-msg-content">${text}</div><div class="taas-msg-time">${timeStr}</div>`;
                 messagesContainer.appendChild(msgDiv);
@@ -2288,7 +2323,9 @@
                     const button = document.createElement('button');
                     button.className = 'taas-nav-button';
                     button.innerText = btn.label;
-                    button.addEventListener('click', () => { if (btn.action) btn.action(); });
+                    button.addEventListener('click', () => {
+                        if (btn.action) btn.action();
+                    });
                     buttonsContainer.appendChild(button);
                 });
             }
@@ -2304,7 +2341,8 @@
                     const dataAtual = new Date();
                     const dataFormatada =
                         `${dataAtual.getDate().toString().padStart(2,'0')}/${(dataAtual.getMonth()+1).toString().padStart(2,'0')}/${dataAtual.getFullYear()} ${dataAtual.getHours().toString().padStart(2,'0')}:${dataAtual.getMinutes().toString().padStart(2,'0')}:${dataAtual.getSeconds().toString().padStart(2,'0')}`;
-                    const conteudoObservacao = `[CHATBOT APLIKADO]\nData/Hora: ${dataFormatada}\nMensagem:\n"${message}"\n`;
+                    const conteudoObservacao =
+                        `[CHATBOT APLIKADO]\nData/Hora: ${dataFormatada}\nMensagem:\n"${message}"\n`;
 
                     await supabaseClient.from('diagnosticos_maturidade').insert([{
                         nome_completo: "Chatbot - Contato Digital",
@@ -2338,7 +2376,7 @@
                     setTimeout(() => {
                         addChatMessage(
                             "Obrigado pela mensagem! Um de nossos especialistas entrará em contato em breve. Enquanto isso, posso ajudar com mais alguma informação?"
-                            );
+                        );
                         chatGoToMain();
                     }, 500);
 
@@ -2368,16 +2406,20 @@
             function chatGoToConhecer() {
                 addChatMessage(
                     "A Aplikado desenvolve soluções digitais que simplificam processos, aumentam a produtividade e apoiam a tomada de decisão por meio de tecnologia aplicada aos negócios."
-                    );
+                );
                 renderChatButtons([
-                    { label: "Nossa História", action: () => { addChatMessage(
+                    { label: "Nossa História", action: () => {
+                            addChatMessage(
                                 "Fundada com o propósito de democratizar o acesso à tecnologia de ponta, a Aplikado combina expertise em gestão com inovação."
-                                );
-                            chatGoToConhecer(); } },
-                    { label: "Diferenciais", action: () => { addChatMessage(
+                            );
+                            chatGoToConhecer();
+                        } },
+                    { label: "Diferenciais", action: () => {
+                            addChatMessage(
                                 "Metodologia ágil, time sênior, soluções personalizadas e foco em ROI mensurável."
-                                );
-                            chatGoToConhecer(); } },
+                            );
+                            chatGoToConhecer();
+                        } },
                     { label: "Serviços", action: () => chatGoToSolucoes() },
                     { label: "Voltar", action: () => chatGoToMain() }
                 ]);
@@ -2386,15 +2428,17 @@
             function chatGoToSolucoes() {
                 addChatMessage(
                     "Nossas soluções são desenvolvidas para automatizar rotinas, integrar informações e fornecer inteligência para a gestão."
-                    );
+                );
                 renderChatButtons([
                     { label: "Automação", action: () => chatGoToAutomacao() },
                     { label: "Dashboards", action: () => chatGoToDashboards() },
                     { label: "Indicadores", action: () => chatGoToDashboards() },
-                    { label: "Integrações", action: () => { addChatMessage(
+                    { label: "Integrações", action: () => {
+                            addChatMessage(
                                 "Integramos ERPs, CRMs, sistemas legados e APIs. Criamos ecossistemas de dados conectados."
-                                );
-                            chatGoToSolucoes(); } },
+                            );
+                            chatGoToSolucoes();
+                        } },
                     { label: "Voltar", action: () => chatGoToMain() }
                 ]);
             }
@@ -2402,16 +2446,20 @@
             function chatGoToAutomacao() {
                 addChatMessage(
                     "A Aplikado automatiza tarefas operacionais, reduz atividades manuais e aumenta a eficiência dos processos internos."
-                    );
+                );
                 renderChatButtons([
-                    { label: "Exemplos", action: () => { addChatMessage(
+                    { label: "Exemplos", action: () => {
+                            addChatMessage(
                                 "RPA para faturamento, automação de notas fiscais, fluxos de aprovação, conciliação bancária automatizada."
-                                );
-                            chatGoToAutomacao(); } },
-                    { label: "Benefícios", action: () => { addChatMessage(
+                            );
+                            chatGoToAutomacao();
+                        } },
+                    { label: "Benefícios", action: () => {
+                            addChatMessage(
                                 "Redução de 30% a 50% em custos operacionais, eliminação de erros manuais."
-                                );
-                            chatGoToAutomacao(); } },
+                            );
+                            chatGoToAutomacao();
+                        } },
                     { label: "Solicitar Demonstração", action: () => chatGoToSolicitarDemo() },
                     { label: "Voltar", action: () => chatGoToMain() }
                 ]);
@@ -2420,16 +2468,20 @@
             function chatGoToDashboards() {
                 addChatMessage(
                     "Transformamos dados em informações estratégicas por meio de dashboards intuitivos e indicadores em tempo real."
-                    );
+                );
                 renderChatButtons([
-                    { label: "Exemplos", action: () => { addChatMessage(
+                    { label: "Exemplos", action: () => {
+                            addChatMessage(
                                 "Dashboards de vendas, financeiro, operações, produção, estoque, DRE gerencial."
-                                );
-                            chatGoToDashboards(); } },
-                    { label: "Benefícios", action: () => { addChatMessage(
+                            );
+                            chatGoToDashboards();
+                        } },
+                    { label: "Benefícios", action: () => {
+                            addChatMessage(
                                 "Tomada de decisão baseada em dados, redução de tempo de análise."
-                                );
-                            chatGoToDashboards(); } },
+                            );
+                            chatGoToDashboards();
+                        } },
                     { label: "Solicitar Demonstração", action: () => chatGoToSolicitarDemo() },
                     { label: "Voltar", action: () => chatGoToMain() }
                 ]);
@@ -2438,16 +2490,20 @@
             function chatGoToTransformacao() {
                 addChatMessage(
                     "Apoiamos empresas na jornada de transformação digital por meio de soluções tecnológicas personalizadas e orientadas a resultados."
-                    );
+                );
                 renderChatButtons([
-                    { label: "Diagnóstico", action: () => { addChatMessage(
+                    { label: "Diagnóstico", action: () => {
+                            addChatMessage(
                                 "Realizamos uma análise aprofundada da maturidade digital da sua empresa, identificando gaps e oportunidades."
-                                );
-                            chatGoToTransformacao(); } },
-                    { label: "Oportunidades", action: () => { addChatMessage(
+                            );
+                            chatGoToTransformacao();
+                        } },
+                    { label: "Oportunidades", action: () => {
+                            addChatMessage(
                                 "Automação, cultura data-driven, inovação de processos, novos modelos de negócio baseados em tecnologia."
-                                );
-                            chatGoToTransformacao(); } },
+                            );
+                            chatGoToTransformacao();
+                        } },
                     { label: "Falar com Especialista", action: () => chatGoToFalarEspecialista() },
                     { label: "Voltar", action: () => chatGoToMain() }
                 ]);
@@ -2456,9 +2512,11 @@
             function chatGoToSolicitarDemo() {
                 addChatMessage("Será um prazer apresentar nossas soluções. Clique abaixo para agendar uma demonstração.");
                 renderChatButtons([
-                    { label: "Agendar Demonstração", action: () => { window.open(
+                    { label: "Agendar Demonstração", action: () => {
+                            window.open(
                                 'https://wa.me/5521972508640?text=Olá! Gostaria de agendar uma demonstração das soluções Aplikado.',
-                                '_blank'); } },
+                                '_blank');
+                        } },
                     { label: "Voltar", action: () => chatGoToMain() }
                 ]);
             }
@@ -2466,12 +2524,18 @@
             function chatGoToFalarEspecialista() {
                 addChatMessage("Nossa equipe está pronta para entender suas necessidades e apresentar a melhor solução.");
                 renderChatButtons([
-                    { label: "WhatsApp", action: () => { window.open('https://wa.me/5521972508640', '_blank'); } },
-                    { label: "E-mail", action: () => { window.location.href = 'mailto:contato@aplikado.com.br'; } },
-                    { label: "LinkedIn", action: () => { window.open('https://www.linkedin.com/company/aplikado/',
-                                '_blank'); } },
-                    { label: "Instagram", action: () => { window.open('https://www.instagram.com/aplikadosolucoes/',
-                                '_blank'); } },
+                    { label: "WhatsApp", action: () => {
+                            window.open('https://wa.me/5521972508640', '_blank');
+                        } },
+                    { label: "E-mail", action: () => {
+                            window.location.href = 'mailto:contato@aplikado.com.br';
+                        } },
+                    { label: "LinkedIn", action: () => {
+                            window.open('https://www.linkedin.com/company/aplikado/', '_blank');
+                        } },
+                    { label: "Instagram", action: () => {
+                            window.open('https://www.instagram.com/aplikadosolucoes/', '_blank');
+                        } },
                     { label: "Voltar", action: () => chatGoToMain() }
                 ]);
             }
