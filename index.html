@@ -1224,6 +1224,8 @@
             gap: 8px;
             margin-bottom: 20px;
             flex-wrap: wrap;
+            border-bottom: 1px solid #222;
+            padding-bottom: 12px;
         }
         .admin-tab {
             padding: 8px 20px;
@@ -1268,6 +1270,18 @@
         .admin-tab .tab-badge.chat-badge {
             background: #10b981;
             color: #fff;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .section-title-log {
@@ -1461,6 +1475,54 @@
             cursor: not-allowed;
             transform: none;
         }
+
+        /* Admin panel scroll */
+        .admin-panel-scroll {
+            max-height: 70vh;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .admin-panel-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .admin-panel-scroll::-webkit-scrollbar-track {
+            background: #1a1a1a;
+            border-radius: 10px;
+        }
+        .admin-panel-scroll::-webkit-scrollbar-thumb {
+            background: #ffd000;
+            border-radius: 10px;
+        }
+
+        .admin-stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        .admin-stat-card {
+            background: #1a1a1a;
+            border-radius: 16px;
+            padding: 16px 24px;
+            flex: 1;
+            min-width: 120px;
+            border: 1px solid #2a2a2a;
+            text-align: center;
+        }
+        .admin-stat-card .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffd000;
+        }
+        .admin-stat-card .stat-label {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .admin-stat-card.log-stat .stat-number { color: #3b82f6; }
+        .admin-stat-card.diag-stat .stat-number { color: #ffd000; }
+        .admin-stat-card.chat-stat .stat-number { color: #10b981; }
     </style>
 </head>
 <body>
@@ -1472,6 +1534,7 @@
             <button class="btn-virtual-attendance" id="btnVirtualAttendance">
                 <i class="fas fa-headset"></i>
                 <span class="btn-text">Atendimento Virtual</span>
+                <span class="badge-attendance" id="attendanceBadge">0</span>
             </button>
             <button class="btn-diagnostic-top" id="openDiagnosticBtn"><i class="fas fa-chart-line"></i> Diagnóstico em 5 Minutos</button>
             <a href="https://www.linkedin.com/company/aplikado/?viewAsMember=true" target="_blank"><i class="fab fa-linkedin-in"></i></a>
@@ -1728,7 +1791,6 @@
 
             // ===== FUNÇÕES DE AUTENTICAÇÃO =====
 
-            // Buscar senha do usuário no Supabase
             async function getUserPassword(username) {
                 try {
                     const { data, error } = await supabaseClient
@@ -1748,10 +1810,8 @@
                 }
             }
 
-            // Salvar nova senha no Supabase
             async function saveUserPassword(username, newPassword) {
                 try {
-                    // Verifica se o usuário já existe
                     const { data: existing, error: findError } = await supabaseClient
                         .from('usuarios_senhas')
                         .select('id')
@@ -1765,7 +1825,6 @@
 
                     let result;
                     if (existing) {
-                        // Atualiza senha existente
                         result = await supabaseClient
                             .from('usuarios_senhas')
                             .update({
@@ -1774,7 +1833,6 @@
                             })
                             .eq('usuario', username);
                     } else {
-                        // Insere novo usuário
                         result = await supabaseClient
                             .from('usuarios_senhas')
                             .insert([{
@@ -1790,7 +1848,6 @@
                         return false;
                     }
 
-                    console.log('✅ Senha salva com sucesso para:', username);
                     return true;
                 } catch (e) {
                     console.error('Erro ao salvar senha:', e);
@@ -1798,7 +1855,6 @@
                 }
             }
 
-            // Verificar se é primeiro acesso (não tem senha definitiva)
             async function isFirstAccess(username) {
                 const password = await getUserPassword(username);
                 return password === null;
@@ -1832,6 +1888,26 @@
                 }
             }
 
+            // ===== FUNÇÃO PARA BUSCAR MENSAGENS DO CHATBOT =====
+            async function buscarMensagensChatbot() {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('diagnosticos_maturidade')
+                        .select('*')
+                        .eq('classificacao_risco', 'Contato Chatbot')
+                        .order('created_at', { ascending: false });
+
+                    if (error) {
+                        console.error('Erro ao buscar mensagens do chatbot:', error);
+                        return [];
+                    }
+                    return data || [];
+                } catch (e) {
+                    console.error('Erro ao buscar mensagens do chatbot:', e);
+                    return [];
+                }
+            }
+
             // ===== FUNÇÃO PARA ATUALIZAR BADGE GERAL =====
             async function atualizarBadgeGeral() {
                 try {
@@ -1847,13 +1923,24 @@
                     const { count: diagCount, error: diagError } = await supabaseClient
                         .from('diagnosticos_maturidade')
                         .select('*', { count: 'exact', head: true })
-                        .is('viewed_at', null);
+                        .is('viewed_at', null)
+                        .neq('classificacao_risco', 'Contato Chatbot');
 
                     if (diagError) {
                         console.error('❌ Erro ao buscar diagnósticos:', diagError);
                     }
 
-                    const total = (logsCount || 0) + (diagCount || 0);
+                    const { count: chatCount, error: chatError } = await supabaseClient
+                        .from('diagnosticos_maturidade')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('classificacao_risco', 'Contato Chatbot')
+                        .is('viewed_at', null);
+
+                    if (chatError) {
+                        console.error('❌ Erro ao buscar mensagens do chat:', chatError);
+                    }
+
+                    const total = (logsCount || 0) + (diagCount || 0) + (chatCount || 0);
 
                     const badge = document.getElementById('notificationBadge');
                     if (badge && total > 0) {
@@ -1883,7 +1970,6 @@
 
                 const definitivePassword = await getUserPassword(username);
 
-                // Usuários especiais (QNUTRI, ALF, FROZEN, VM)
                 if (userConfig.isSpecial) {
                     if (password === userConfig.initialPassword) {
                         currentUser = username;
@@ -1897,11 +1983,9 @@
                     }
                 }
 
-                // Usuários normais
                 const isFirst = definitivePassword === null;
 
                 if (isFirst) {
-                    // Primeiro acesso: verifica senha inicial
                     if (password === userConfig.initialPassword) {
                         pendingUser = username;
                         await registrarLogAcesso(username, password, true);
@@ -1913,7 +1997,6 @@
                         return false;
                     }
                 } else {
-                    // Acessos subsequentes: verifica senha definitiva
                     if (password === definitivePassword) {
                         currentUser = username;
                         await registrarLogAcesso(username, password, true);
@@ -1970,7 +2053,6 @@
                 modal.style.display = 'none';
             }
 
-            // Evento de alteração de senha
             document.getElementById('changePasswordBtn').addEventListener('click', async function() {
                 const newPassword = document.getElementById('newPassword').value;
                 const confirmPassword = document.getElementById('confirmPassword').value;
@@ -2348,6 +2430,8 @@
                         }
                     }
 
+                    await atualizarBadgeGeral();
+
                 } catch (e) {
                     console.error('Erro ao atualizar badge do chat:', e);
                 }
@@ -2386,66 +2470,152 @@
                 }
             }
 
-            // ===== ADMIN ICON =====
+            // ===== FUNÇÃO PARA MARCAR DIAGNÓSTICOS COMO LIDOS =====
+            async function marcarDiagnosticosComoLidos() {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('diagnosticos_maturidade')
+                        .select('id')
+                        .is('viewed_at', null)
+                        .neq('classificacao_risco', 'Contato Chatbot');
+
+                    if (error) {
+                        console.error('Erro ao buscar diagnósticos:', error);
+                        return;
+                    }
+
+                    if (data && data.length > 0) {
+                        const ids = data.map(item => item.id);
+                        const { error: updateError } = await supabaseClient
+                            .from('diagnosticos_maturidade')
+                            .update({ viewed_at: new Date().toISOString() })
+                            .in('id', ids);
+
+                        if (updateError) {
+                            console.error('Erro ao marcar diagnósticos como lidos:', updateError);
+                        } else {
+                            console.log(`${ids.length} diagnósticos marcados como lidos`);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Erro ao marcar diagnósticos como lidos:', e);
+                }
+            }
+
+            // ===== FUNÇÃO PARA MARCAR LOGS COMO LIDOS =====
+            async function marcarLogsComoLidos() {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('logs_acesso')
+                        .select('id')
+                        .is('viewed_at', null);
+
+                    if (error) {
+                        console.error('Erro ao buscar logs:', error);
+                        return;
+                    }
+
+                    if (data && data.length > 0) {
+                        const ids = data.map(item => item.id);
+                        const { error: updateError } = await supabaseClient
+                            .from('logs_acesso')
+                            .update({ viewed_at: new Date().toISOString() })
+                            .in('id', ids);
+
+                        if (updateError) {
+                            console.error('Erro ao marcar logs como lidos:', updateError);
+                        } else {
+                            console.log(`${ids.length} logs marcados como lidos`);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Erro ao marcar logs como lidos:', e);
+                }
+            }
+
+            // ===== ADMIN ICON - VERSÃO CORRIGIDA COM ABAS =====
             document.getElementById('adminIcon')?.addEventListener('click', async () => {
                 const senha = prompt("Área administrativa - informe a senha:");
                 if (senha !== '123') return;
 
-                // Buscar logs e diagnósticos
-                const { data: logs, error: logsError } = await supabaseClient
-                    .from('logs_acesso')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+                // Buscar dados
+                const [logsResult, diagnosticosResult, chatResult] = await Promise.all([
+                    supabaseClient.from('logs_acesso').select('*').order('created_at', { ascending: false }),
+                    supabaseClient.from('diagnosticos_maturidade').select('*').neq('classificacao_risco', 'Contato Chatbot').order('created_at', { ascending: false }),
+                    supabaseClient.from('diagnosticos_maturidade').select('*').eq('classificacao_risco', 'Contato Chatbot').order('created_at', { ascending: false })
+                ]);
 
-                if (logsError) {
-                    console.error('Erro ao buscar logs:', logsError);
-                }
-
-                const { data: diagnosticos, error: diagError } = await supabaseClient
-                    .from('diagnosticos_maturidade')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
-                if (diagError) {
-                    console.error('Erro ao buscar diagnósticos:', diagError);
-                }
+                const logs = logsResult.data || [];
+                const diagnosticos = diagnosticosResult.data || [];
+                const chatMensagens = chatResult.data || [];
 
                 // Marcar como visualizados
-                if (logs && logs.length > 0) {
-                    const naoVistos = logs.filter(l => !l.viewed_at).map(l => l.id);
-                    if (naoVistos.length) {
-                        await supabaseClient.from('logs_acesso').update({ viewed_at: new Date() })
-                            .in('id', naoVistos);
-                    }
-                }
-
-                if (diagnosticos && diagnosticos.length > 0) {
-                    const naoVistos = diagnosticos.filter(d => !d.viewed_at).map(d => d.id);
-                    if (naoVistos.length) {
-                        await supabaseClient.from('diagnosticos_maturidade').update({ viewed_at: new Date() })
-                            .in('id', naoVistos);
-                    }
-                }
-
+                await marcarLogsComoLidos();
+                await marcarDiagnosticosComoLidos();
+                await markChatMessagesAsRead();
                 await atualizarBadgeGeral();
 
-                // Exibir painel
+                // Contar não lidos para badges
+                const logsNaoLidos = logs.filter(l => !l.viewed_at).length;
+                const diagNaoLidos = diagnosticos.filter(d => !d.viewed_at).length;
+                const chatNaoLidos = chatMensagens.filter(c => !c.viewed_at).length;
+
+                // Construir HTML do painel com abas
                 let html = `
-                <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:10000;overflow:auto;padding:2rem;">
+                <div id="adminPanel" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;overflow:auto;padding:2rem;">
                     <div style="max-width:1400px;margin:0 auto;background:#0f0f0f;border-radius:24px;padding:2rem;border:1px solid #ffd000;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px;">
-                            <h2 style="color:#ffd000;">Painel Administrativo</h2>
+                            <h2 style="color:#ffd000;display:flex;align-items:center;gap:12px;">
+                                <i class="fas fa-lock"></i> Painel Administrativo
+                            </h2>
                             <button id="closeAdmin" style="background:#ffd000;padding:8px 20px;border:none;border-radius:40px;cursor:pointer;font-weight:600;">Fechar</button>
                         </div>
+
+                        <!-- Estatísticas -->
+                        <div class="admin-stats">
+                            <div class="admin-stat-card log-stat">
+                                <div class="stat-number">${logs.length}</div>
+                                <div class="stat-label">Logs de Acesso</div>
+                            </div>
+                            <div class="admin-stat-card diag-stat">
+                                <div class="stat-number">${diagnosticos.length}</div>
+                                <div class="stat-label">Diagnósticos</div>
+                            </div>
+                            <div class="admin-stat-card chat-stat">
+                                <div class="stat-number">${chatMensagens.length}</div>
+                                <div class="stat-label">Mensagens Chatbot</div>
+                            </div>
+                        </div>
+
+                        <!-- Abas -->
+                        <div class="admin-tabs">
+                            <button class="admin-tab active" data-tab="tab-logs">
+                                <i class="fas fa-history"></i> Logs de Acesso
+                                ${logsNaoLidos > 0 ? `<span class="tab-badge log-badge">${logsNaoLidos}</span>` : ''}
+                            </button>
+                            <button class="admin-tab" data-tab="tab-diagnosticos">
+                                <i class="fas fa-file-alt"></i> Diagnósticos
+                                ${diagNaoLidos > 0 ? `<span class="tab-badge diag-badge">${diagNaoLidos}</span>` : ''}
+                            </button>
+                            <button class="admin-tab" data-tab="tab-chat">
+                                <i class="fas fa-comment-dots"></i> Chatbot
+                                ${chatNaoLidos > 0 ? `<span class="tab-badge chat-badge">${chatNaoLidos}</span>` : ''}
+                            </button>
+                        </div>
+
+                        <div class="admin-panel-scroll">
+                            <!-- Aba Logs -->
+                            <div id="tab-logs" class="tab-content active">
                 `;
 
-                // Logs
-                if (logs && logs.length > 0) {
+                if (logs.length > 0) {
                     html += `<div class="section-title-log"><i class="fas fa-history"></i> Logs de Acesso (${logs.length})</div>`;
                     logs.forEach((log) => {
                         const statusClass = log.sucesso ? 'notif-status-success' : 'notif-status-failed';
                         const statusLabel = log.sucesso ? '✅ Sucesso' : '❌ Falha';
                         const dataHora = new Date(log.created_at).toLocaleString('pt-BR');
+                        const viewedStatus = log.viewed_at ? '👁️ Visto' : '🆕 Novo';
+                        const viewedClass = log.viewed_at ? 'notif-status-viewed' : 'notif-status-new';
                         html += `
                             <div class="notification-item notif-log">
                                 <div class="notif-header">
@@ -2453,10 +2623,12 @@
                                     <span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span>
                                     <span class="notif-status ${statusClass}">${statusLabel}</span>
                                     <span class="notif-type">🔵 Log de Acesso</span>
+                                    <span class="notif-status ${viewedClass}">${viewedStatus}</span>
                                 </div>
                                 <div class="notif-details">
                                     <span><i class="fas fa-key"></i> Senha: ${log.senha_digitada || 'não informada'}</span>
                                     ${log.redirect_destino ? `<span style="margin-left:16px;"><i class="fas fa-arrow-right"></i> Redirecionado para: ${log.redirect_destino}</span>` : ''}
+                                    ${log.user_agent ? `<span style="margin-left:16px;"><i class="fas fa-desktop"></i> ${log.user_agent.substring(0, 50)}...</span>` : ''}
                                 </div>
                             </div>
                         `;
@@ -2470,38 +2642,140 @@
                     `;
                 }
 
-                // Diagnósticos
-                if (diagnosticos && diagnosticos.length > 0) {
-                    const diagsNormais = diagnosticos.filter(d => d.nome_completo && d.nome_completo !== "Chatbot - Contato Digital");
-                    if (diagsNormais.length > 0) {
-                        html += `<div class="section-title-diag"><i class="fas fa-file-alt"></i> Diagnósticos (${diagsNormais.length})</div>`;
-                        diagsNormais.forEach((d) => {
-                            const dataHora = new Date(d.created_at).toLocaleString('pt-BR');
-                            html += `
-                                <div class="notification-item notif-diagnostico">
-                                    <div class="notif-header">
-                                        <span class="notif-user"><i class="fas fa-user"></i> ${d.nome_completo || '-'}</span>
-                                        <span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span>
-                                        <span class="notif-type">🟡 Diagnóstico</span>
-                                    </div>
-                                    <div class="notif-details">
-                                        <span><i class="fas fa-envelope"></i> ${d.email || '-'}</span>
-                                        <span style="margin-left:16px;"><i class="fas fa-phone"></i> ${d.whatsapp || '-'}</span>
-                                        <span style="margin-left:16px;"><i class="fas fa-building"></i> ${d.empresa || '-'}</span>
-                                        <span style="margin-left:16px;"><i class="fas fa-chart-line"></i> Risco: ${d.percentual_risco || '-'}%</span>
-                                    </div>
+                html += `
+                            </div>
+                            <!-- Aba Diagnósticos -->
+                            <div id="tab-diagnosticos" class="tab-content">
+                `;
+
+                if (diagnosticos.length > 0) {
+                    html += `<div class="section-title-diag"><i class="fas fa-file-alt"></i> Diagnósticos (${diagnosticos.length})</div>`;
+                    diagnosticos.forEach((d) => {
+                        const dataHora = new Date(d.created_at).toLocaleString('pt-BR');
+                        const viewedStatus = d.viewed_at ? '👁️ Visto' : '🆕 Novo';
+                        const viewedClass = d.viewed_at ? 'notif-status-viewed' : 'notif-status-new';
+                        html += `
+                            <div class="notification-item notif-diagnostico">
+                                <div class="notif-header">
+                                    <span class="notif-user"><i class="fas fa-user"></i> ${d.nome_completo || '-'}</span>
+                                    <span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span>
+                                    <span class="notif-type">🟡 Diagnóstico</span>
+                                    <span class="notif-status ${viewedClass}">${viewedStatus}</span>
                                 </div>
-                            `;
-                        });
-                    }
+                                <div class="notif-details">
+                                    <span><i class="fas fa-envelope"></i> ${d.email || '-'}</span>
+                                    <span style="margin-left:16px;"><i class="fas fa-phone"></i> ${d.whatsapp || '-'}</span>
+                                    <span style="margin-left:16px;"><i class="fas fa-building"></i> ${d.empresa || '-'}</span>
+                                    <span style="margin-left:16px;"><i class="fas fa-chart-line"></i> Risco: ${d.percentual_risco || '-'}%</span>
+                                    <span style="margin-left:16px;"><i class="fas fa-tag"></i> ${d.classificacao_risco || '-'}</span>
+                                </div>
+                                ${d.observacoes ? `<div class="notif-details" style="margin-top:8px;padding-top:8px;border-top:1px solid #222;"><i class="fas fa-comment"></i> ${d.observacoes}</div>` : ''}
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += `
+                        <div class="no-message">
+                            <i class="fas fa-inbox"></i>
+                            Nenhum diagnóstico registrado.
+                        </div>
+                    `;
                 }
 
-                html += `</div></div>`;
+                html += `
+                            </div>
+                            <!-- Aba Chatbot -->
+                            <div id="tab-chat" class="tab-content">
+                `;
+
+                if (chatMensagens.length > 0) {
+                    html += `<div class="section-title-chat"><i class="fas fa-comment-dots"></i> Mensagens do Chatbot (${chatMensagens.length})</div>`;
+                    chatMensagens.forEach((c) => {
+                        const dataHora = new Date(c.created_at).toLocaleString('pt-BR');
+                        const viewedStatus = c.viewed_at ? '👁️ Visto' : '🆕 Novo';
+                        const viewedClass = c.viewed_at ? 'notif-status-viewed' : 'notif-status-new';
+                        // Extrair a mensagem do campo observacoes
+                        let mensagem = c.observacoes || 'Mensagem sem conteúdo';
+                        // Tentar extrair apenas a mensagem do texto
+                        const match = mensagem.match(/Mensagem:\s*"([^"]*)"/);
+                        if (match) {
+                            mensagem = match[1];
+                        }
+                        html += `
+                            <div class="notification-item notif-chatbot">
+                                <div class="notif-header">
+                                    <span class="notif-user"><i class="fas fa-user"></i> ${c.nome_completo || 'Chatbot'}</span>
+                                    <span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span>
+                                    <span class="notif-type">🟢 Chatbot</span>
+                                    <span class="notif-status ${viewedClass}">${viewedStatus}</span>
+                                </div>
+                                <div class="notif-details">
+                                    <span><i class="fas fa-envelope"></i> ${c.email || '-'}</span>
+                                    <span style="margin-left:16px;"><i class="fas fa-phone"></i> ${c.whatsapp || '-'}</span>
+                                </div>
+                                <div class="notif-details" style="margin-top:8px;padding-top:8px;border-top:1px solid #222;">
+                                    <i class="fas fa-comment"></i> ${mensagem}
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += `
+                        <div class="no-message">
+                            <i class="fas fa-inbox"></i>
+                            Nenhuma mensagem do chatbot registrada.
+                        </div>
+                    `;
+                }
+
+                html += `
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+                // Criar e adicionar o painel
                 const div = document.createElement('div');
                 div.innerHTML = html;
                 document.body.appendChild(div);
 
-                div.querySelector('#closeAdmin').onclick = () => div.remove();
+                // Eventos das abas
+                const tabs = div.querySelectorAll('.admin-tab');
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', function() {
+                        // Remover active de todas as abas
+                        tabs.forEach(t => t.classList.remove('active'));
+                        this.classList.add('active');
+
+                        // Ocultar todos os conteúdos
+                        const tabContents = div.querySelectorAll('.tab-content');
+                        tabContents.forEach(tc => tc.classList.remove('active'));
+
+                        // Mostrar o conteúdo da aba selecionada
+                        const targetId = this.dataset.tab;
+                        const targetContent = div.querySelector(`#${targetId}`);
+                        if (targetContent) {
+                            targetContent.classList.add('active');
+                        }
+                    });
+                });
+
+                // Fechar painel
+                div.querySelector('#closeAdmin').onclick = () => {
+                    div.remove();
+                    window.location.reload();
+                };
+
+                // Fechar com ESC
+                const closeOnEsc = (e) => {
+                    if (e.key === 'Escape') {
+                        div.remove();
+                        window.removeEventListener('keydown', closeOnEsc);
+                        window.location.reload();
+                    }
+                };
+                window.addEventListener('keydown', closeOnEsc);
+
                 await atualizarBadgeGeral();
             });
 
@@ -2589,6 +2863,7 @@
                 });
             }
 
+            // ===== FUNÇÃO CORRIGIDA PARA ENVIAR MENSAGEM DO CHATBOT =====
             async function sendClientMessage() {
                 const message = inputField.value.trim();
                 if (message === '') return;
@@ -2603,7 +2878,8 @@
                     const conteudoObservacao =
                         `[CHATBOT APLIKADO]\nData/Hora: ${dataFormatada}\nMensagem:\n"${message}"\n`;
 
-                    await supabaseClient.from('diagnosticos_maturidade').insert([{
+                    // Inserir no Supabase com os campos corretos
+                    const { error } = await supabaseClient.from('diagnosticos_maturidade').insert([{
                         nome_completo: "Chatbot - Contato Digital",
                         empresa: "Chatbot - Lead",
                         cargo: "Lead via Chatbot",
@@ -2629,6 +2905,13 @@
                         percentual_risco: null
                     }]);
 
+                    if (error) {
+                        console.error('Erro ao registrar mensagem:', error);
+                        addChatMessage("Desculpe, tivemos um problema ao enviar sua mensagem. Tente novamente.");
+                        return;
+                    }
+
+                    console.log('✅ Mensagem do chatbot registrada com sucesso!');
                     await updateChatBadge();
                     await atualizarBadgeGeral();
 
@@ -2640,7 +2923,7 @@
                     }, 500);
 
                 } catch (e) {
-                    console.error("Erro ao registrar:", e);
+                    console.error("Erro ao registrar mensagem:", e);
                     addChatMessage("Desculpe, tivemos um problema. Pode tentar novamente?");
                 }
             }
