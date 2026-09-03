@@ -1674,71 +1674,60 @@
             const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
             // ===== CONFIGURAÇÃO DE USUÁRIOS =====
-            // Usuários do sistema (senhas iniciais)
             const USERS = {
-                'Davi Macedo': { 
-                    initialPassword: '@500*', 
+                'Davi Macedo': {
+                    initialPassword: '@500*',
                     type: 'select_client',
-                    clients: ['ALF', 'QNUTRI'],
-                    hasChangedPassword: false
+                    clients: ['ALF', 'QNUTRI']
                 },
-                'Neilane Barreira': { 
-                    initialPassword: '@200*', 
+                'Neilane Barreira': {
+                    initialPassword: '@200*',
+                    type: 'direct',
+                    client: 'QNUTRI'
+                },
+                'Andre Luiz': {
+                    initialPassword: '@100*',
+                    type: 'direct',
+                    client: 'ALF'
+                },
+                'Expedito Macedo': {
+                    initialPassword: '@400*',
+                    type: 'select_client',
+                    clients: ['ALF', 'QNUTRI']
+                },
+                'Luciano Sousa': {
+                    initialPassword: '@300*',
+                    type: 'select_client',
+                    clients: ['ALF', 'QNUTRI']
+                },
+                'QNUTRI': {
+                    initialPassword: '963852741',
                     type: 'direct',
                     client: 'QNUTRI',
-                    hasChangedPassword: false
-                },
-                'Andre Luiz': { 
-                    initialPassword: '@100*', 
-                    type: 'direct',
-                    client: 'ALF',
-                    hasChangedPassword: false
-                },
-                'Expedito Macedo': { 
-                    initialPassword: '@400*', 
-                    type: 'select_client',
-                    clients: ['ALF', 'QNUTRI'],
-                    hasChangedPassword: false
-                },
-                'Luciano Sousa': { 
-                    initialPassword: '@300*', 
-                    type: 'select_client',
-                    clients: ['ALF', 'QNUTRI'],
-                    hasChangedPassword: false
-                },
-                // Logins especiais do sistema (senha definitiva fixa)
-                'QNUTRI': { 
-                    initialPassword: '963852741', 
-                    type: 'direct',
-                    client: 'QNUTRI',
-                    hasChangedPassword: true, // não precisa alterar
                     isSpecial: true
                 },
-                'ALF': { 
-                    initialPassword: '963852741', 
+                'ALF': {
+                    initialPassword: '963852741',
                     type: 'direct',
                     client: 'ALF',
-                    hasChangedPassword: true,
                     isSpecial: true
                 },
-                'FROZEN': { 
-                    initialPassword: '963852741', 
+                'FROZEN': {
+                    initialPassword: '963852741',
                     type: 'direct',
                     client: 'FROZEN',
-                    hasChangedPassword: true,
                     isSpecial: true
                 },
-                'VM': { 
-                    initialPassword: '963852741', 
+                'VM': {
+                    initialPassword: '963852741',
                     type: 'direct',
                     client: 'VM',
-                    hasChangedPassword: true,
                     isSpecial: true
                 }
             };
 
             // ===== FUNÇÕES DE AUTENTICAÇÃO =====
-            
+
             // Buscar senha do usuário no Supabase
             async function getUserPassword(username) {
                 try {
@@ -1746,13 +1735,9 @@
                         .from('usuarios_senhas')
                         .select('senha_definitiva')
                         .eq('usuario', username)
-                        .single();
+                        .maybeSingle();
 
                     if (error) {
-                        if (error.code === 'PGRST116') {
-                            // Usuário não encontrado na tabela (primeiro acesso)
-                            return null;
-                        }
                         console.error('Erro ao buscar senha:', error);
                         return null;
                     }
@@ -1771,42 +1756,41 @@
                         .from('usuarios_senhas')
                         .select('id')
                         .eq('usuario', username)
-                        .single();
+                        .maybeSingle();
 
-                    if (findError && findError.code !== 'PGRST116') {
+                    if (findError) {
                         console.error('Erro ao verificar usuário:', findError);
                         return false;
                     }
 
+                    let result;
                     if (existing) {
                         // Atualiza senha existente
-                        const { error: updateError } = await supabaseClient
+                        result = await supabaseClient
                             .from('usuarios_senhas')
-                            .update({ 
+                            .update({
                                 senha_definitiva: newPassword,
                                 updated_at: new Date().toISOString()
                             })
                             .eq('usuario', username);
-
-                        if (updateError) {
-                            console.error('Erro ao atualizar senha:', updateError);
-                            return false;
-                        }
                     } else {
                         // Insere novo usuário
-                        const { error: insertError } = await supabaseClient
+                        result = await supabaseClient
                             .from('usuarios_senhas')
                             .insert([{
                                 usuario: username,
                                 senha_definitiva: newPassword,
-                                created_at: new Date().toISOString()
+                                created_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString()
                             }]);
-
-                        if (insertError) {
-                            console.error('Erro ao inserir senha:', insertError);
-                            return false;
-                        }
                     }
+
+                    if (result.error) {
+                        console.error('Erro ao salvar senha:', result.error);
+                        return false;
+                    }
+
+                    console.log('✅ Senha salva com sucesso para:', username);
                     return true;
                 } catch (e) {
                     console.error('Erro ao salvar senha:', e);
@@ -1824,7 +1808,7 @@
             async function registrarLogAcesso(usuario, senha, sucesso, redirect = null) {
                 try {
                     const dataAtual = new Date();
-                    
+
                     const logData = {
                         usuario: usuario || 'desconhecido',
                         senha_digitada: senha || 'não informada',
@@ -1851,7 +1835,6 @@
             // ===== FUNÇÃO PARA ATUALIZAR BADGE GERAL =====
             async function atualizarBadgeGeral() {
                 try {
-                    // Busca logs de acesso não visualizados
                     const { count: logsCount, error: logsError } = await supabaseClient
                         .from('logs_acesso')
                         .select('*', { count: 'exact', head: true })
@@ -1861,7 +1844,6 @@
                         console.error('❌ Erro ao buscar logs:', logsError);
                     }
 
-                    // Busca diagnósticos não visualizados
                     const { count: diagCount, error: diagError } = await supabaseClient
                         .from('diagnosticos_maturidade')
                         .select('*', { count: 'exact', head: true })
@@ -1887,22 +1869,21 @@
 
             // ===== VARIÁVEIS DE SESSÃO =====
             let currentUser = null;
-            let pendingUser = null; // Usuário aguardando alteração de senha
+            let pendingUser = null;
 
             // ===== FUNÇÃO DE LOGIN =====
             async function handleLogin(username, password) {
                 const userConfig = USERS[username];
-                
+
                 if (!userConfig) {
                     await registrarLogAcesso(username, password, false);
                     alert('Usuário ou senha inválidos.');
                     return false;
                 }
 
-                // Verifica se o usuário já tem senha definitiva
                 const definitivePassword = await getUserPassword(username);
-                
-                // Se é um usuário especial (QNUTRI, ALF, FROZEN, VM)
+
+                // Usuários especiais (QNUTRI, ALF, FROZEN, VM)
                 if (userConfig.isSpecial) {
                     if (password === userConfig.initialPassword) {
                         currentUser = username;
@@ -1916,14 +1897,12 @@
                     }
                 }
 
-                // Para usuários normais
-                // Verifica se é primeiro acesso (não tem senha definitiva)
-                const isFirst = await isFirstAccess(username);
+                // Usuários normais
+                const isFirst = definitivePassword === null;
 
                 if (isFirst) {
                     // Primeiro acesso: verifica senha inicial
                     if (password === userConfig.initialPassword) {
-                        // Salva o usuário para alteração de senha
                         pendingUser = username;
                         await registrarLogAcesso(username, password, true);
                         showChangePasswordModal();
@@ -1938,8 +1917,7 @@
                     if (password === definitivePassword) {
                         currentUser = username;
                         await registrarLogAcesso(username, password, true);
-                        
-                        // Redireciona conforme o tipo de usuário
+
                         if (userConfig.type === 'select_client') {
                             showClientSelectModal();
                         } else if (userConfig.type === 'direct') {
@@ -1965,7 +1943,6 @@
                 modal.style.display = 'none';
             }
 
-            // Eventos dos botões de seleção de cliente
             document.querySelectorAll('.client-select-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const client = this.dataset.client;
@@ -1978,7 +1955,6 @@
             function showChangePasswordModal() {
                 const modal = document.getElementById('changePasswordModal');
                 modal.style.display = 'flex';
-                // Limpa campos
                 document.getElementById('newPassword').value = '';
                 document.getElementById('confirmPassword').value = '';
                 document.getElementById('newPassword').classList.remove('error');
@@ -1986,6 +1962,7 @@
                 document.getElementById('newPasswordError').classList.remove('show');
                 document.getElementById('confirmPasswordError').classList.remove('show');
                 document.getElementById('changePasswordBtn').disabled = false;
+                document.getElementById('changePasswordBtn').textContent = 'ALTERAR SENHA';
             }
 
             function hideChangePasswordModal() {
@@ -2004,7 +1981,6 @@
                     return;
                 }
 
-                // Validações
                 let isValid = true;
 
                 if (newPassword.length < 6) {
@@ -2027,19 +2003,16 @@
 
                 if (!isValid) return;
 
-                // Desabilita botão durante o processamento
                 this.disabled = true;
                 this.textContent = 'Salvando...';
 
                 try {
-                    // Salva a nova senha no Supabase
                     const saved = await saveUserPassword(username, newPassword);
 
                     if (saved) {
                         hideChangePasswordModal();
                         currentUser = username;
-                        
-                        // Redireciona conforme o tipo de usuário
+
                         const userConfig = USERS[username];
                         if (userConfig.type === 'select_client') {
                             showClientSelectModal();
@@ -2077,28 +2050,47 @@
             }
 
             // ===== EVENTOS DOS MODAIS =====
-            // Fechar modal de login
             document.getElementById('closeModal')?.addEventListener('click', () => {
                 document.getElementById('loginModal').style.display = 'none';
             });
 
-            // Fechar modais clicando fora
             window.addEventListener('click', (e) => {
                 const loginModal = document.getElementById('loginModal');
                 if (e.target === loginModal) {
                     loginModal.style.display = 'none';
                 }
-                const clientModal = document.getElementById('clientSelectModal');
-                if (e.target === clientModal) {
-                    // Não permite fechar clicando fora (deve escolher um cliente)
-                }
-                const changeModal = document.getElementById('changePasswordModal');
-                if (e.target === changeModal) {
-                    // Não permite fechar clicando fora (deve alterar a senha)
-                }
             });
 
-            // ===== DIAGNÓSTICO (mantido do original) =====
+            // ===== EVENTOS DOS BOTÕES DE LOGIN =====
+            const loginModal = document.getElementById('loginModal');
+            const openLoginBtns = document.querySelectorAll('#openModalBtn, #openModalBtnMobile');
+            const closeLogin = document.getElementById('closeModal');
+
+            openLoginBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    loginModal.style.display = 'flex';
+                    document.getElementById('username').focus();
+                });
+            });
+
+            if (closeLogin) closeLogin.onclick = () => loginModal.style.display = 'none';
+            window.addEventListener('click', (e) => {
+                if (e.target === loginModal) loginModal.style.display = 'none';
+            });
+
+            // ===== CARROSSEL =====
+            let slides = document.querySelectorAll(".slide");
+            let idx = 0;
+            if (slides.length) {
+                setInterval(() => {
+                    slides[idx].classList.remove("active");
+                    idx = (idx + 1) % slides.length;
+                    slides[idx].classList.add("active");
+                }, 5000);
+            }
+
+            // ===== DIAGNÓSTICO =====
             const questions = [
                 { id: 'q1', text: 'Quantos departamentos utilizam planilhas na sua empresa?', options: ['Nenhum',
                         '1 a 2', '3 a 5', 'Mais de 5'
@@ -2130,11 +2122,11 @@
 
             const validators = {
                 nomeCompleto: { regex: /^[a-zA-ZáâãàéêíóôõúçñÁÂÃÀÉÊÍÓÔÕÚÇÑ\s]{3,100}$/,
-                message: 'Nome deve ter pelo menos 3 caracteres' },
+                    message: 'Nome deve ter pelo menos 3 caracteres' },
                 empresa: { regex: /^[a-zA-Z0-9áâãàéêíóôõúçñÁÂÃÀÉÊÍÓÔÕÚÇÑ\s&.]{2,100}$/,
-                message: 'Empresa deve ter pelo menos 2 caracteres' },
+                    message: 'Empresa deve ter pelo menos 2 caracteres' },
                 cargo: { regex: /^[a-zA-ZáâãàéêíóôõúçñÁÂÃÀÉÊÍÓÔÕÚÇÑ\s]{3,80}$/,
-                message: 'Cargo deve ter pelo menos 3 caracteres' },
+                    message: 'Cargo deve ter pelo menos 3 caracteres' },
                 whatsapp: { regex: /^\(?[1-9]{2}\)? ?(?:[2-8]|9[1-9])[0-9]{3}\-?[0-9]{4}$/,
                     message: 'WhatsApp inválido', mask: true },
                 email: { regex: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, message: 'E-mail inválido' }
@@ -2303,7 +2295,6 @@
                 await atualizarBadgeGeral();
             }
 
-            // ===== EVENTOS DOS BOTÕES DE DIAGNÓSTICO =====
             const modal = document.getElementById('diagnosticModal');
             const openBtns = document.querySelectorAll('#openDiagnosticBtn, #openDiagnosticBtnMobile');
             const closeModalBtn = document.getElementById('closeDiagnosticModal');
@@ -2318,46 +2309,542 @@
             if (closeModalBtn) closeModalBtn.addEventListener('click', () => { modal.style.display = 'none'; });
             window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
 
-            // ===== EVENTOS DOS BOTÕES DE LOGIN =====
-            const loginModal = document.getElementById('loginModal');
-            const openLoginBtns = document.querySelectorAll('#openModalBtn, #openModalBtnMobile');
-            const closeLogin = document.getElementById('closeModal');
+            // ===== CHATBOT =====
+            async function updateChatBadge() {
+                try {
+                    const { count, error } = await supabaseClient
+                        .from('diagnosticos_maturidade')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('classificacao_risco', 'Contato Chatbot')
+                        .is('viewed_at', null);
 
-            openLoginBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    loginModal.style.display = 'flex';
-                    document.getElementById('username').focus();
-                });
-            });
+                    if (error) {
+                        console.error('Erro ao buscar mensagens do chat:', error);
+                        return;
+                    }
 
-            if (closeLogin) closeLogin.onclick = () => loginModal.style.display = 'none';
-            window.addEventListener('click', (e) => {
-                if (e.target === loginModal) loginModal.style.display = 'none';
-            });
+                    const attendanceBadge = document.getElementById('attendanceBadge');
+                    const attendanceBadgeMobile = document.getElementById('attendanceBadgeMobile');
 
-            // ===== CARROSSEL =====
-            let slides = document.querySelectorAll(".slide");
-            let idx = 0;
-            if (slides.length) {
-                setInterval(() => {
-                    slides[idx].classList.remove("active");
-                    idx = (idx + 1) % slides.length;
-                    slides[idx].classList.add("active");
-                }, 5000);
+                    const total = count || 0;
+
+                    if (attendanceBadge) {
+                        if (total > 0) {
+                            attendanceBadge.textContent = total > 9 ? '9+' : total;
+                            attendanceBadge.classList.add('show');
+                            attendanceBadge.classList.add('has-messages');
+                        } else {
+                            attendanceBadge.classList.remove('show');
+                            attendanceBadge.classList.remove('has-messages');
+                        }
+                    }
+
+                    if (attendanceBadgeMobile) {
+                        if (total > 0) {
+                            attendanceBadgeMobile.textContent = total > 9 ? '9+' : total;
+                            attendanceBadgeMobile.style.display = 'flex';
+                        } else {
+                            attendanceBadgeMobile.style.display = 'none';
+                        }
+                    }
+
+                } catch (e) {
+                    console.error('Erro ao atualizar badge do chat:', e);
+                }
             }
 
-            // ===== CHATBOT (mantido do original) =====
-            // ... (código do chatbot mantido intacto)
+            async function markChatMessagesAsRead() {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('diagnosticos_maturidade')
+                        .select('id')
+                        .eq('classificacao_risco', 'Contato Chatbot')
+                        .is('viewed_at', null);
+
+                    if (error) {
+                        console.error('Erro ao buscar mensagens para marcar como lidas:', error);
+                        return;
+                    }
+
+                    if (data && data.length > 0) {
+                        const ids = data.map(item => item.id);
+                        const { error: updateError } = await supabaseClient
+                            .from('diagnosticos_maturidade')
+                            .update({ viewed_at: new Date().toISOString() })
+                            .in('id', ids);
+
+                        if (updateError) {
+                            console.error('Erro ao marcar mensagens como lidas:', updateError);
+                        } else {
+                            console.log(`${ids.length} mensagens do chat marcadas como lidas`);
+                            await updateChatBadge();
+                            await atualizarBadgeGeral();
+                        }
+                    }
+                } catch (e) {
+                    console.error('Erro ao marcar mensagens como lidas:', e);
+                }
+            }
+
+            // ===== ADMIN ICON =====
+            document.getElementById('adminIcon')?.addEventListener('click', async () => {
+                const senha = prompt("Área administrativa - informe a senha:");
+                if (senha !== '123') return;
+
+                // Buscar logs e diagnósticos
+                const { data: logs, error: logsError } = await supabaseClient
+                    .from('logs_acesso')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (logsError) {
+                    console.error('Erro ao buscar logs:', logsError);
+                }
+
+                const { data: diagnosticos, error: diagError } = await supabaseClient
+                    .from('diagnosticos_maturidade')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (diagError) {
+                    console.error('Erro ao buscar diagnósticos:', diagError);
+                }
+
+                // Marcar como visualizados
+                if (logs && logs.length > 0) {
+                    const naoVistos = logs.filter(l => !l.viewed_at).map(l => l.id);
+                    if (naoVistos.length) {
+                        await supabaseClient.from('logs_acesso').update({ viewed_at: new Date() })
+                            .in('id', naoVistos);
+                    }
+                }
+
+                if (diagnosticos && diagnosticos.length > 0) {
+                    const naoVistos = diagnosticos.filter(d => !d.viewed_at).map(d => d.id);
+                    if (naoVistos.length) {
+                        await supabaseClient.from('diagnosticos_maturidade').update({ viewed_at: new Date() })
+                            .in('id', naoVistos);
+                    }
+                }
+
+                await atualizarBadgeGeral();
+
+                // Exibir painel
+                let html = `
+                <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:10000;overflow:auto;padding:2rem;">
+                    <div style="max-width:1400px;margin:0 auto;background:#0f0f0f;border-radius:24px;padding:2rem;border:1px solid #ffd000;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px;">
+                            <h2 style="color:#ffd000;">Painel Administrativo</h2>
+                            <button id="closeAdmin" style="background:#ffd000;padding:8px 20px;border:none;border-radius:40px;cursor:pointer;font-weight:600;">Fechar</button>
+                        </div>
+                `;
+
+                // Logs
+                if (logs && logs.length > 0) {
+                    html += `<div class="section-title-log"><i class="fas fa-history"></i> Logs de Acesso (${logs.length})</div>`;
+                    logs.forEach((log) => {
+                        const statusClass = log.sucesso ? 'notif-status-success' : 'notif-status-failed';
+                        const statusLabel = log.sucesso ? '✅ Sucesso' : '❌ Falha';
+                        const dataHora = new Date(log.created_at).toLocaleString('pt-BR');
+                        html += `
+                            <div class="notification-item notif-log">
+                                <div class="notif-header">
+                                    <span class="notif-user"><i class="fas fa-user"></i> ${log.usuario || 'desconhecido'}</span>
+                                    <span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span>
+                                    <span class="notif-status ${statusClass}">${statusLabel}</span>
+                                    <span class="notif-type">🔵 Log de Acesso</span>
+                                </div>
+                                <div class="notif-details">
+                                    <span><i class="fas fa-key"></i> Senha: ${log.senha_digitada || 'não informada'}</span>
+                                    ${log.redirect_destino ? `<span style="margin-left:16px;"><i class="fas fa-arrow-right"></i> Redirecionado para: ${log.redirect_destino}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += `
+                        <div class="no-message">
+                            <i class="fas fa-inbox"></i>
+                            Nenhum log de acesso registrado.
+                        </div>
+                    `;
+                }
+
+                // Diagnósticos
+                if (diagnosticos && diagnosticos.length > 0) {
+                    const diagsNormais = diagnosticos.filter(d => d.nome_completo && d.nome_completo !== "Chatbot - Contato Digital");
+                    if (diagsNormais.length > 0) {
+                        html += `<div class="section-title-diag"><i class="fas fa-file-alt"></i> Diagnósticos (${diagsNormais.length})</div>`;
+                        diagsNormais.forEach((d) => {
+                            const dataHora = new Date(d.created_at).toLocaleString('pt-BR');
+                            html += `
+                                <div class="notification-item notif-diagnostico">
+                                    <div class="notif-header">
+                                        <span class="notif-user"><i class="fas fa-user"></i> ${d.nome_completo || '-'}</span>
+                                        <span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span>
+                                        <span class="notif-type">🟡 Diagnóstico</span>
+                                    </div>
+                                    <div class="notif-details">
+                                        <span><i class="fas fa-envelope"></i> ${d.email || '-'}</span>
+                                        <span style="margin-left:16px;"><i class="fas fa-phone"></i> ${d.whatsapp || '-'}</span>
+                                        <span style="margin-left:16px;"><i class="fas fa-building"></i> ${d.empresa || '-'}</span>
+                                        <span style="margin-left:16px;"><i class="fas fa-chart-line"></i> Risco: ${d.percentual_risco || '-'}%</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                }
+
+                html += `</div></div>`;
+                const div = document.createElement('div');
+                div.innerHTML = html;
+                document.body.appendChild(div);
+
+                div.querySelector('#closeAdmin').onclick = () => div.remove();
+                await atualizarBadgeGeral();
+            });
+
+            // ===== CHATBOT =====
+            const chatWindow = document.getElementById('taasChatWindow');
+            const closeChatBtn = document.getElementById('taasCloseBtn');
+            const messagesContainer = document.getElementById('taasMessages');
+            const buttonsContainer = document.getElementById('taasButtons');
+            const inputField = document.getElementById('taasInputField');
+            const sendBtn = document.getElementById('taasSendBtn');
+
+            let chatInitialized = false;
+            let chatIsOpen = false;
+
+            function addChatMessage(text, isBot = true) {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `taas-msg ${isBot ? 'bot' : 'client'}`;
+                const time = new Date();
+                const timeStr =
+                    `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                msgDiv.innerHTML =
+                    `<div class="taas-msg-content">${text}</div><div class="taas-msg-time">${timeStr}</div>`;
+                messagesContainer.appendChild(msgDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            async function openChat() {
+                chatWindow.classList.add('open');
+                chatIsOpen = true;
+                if (!chatInitialized) {
+                    initializeChatbot();
+                }
+                await markChatMessagesAsRead();
+                await updateChatBadge();
+                await atualizarBadgeGeral();
+            }
+
+            function closeChat() {
+                chatWindow.classList.remove('open');
+                chatIsOpen = false;
+            }
+
+            const btnVirtualAttendance = document.getElementById('btnVirtualAttendance');
+            const btnVirtualAttendanceMobile = document.getElementById('btnVirtualAttendanceMobile');
+
+            if (btnVirtualAttendance) {
+                btnVirtualAttendance.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (chatIsOpen) {
+                        inputField.focus();
+                    } else {
+                        openChat();
+                    }
+                });
+            }
+
+            if (btnVirtualAttendanceMobile) {
+                btnVirtualAttendanceMobile.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (chatIsOpen) {
+                        inputField.focus();
+                    } else {
+                        openChat();
+                    }
+                });
+            }
+
+            if (closeChatBtn) {
+                closeChatBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    closeChat();
+                });
+            }
+
+            function renderChatButtons(buttons) {
+                buttonsContainer.innerHTML = '';
+                buttons.forEach(btn => {
+                    const button = document.createElement('button');
+                    button.className = 'taas-nav-button';
+                    button.innerText = btn.label;
+                    button.addEventListener('click', () => {
+                        if (btn.action) btn.action();
+                    });
+                    buttonsContainer.appendChild(button);
+                });
+            }
+
+            async function sendClientMessage() {
+                const message = inputField.value.trim();
+                if (message === '') return;
+
+                addChatMessage(message, false);
+                inputField.value = '';
+
+                try {
+                    const dataAtual = new Date();
+                    const dataFormatada =
+                        `${dataAtual.getDate().toString().padStart(2,'0')}/${(dataAtual.getMonth()+1).toString().padStart(2,'0')}/${dataAtual.getFullYear()} ${dataAtual.getHours().toString().padStart(2,'0')}:${dataAtual.getMinutes().toString().padStart(2,'0')}:${dataAtual.getSeconds().toString().padStart(2,'0')}`;
+                    const conteudoObservacao =
+                        `[CHATBOT APLIKADO]\nData/Hora: ${dataFormatada}\nMensagem:\n"${message}"\n`;
+
+                    await supabaseClient.from('diagnosticos_maturidade').insert([{
+                        nome_completo: "Chatbot - Contato Digital",
+                        empresa: "Chatbot - Lead",
+                        cargo: "Lead via Chatbot",
+                        whatsapp: "Não informado via chatbot",
+                        email: "chatbot@aplikado.com.br",
+                        pergunta_1: 0,
+                        pergunta_2: 0,
+                        pergunta_3: 0,
+                        pergunta_4: 0,
+                        pergunta_5: 0,
+                        pergunta_6: 0,
+                        pergunta_7: 0,
+                        pergunta_8: 0,
+                        pergunta_9: 0,
+                        pergunta_10: 0,
+                        pontuacao_total: 0,
+                        classificacao_risco: "Contato Chatbot",
+                        recomendacoes: "Registro automático gerado pelo chatbot",
+                        contato_realizado: false,
+                        observacoes: conteudoObservacao,
+                        created_at: dataAtual.toISOString(),
+                        viewed_at: null,
+                        percentual_risco: null
+                    }]);
+
+                    await updateChatBadge();
+                    await atualizarBadgeGeral();
+
+                    setTimeout(() => {
+                        addChatMessage(
+                            "Obrigado pela mensagem! Um de nossos especialistas entrará em contato em breve. Enquanto isso, posso ajudar com mais alguma informação?"
+                        );
+                        chatGoToMain();
+                    }, 500);
+
+                } catch (e) {
+                    console.error("Erro ao registrar:", e);
+                    addChatMessage("Desculpe, tivemos um problema. Pode tentar novamente?");
+                }
+            }
+
+            sendBtn.addEventListener('click', sendClientMessage);
+            inputField.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendClientMessage();
+            });
+
+            function chatGoToMain() {
+                renderChatButtons([
+                    { label: "Conhecer a Aplikado", action: () => chatGoToConhecer() },
+                    { label: "Soluções e Serviços", action: () => chatGoToSolucoes() },
+                    { label: "Automação de Processos", action: () => chatGoToAutomacao() },
+                    { label: "Dashboards e Indicadores", action: () => chatGoToDashboards() },
+                    { label: "Transformação Digital", action: () => chatGoToTransformacao() },
+                    { label: "Solicitar Demonstração", action: () => chatGoToSolicitarDemo() },
+                    { label: "Falar com um Especialista", action: () => chatGoToFalarEspecialista() }
+                ]);
+            }
+
+            function chatGoToConhecer() {
+                addChatMessage(
+                    "A Aplikado desenvolve soluções digitais que simplificam processos, aumentam a produtividade e apoiam a tomada de decisão por meio de tecnologia aplicada aos negócios."
+                );
+                renderChatButtons([
+                    { label: "Nossa História", action: () => {
+                            addChatMessage(
+                                "Fundada com o propósito de democratizar o acesso à tecnologia de ponta, a Aplikado combina expertise em gestão com inovação."
+                            );
+                            chatGoToConhecer();
+                        } },
+                    { label: "Diferenciais", action: () => {
+                            addChatMessage(
+                                "Metodologia ágil, time sênior, soluções personalizadas e foco em ROI mensurável."
+                            );
+                            chatGoToConhecer();
+                        } },
+                    { label: "Serviços", action: () => chatGoToSolucoes() },
+                    { label: "Voltar", action: () => chatGoToMain() }
+                ]);
+            }
+
+            function chatGoToSolucoes() {
+                addChatMessage(
+                    "Nossas soluções são desenvolvidas para automatizar rotinas, integrar informações e fornecer inteligência para a gestão."
+                );
+                renderChatButtons([
+                    { label: "Automação", action: () => chatGoToAutomacao() },
+                    { label: "Dashboards", action: () => chatGoToDashboards() },
+                    { label: "Indicadores", action: () => chatGoToDashboards() },
+                    { label: "Integrações", action: () => {
+                            addChatMessage(
+                                "Integramos ERPs, CRMs, sistemas legados e APIs. Criamos ecossistemas de dados conectados."
+                            );
+                            chatGoToSolucoes();
+                        } },
+                    { label: "Voltar", action: () => chatGoToMain() }
+                ]);
+            }
+
+            function chatGoToAutomacao() {
+                addChatMessage(
+                    "A Aplikado automatiza tarefas operacionais, reduz atividades manuais e aumenta a eficiência dos processos internos."
+                );
+                renderChatButtons([
+                    { label: "Exemplos", action: () => {
+                            addChatMessage(
+                                "RPA para faturamento, automação de notas fiscais, fluxos de aprovação, conciliação bancária automatizada."
+                            );
+                            chatGoToAutomacao();
+                        } },
+                    { label: "Benefícios", action: () => {
+                            addChatMessage(
+                                "Redução de 30% a 50% em custos operacionais, eliminação de erros manuais."
+                            );
+                            chatGoToAutomacao();
+                        } },
+                    { label: "Solicitar Demonstração", action: () => chatGoToSolicitarDemo() },
+                    { label: "Voltar", action: () => chatGoToMain() }
+                ]);
+            }
+
+            function chatGoToDashboards() {
+                addChatMessage(
+                    "Transformamos dados em informações estratégicas por meio de dashboards intuitivos e indicadores em tempo real."
+                );
+                renderChatButtons([
+                    { label: "Exemplos", action: () => {
+                            addChatMessage(
+                                "Dashboards de vendas, financeiro, operações, produção, estoque, DRE gerencial."
+                            );
+                            chatGoToDashboards();
+                        } },
+                    { label: "Benefícios", action: () => {
+                            addChatMessage(
+                                "Tomada de decisão baseada em dados, redução de tempo de análise."
+                            );
+                            chatGoToDashboards();
+                        } },
+                    { label: "Solicitar Demonstração", action: () => chatGoToSolicitarDemo() },
+                    { label: "Voltar", action: () => chatGoToMain() }
+                ]);
+            }
+
+            function chatGoToTransformacao() {
+                addChatMessage(
+                    "Apoiamos empresas na jornada de transformação digital por meio de soluções tecnológicas personalizadas e orientadas a resultados."
+                );
+                renderChatButtons([
+                    { label: "Diagnóstico", action: () => {
+                            addChatMessage(
+                                "Realizamos uma análise aprofundada da maturidade digital da sua empresa, identificando gaps e oportunidades."
+                            );
+                            chatGoToTransformacao();
+                        } },
+                    { label: "Oportunidades", action: () => {
+                            addChatMessage(
+                                "Automação, cultura data-driven, inovação de processos, novos modelos de negócio baseados em tecnologia."
+                            );
+                            chatGoToTransformacao();
+                        } },
+                    { label: "Falar com Especialista", action: () => chatGoToFalarEspecialista() },
+                    { label: "Voltar", action: () => chatGoToMain() }
+                ]);
+            }
+
+            function chatGoToSolicitarDemo() {
+                addChatMessage("Será um prazer apresentar nossas soluções. Clique abaixo para agendar uma demonstração.");
+                renderChatButtons([
+                    { label: "Agendar Demonstração", action: () => {
+                            window.open(
+                                'https://wa.me/5521972508640?text=Olá! Gostaria de agendar uma demonstração das soluções Aplikado.',
+                                '_blank');
+                        } },
+                    { label: "Voltar", action: () => chatGoToMain() }
+                ]);
+            }
+
+            function chatGoToFalarEspecialista() {
+                addChatMessage("Nossa equipe está pronta para entender suas necessidades e apresentar a melhor solução.");
+                renderChatButtons([
+                    { label: "WhatsApp", action: () => {
+                            window.open('https://wa.me/5521972508640', '_blank');
+                        } },
+                    { label: "E-mail", action: () => {
+                            window.location.href = 'mailto:contato@aplikado.com.br';
+                        } },
+                    { label: "LinkedIn", action: () => {
+                            window.open('https://www.linkedin.com/company/aplikado/', '_blank');
+                        } },
+                    { label: "Instagram", action: () => {
+                            window.open('https://www.instagram.com/aplikadosolucoes/', '_blank');
+                        } },
+                    { label: "Voltar", action: () => chatGoToMain() }
+                ]);
+            }
+
+            function initializeChatbot() {
+                if (chatInitialized) return;
+                chatInitialized = true;
+                addChatMessage("Olá! Sou o assistente virtual da Aplikado. Como posso ajudar você hoje?");
+                addChatMessage("Escolha uma das opções abaixo ou digite sua mensagem:");
+                chatGoToMain();
+            }
+
+            // ===== POPUP IMAGEM =====
+            const imagePopup = document.getElementById('imagePopup');
+            const closeImagePopup = document.getElementById('closeImagePopup');
+            let popupClosed = false;
+            if (imagePopup && !popupClosed) {
+                setTimeout(() => {
+                    imagePopup.classList.add('active');
+                }, 500);
+            }
+
+            function closePopupAndOpenChat() {
+                if (imagePopup) {
+                    imagePopup.classList.remove('active');
+                    popupClosed = true;
+                }
+            }
+            if (closeImagePopup) closeImagePopup.addEventListener('click', closePopupAndOpenChat);
+            if (imagePopup) imagePopup.addEventListener('click', (e) => {
+                if (e.target === imagePopup) closePopupAndOpenChat();
+            });
 
             // ===== INICIALIZAÇÃO =====
             setTimeout(async () => {
+                await updateChatBadge();
                 await atualizarBadgeGeral();
             }, 500);
 
             setInterval(async () => {
+                await updateChatBadge();
                 await atualizarBadgeGeral();
             }, 30000);
+
+            document.addEventListener('visibilitychange', async () => {
+                if (!document.hidden) {
+                    await updateChatBadge();
+                    await atualizarBadgeGeral();
+                }
+            });
 
         })();
     </script>
