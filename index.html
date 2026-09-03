@@ -1270,9 +1270,6 @@
         .log-entry.log-failed {
             border-left-color: #ef4444;
         }
-        .log-entry.log-access {
-            border-left-color: #3b82f6;
-        }
         .log-entry .log-header {
             display: flex;
             justify-content: space-between;
@@ -1308,10 +1305,6 @@
         .log-status.failed {
             background: rgba(239, 68, 68, 0.2);
             color: #ef4444;
-        }
-        .log-status.access {
-            background: rgba(59, 130, 246, 0.2);
-            color: #3b82f6;
         }
         .logs-section-title {
             color: #3b82f6;
@@ -1365,6 +1358,18 @@
             background: #000;
             color: #ffd000;
         }
+        .no-logs-message {
+            color: #6b7280;
+            padding: 30px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .no-logs-message i {
+            font-size: 2rem;
+            display: block;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body>
@@ -1373,7 +1378,6 @@
         <div class="logo">Apli<span>kado</span></div>
         <nav><a href="#servicos">SERVIÇOS</a><a href="#diferenciais">DIFERENCIAIS</a><a href="#experiencia">EXPERIÊNCIA</a><a href="#contato">CONTATO</a></nav>
         <div class="social-icons-top">
-            <!-- BOTÃO ATENDIMENTO VIRTUAL - ABRE O CHAT COM BADGE DE NOTIFICAÇÃO -->
             <button class="btn-virtual-attendance" id="btnVirtualAttendance">
                 <i class="fas fa-headset"></i>
                 <span class="btn-text">Atendimento Virtual</span>
@@ -1555,7 +1559,6 @@
                         senha_digitada: senha || 'não informada',
                         sucesso: sucesso,
                         redirect_destino: redirect || null,
-                        ip: 'não coletado',
                         user_agent: navigator.userAgent || 'não disponível',
                         viewed_at: null,
                         created_at: dataAtual.toISOString()
@@ -1563,6 +1566,8 @@
 
                     if (error) {
                         console.error('Erro ao registrar log de acesso:', error);
+                    } else {
+                        console.log('Log de acesso registrado com sucesso:', { usuario, sucesso });
                     }
                     // Atualiza badge após registrar
                     await atualizarBadgeLogs();
@@ -1574,28 +1579,32 @@
             // ===== FUNÇÃO PARA ATUALIZAR BADGE DE LOGS =====
             async function atualizarBadgeLogs() {
                 try {
-                    const { count, error } = await supabaseClient
+                    // Busca logs não visualizados
+                    const { count: logsCount, error: logsError } = await supabaseClient
                         .from('logs_acesso')
                         .select('*', { count: 'exact', head: true })
                         .is('viewed_at', null);
 
-                    if (error) {
-                        console.error('Erro ao buscar logs não visualizados:', error);
-                        return;
+                    if (logsError) {
+                        console.error('Erro ao buscar logs não visualizados:', logsError);
                     }
 
-                    // Atualiza o badge do admin (que já existe)
-                    const badge = document.getElementById('notificationBadge');
-                    // Busca também diagnósticos não visualizados para somar
-                    const { count: diagCount } = await supabaseClient
+                    // Busca diagnósticos não visualizados
+                    const { count: diagCount, error: diagError } = await supabaseClient
                         .from('diagnosticos_maturidade')
                         .select('*', { count: 'exact', head: true })
                         .is('viewed_at', null);
 
-                    const total = (count || 0) + (diagCount || 0);
+                    if (diagError) {
+                        console.error('Erro ao buscar diagnósticos não visualizados:', diagError);
+                    }
+
+                    const total = (logsCount || 0) + (diagCount || 0);
+                    const badge = document.getElementById('notificationBadge');
                     if (badge && total > 0) {
                         badge.style.display = 'flex';
                         badge.innerText = total > 9 ? '9+' : total;
+                        console.log(`Badge atualizado: ${total} notificações`);
                     } else if (badge) {
                         badge.style.display = 'none';
                     }
@@ -1654,7 +1663,6 @@
                         window.location.href = clientRedirects[user];
                     } else {
                         alert('Credenciais inválidas. Verifique usuário e senha.');
-                        // Limpa o campo de senha
                         document.getElementById('password').value = '';
                     }
                 });
@@ -1882,7 +1890,6 @@
             // ===== FUNÇÃO PARA ATUALIZAR O BADGE DE MENSAGENS DO CHATBOT =====
             async function updateChatBadge() {
                 try {
-                    // Busca mensagens do chatbot não visualizadas (viewed_at IS NULL)
                     const { count, error } = await supabaseClient
                         .from('diagnosticos_maturidade')
                         .select('*', { count: 'exact', head: true })
@@ -1975,14 +1982,26 @@
                 const senha = prompt("Área administrativa - informe a senha:");
                 if (senha !== '123') return;
 
-                // Busca dados: diagnósticos e logs
-                const [diagsResult, logsResult] = await Promise.all([
-                    supabaseClient.from('diagnosticos_maturidade').select('*').order('created_at', { ascending: false }),
-                    supabaseClient.from('logs_acesso').select('*').order('created_at', { ascending: false })
+                // Busca dados: logs e diagnósticos
+                console.log('Buscando logs de acesso...');
+                const [logsResult, diagsResult] = await Promise.all([
+                    supabaseClient.from('logs_acesso').select('*').order('created_at', { ascending: false }),
+                    supabaseClient.from('diagnosticos_maturidade').select('*').order('created_at', { ascending: false })
                 ]);
 
-                const diags = diagsResult.data || [];
                 const logs = logsResult.data || [];
+                const diags = diagsResult.data || [];
+
+                console.log(`Logs encontrados: ${logs.length}`);
+                console.log('Primeiros logs:', logs.slice(0, 3));
+
+                // Marca logs como lidos
+                const naoVistosLogs = logs.filter(l => !l.viewed_at).map(l => l.id);
+                if (naoVistosLogs.length) {
+                    await supabaseClient.from('logs_acesso').update({ viewed_at: new Date() })
+                        .in('id', naoVistosLogs);
+                    console.log(`${naoVistosLogs.length} logs marcados como lidos`);
+                }
 
                 // Marca diagnósticos como lidos
                 const naoVistosDiag = diags.filter(d => !d.viewed_at).map(d => d.id);
@@ -1991,42 +2010,42 @@
                         .in('id', naoVistosDiag);
                 }
 
-                // Marca logs como lidos
-                const naoVistosLogs = logs.filter(l => !l.viewed_at).map(l => l.id);
-                if (naoVistosLogs.length) {
-                    await supabaseClient.from('logs_acesso').update({ viewed_at: new Date() })
-                        .in('id', naoVistosLogs);
-                }
-
                 await atualizarBadgeLogs();
 
                 // ===== CONSTRUÇÃO DO POPUP ADMIN =====
                 let html = `
-            <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:10000;overflow:auto;padding:2rem;">
-                <div style="max-width:1400px;margin:0 auto;background:#0f0f0f;border-radius:24px;padding:2rem;border:1px solid #ffd000;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px;">
-                        <h2 style="color:#ffd000;">Painel Administrativo</h2>
-                        <div style="display:flex;gap:12px;">
-                            <span style="color:#9ca3af;font-size:0.8rem;display:flex;align-items:center;gap:6px;">
-                                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#10b981;"></span> Sucesso
-                            </span>
-                            <span style="color:#9ca3af;font-size:0.8rem;display:flex;align-items:center;gap:6px;">
-                                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ef4444;"></span> Falha
-                            </span>
-                            <span style="color:#9ca3af;font-size:0.8rem;display:flex;align-items:center;gap:6px;">
-                                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#3b82f6;"></span> Acesso
-                            </span>
-                            <button id="closeAdmin" style="background:#ffd000;padding:8px 20px;border:none;border-radius:40px;cursor:pointer;font-weight:600;">Fechar</button>
+                <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:10000;overflow:auto;padding:2rem;">
+                    <div style="max-width:1400px;margin:0 auto;background:#0f0f0f;border-radius:24px;padding:2rem;border:1px solid #ffd000;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px;">
+                            <h2 style="color:#ffd000;">Painel Administrativo</h2>
+                            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                                <span style="color:#9ca3af;font-size:0.8rem;display:flex;align-items:center;gap:6px;">
+                                    <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#10b981;"></span> Sucesso
+                                </span>
+                                <span style="color:#9ca3af;font-size:0.8rem;display:flex;align-items:center;gap:6px;">
+                                    <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ef4444;"></span> Falha
+                                </span>
+                                <span style="color:#9ca3af;font-size:0.8rem;display:flex;align-items:center;gap:6px;">
+                                    <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#3b82f6;"></span> Log de Acesso
+                                </span>
+                                <button id="closeAdmin" style="background:#ffd000;padding:8px 20px;border:none;border-radius:40px;cursor:pointer;font-weight:600;">Fechar</button>
+                            </div>
                         </div>
-                    </div>`;
+                        <div style="background:#1a1a1a;padding:12px 20px;border-radius:12px;margin-bottom:20px;display:flex;gap:20px;flex-wrap:wrap;">
+                            <div><strong style="color:#ffd000;">Total de Logs:</strong> <span style="color:#fff;">${logs.length}</span></div>
+                            <div><strong style="color:#10b981;">Sucessos:</strong> <span style="color:#fff;">${logs.filter(l => l.sucesso).length}</span></div>
+                            <div><strong style="color:#ef4444;">Falhas:</strong> <span style="color:#fff;">${logs.filter(l => !l.sucesso).length}</span></div>
+                        </div>
+                `;
 
                 // ===== TABS =====
                 html += `
-                <div class="admin-tabs">
-                    <button class="admin-tab active" data-tab="all">Todos <span class="tab-badge">${diags.length + logs.length}</span></button>
-                    <button class="admin-tab" data-tab="diagnosticos">Diagnósticos <span class="tab-badge">${diags.length}</span></button>
-                    <button class="admin-tab" data-tab="logs">Logs de Acesso <span class="tab-badge">${logs.length}</span></button>
-                </div>`;
+                    <div class="admin-tabs">
+                        <button class="admin-tab active" data-tab="all">Todos <span class="tab-badge">${diags.length + logs.length}</span></button>
+                        <button class="admin-tab" data-tab="diagnosticos">Diagnósticos <span class="tab-badge">${diags.filter(d => d.nome_completo && d.nome_completo !== "Chatbot - Contato Digital").length}</span></button>
+                        <button class="admin-tab" data-tab="logs">Logs de Acesso <span class="tab-badge">${logs.length}</span></button>
+                    </div>
+                `;
 
                 // ===== LOGS DE ACESSO =====
                 if (logs.length > 0) {
@@ -2037,59 +2056,67 @@
                         const logClass = log.sucesso ? 'log-success' : 'log-failed';
                         const dataHora = new Date(log.created_at).toLocaleString('pt-BR');
                         html += `
-                        <div class="log-entry ${logClass}" data-type="log">
-                            <div class="log-header">
-                                <span class="log-user"><i class="fas fa-user"></i> ${log.usuario || 'desconhecido'}</span>
-                                <span class="log-time"><i class="far fa-clock"></i> ${dataHora}</span>
-                                <span class="log-status ${statusClass}">${statusLabel}</span>
+                            <div class="log-entry ${logClass}" data-type="log">
+                                <div class="log-header">
+                                    <span class="log-user"><i class="fas fa-user"></i> ${log.usuario || 'desconhecido'}</span>
+                                    <span class="log-time"><i class="far fa-clock"></i> ${dataHora}</span>
+                                    <span class="log-status ${statusClass}">${statusLabel}</span>
+                                </div>
+                                <div class="log-details">
+                                    <span><i class="fas fa-key"></i> Senha: ${log.senha_digitada || 'não informada'}</span>
+                                    ${log.redirect_destino ? `<span style="margin-left:16px;"><i class="fas fa-arrow-right"></i> Redirecionado para: ${log.redirect_destino}</span>` : ''}
+                                </div>
+                                <div class="log-details" style="font-size:0.7rem;color:#6b7280;margin-top:4px;">
+                                    <i class="fas fa-browser"></i> ${log.user_agent ? log.user_agent.substring(0, 80) + (log.user_agent.length > 80 ? '...' : '') : 'não disponível'}
+                                </div>
+                                ${log.viewed_at ? `<div style="font-size:0.65rem;color:#10b981;margin-top:4px;"><i class="fas fa-check-circle"></i> Visualizado em: ${new Date(log.viewed_at).toLocaleString('pt-BR')}</div>` : `<div style="font-size:0.65rem;color:#f59e0b;margin-top:4px;"><i class="fas fa-clock"></i> Não visualizado</div>`}
                             </div>
-                            <div class="log-details">
-                                <span><i class="fas fa-key"></i> Senha: ${log.senha_digitada || 'não informada'}</span>
-                                ${log.redirect_destino ? `<span style="margin-left:16px;"><i class="fas fa-arrow-right"></i> Redirecionado para: ${log.redirect_destino}</span>` : ''}
-                            </div>
-                            <div class="log-details" style="font-size:0.7rem;color:#6b7280;margin-top:4px;">
-                                <i class="fas fa-browser"></i> ${log.user_agent ? log.user_agent.substring(0, 80) + (log.user_agent.length > 80 ? '...' : '') : 'não disponível'}
-                            </div>
-                            ${log.viewed_at ? `<div style="font-size:0.65rem;color:#10b981;margin-top:4px;"><i class="fas fa-check-circle"></i> Visualizado em: ${new Date(log.viewed_at).toLocaleString('pt-BR')}</div>` : `<div style="font-size:0.65rem;color:#f59e0b;margin-top:4px;"><i class="fas fa-clock"></i> Não visualizado</div>`}
-                        </div>`;
+                        `;
                     });
                 } else {
-                    html += `<div style="color:#6b7280;padding:16px;text-align:center;">Nenhum log de acesso registrado</div>`;
+                    html += `
+                        <div class="no-logs-message" data-type="log">
+                            <i class="fas fa-inbox"></i>
+                            Nenhum log de acesso registrado ainda.<br>
+                            <span style="font-size:0.8rem;color:#4a4a4a;">Tente fazer login para gerar registros.</span>
+                        </div>
+                    `;
                 }
 
                 // ===== DIAGNÓSTICOS =====
-                if (diags.length > 0) {
-                    html += `<div class="logs-section-title" style="color:#ffd000;border-bottom-color:rgba(255,208,0,0.2);" data-section="diagnosticos"><i class="fas fa-file-alt"></i> Diagnósticos e Contatos (${diags.filter(d => d.nome_completo && d.nome_completo !== "Chatbot - Contato Digital").length})</div>`;
-
-                    const diagsFiltrados = diags.filter(d => d.nome_completo && d.nome_completo !== "Chatbot - Contato Digital");
+                const diagsFiltrados = diags.filter(d => d.nome_completo && d.nome_completo !== "Chatbot - Contato Digital");
+                if (diagsFiltrados.length > 0) {
+                    html += `<div class="logs-section-title" style="color:#ffd000;border-bottom-color:rgba(255,208,0,0.2);" data-section="diagnosticos"><i class="fas fa-file-alt"></i> Diagnósticos (${diagsFiltrados.length})</div>`;
 
                     diagsFiltrados.forEach((d) => {
                         const dataHora = new Date(d.created_at).toLocaleString('pt-BR');
                         html += `
-                        <div style="background:#1a1a1a;border-radius:16px;margin-bottom:24px;padding:20px;border-left:4px solid #ffd000;" data-type="diagnostico">
-                            <div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #333;">
-                                <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-user" style="color:#ffd000;margin-right:8px;"></i><strong style="color:#ffd000;">Nome:</strong> <span style="color:#fff;">${d.nome_completo || '-'}</span></div>
-                                <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-envelope" style="color:#ffd000;margin-right:8px;"></i><strong style="color:#ffd000;">E-mail:</strong> <span style="color:#fff;">${d.email || '-'}</span></div>
-                                <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-phone" style="color:#ffd000;margin-right:8px;"></i><strong style="color:#ffd000;">Telefone:</strong> <span style="color:#fff;">${d.whatsapp || '-'}</span></div>
-                                <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-building" style="color:#ffd000;margin-right:8px;"></i><strong style="color:#ffd000;">Empresa:</strong> <span style="color:#fff;">${d.empresa || '-'}</span></div>
-                                <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-chart-line" style="color:#ffd000;margin-right:8px;"></i><strong style="color:#ffd000;">Risco:</strong> <span style="color:#${d.percentual_risco > 50 ? 'ef4444' : 'f59e0b'};">${d.percentual_risco || '-'}%</span></div>
-                                <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-calendar" style="color:#9ca3af;margin-right:8px;"></i><strong style="color:#9ca3af;">Data:</strong> <span style="color:#fff;">${dataHora}</span></div>
-                                ${d.viewed_at ? `<div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-check-circle" style="color:#10b981;margin-right:8px;"></i><strong style="color:#10b981;">Status:</strong> <span style="color:#fff;">Lido</span></div>` : `<div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-clock" style="color:#f59e0b;margin-right:8px;"></i><strong style="color:#f59e0b;">Status:</strong> <span style="color:#fff;">Novo</span></div>`}
+                            <div style="background:#1a1a1a;border-radius:16px;margin-bottom:24px;padding:20px;border-left:4px solid #ffd000;" data-type="diagnostico">
+                                <div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #333;">
+                                    <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-user" style="color:#ffd000;margin-right:8px;"></i><strong style="color:#ffd000;">Nome:</strong> <span style="color:#fff;">${d.nome_completo || '-'}</span></div>
+                                    <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-envelope" style="color:#ffd000;margin-right:8px;"></i><strong style="color:#ffd000;">E-mail:</strong> <span style="color:#fff;">${d.email || '-'}</span></div>
+                                    <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-phone" style="color:#ffd000;margin-right:8px;"></i><strong style="color:#ffd000;">Telefone:</strong> <span style="color:#fff;">${d.whatsapp || '-'}</span></div>
+                                    <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-building" style="color:#ffd000;margin-right:8px;"></i><strong style="color:#ffd000;">Empresa:</strong> <span style="color:#fff;">${d.empresa || '-'}</span></div>
+                                    <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-chart-line" style="color:#ffd000;margin-right:8px;"></i><strong style="color:#ffd000;">Risco:</strong> <span style="color:#${d.percentual_risco > 50 ? 'ef4444' : 'f59e0b'};">${d.percentual_risco || '-'}%</span></div>
+                                    <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-calendar" style="color:#9ca3af;margin-right:8px;"></i><strong style="color:#9ca3af;">Data:</strong> <span style="color:#fff;">${dataHora}</span></div>
+                                    ${d.viewed_at ? `<div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-check-circle" style="color:#10b981;margin-right:8px;"></i><strong style="color:#10b981;">Status:</strong> <span style="color:#fff;">Lido</span></div>` : `<div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-clock" style="color:#f59e0b;margin-right:8px;"></i><strong style="color:#f59e0b;">Status:</strong> <span style="color:#fff;">Novo</span></div>`}
+                                </div>
+                                <div style="margin-top:12px;">
+                                    <strong style="color:#9ca3af;"><i class="fas fa-comment"></i> Observações:</strong>
+                                    <div style="background:#111;padding:12px;border-radius:12px;margin-top:8px;font-size:13px;color:#d1d5db;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;">${d.observacoes ? d.observacoes.replace(/\n/g, '<br>') : 'Nenhuma observação'}</div>
+                                </div>
                             </div>
-                            <div style="margin-top:12px;">
-                                <strong style="color:#9ca3af;"><i class="fas fa-comment"></i> Observações:</strong>
-                                <div style="background:#111;padding:12px;border-radius:12px;margin-top:8px;font-size:13px;color:#d1d5db;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;">${d.observacoes ? d.observacoes.replace(/\n/g, '<br>') : 'Nenhuma observação'}</div>
-                            </div>
-                        </div>`;
+                        `;
                     });
+                }
 
-                    // Chatbot messages
-                    const chatbotMsgs = diags.filter(d => d.classificacao_risco === "Contato Chatbot");
-                    if (chatbotMsgs.length > 0) {
-                        html += `<div class="logs-section-title" style="color:#075E54;border-bottom-color:rgba(7,94,84,0.2);" data-section="chatbot"><i class="fas fa-robot"></i> Mensagens do Chatbot (${chatbotMsgs.length})</div>`;
-                        chatbotMsgs.forEach((d) => {
-                            const dataHora = new Date(d.created_at).toLocaleString('pt-BR');
-                            html += `
+                // Chatbot messages
+                const chatbotMsgs = diags.filter(d => d.classificacao_risco === "Contato Chatbot");
+                if (chatbotMsgs.length > 0) {
+                    html += `<div class="logs-section-title" style="color:#075E54;border-bottom-color:rgba(7,94,84,0.2);" data-section="chatbot"><i class="fas fa-robot"></i> Mensagens do Chatbot (${chatbotMsgs.length})</div>`;
+                    chatbotMsgs.forEach((d) => {
+                        const dataHora = new Date(d.created_at).toLocaleString('pt-BR');
+                        html += `
                             <div style="background:#1a1a1a;border-radius:16px;margin-bottom:24px;padding:20px;border-left:4px solid #075E54;" data-type="chatbot">
                                 <div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #333;">
                                     <div style="background:#222;padding:8px 16px;border-radius:12px;"><i class="fas fa-robot" style="color:#075E54;margin-right:8px;"></i><strong style="color:#075E54;">Origem:</strong> <span style="color:#fff;">Chatbot</span></div>
@@ -2100,9 +2127,9 @@
                                     <strong style="color:#9ca3af;"><i class="fas fa-comment"></i> Mensagem:</strong>
                                     <div style="background:#111;padding:12px;border-radius:12px;margin-top:8px;font-size:13px;color:#d1d5db;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;">${d.observacoes ? d.observacoes.replace(/\n/g, '<br>') : 'Nenhuma mensagem'}</div>
                                 </div>
-                            </div>`;
-                        });
-                    }
+                            </div>
+                        `;
+                    });
                 }
 
                 html += `</div></div>`;
