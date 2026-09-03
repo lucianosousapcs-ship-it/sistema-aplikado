@@ -1673,12 +1673,12 @@
         <div class="mobile-construction-container">
             <button class="close-btn-abs" id="closeConstructionPopup">&times;</button>
             <span class="icon-construction"><i class="fas fa-tools"></i></span>
-            <h2>Acesso em Construção</h2>
+            <h2>⚠️ Acesso em Construção</h2>
             <p class="subtitle">Estamos preparando nossa plataforma para dispositivos móveis</p>
             <p class="description">
-                A versão mobile da plataforma Aplikado está em desenvolvimento.
-                Para uma experiência completa e acesso a todas as funcionalidades,
-                <strong>recomendamos utilizar um computador</strong>.
+                A versão mobile da plataforma Aplikado está em desenvolvimento.<br><br>
+                Para uma experiência completa e acesso a todas as funcionalidades,<br>
+                <strong>recomendamos utilizar um computador desktop ou notebook</strong>.
             </p>
             <div class="device-icon">
                 <i class="fas fa-desktop"></i>
@@ -1864,7 +1864,11 @@
         (function() {
             AOS.init({ duration: 800, once: true });
 
-            // ===== POPUP DE CONSTRUÇÃO MOBILE =====
+            // ===== VARIÁVEL PARA VERIFICAR SE É MOBILE =====
+            const isMobile = window.innerWidth <= 768 || 
+                            /Android|iPhone|iPad|iPod|BlackBerry|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+
+            // ===== FUNÇÕES DO POPUP DE CONSTRUÇÃO MOBILE =====
             function showMobileConstruction() {
                 const overlay = document.getElementById('mobileConstructionOverlay');
                 if (overlay) {
@@ -1881,20 +1885,6 @@
                 }
             }
 
-            // Verifica se é dispositivo móvel
-            const isMobile = window.innerWidth <= 768 || 
-                            /Android|iPhone|iPad|iPod|BlackBerry|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
-
-            // Se for mobile, mostra o popup (mas verifica se já foi fechado na sessão)
-            if (isMobile) {
-                const sessionKey = 'aplikado_mobile_construction_closed';
-                const wasClosed = sessionStorage.getItem(sessionKey);
-                if (!wasClosed) {
-                    // Pequeno delay para garantir que a página carregou
-                    setTimeout(showMobileConstruction, 800);
-                }
-            }
-
             // Event listeners para fechar o popup
             const closeBtn = document.getElementById('closeConstructionPopup');
             const closeActionBtn = document.getElementById('btnCloseConstruction');
@@ -1907,7 +1897,7 @@
             if (closeBtn) closeBtn.addEventListener('click', handleCloseConstruction);
             if (closeActionBtn) closeActionBtn.addEventListener('click', handleCloseConstruction);
 
-            // Fechar ao clicar fora do container (apenas no overlay)
+            // Fechar ao clicar fora do container
             const overlay = document.getElementById('mobileConstructionOverlay');
             if (overlay) {
                 overlay.addEventListener('click', function(e) {
@@ -1916,6 +1906,36 @@
                     }
                 });
             }
+
+            // ===== INTERCEPTA O CLICK NO BOTÃO DE LOGIN =====
+            function handleLoginClick(e) {
+                e.preventDefault();
+                
+                // Se for mobile, mostra o popup de construção
+                if (isMobile) {
+                    const sessionKey = 'aplikado_mobile_construction_closed';
+                    const wasClosed = sessionStorage.getItem(sessionKey);
+                    
+                    // Se já foi fechado na sessão, não mostra novamente
+                    if (!wasClosed) {
+                        showMobileConstruction();
+                        return;
+                    }
+                }
+                
+                // Se não for mobile ou já fechou o popup, mostra o modal de login
+                const loginModal = document.getElementById('loginModal');
+                if (loginModal) {
+                    loginModal.style.display = 'flex';
+                    document.getElementById('username').focus();
+                }
+            }
+
+            // Aplica o handler para todos os botões de login
+            const loginBtns = document.querySelectorAll('#openModalBtn, #openModalBtnMobile, .btn-login, .btn-login-mobile');
+            loginBtns.forEach(btn => {
+                btn.addEventListener('click', handleLoginClick);
+            });
 
             // ===== CONFIGURAÇÃO SUPABASE =====
             const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
@@ -2328,24 +2348,6 @@
                 if (e.target === loginModal) {
                     loginModal.style.display = 'none';
                 }
-            });
-
-            // ===== EVENTOS DOS BOTÕES DE LOGIN =====
-            const loginModal = document.getElementById('loginModal');
-            const openLoginBtns = document.querySelectorAll('#openModalBtn, #openModalBtnMobile');
-            const closeLogin = document.getElementById('closeModal');
-
-            openLoginBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    loginModal.style.display = 'flex';
-                    document.getElementById('username').focus();
-                });
-            });
-
-            if (closeLogin) closeLogin.onclick = () => loginModal.style.display = 'none';
-            window.addEventListener('click', (e) => {
-                if (e.target === loginModal) loginModal.style.display = 'none';
             });
 
             // ===== CARROSSEL =====
