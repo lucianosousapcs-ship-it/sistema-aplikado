@@ -1523,6 +1523,119 @@
         .admin-stat-card.log-stat .stat-number { color: #3b82f6; }
         .admin-stat-card.diag-stat .stat-number { color: #ffd000; }
         .admin-stat-card.chat-stat .stat-number { color: #10b981; }
+
+        /* ===== ESTILOS DO POPUP DE CONSTRUÇÃO MOBILE ===== */
+        .mobile-construction-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(8px);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0.3s, opacity 0.3s;
+        }
+        .mobile-construction-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .mobile-construction-container {
+            background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+            border: 2px solid #ffd000;
+            border-radius: 32px;
+            padding: 3rem 2.5rem;
+            max-width: 480px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+        .mobile-construction-overlay.active .mobile-construction-container {
+            transform: scale(1);
+        }
+        .mobile-construction-container .icon-construction {
+            font-size: 4rem;
+            color: #ffd000;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        .mobile-construction-container h2 {
+            color: #ffd000;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-family: 'Poppins', sans-serif;
+        }
+        .mobile-construction-container .subtitle {
+            color: #e5e7eb;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            font-weight: 400;
+        }
+        .mobile-construction-container .description {
+            color: #9ca3af;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 1.8rem;
+        }
+        .mobile-construction-container .btn-close-construction {
+            background: #ffd000;
+            color: #000;
+            border: none;
+            border-radius: 40px;
+            padding: 12px 32px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+        .mobile-construction-container .btn-close-construction:hover {
+            background: #e6b800;
+            transform: scale(1.05);
+        }
+        .mobile-construction-container .device-icon {
+            font-size: 3rem;
+            color: #ffd000;
+            opacity: 0.6;
+            margin-top: 1rem;
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+        }
+        .mobile-construction-container .device-icon i {
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+        .mobile-construction-container .device-icon i.fa-desktop {
+            opacity: 1;
+            color: #ffd000;
+        }
+        .mobile-construction-container .device-icon i.fa-mobile-alt {
+            opacity: 0.3;
+        }
+        .mobile-construction-container .close-btn-abs {
+            position: absolute;
+            top: 12px;
+            right: 18px;
+            background: transparent;
+            border: none;
+            color: #9ca3af;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .mobile-construction-container .close-btn-abs:hover {
+            color: #ffd000;
+        }
     </style>
 </head>
 <body>
@@ -1553,6 +1666,27 @@
         <button id="openDiagnosticBtnMobile" style="background:transparent; border:1px solid #ffd000; border-radius:25px; padding:8px; margin:5px auto; width:fit-content; color:#ffd000; cursor:pointer;"><i class="fas fa-chart-line"></i> Diagnóstico Grátis</button>
         <a href="#" class="btn-login-mobile" id="openModalBtnMobile" style="border:2px solid #ffd000; padding:8px; border-radius:25px; color:#ffd000; text-decoration:none; display:inline-block; width:fit-content; margin:0 auto;">Login</a>
         <div class="mobile-social-icons"><a href="https://www.linkedin.com/company/aplikado/?viewAsMember=true" target="_blank"><i class="fab fa-linkedin-in"></i></a><a href="https://www.instagram.com/aplikadosolucoes/" target="_blank"><i class="fab fa-instagram"></i></a></div>
+    </div>
+
+    <!-- ===== POPUP DE CONSTRUÇÃO MOBILE ===== -->
+    <div id="mobileConstructionOverlay" class="mobile-construction-overlay">
+        <div class="mobile-construction-container">
+            <button class="close-btn-abs" id="closeConstructionPopup">&times;</button>
+            <span class="icon-construction"><i class="fas fa-tools"></i></span>
+            <h2>Acesso em Construção</h2>
+            <p class="subtitle">Estamos preparando nossa plataforma para dispositivos móveis</p>
+            <p class="description">
+                A versão mobile da plataforma Aplikado está em desenvolvimento.
+                Para uma experiência completa e acesso a todas as funcionalidades,
+                <strong>recomendamos utilizar um computador</strong>.
+            </p>
+            <div class="device-icon">
+                <i class="fas fa-desktop"></i>
+                <i class="fas fa-mobile-alt"></i>
+            </div>
+            <br>
+            <button class="btn-close-construction" id="btnCloseConstruction">Entendi, vou acessar no computador</button>
+        </div>
     </div>
 
     <section class="hero">
@@ -1729,6 +1863,59 @@
     <script>
         (function() {
             AOS.init({ duration: 800, once: true });
+
+            // ===== POPUP DE CONSTRUÇÃO MOBILE =====
+            function showMobileConstruction() {
+                const overlay = document.getElementById('mobileConstructionOverlay');
+                if (overlay) {
+                    overlay.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+
+            function hideMobileConstruction() {
+                const overlay = document.getElementById('mobileConstructionOverlay');
+                if (overlay) {
+                    overlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            }
+
+            // Verifica se é dispositivo móvel
+            const isMobile = window.innerWidth <= 768 || 
+                            /Android|iPhone|iPad|iPod|BlackBerry|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+
+            // Se for mobile, mostra o popup (mas verifica se já foi fechado na sessão)
+            if (isMobile) {
+                const sessionKey = 'aplikado_mobile_construction_closed';
+                const wasClosed = sessionStorage.getItem(sessionKey);
+                if (!wasClosed) {
+                    // Pequeno delay para garantir que a página carregou
+                    setTimeout(showMobileConstruction, 800);
+                }
+            }
+
+            // Event listeners para fechar o popup
+            const closeBtn = document.getElementById('closeConstructionPopup');
+            const closeActionBtn = document.getElementById('btnCloseConstruction');
+
+            function handleCloseConstruction() {
+                hideMobileConstruction();
+                sessionStorage.setItem('aplikado_mobile_construction_closed', 'true');
+            }
+
+            if (closeBtn) closeBtn.addEventListener('click', handleCloseConstruction);
+            if (closeActionBtn) closeActionBtn.addEventListener('click', handleCloseConstruction);
+
+            // Fechar ao clicar fora do container (apenas no overlay)
+            const overlay = document.getElementById('mobileConstructionOverlay');
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        handleCloseConstruction();
+                    }
+                });
+            }
 
             // ===== CONFIGURAÇÃO SUPABASE =====
             const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
@@ -2533,7 +2720,7 @@
                 }
             }
 
-            // ===== ADMIN ICON - VERSÃO CORRIGIDA COM ABAS =====
+            // ===== ADMIN ICON =====
             document.getElementById('adminIcon')?.addEventListener('click', async () => {
                 const senha = prompt("Área administrativa - informe a senha:");
                 if (senha !== '123') return;
@@ -2694,9 +2881,7 @@
                         const dataHora = new Date(c.created_at).toLocaleString('pt-BR');
                         const viewedStatus = c.viewed_at ? '👁️ Visto' : '🆕 Novo';
                         const viewedClass = c.viewed_at ? 'notif-status-viewed' : 'notif-status-new';
-                        // Extrair a mensagem do campo observacoes
                         let mensagem = c.observacoes || 'Mensagem sem conteúdo';
-                        // Tentar extrair apenas a mensagem do texto
                         const match = mensagem.match(/Mensagem:\s*"([^"]*)"/);
                         if (match) {
                             mensagem = match[1];
@@ -2743,15 +2928,12 @@
                 const tabs = div.querySelectorAll('.admin-tab');
                 tabs.forEach(tab => {
                     tab.addEventListener('click', function() {
-                        // Remover active de todas as abas
                         tabs.forEach(t => t.classList.remove('active'));
                         this.classList.add('active');
 
-                        // Ocultar todos os conteúdos
                         const tabContents = div.querySelectorAll('.tab-content');
                         tabContents.forEach(tc => tc.classList.remove('active'));
 
-                        // Mostrar o conteúdo da aba selecionada
                         const targetId = this.dataset.tab;
                         const targetContent = div.querySelector(`#${targetId}`);
                         if (targetContent) {
@@ -2766,7 +2948,6 @@
                     window.location.reload();
                 };
 
-                // Fechar com ESC
                 const closeOnEsc = (e) => {
                     if (e.key === 'Escape') {
                         div.remove();
@@ -2863,7 +3044,6 @@
                 });
             }
 
-            // ===== FUNÇÃO CORRIGIDA PARA ENVIAR MENSAGEM DO CHATBOT =====
             async function sendClientMessage() {
                 const message = inputField.value.trim();
                 if (message === '') return;
@@ -2878,7 +3058,6 @@
                     const conteudoObservacao =
                         `[CHATBOT APLIKADO]\nData/Hora: ${dataFormatada}\nMensagem:\n"${message}"\n`;
 
-                    // Inserir no Supabase com os campos corretos
                     const { error } = await supabaseClient.from('diagnosticos_maturidade').insert([{
                         nome_completo: "Chatbot - Contato Digital",
                         empresa: "Chatbot - Lead",
