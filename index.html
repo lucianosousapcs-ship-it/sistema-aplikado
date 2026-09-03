@@ -1550,15 +1550,16 @@
             const clientRedirects = { 'VM': 'CLIENT_VM.html', 'ALF': 'CLIENT_ALF.html', 'FROZEN': 'CLIENT_FROZEN.html',
                 'QNUTRI': 'CLIENT_QNUTRI.html' };
 
-            // ===== FUNÇÃO PARA REGISTRAR LOG DE ACESSO =====
+            // ===== FUNÇÃO PARA REGISTRAR LOG DE ACESSO (CORRIGIDA) =====
             async function registrarLogAcesso(usuario, senha, sucesso, redirect = null) {
                 try {
                     const dataAtual = new Date();
                     const { error } = await supabaseClient.from('logs_acesso').insert([{
-                        usuario: usuario || 'desconhecido',
-                        senha_digitada: senha || 'não informada',
+                        usuario_text: usuario || 'desconhecido',
+                        senha_digitada_text: senha || 'não informada',
                         sucesso: sucesso,
                         redirect_destino: redirect || null,
+                        ip: 'não coletado',
                         user_agent: navigator.userAgent || 'não disponível',
                         viewed_at: null,
                         created_at: dataAtual.toISOString()
@@ -1569,7 +1570,6 @@
                     } else {
                         console.log('Log de acesso registrado com sucesso:', { usuario, sucesso });
                     }
-                    // Atualiza badge após registrar
                     await atualizarBadgeLogs();
                 } catch (e) {
                     console.error('Erro ao registrar log:', e);
@@ -1993,7 +1993,9 @@
                 const diags = diagsResult.data || [];
 
                 console.log(`Logs encontrados: ${logs.length}`);
-                console.log('Primeiros logs:', logs.slice(0, 3));
+                if (logs.length > 0) {
+                    console.log('Primeiros logs:', logs.slice(0, 3));
+                }
 
                 // Marca logs como lidos
                 const naoVistosLogs = logs.filter(l => !l.viewed_at).map(l => l.id);
@@ -2058,12 +2060,12 @@
                         html += `
                             <div class="log-entry ${logClass}" data-type="log">
                                 <div class="log-header">
-                                    <span class="log-user"><i class="fas fa-user"></i> ${log.usuario || 'desconhecido'}</span>
+                                    <span class="log-user"><i class="fas fa-user"></i> ${log.usuario_text || 'desconhecido'}</span>
                                     <span class="log-time"><i class="far fa-clock"></i> ${dataHora}</span>
                                     <span class="log-status ${statusClass}">${statusLabel}</span>
                                 </div>
                                 <div class="log-details">
-                                    <span><i class="fas fa-key"></i> Senha: ${log.senha_digitada || 'não informada'}</span>
+                                    <span><i class="fas fa-key"></i> Senha: ${log.senha_digitada_text || 'não informada'}</span>
                                     ${log.redirect_destino ? `<span style="margin-left:16px;"><i class="fas fa-arrow-right"></i> Redirecionado para: ${log.redirect_destino}</span>` : ''}
                                 </div>
                                 <div class="log-details" style="font-size:0.7rem;color:#6b7280;margin-top:4px;">
