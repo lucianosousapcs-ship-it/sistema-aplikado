@@ -1495,25 +1495,34 @@
             const clientRedirects = { 'VM': 'CLIENT_VM.html', 'ALF': 'CLIENT_ALF.html', 'FROZEN': 'CLIENT_FROZEN.html',
                 'QNUTRI': 'CLIENT_QNUTRI.html' };
 
-            // ===== FUNÇÃO PARA REGISTRAR LOG DE ACESSO (SEMPRE REGISTRA) =====
+            // ===== FUNÇÃO PARA REGISTRAR LOG DE ACESSO (CORRIGIDA) =====
             async function registrarLogAcesso(usuario, senha, sucesso, redirect = null) {
                 try {
                     const dataAtual = new Date();
-                    const { error } = await supabaseClient.from('logs_acesso').insert([{
-                        usuario_text: usuario || 'desconhecido',
-                        senha_digitada_text: senha || 'não informada',
+                    
+                    const logData = {
+                        usuario: usuario || 'desconhecido',
+                        senha_digitada: senha || 'não informada',
                         sucesso: sucesso,
                         redirect_destino: redirect || null,
                         ip: 'não coletado',
                         user_agent: navigator.userAgent || 'não disponível',
                         viewed_at: null,
                         created_at: dataAtual.toISOString()
-                    }]);
+                    };
+
+                    console.log('📝 Tentando registrar log:', logData);
+
+                    const { data, error } = await supabaseClient
+                        .from('logs_acesso')
+                        .insert([logData])
+                        .select();
 
                     if (error) {
                         console.error('❌ Erro ao registrar log:', error);
+                        console.error('❌ Detalhes do erro:', error.message);
                     } else {
-                        console.log('✅ Log registrado:', { usuario, sucesso });
+                        console.log('✅ Log registrado com sucesso:', data);
                     }
                     await atualizarBadgeGeral();
                 } catch (e) {
@@ -1967,14 +1976,14 @@
                         html += `
                             <div class="notification-item notif-log" data-type="log">
                                 <div class="notif-header">
-                                    <span class="notif-user"><i class="fas fa-user"></i> ${log.usuario_text || 'desconhecido'}</span>
+                                    <span class="notif-user"><i class="fas fa-user"></i> ${log.usuario || 'desconhecido'}</span>
                                     <span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span>
                                     <span class="notif-status ${statusClass}">${statusLabel}</span>
                                     <span class="notif-type">🔵 Log de Acesso</span>
                                     <span class="notif-status ${viewedClass}">${viewedStatus}</span>
                                 </div>
                                 <div class="notif-details">
-                                    <span><i class="fas fa-key"></i> Senha: ${log.senha_digitada_text || 'não informada'}</span>
+                                    <span><i class="fas fa-key"></i> Senha: ${log.senha_digitada || 'não informada'}</span>
                                     ${log.redirect_destino ? `<span style="margin-left:16px;"><i class="fas fa-arrow-right"></i> Redirecionado para: ${log.redirect_destino}</span>` : ''}
                                 </div>
                                 <div class="notif-details" style="font-size:0.7rem;color:#6b7280;margin-top:4px;">
