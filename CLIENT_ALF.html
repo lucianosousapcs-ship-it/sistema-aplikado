@@ -1395,16 +1395,17 @@
         });
 
         // ============================================================
-        // SUPABASE CONFIGURAÇÃO
+        // SUPABASE CONFIGURAÇÃO - DESATIVADA PARA TESTE (usa dados mock)
         // ============================================================
-        // Substitua com suas credenciais do Supabase
+        // Para ativar o Supabase, descomente as linhas abaixo e configure suas credenciais
+        /*
         const SUPABASE_URL = 'https://seu-projeto.supabase.co';
         const SUPABASE_ANON_KEY = 'sua-chave-anon-aqui';
-
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        */
 
         // ============================================================
-        // POPUP ESTATÍSTICAS - Buscando dados do Supabase
+        // POPUP ESTATÍSTICAS - Usando dados mockados
         // ============================================================
         const popup = document.getElementById('popupEstatisticas');
         const closePopup = document.getElementById('closePopup');
@@ -1420,66 +1421,32 @@
         const pcCorporativo = document.getElementById('pcCorporativo');
         const vlCorporativo = document.getElementById('vlCorporativo');
 
-        async function carregarEstatisticas() {
+        function carregarEstatisticas() {
             try {
                 // Mostra loading
                 popupLoading.style.display = 'flex';
                 popupContent.style.display = 'none';
 
-                // Busca dados da tabela 'estatisticas' - ajuste para o nome da sua tabela
-                const { data, error } = await supabase
-                    .from('estatisticas')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .single();
+                // Simula um pequeno delay para mostrar o loading
+                setTimeout(() => {
+                    // Usa dados mockados (exemplo da imagem)
+                    periodoMes.textContent = '09/2026';
+                    totalOperacao.textContent = 'R$ 73.109,22';
+                    totalClassificacao.textContent = 'R$ 73.109,22';
+                    pcLojasFisicas.textContent = '11,7%';
+                    vlLojasFisicas.textContent = 'R$ 8.553,78';
+                    pcCorporativo.textContent = '88,3%';
+                    vlCorporativo.textContent = 'R$ 64.555,44';
 
-                if (error) {
-                    console.error('Erro ao buscar dados:', error);
-                    // Usa dados mockados em caso de erro
-                    usarDadosMock();
-                    return;
-                }
-
-                if (data) {
-                    // Atualiza os elementos com os dados do Supabase
-                    periodoMes.textContent = data.periodo || '09/2026';
-                    totalOperacao.textContent = formatarMoeda(data.total_operacao || 73109.22);
-                    totalClassificacao.textContent = formatarMoeda(data.total_classificacao || 73109.22);
-                    pcLojasFisicas.textContent = (data.pc_lojas_fisicas || 11.7).toFixed(1) + '%';
-                    vlLojasFisicas.textContent = formatarMoeda(data.vl_lojas_fisicas || 8553.78);
-                    pcCorporativo.textContent = (data.pc_corporativo || 88.3).toFixed(1) + '%';
-                    vlCorporativo.textContent = formatarMoeda(data.vl_corporativo || 64555.44);
-
-                    // Atualiza tags de operação se vier do banco
-                    if (data.operacoes && Array.isArray(data.operacoes)) {
-                        const tagsContainer = document.getElementById('tagsOperacao');
-                        tagsContainer.innerHTML = data.operacoes.map(op => 
-                            `<span class="popup-tag ${op.destaque ? 'highlight' : ''}">${op.nome}</span>`
-                        ).join('');
-                    }
-                } else {
-                    usarDadosMock();
-                }
+                    popupLoading.style.display = 'none';
+                    popupContent.style.display = 'block';
+                }, 500);
 
             } catch (err) {
                 console.error('Erro:', err);
-                usarDadosMock();
-            } finally {
                 popupLoading.style.display = 'none';
                 popupContent.style.display = 'block';
             }
-        }
-
-        function usarDadosMock() {
-            // Dados mockados (exemplo da imagem)
-            periodoMes.textContent = '09/2026';
-            totalOperacao.textContent = 'R$ 73.109,22';
-            totalClassificacao.textContent = 'R$ 73.109,22';
-            pcLojasFisicas.textContent = '11,7%';
-            vlLojasFisicas.textContent = 'R$ 8.553,78';
-            pcCorporativo.textContent = '88,3%';
-            vlCorporativo.textContent = 'R$ 64.555,44';
         }
 
         function formatarMoeda(valor) {
