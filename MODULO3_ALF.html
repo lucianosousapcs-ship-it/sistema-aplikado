@@ -3777,162 +3777,158 @@ function deletarConta(grupo, idx) {
 // FUNÇÕES DO DRE
 // ============================================================
 async function gerarDREComSupabase() {
-    console.log('🔄 GERANDO DRE A PARTIR DOS DADOS DAS TELAS...');
-    
+    console.log('🔄 [CORREÇÃO FINAL] Gerando DRE com comparação por CÓDIGO...');
     try {
         const corpo = document.getElementById('corpoDRE');
-        if (!corpo) {
-            console.error('❌ corpoDRE não encontrado');
-            return;
+        if (!corpo) return;
+        
+        // Função para extrair o código de um plano (ex: "100 - REC. DINHEIRO" -> "100")
+        function extrairCodigo(planoOuId) {
+            const texto = String(planoOuId || '');
+            return texto.trim().split(' ')[0];
         }
         
-        corpo.innerHTML = '';
-        
-        function getTotalPorPlano(planoNome, mes) {
+        // Função para calcular o total de um plano em um mês
+        function calc(id, mes) {
             let total = 0;
+            const codigoConta = extrairCodigo(id); // Ex: "100", "2"
             
             if (typeof receitasDataReais !== 'undefined') {
                 receitasDataReais.forEach(r => {
-                    const mesReceita = extrairMes(r.data);
-                    if (mesReceita === mes && r.plano && r.plano.includes(planoNome)) {
+                    const codigoPlano = extrairCodigo(r.plano);
+                    // CORREÇÃO: Comparar APENAS pelo código numérico
+                    if (extrairMes(r.data) === mes && codigoPlano === codigoConta) {
                         total += Number(r.valor) || 0;
                     }
                 });
             }
-            
             if (typeof despesasDataReais !== 'undefined') {
                 despesasDataReais.forEach(d => {
-                    const mesDespesa = extrairMes(d.data);
-                    if (mesDespesa === mes && d.plano && d.plano.includes(planoNome)) {
+                    const codigoPlano = extrairCodigo(d.plano);
+                    if (extrairMes(d.data) === mes && codigoPlano === codigoConta) {
                         total += Number(d.valor) || 0;
                     }
                 });
             }
-            
-            if (typeof contasExtrasData !== 'undefined' && contasExtrasData.length > 0) {
+            if (typeof contasExtrasData !== 'undefined') {
                 contasExtrasData.forEach(s => {
-                    const mesSangria = extrairMes(s.dt_pagto);
-                    if (mesSangria === mes && s.plano && s.plano.includes(planoNome)) {
+                    const codigoPlano = extrairCodigo(s.plano);
+                    if (extrairMes(s.dt_pagto) === mes && codigoPlano === codigoConta) {
                         total += Number(s.valor) || 0;
                     }
                 });
             }
-            
             return total;
         }
         
-        // CALCULA RECEITAS
-        const receitasMensais = [];
-        for (let m = 0; m < 12; m++) {
-            let total = 0;
-            if (estruturaDRE && estruturaDRE.receitas) {
-                estruturaDRE.receitas.forEach(r => {
-                    total += getTotalPorPlano(r.nome, m);
-                });
-            }
-            receitasMensais[m] = total;
-        }
-        
-        // CALCULA DESPESAS VARIAVEIS
-        const despesasVarMensais = [];
-        for (let m = 0; m < 12; m++) {
-            let total = 0;
-            if (estruturaDRE && estruturaDRE.custosVariaveis) {
-                estruturaDRE.custosVariaveis.forEach(c => {
-                    total += getTotalPorPlano(c.nome, m);
-                });
-            }
-            despesasVarMensais[m] = -Math.abs(total);
-        }
-        
-        // CALCULA DESPESAS FIXAS
-        const despesasFixMensais = [];
-        for (let m = 0; m < 12; m++) {
-            let total = 0;
-            if (estruturaDRE && estruturaDRE.custosFixos) {
-                estruturaDRE.custosFixos.forEach(c => {
-                    total += getTotalPorPlano(c.nome, m);
-                });
-            }
-            despesasFixMensais[m] = -Math.abs(total);
-        }
-        
-        function addLinha(cod, nome, valores, classe) {
+        // Função para adicionar linha
+        function add(cod, nome, vals, cls) {
             const tr = document.createElement('tr');
-            tr.className = classe || '';
-            
-            let totalAnual = 0;
-            let temMovimentacao = false;
-            
+            tr.className = cls || '';
+            let total = 0;
+            let html = `<td>${cod ? cod + ' - ' + nome : nome}</td>`;
             for (let i = 0; i < 12; i++) {
-                const v = valores[i] || 0;
-                totalAnual += v;
-                if (v !== 0) temMovimentacao = true;
+                const v = vals[i] || 0;
+                total += v;
+                if (v !== 0) tr.classList.add('linha-com-movimentacao');
+                html += `<td class="${v >= 0 ? 'valor-positivo' : 'valor-negativo'}">${formatarMoeda(v)}</td>`;
             }
-            
-            if (temMovimentacao || totalAnual !== 0) {
-                tr.classList.add('linha-com-movimentacao');
-            }
-            
-            let html = `<td style="text-align:left;">${cod ? cod + ' - ' + nome : nome}</td>`;
-            
-            for (let i = 0; i < 12; i++) {
-                const v = valores[i] || 0;
-                const className = v >= 0 ? 'valor-positivo' : 'valor-negativo';
-                html += `<td class="${className}">${formatarMoeda(v)}</td>`;
-            }
-            
-            const classNameTotal = totalAnual >= 0 ? 'valor-positivo' : 'valor-negativo';
-            html += `<td class="${classNameTotal}">${formatarMoeda(totalAnual)}</td>`;
-            
+            html += `<td class="${total >= 0 ? 'valor-positivo' : 'valor-negativo'}">${formatarMoeda(total)}</td>`;
             tr.innerHTML = html;
             corpo.appendChild(tr);
         }
         
-        // MONTAR O DRE
-        addLinha('', 'RECEITAS TOTAIS', receitasMensais, 'dre-group-title');
+        corpo.innerHTML = '';
+        
+        // ============================================
+        // RECEITAS
+        // ============================================
+        const recMensal = [];
+        for (let m = 0; m < 12; m++) {
+            let t = 0;
+            if (estruturaDRE && estruturaDRE.receitas) {
+                estruturaDRE.receitas.forEach(r => {
+                    const id = r.identificador || `${r.cod} - ${r.nome}`;
+                    t += calc(id, m);
+                });
+            }
+            recMensal[m] = t;
+        }
+        add('', 'RECEITAS TOTAIS', recMensal, 'dre-group-title');
+        
         if (estruturaDRE && estruturaDRE.receitas) {
             estruturaDRE.receitas.forEach(r => {
                 const vals = [];
-                for (let m = 0; m < 12; m++) {
-                    vals[m] = getTotalPorPlano(r.nome, m);
-                }
-                addLinha(r.cod, r.nome, vals, 'dre-subgroup');
+                const id = r.identificador || `${r.cod} - ${r.nome}`;
+                for (let m = 0; m < 12; m++) vals[m] = calc(id, m);
+                add(r.cod, r.nome, vals, 'dre-subgroup');
             });
         }
         
-        const lucroBruto = receitasMensais.map((r, i) => r + despesasVarMensais[i]);
-        addLinha('', 'CUSTOS VARIAVEIS', despesasVarMensais, 'dre-group-title');
+        // ============================================
+        // CUSTOS VARIAVEIS
+        // ============================================
+        const dvMensal = [];
+        for (let m = 0; m < 12; m++) {
+            let t = 0;
+            if (estruturaDRE && estruturaDRE.custosVariaveis) {
+                estruturaDRE.custosVariaveis.forEach(c => {
+                    const id = c.identificador || `${c.cod} - ${c.nome}`;
+                    t += calc(id, m);
+                });
+            }
+            dvMensal[m] = -Math.abs(t);
+        }
+        add('', 'CUSTOS VARIAVEIS', dvMensal, 'dre-group-title');
+        
         if (estruturaDRE && estruturaDRE.custosVariaveis) {
             estruturaDRE.custosVariaveis.forEach(c => {
                 const vals = [];
-                for (let m = 0; m < 12; m++) {
-                    vals[m] = -Math.abs(getTotalPorPlano(c.nome, m));
-                }
-                addLinha(c.cod, c.nome, vals, 'dre-subgroup');
+                const id = c.identificador || `${c.cod} - ${c.nome}`;
+                for (let m = 0; m < 12; m++) vals[m] = -Math.abs(calc(id, m));
+                add(c.cod, c.nome, vals, 'dre-subgroup');
             });
         }
         
-        addLinha('', 'LUCRO BRUTO', lucroBruto, 'dre-total-row');
+        const lb = recMensal.map((r, i) => r + dvMensal[i]);
+        add('', 'LUCRO BRUTO', lb, 'dre-total-row');
         
-        addLinha('', 'CUSTOS FIXOS', despesasFixMensais.map(v => -Math.abs(v)), 'dre-group-title');
+        // ============================================
+        // CUSTOS FIXOS
+        // ============================================
+        const dfMensal = [];
+        for (let m = 0; m < 12; m++) {
+            let t = 0;
+            if (estruturaDRE && estruturaDRE.custosFixos) {
+                estruturaDRE.custosFixos.forEach(c => {
+                    const id = c.identificador || `${c.cod} - ${c.nome}`;
+                    t += calc(id, m);
+                });
+            }
+            dfMensal[m] = -Math.abs(t);
+        }
+        add('', 'CUSTOS FIXOS', dfMensal, 'dre-group-title');
+        
         if (estruturaDRE && estruturaDRE.custosFixos) {
             estruturaDRE.custosFixos.forEach(c => {
                 const vals = [];
-                for (let m = 0; m < 12; m++) {
-                    vals[m] = -Math.abs(getTotalPorPlano(c.nome, m));
-                }
-                addLinha(c.cod, c.nome, vals, 'dre-subgroup');
+                const id = c.identificador || `${c.cod} - ${c.nome}`;
+                for (let m = 0; m < 12; m++) vals[m] = -Math.abs(calc(id, m));
+                add(c.cod, c.nome, vals, 'dre-subgroup');
             });
         }
         
-        const resultadoOp = lucroBruto.map((lb, i) => lb + despesasFixMensais[i]);
-        addLinha('', 'RESULTADO OPERACIONAL', resultadoOp, 'dre-total-row');
+        const ro = lb.map((l, i) => l + dfMensal[i]);
+        add('', 'RESULTADO OPERACIONAL', ro, 'dre-total-row');
         
-        // ADICIONA EVENTOS DE CLIQUE PARA O POP-UP
-        adicionarEventosCliqueDRE();
+        // ============================================
+        // EVENTOS DE CLIQUE
+        // ============================================
+        if (typeof adicionarEventosCliqueDRE === 'function') {
+            adicionarEventosCliqueDRE();
+        }
         
-        console.log('✅ DRE GERADO COM SUCESSO!');
+        console.log('✅ [CORREÇÃO FINAL] DRE GERADO COM SUCESSO!');
         
     } catch (error) {
         console.error('❌ Erro ao gerar DRE:', error);
@@ -3942,7 +3938,6 @@ async function gerarDREComSupabase() {
         }
     }
 }
-
 // ============================================================
 // FUNÇÃO ADICIONAR EVENTOS DE CLIQUE NO DRE
 // ============================================================
