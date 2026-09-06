@@ -988,7 +988,6 @@
             color: #f2c200;
         }
 
-        /* Loading state */
         .popup-loading {
             display: flex;
             justify-content: center;
@@ -1461,7 +1460,7 @@
             content.style.display = 'none';
 
             try {
-                // 1. BUSCAR VENDAS (vendas_alf)
+                // Buscar vendas (vendas_alf)
                 const { data: vendas, error: erroVendas } = await supabase
                     .from('vendas_alf')
                     .select('*');
@@ -1469,7 +1468,7 @@
                 if (erroVendas) throw new Error('Erro ao buscar vendas: ' + erroVendas.message);
                 console.log('✅ Vendas carregadas:', vendas?.length || 0, 'registros');
 
-                // 2. BUSCAR DESPESAS (dados_m2)
+                // Buscar despesas (dados_m2)
                 const { data: despesas, error: erroDespesas } = await supabase
                     .from('dados_m2')
                     .select('*');
@@ -1477,7 +1476,7 @@
                 if (erroDespesas) throw new Error('Erro ao buscar despesas: ' + erroDespesas.message);
                 console.log('✅ Despesas carregadas:', despesas?.length || 0, 'registros');
 
-                // 3. BUSCAR LANÇAMENTOS DRE (dre_lancamentos)
+                // Buscar lançamentos DRE (dre_lancamentos)
                 const { data: dreLancamentos, error: erroDre } = await supabase
                     .from('dre_lancamentos')
                     .select('*');
@@ -1485,9 +1484,7 @@
                 if (erroDre) throw new Error('Erro ao buscar lançamentos DRE: ' + erroDre.message);
                 console.log('✅ Lançamentos DRE carregados:', dreLancamentos?.length || 0, 'registros');
 
-                // 4. PROCESSAR DADOS
-
-                // 4.1 Calcular totais de vendas por tipo
+                // Processar dados
                 let totalVendas = 0;
                 let totalLojas = 0;
                 let totalCorporativo = 0;
@@ -1500,26 +1497,24 @@
                         totalVendas += valor;
                         tiposOperacao.add(tipo);
 
-                        // Classificação: lojas físicas vs corporativo
-                        // Ajuste conforme a estrutura real da tabela
-                        if (tipo === 'LOJA' || tipo === 'FISICA' || tipo === 'LOJAS' || tipo === 'VNF') {
+                        // Classificação
+                        const tipoUpper = tipo.toUpperCase();
+                        if (['LOJA', 'FISICA', 'LOJAS', 'VNF', 'PDV'].includes(tipoUpper)) {
                             totalLojas += valor;
-                        } else if (tipo === 'CORP' || tipo === 'CORPORATIVO' || tipo === 'WEB' || tipo === 'VND') {
+                        } else if (['CORP', 'CORPORATIVO', 'WEB', 'VND', 'DIGITAL'].includes(tipoUpper)) {
                             totalCorporativo += valor;
                         } else {
-                            // Fallback: se não identificado, considerar como corporativo
                             totalCorporativo += valor;
                         }
                     });
 
-                    // Se não houver classificação, usar 50/50 como fallback
                     if (totalLojas === 0 && totalCorporativo === 0 && totalVendas > 0) {
                         totalLojas = totalVendas * 0.3;
                         totalCorporativo = totalVendas * 0.7;
                     }
                 }
 
-                // 4.2 Calcular despesas
+                // Calcular despesas
                 let totalDespesas = 0;
                 if (despesas && despesas.length > 0) {
                     despesas.forEach(d => {
@@ -1528,8 +1523,7 @@
                     });
                 }
 
-                // 4.3 Calcular resultado (receita - despesas)
-                // Usar receita do DRE como referência
+                // Calcular receita do DRE
                 let receitaDre = 0;
                 if (dreLancamentos && dreLancamentos.length > 0) {
                     dreLancamentos.forEach(l => {
@@ -1539,30 +1533,21 @@
                     });
                 }
 
-                // Se não houver receita no DRE, usar total de vendas
                 const receitaTotal = receitaDre > 0 ? receitaDre : totalVendas;
                 const resultado = receitaTotal - totalDespesas;
-
-                // 4.4 Calcular percentuais
                 const totalGeral = totalVendas > 0 ? totalVendas : receitaTotal;
                 const pcLojas = totalGeral > 0 ? (totalLojas / totalGeral) * 100 : 0;
                 const pcCorporativo = totalGeral > 0 ? (totalCorporativo / totalGeral) * 100 : 0;
 
-                // 4.5 Obter mês atual para período
                 const hoje = new Date();
                 const mes = String(hoje.getMonth() + 1).padStart(2, '0');
                 const ano = hoje.getFullYear();
                 const periodo = `${mes}/${ano}`;
 
-                // 5. ATUALIZAR POPUP
-
-                // Período
+                // Atualizar popup
                 document.getElementById('periodoMes').textContent = periodo;
-
-                // Total de operações
                 document.getElementById('totalOperacao').textContent = formatarMoeda(totalGeral);
 
-                // Tags de operação
                 const tagsContainer = document.getElementById('tagsOperacao');
                 const tiposArray = Array.from(tiposOperacao).slice(0, 5);
                 if (tiposArray.length === 0) {
@@ -1572,34 +1557,25 @@
                     `<span class="popup-tag ${idx === 0 ? 'highlight' : ''}">${tipo}</span>`
                 ).join('');
 
-                // Classificação de vendas
                 document.getElementById('vlLojasFisicas').textContent = formatarMoeda(totalLojas);
                 document.getElementById('pcLojasFisicas').textContent = pcLojas.toFixed(1) + '%';
                 document.getElementById('vlCorporativo').textContent = formatarMoeda(totalCorporativo);
                 document.getElementById('pcCorporativo').textContent = pcCorporativo.toFixed(1) + '%';
 
-                // Resumo financeiro
                 document.getElementById('receitaTotal').textContent = formatarMoeda(receitaTotal);
                 document.getElementById('despesasTotal').textContent = formatarMoeda(totalDespesas);
                 document.getElementById('resultadoTotal').textContent = formatarMoeda(resultado);
 
-                // Esconder loading e mostrar conteúdo
                 loading.style.display = 'none';
                 content.style.display = 'block';
 
                 console.log('✅ [ALF] Estatísticas carregadas com sucesso!');
-                console.log('📊 Receita:', formatarMoeda(receitaTotal));
-                console.log('📊 Despesas:', formatarMoeda(totalDespesas));
-                console.log('📊 Resultado:', formatarMoeda(resultado));
 
             } catch (error) {
                 console.error('❌ [ALF] Erro ao carregar estatísticas:', error.message);
-
-                // Mostrar erro no popup
                 loading.style.display = 'none';
                 content.style.display = 'block';
 
-                // Preencher com dados de fallback
                 document.getElementById('periodoMes').textContent = 'Erro ao carregar';
                 document.getElementById('totalOperacao').textContent = '--';
                 document.getElementById('vlLojasFisicas').textContent = '--';
@@ -1610,15 +1586,6 @@
                 document.getElementById('despesasTotal').textContent = '--';
                 document.getElementById('resultadoTotal').textContent = '--';
                 document.getElementById('tagsOperacao').innerHTML = '<span class="popup-tag highlight">ERRO</span>';
-
-                // Adicionar mensagem de erro
-                const section = document.querySelector('.popup-section');
-                if (section) {
-                    const errorMsg = document.createElement('div');
-                    errorMsg.style.cssText = 'color: #f87171; font-size: 14px; margin-top: 8px;';
-                    errorMsg.textContent = '⚠️ ' + error.message;
-                    section.appendChild(errorMsg);
-                }
             }
         }
     </script>
