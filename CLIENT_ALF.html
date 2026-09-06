@@ -340,6 +340,12 @@
             gap: 12px;
             border-radius: 10px;
             transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .module-features li:hover {
+            background: rgba(242, 194, 0, 0.04);
+            transform: translateX(4px);
         }
 
         .module-features li a {
@@ -384,17 +390,15 @@
             color: #ffffff;
         }
 
-        .module-features li .link-estatisticas {
-            color: var(--text-secondary);
-            text-decoration: none;
+        .module-features li .estatistica-item {
             display: flex;
             align-items: center;
             gap: 12px;
             flex: 1;
-            cursor: pointer;
+            color: var(--text-secondary);
         }
 
-        .module-features li .link-estatisticas .li-icon {
+        .module-features li .estatistica-item .li-icon {
             color: #f2c200;
             font-size: 10px;
             width: 20px;
@@ -407,24 +411,15 @@
             flex-shrink: 0;
         }
 
-        .module-features li .link-estatisticas .status-icon {
+        .module-features li .estatistica-item .status-icon {
             margin-left: auto;
             font-size: 11px;
             opacity: 0.5;
         }
 
-        .module-features li .link-estatisticas .status-icon.active {
+        .module-features li .estatistica-item .status-icon.active {
             color: #4ade80;
             opacity: 0.7;
-        }
-
-        .module-features li .link-estatisticas:hover {
-            color: #ffffff;
-        }
-
-        .module-features li:hover {
-            background: rgba(242, 194, 0, 0.04);
-            transform: translateX(4px);
         }
 
         .module-footer {
@@ -906,8 +901,8 @@
                             <span class="status-icon active"><i class="fas fa-check-circle"></i></span>
                         </a>
                     </li>
-                    <li id="liEstatisticas">
-                        <span class="link-estatisticas" id="linkEstatisticas">
+                    <li id="estatisticasBtn">
+                        <span class="estatistica-item">
                             <span class="li-icon"><i class="fas fa-chevron-right"></i></span>
                             <span>Estatísticas do Negócio</span>
                             <span class="status-icon active"><i class="fas fa-check-circle"></i></span>
@@ -1012,6 +1007,8 @@
         // ============================================================
         // INICIALIZAÇÃO
         // ============================================================
+        console.log('🚀 Inicializando ALF...');
+
         AOS.init({ duration: 500, once: true, offset: 15 });
 
         // Menu mobile
@@ -1030,29 +1027,52 @@
         });
 
         // ============================================================
-        // LINK ESTATÍSTICAS - Usando o LI diretamente
+        // ESTATÍSTICAS - COM DEBUG
         // ============================================================
-        document.getElementById('liEstatisticas').addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('🔗 Abrindo Estatísticas...');
+        console.log('🔍 Procurando elemento #estatisticasBtn...');
+        const estatisticasBtn = document.getElementById('estatisticasBtn');
+        console.log('📌 Elemento encontrado:', estatisticasBtn);
+
+        if (estatisticasBtn) {
+            console.log('✅ Adicionando event listener ao #estatisticasBtn');
             
-            const popup = document.getElementById('popupEstatisticas');
-            if (popup) {
-                popup.classList.add('active');
-                carregarEstatisticasModuloIII();
-            }
-        });
+            estatisticasBtn.addEventListener('click', function(e) {
+                console.log('🔥 CLICOU EM ESTATÍSTICAS!');
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('📊 Abrindo popup de estatísticas...');
+                const popup = document.getElementById('popupEstatisticas');
+                console.log('📌 Popup encontrado:', popup);
+                
+                if (popup) {
+                    popup.classList.add('active');
+                    console.log('✅ Popup ativado!');
+                    carregarEstatisticasModuloIII();
+                } else {
+                    console.error('❌ Popup não encontrado!');
+                }
+            });
+
+            // Adicionar também evento de mouseover para debug
+            estatisticasBtn.addEventListener('mouseover', function() {
+                console.log('🖱️ Mouse passou por cima de Estatísticas');
+            });
+        } else {
+            console.error('❌ Elemento #estatisticasBtn NÃO encontrado!');
+        }
 
         // ============================================================
         // Fechar popup
         // ============================================================
         document.querySelector('.popup-close').addEventListener('click', function() {
+            console.log('❌ Fechando popup');
             document.getElementById('popupEstatisticas').classList.remove('active');
         });
 
         document.getElementById('popupEstatisticas').addEventListener('click', function(e) {
             if (e.target === this) {
+                console.log('❌ Fechando popup (clique fora)');
                 this.classList.remove('active');
             }
         });
@@ -1061,6 +1081,7 @@
             if (e.key === 'Escape') {
                 const popup = document.getElementById('popupEstatisticas');
                 if (popup && popup.classList.contains('active')) {
+                    console.log('❌ Fechando popup (ESC)');
                     popup.classList.remove('active');
                 }
             }
@@ -1086,29 +1107,34 @@
             content.style.display = 'none';
 
             try {
+                console.log('🔄 Buscando dados do Supabase...');
+                
                 // Buscar vendas
+                console.log('📦 Buscando vendas_alf...');
                 const { data: vendas, error: erroVendas } = await supabase
                     .from('vendas_alf')
                     .select('*');
 
                 if (erroVendas) throw new Error('Erro ao buscar vendas: ' + erroVendas.message);
-                console.log('✅ Vendas:', vendas?.length || 0);
+                console.log('✅ Vendas carregadas:', vendas?.length || 0);
 
                 // Buscar despesas
+                console.log('📦 Buscando dados_m2...');
                 const { data: despesas, error: erroDespesas } = await supabase
                     .from('dados_m2')
                     .select('*');
 
                 if (erroDespesas) throw new Error('Erro ao buscar despesas: ' + erroDespesas.message);
-                console.log('✅ Despesas:', despesas?.length || 0);
+                console.log('✅ Despesas carregadas:', despesas?.length || 0);
 
                 // Buscar DRE
+                console.log('📦 Buscando dre_lancamentos...');
                 const { data: dreLancamentos, error: erroDre } = await supabase
                     .from('dre_lancamentos')
                     .select('*');
 
                 if (erroDre) throw new Error('Erro ao buscar DRE: ' + erroDre.message);
-                console.log('✅ DRE:', dreLancamentos?.length || 0);
+                console.log('✅ DRE carregado:', dreLancamentos?.length || 0);
 
                 // Processar vendas
                 let totalVendas = 0;
@@ -1160,6 +1186,14 @@
                 const hoje = new Date();
                 const periodo = `${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`;
 
+                console.log('📊 Dados processados:');
+                console.log('  - Total Geral:', formatarMoeda(totalGeral));
+                console.log('  - Lojas:', formatarMoeda(totalLojas));
+                console.log('  - Corporativo:', formatarMoeda(totalCorporativo));
+                console.log('  - Receita:', formatarMoeda(receitaTotal));
+                console.log('  - Despesas:', formatarMoeda(totalDespesas));
+                console.log('  - Resultado:', formatarMoeda(resultado));
+
                 // Atualizar popup
                 document.getElementById('periodoMes').textContent = periodo;
                 document.getElementById('totalOperacao').textContent = formatarMoeda(totalGeral);
@@ -1190,14 +1224,15 @@
                 console.error('❌ Erro:', error.message);
                 loading.style.display = 'none';
                 content.style.display = 'block';
-                document.getElementById('totalOperacao').textContent = 'Erro ao carregar';
+                document.getElementById('totalOperacao').textContent = 'Erro ao carregar: ' + error.message;
             }
         }
 
         console.log('🔗 Links do Módulo III:');
         console.log('  ✅ DRE → MODULO3_ALF.html');
         console.log('  ✅ Margens → RATEIO_ALF.html');
-        console.log('  ✅ Estatísticas → Popup (clicar no LI com ID liEstatisticas)');
+        console.log('  ✅ Estatísticas → ID #estatisticasBtn (click)');
+        console.log('📌 Verifique se o elemento existe no DOM');
     </script>
 </body>
 </html>
