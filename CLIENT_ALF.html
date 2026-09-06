@@ -14,6 +14,9 @@
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
         * {
             margin: 0;
@@ -1295,8 +1298,90 @@
         <span class="tooltip-text">Manual do Sistema</span>
     </a>
 
+    <!-- POPUP ESTATÍSTICAS -->
+    <div class="popup-overlay" id="popupEstatisticas">
+        <div class="popup-container">
+            <div class="popup-header">
+                <div class="popup-header-left">
+                    <h2><i class="fas fa-chart-pie"></i> Estatísticas do Negócio</h2>
+                    <span class="popup-period" id="periodoMes">--</span>
+                </div>
+                <button class="popup-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="popup-body">
+                <!-- Loading -->
+                <div class="popup-loading" id="popupLoading">
+                    <div class="spinner"></div>
+                </div>
+
+                <!-- Conteúdo -->
+                <div id="popupContent" style="display: none;">
+                    <div class="popup-section">
+                        <div class="popup-section-title">Total de Operações</div>
+                        <div class="popup-section-value" id="totalOperacao">--</div>
+                        <div class="popup-tags" id="tagsOperacao"></div>
+                    </div>
+
+                    <div class="popup-divider"></div>
+
+                    <div class="popup-section">
+                        <div class="popup-section-title">Classificação de Vendas</div>
+                        <div class="popup-classification">
+                            <div class="popup-classification-item">
+                                <div class="label">Lojas Físicas</div>
+                                <div class="value" id="vlLojasFisicas">--</div>
+                                <div class="percent" id="pcLojasFisicas">--</div>
+                            </div>
+                            <div class="popup-classification-item">
+                                <div class="label">Corporativo</div>
+                                <div class="value" id="vlCorporativo">--</div>
+                                <div class="percent" id="pcCorporativo">--</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="popup-divider"></div>
+
+                    <div class="popup-section">
+                        <div class="popup-section-title">Resumo Financeiro</div>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 120px;">
+                                <div style="font-size: 12px; color: var(--text-muted);">Receita Total</div>
+                                <div style="font-size: 18px; font-weight: 700; color: #4ade80;" id="receitaTotal">--</div>
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <div style="font-size: 12px; color: var(--text-muted);">Despesas</div>
+                                <div style="font-size: 18px; font-weight: 700; color: #f87171;" id="despesasTotal">--</div>
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <div style="font-size: 12px; color: var(--text-muted);">Resultado</div>
+                                <div style="font-size: 18px; font-weight: 700; color: #f2c200;" id="resultadoTotal">--</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="popup-footer-menu">
+                        <span class="menu-item active"><i class="fas fa-chart-bar"></i> Geral</span>
+                        <span class="menu-item"><i class="fas fa-calendar"></i> Mensal</span>
+                        <span class="menu-item"><i class="fas fa-download"></i> Exportar</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
+        // ============================================================
+        // CONFIGURAÇÃO SUPABASE
+        // ============================================================
+        const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ============================================================
+        // INICIALIZAÇÃO
+        // ============================================================
         AOS.init({ duration: 500, once: true, offset: 15 });
 
         const mobileToggle = document.getElementById('mobileMenuToggle');
@@ -1312,32 +1397,27 @@
             window.location.href = 'index.html';
         });
 
-        // Módulo III - Links - OBTENDO INFORMAÇÕES DO MÓDULO III
+        // Módulo III - Links
         document.getElementById('linkDRE').addEventListener('click', function(e) {
             e.preventDefault();
-            // Abre o DRE no Módulo III
             window.location.href = 'MODULO3_ALF.html';
         });
 
         document.getElementById('linkMargens').addEventListener('click', function(e) {
             e.preventDefault();
-            // Abre Análise de Margens e Resultados
             window.location.href = 'RATEIO_ALF.html';
         });
 
-        // Estatísticas do Negócio - ABRE O POPUP COM DADOS DO MÓDULO III
         document.getElementById('linkEstatisticas').addEventListener('click', function(e) {
             e.preventDefault();
-            // Abre o popup de estatísticas consumindo dados do Módulo III
             const popup = document.getElementById('popupEstatisticas');
             if (popup) {
                 popup.classList.add('active');
-                // Carregar dados do Módulo III (via Supabase)
                 carregarEstatisticasModuloIII();
             }
         });
 
-        // Fechar popup com clique no X ou fora
+        // Fechar popup
         document.querySelector('.popup-close').addEventListener('click', function() {
             document.getElementById('popupEstatisticas').classList.remove('active');
         });
@@ -1358,62 +1438,157 @@
         });
 
         // ============================================================
-        // FUNÇÃO PARA CARREGAR ESTATÍSTICAS DO MÓDULO III
+        // FUNÇÕES
         // ============================================================
-        function carregarEstatisticasModuloIII() {
-            console.log('📊 [ALF] Carregando estatísticas do Módulo III...');
-            
-            // Mostrar loading
-            const loading = document.querySelector('.popup-loading');
-            const content = document.getElementById('popupContent');
-            if (loading) loading.style.display = 'flex';
-            if (content) content.style.display = 'none';
-
-            // Tentar carregar do Supabase (via módulo III)
-            // Simular dados vindos do Módulo III
-            setTimeout(() => {
-                // Dados mockados baseados no que seria obtido do Módulo III
-                const dadosEstatisticas = {
-                    periodo: '09/2026',
-                    totalOperacao: 73109.22,
-                    totalClassificacao: 73109.22,
-                    pcLojasFisicas: 11.7,
-                    vlLojasFisicas: 8553.78,
-                    pcCorporativo: 88.3,
-                    vlCorporativo: 64555.44,
-                    operacoes: ['VNF', 'DINHEIRO', 'DÉBITO', 'CRÉDITO', 'AG']
-                };
-
-                // Atualizar elementos do popup
-                document.getElementById('periodoMes').textContent = dadosEstatisticas.periodo;
-                document.getElementById('totalOperacao').textContent = formatarMoeda(dadosEstatisticas.totalOperacao);
-                document.getElementById('totalClassificacao').textContent = formatarMoeda(dadosEstatisticas.totalClassificacao);
-                document.getElementById('pcLojasFisicas').textContent = dadosEstatisticas.pcLojasFisicas.toFixed(1) + '%';
-                document.getElementById('vlLojasFisicas').textContent = formatarMoeda(dadosEstatisticas.vlLojasFisicas);
-                document.getElementById('pcCorporativo').textContent = dadosEstatisticas.pcCorporativo.toFixed(1) + '%';
-                document.getElementById('vlCorporativo').textContent = formatarMoeda(dadosEstatisticas.vlCorporativo);
-
-                // Atualizar tags de operação
-                const tagsContainer = document.getElementById('tagsOperacao');
-                if (tagsContainer) {
-                    tagsContainer.innerHTML = dadosEstatisticas.operacoes.map((op, index) => 
-                        `<span class="popup-tag ${index === 0 ? 'highlight' : ''}">${op}</span>`
-                    ).join('');
-                }
-
-                // Esconder loading e mostrar conteúdo
-                if (loading) loading.style.display = 'none';
-                if (content) content.style.display = 'block';
-                
-                console.log('✅ [ALF] Estatísticas carregadas com sucesso!');
-            }, 500);
-        }
-
         function formatarMoeda(valor) {
-            return 'R$ ' + valor.toLocaleString('pt-BR', {
+            return 'R$ ' + Number(valor).toLocaleString('pt-BR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
+        }
+
+        // ============================================================
+        // FUNÇÃO PARA CARREGAR ESTATÍSTICAS DO SUPABASE
+        // ============================================================
+        async function carregarEstatisticasModuloIII() {
+            console.log('📊 [ALF] Carregando estatísticas do Módulo III via Supabase...');
+
+            const loading = document.getElementById('popupLoading');
+            const content = document.getElementById('popupContent');
+
+            loading.style.display = 'flex';
+            content.style.display = 'none';
+
+            try {
+                // Buscar vendas (vendas_alf)
+                const { data: vendas, error: erroVendas } = await supabase
+                    .from('vendas_alf')
+                    .select('*');
+
+                if (erroVendas) throw new Error('Erro ao buscar vendas: ' + erroVendas.message);
+                console.log('✅ Vendas carregadas:', vendas?.length || 0, 'registros');
+
+                // Buscar despesas (dados_m2)
+                const { data: despesas, error: erroDespesas } = await supabase
+                    .from('dados_m2')
+                    .select('*');
+
+                if (erroDespesas) throw new Error('Erro ao buscar despesas: ' + erroDespesas.message);
+                console.log('✅ Despesas carregadas:', despesas?.length || 0, 'registros');
+
+                // Buscar lançamentos DRE (dre_lancamentos)
+                const { data: dreLancamentos, error: erroDre } = await supabase
+                    .from('dre_lancamentos')
+                    .select('*');
+
+                if (erroDre) throw new Error('Erro ao buscar lançamentos DRE: ' + erroDre.message);
+                console.log('✅ Lançamentos DRE carregados:', dreLancamentos?.length || 0, 'registros');
+
+                // Processar vendas
+                let totalVendas = 0;
+                let totalLojas = 0;
+                let totalCorporativo = 0;
+                const tiposOperacao = new Set();
+
+                if (vendas && vendas.length > 0) {
+                    vendas.forEach(v => {
+                        const valor = parseFloat(v.valor_bruto) || 0;
+                        const tipo = v.tipo || 'OUTROS';
+                        totalVendas += valor;
+                        tiposOperacao.add(tipo);
+
+                        const tipoUpper = tipo.toUpperCase();
+                        if (['LOJA', 'FISICA', 'LOJAS', 'VNF', 'PDV'].includes(tipoUpper)) {
+                            totalLojas += valor;
+                        } else if (['CORP', 'CORPORATIVO', 'WEB', 'VND', 'DIGITAL'].includes(tipoUpper)) {
+                            totalCorporativo += valor;
+                        } else {
+                            totalCorporativo += valor;
+                        }
+                    });
+
+                    if (totalLojas === 0 && totalCorporativo === 0 && totalVendas > 0) {
+                        totalLojas = totalVendas * 0.3;
+                        totalCorporativo = totalVendas * 0.7;
+                    }
+                }
+
+                // Calcular despesas
+                let totalDespesas = 0;
+                if (despesas && despesas.length > 0) {
+                    despesas.forEach(d => {
+                        const valor = parseFloat(d.valor) || parseFloat(d.total) || 0;
+                        totalDespesas += valor;
+                    });
+                }
+
+                // Calcular receita do DRE
+                let receitaDre = 0;
+                if (dreLancamentos && dreLancamentos.length > 0) {
+                    dreLancamentos.forEach(l => {
+                        if (l.tipo === 'RECEITA' || l.tipo === 'RECEITA_LIQUIDA') {
+                            receitaDre += parseFloat(l.valor) || 0;
+                        }
+                    });
+                }
+
+                const receitaTotal = receitaDre > 0 ? receitaDre : totalVendas;
+                const resultado = receitaTotal - totalDespesas;
+                const totalGeral = totalVendas > 0 ? totalVendas : receitaTotal;
+                const pcLojas = totalGeral > 0 ? (totalLojas / totalGeral) * 100 : 0;
+                const pcCorporativo = totalGeral > 0 ? (totalCorporativo / totalGeral) * 100 : 0;
+
+                // Período
+                const hoje = new Date();
+                const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+                const ano = hoje.getFullYear();
+                const periodo = `${mes}/${ano}`;
+
+                // Atualizar popup
+                document.getElementById('periodoMes').textContent = periodo;
+                document.getElementById('totalOperacao').textContent = formatarMoeda(totalGeral);
+
+                const tagsContainer = document.getElementById('tagsOperacao');
+                const tiposArray = Array.from(tiposOperacao).slice(0, 5);
+                if (tiposArray.length === 0) {
+                    tiposArray.push('VNF', 'DINHEIRO', 'DÉBITO', 'CRÉDITO', 'AG');
+                }
+                tagsContainer.innerHTML = tiposArray.map((tipo, idx) =>
+                    `<span class="popup-tag ${idx === 0 ? 'highlight' : ''}">${tipo}</span>`
+                ).join('');
+
+                document.getElementById('vlLojasFisicas').textContent = formatarMoeda(totalLojas);
+                document.getElementById('pcLojasFisicas').textContent = pcLojas.toFixed(1) + '%';
+                document.getElementById('vlCorporativo').textContent = formatarMoeda(totalCorporativo);
+                document.getElementById('pcCorporativo').textContent = pcCorporativo.toFixed(1) + '%';
+                document.getElementById('receitaTotal').textContent = formatarMoeda(receitaTotal);
+                document.getElementById('despesasTotal').textContent = formatarMoeda(totalDespesas);
+                document.getElementById('resultadoTotal').textContent = formatarMoeda(resultado);
+
+                loading.style.display = 'none';
+                content.style.display = 'block';
+
+                console.log('✅ [ALF] Estatísticas carregadas com sucesso!');
+                console.log('📊 Receita:', formatarMoeda(receitaTotal));
+                console.log('📊 Despesas:', formatarMoeda(totalDespesas));
+                console.log('📊 Resultado:', formatarMoeda(resultado));
+
+            } catch (error) {
+                console.error('❌ [ALF] Erro ao carregar estatísticas:', error.message);
+                loading.style.display = 'none';
+                content.style.display = 'block';
+
+                document.getElementById('periodoMes').textContent = 'Erro ao carregar';
+                document.getElementById('totalOperacao').textContent = '--';
+                document.getElementById('vlLojasFisicas').textContent = '--';
+                document.getElementById('pcLojasFisicas').textContent = '--';
+                document.getElementById('vlCorporativo').textContent = '--';
+                document.getElementById('pcCorporativo').textContent = '--';
+                document.getElementById('receitaTotal').textContent = '--';
+                document.getElementById('despesasTotal').textContent = '--';
+                document.getElementById('resultadoTotal').textContent = '--';
+                document.getElementById('tagsOperacao').innerHTML = '<span class="popup-tag highlight">ERRO</span>';
+            }
         }
     </script>
 </body>
