@@ -543,6 +543,7 @@
                 <div class="cards-grid" id="cardsDesempenho">
                     <div class="stat-card"><div class="label">Receita Corporativo</div><div class="value gold" id="dReceitaCorp">R$ 0,00</div></div>
                     <div class="stat-card"><div class="label">Receita Loja Física</div><div class="value gold" id="dReceitaLoja">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Despesa Total</div><div class="value red" id="dDespesaTotal">R$ 0,00</div></div>
                     <div class="stat-card"><div class="label">Resultado Corporativo</div><div class="value" id="dResultCorp">R$ 0,00</div></div>
                     <div class="stat-card"><div class="label">Resultado Loja Física</div><div class="value" id="dResultLoja">R$ 0,00</div></div>
                     <div class="stat-card"><div class="label">Resultado Consolidado</div><div class="value purple" id="dConsolidado">R$ 0,00</div></div>
@@ -737,7 +738,7 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // ============================================================
-    // USUÁRIOS PRÉ-CADASTRADOS (fallback)
+    // USUÁRIOS PRÉ-CADASTRADOS (fallback - APENAS SE NÃO HOUVER CONEXÃO)
     // ============================================================
     const USUARIOS_PRE_CADASTRADOS = [
         { nome: 'LUCIANO SOUSA', usuario: 'LUCIANO SOUSA', senha: '@100*' },
@@ -750,6 +751,7 @@
     let dadosMensais = [];
     let receitasData = [];
     let despesasData = [];
+    let sangriasData = [];
     let rateiosFixos = [];
     let rateiosIndividuais = {};
     let auditoriaLog = [];
@@ -1197,12 +1199,12 @@
     }
 
     // ============================================================
-    // CARREGAR DADOS DO SUPABASE - CORRIGIDO
+    // CARREGAR DADOS DO SUPABASE - COM SANGRIA (DEFINITIVO)
     // ============================================================
     async function carregarDadosReais() {
         console.log('📥 Carregando dados do Supabase...');
         try {
-            // Carregar VENDAS
+            // CARREGAR VENDAS
             let vendas = [];
             let page = 0;
             while (true) {
@@ -1217,7 +1219,7 @@
             }
             console.log(`📊 Vendas: ${vendas.length} registros`);
 
-            // Carregar DESPESAS
+            // CARREGAR DESPESAS
             let despesas = [];
             page = 0;
             while (true) {
@@ -1232,12 +1234,29 @@
             }
             console.log(`📊 Despesas: ${despesas.length} registros`);
 
-            // Carregar PLANO DE CONTAS
+            // CARREGAR PLANO DE CONTAS
             const { data: planos, error: planosError } = await supabaseClient
                 .from('plano_contas')
                 .select('*')
                 .eq('ativo', true);
             if (!planosError) planosContas = planos || [];
+
+            // ============================================================
+            // CARREGAR SANGRIA - CORREÇÃO DEFINITIVA
+            // ============================================================
+            console.log('📊 Carregando contas_extras (sangria)...');
+            let sangrias = [];
+            try {
+                const { data, error } = await supabaseClient
+                    .from('contas_extras')
+                    .select('*');
+                if (error) throw new Error(`Erro em contas_extras: ${error.message}`);
+                sangrias = data || [];
+                console.log(`✅ contas_extras: ${sangrias.length} registros`);
+            } catch (e) {
+                console.warn('⚠️ Erro ao carregar sangrias:', e.message);
+                sangrias = [];
+            }
 
             // ============================================================
             // PROCESSAR RECEITAS
@@ -1248,23 +1267,17 @@
                 const cliente = v['CLIENTE/FORNECEDOR'] || v.cliente || 'N/I';
                 const canal = classificarReceita({ tipo, cliente });
                 
-                // Extrair data da RECEITA
                 let dataStr = v.data || v['DATA'] || v.created_at || null;
                 
                 if (dataStr) {
-                    // Se for timestamp ISO, pega só a data
                     if (typeof dataStr === 'string' && dataStr.includes('T')) {
                         dataStr = dataStr.split('T')[0];
-                    }
-                    // Se for número (timestamp), converte
-                    else if (typeof dataStr === 'number') {
+                    } else if (typeof dataStr === 'number') {
                         const dt = new Date(dataStr);
                         if (!isNaN(dt)) {
                             dataStr = dt.toISOString().split('T')[0];
                         }
-                    }
-                    // Se for string com barra (DD/MM/AAAA)
-                    else if (typeof dataStr === 'string' && dataStr.includes('/')) {
+                    } else if (typeof dataStr === 'string' && dataStr.includes('/')) {
                         const parts = dataStr.split('/');
                         if (parts.length === 3) {
                             dataStr = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
@@ -1272,7 +1285,6 @@
                     }
                 }
                 
-                // Se não tiver data válida, usa data atual
                 if (!dataStr) {
                     const hoje = new Date();
                     dataStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
@@ -1289,28 +1301,21 @@
             });
 
             // ============================================================
-            // PROCESSAR DESPESAS - CORRIGIDO PARA USAR A COLUNA CERTA
+            // PROCESSAR DESPESAS
             // ============================================================
             despesasData = despesas.map(d => {
                 let dataCorreta = null;
                 
-                // 1. PRIORIDADE: usar a coluna 'vencimento' (data de vencimento)
                 if (d.vencimento) {
                     let venc = String(d.vencimento);
-                    
-                    // Se for timestamp ISO
                     if (venc.includes('T')) {
                         venc = venc.split('T')[0];
-                    }
-                    // Se for formato DD/MM/AAAA
-                    else if (venc.includes('/')) {
+                    } else if (venc.includes('/')) {
                         const parts = venc.split('/');
                         if (parts.length === 3) {
                             venc = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
                         }
-                    }
-                    // Se for número (timestamp)
-                    else if (typeof d.vencimento === 'number') {
+                    } else if (typeof d.vencimento === 'number') {
                         const dt = new Date(d.vencimento);
                         if (!isNaN(dt)) {
                             venc = dt.toISOString().split('T')[0];
@@ -1319,7 +1324,6 @@
                     dataCorreta = venc;
                 }
                 
-                // 2. Tentar do campo 'created_at' (data de criação)
                 if (!dataCorreta && d.created_at) {
                     const dt = new Date(d.created_at);
                     if (!isNaN(dt)) {
@@ -1327,7 +1331,6 @@
                     }
                 }
                 
-                // 3. Tentar do campo 'documento' (formato YYYYMMDD)
                 if (!dataCorreta && d.documento && /^\d{8}$/.test(d.documento)) {
                     const ano = d.documento.substring(0, 4);
                     const mes = d.documento.substring(4, 6);
@@ -1335,7 +1338,6 @@
                     dataCorreta = `${ano}-${mes}-${dia}`;
                 }
                 
-                // 4. Fallback: data atual
                 if (!dataCorreta) {
                     const hoje = new Date();
                     dataCorreta = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
@@ -1353,18 +1355,44 @@
                 };
             });
 
-            // Log para debug - mostrar distribuição por mês
-            console.log('📅 Distribuição das DESPESAS por mês:');
-            const mesesDespesas = {};
-            despesasData.forEach(d => {
-                const mes = extrairMes(d.data);
-                if (mes >= 0 && mes <= 11) {
-                    mesesDespesas[mes] = (mesesDespesas[mes] || 0) + 1;
+            // ============================================================
+            // PROCESSAR SANGRIA - CORREÇÃO DEFINITIVA
+            // ============================================================
+            sangriasData = sangrias.map(s => {
+                let dataCorreta = null;
+                
+                if (s.dt_pagto) {
+                    let data = String(s.dt_pagto);
+                    if (data.includes('T')) {
+                        data = data.split('T')[0];
+                    } else if (data.includes('/')) {
+                        const parts = data.split('/');
+                        if (parts.length === 3) {
+                            data = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+                        }
+                    }
+                    dataCorreta = data;
                 }
+                
+                if (!dataCorreta && s.data) {
+                    dataCorreta = String(s.data);
+                }
+                
+                if (!dataCorreta) {
+                    const hoje = new Date();
+                    dataCorreta = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+                }
+                
+                return {
+                    id: s.id || Math.random(),
+                    data: dataCorreta,
+                    valor: Number(s.valor || 0),
+                    fornecedor: s.fornecedor || 'N/I',
+                    operacao: s.operacao || 'Sangria'
+                };
             });
-            for (let i = 0; i < 12; i++) {
-                console.log(`  ${meses[i]}: ${mesesDespesas[i] || 0} registros`);
-            }
+
+            console.log(`📊 Sangrias processadas: ${sangriasData.length} registros`);
 
             await carregarRateiosFixos();
             carregarRateiosIndividuais();
@@ -1374,6 +1402,7 @@
 
             const ops = new Set();
             despesasData.forEach(d => { if (d.operacao) ops.add(d.operacao); });
+            sangriasData.forEach(s => { if (s.operacao) ops.add(s.operacao); });
             planosContas.forEach(p => { if (p.nome) ops.add(p.nome); });
             operacoesUnicas = Array.from(ops).sort();
 
@@ -1383,8 +1412,9 @@
             console.log('✅ Dados carregados com sucesso!');
             console.log(`📊 Receitas: ${receitasData.length} (${receitasData.filter(r => r.canal === 'CORPORATIVO').length} Corp, ${receitasData.filter(r => r.canal === 'LOJA_FISICA').length} Loja)`);
             console.log(`📊 Despesas: ${despesasData.length}`);
+            console.log(`📊 Sangrias: ${sangriasData.length}`);
 
-            return { vendas: vendas.length, despesas: despesas.length };
+            return { vendas: vendas.length, despesas: despesas.length, sangrias: sangrias.length };
         } catch (error) {
             console.error('❌ Erro ao carregar dados:', error);
             mostrarToast('❌ Erro', error.message, '#ef4444');
@@ -1982,6 +2012,7 @@
         }
 
         if (tipo === 'TODOS' || tipo === 'DESPESA') {
+            // Adicionar despesas
             despesasData.forEach(d => {
                 let canalLabel = 'Não definido';
                 let canalClass = 'tag-red';
@@ -2026,6 +2057,18 @@
                     operacao: d.operacao
                 });
             });
+
+            // ✅ ADICIONAR SANGRIA AOS LANÇAMENTOS
+            sangriasData.forEach(s => {
+                items.push({
+                    ...s,
+                    _tipo: 'DESPESA',
+                    _nome: s.fornecedor,
+                    _canal: 'Sangria',
+                    _canalClass: 'tag-red',
+                    operacao: 'Sangria'
+                });
+            });
         }
 
         if (busca) items = items.filter(i => (i._nome || '').toLowerCase().includes(busca) || (i.operacao || '').toLowerCase().includes(busca));
@@ -2046,10 +2089,11 @@
         for (const i of items.slice(0, 200)) {
             const tagClass = i._tipo === 'RECEITA' ? 'tag-green' : 'tag-red';
             const tagText = i._tipo === 'RECEITA' ? 'Receita' : 'Despesa';
+            const isSangria = i.operacao === 'Sangria' || i._canal === 'Sangria';
             html += `
                 <tr>
                     <td>${formatarDataBr(i.data)}</td>
-                    <td><span class="tag ${tagClass}">${tagText}</span></td>
+                    <td><span class="tag ${tagClass}">${tagText}${isSangria ? ' 🔴' : ''}</span></td>
                     <td>${escapeHtml((i._nome || '-').substring(0, 25))}</td>
                     <td>${escapeHtml((i.operacao || '-').substring(0, 30))}</td>
                     <td style="text-align:right;font-weight:600;color:${i._tipo === 'RECEITA' ? 'var(--success)' : 'var(--danger)'};">R$ ${i.valor.toFixed(2)}</td>
@@ -2062,14 +2106,34 @@
     }
 
     // ============================================================
-    // FUNÇÃO PRINCIPAL: CARREGAR DADOS
+    // FUNÇÃO PRINCIPAL: CARREGAR DADOS - COM SANGRIA (DEFINITIVO)
     // ============================================================
     function carregarDados() {
-        console.log('🔄 Calculando resultados...');
-        dadosMensais = criarArrayMeses();
+        console.log('🔄 Carregando dados com SANGRIA...');
+        console.log('📊 Receitas:', receitasData ? receitasData.length : 0);
+        console.log('📊 Despesas:', despesasData ? despesasData.length : 0);
+        console.log('📊 Sangrias:', sangriasData ? sangriasData.length : 0);
+        
+        // INICIALIZA O ARRAY DE MESES
+        dadosMensais = [];
+        for (let i = 0; i < 12; i++) {
+            dadosMensais[i] = {
+                receitaLoja: 0,
+                receitaCorp: 0,
+                despesaLoja: 0,
+                despesaCorp: 0,
+                receita: 0,
+                despesa: 0,
+                resultado: 0,
+                transacoes: 0
+            };
+        }
+        
         rateiosIndividuais = carregarRateiosIndividuais();
 
+        // PROCESSA RECEITAS
         if (receitasData && receitasData.length > 0) {
+            console.log('📊 Processando receitas...');
             receitasData.forEach(r => {
                 const mes = extrairMes(r.data);
                 if (mes >= 0 && mes <= 11 && dadosMensais[mes]) {
@@ -2079,16 +2143,20 @@
                     } else {
                         dadosMensais[mes].receitaLoja += valor;
                     }
+                    dadosMensais[mes].receita += valor;
+                    dadosMensais[mes].transacoes++;
                 }
             });
         }
 
+        // PROCESSA DESPESAS
         if (despesasData && despesasData.length > 0) {
+            console.log('📊 Processando despesas...');
             for (const d of despesasData) {
                 const mes = extrairMes(d.data);
                 if (mes < 0 || mes > 11 || !dadosMensais[mes]) continue;
+                
                 const valor = Number(d.valor || 0);
-
                 let lojaPct = 50, corpPct = 50;
 
                 if (rateiosIndividuais && rateiosIndividuais[d.id]) {
@@ -2106,22 +2174,71 @@
                     }
                 }
 
-                dadosMensais[mes].despesaLoja += (valor * lojaPct) / 100;
-                dadosMensais[mes].despesaCorp += (valor * corpPct) / 100;
+                const despesaLoja = (valor * lojaPct) / 100;
+                const despesaCorp = (valor * corpPct) / 100;
+                
+                dadosMensais[mes].despesaLoja += despesaLoja;
+                dadosMensais[mes].despesaCorp += despesaCorp;
+                dadosMensais[mes].despesa += despesaLoja + despesaCorp;
             }
         }
 
+        // ============================================================
+        // ✅ CORREÇÃO DEFINITIVA: ADICIONAR SANGRIA
+        // ============================================================
+        if (sangriasData && sangriasData.length > 0) {
+            console.log('📊 Processando sangrias...');
+            for (const s of sangriasData) {
+                const mes = extrairMes(s.data);
+                if (mes >= 0 && mes <= 11 && dadosMensais[mes]) {
+                    const valor = Number(s.valor || 0);
+                    // Rateio 50/50 para sangrias também
+                    const sangriaLoja = valor * 0.5;
+                    const sangriaCorp = valor * 0.5;
+                    
+                    dadosMensais[mes].despesaLoja += sangriaLoja;
+                    dadosMensais[mes].despesaCorp += sangriaCorp;
+                    dadosMensais[mes].despesa += sangriaLoja + sangriaCorp;
+                }
+            }
+            console.log('✅ Sangrias processadas!');
+        }
+
+        // CALCULA RESULTADOS
+        for (let i = 0; i < 12; i++) {
+            if (dadosMensais[i]) {
+                dadosMensais[i].resultado = dadosMensais[i].receita - dadosMensais[i].despesa;
+            }
+        }
+
+        // LOG DOS RESULTADOS
+        console.log('📊 RESULTADOS POR MÊS (COM SANGRIA):');
+        let totalDespesa = 0;
+        let totalReceita = 0;
+        for (let i = 0; i < 12; i++) {
+            if (dadosMensais[i] && (dadosMensais[i].receita > 0 || dadosMensais[i].despesa > 0)) {
+                console.log(`  ${meses[i]}: Receita ${formatarMoeda(dadosMensais[i].receita)}, Despesa ${formatarMoeda(dadosMensais[i].despesa)}`);
+                totalReceita += dadosMensais[i].receita;
+                totalDespesa += dadosMensais[i].despesa;
+            }
+        }
+        console.log(`📊 TOTAL RECEITA: ${formatarMoeda(totalReceita)}`);
+        console.log(`📊 TOTAL DESPESA (COM SANGRIA): ${formatarMoeda(totalDespesa)}`);
+
+        // ATUALIZA A TELA
         try {
             atualizarCardsDesempenho();
             atualizarCardsIndicadores();
             atualizarTabelaResultados();
             atualizarGraficos();
             atualizarPeriodo();
-        } catch (e) {}
+        } catch (e) {
+            console.error('❌ Erro ao atualizar tela:', e);
+        }
     }
 
     // ============================================================
-    // ATUALIZAR CARDS
+    // ATUALIZAR CARDS DESEMPENHO
     // ============================================================
     function atualizarCardsDesempenho() {
         let totalReceitaLoja = 0, totalReceitaCorp = 0, totalDespesaLoja = 0, totalDespesaCorp = 0;
@@ -2133,21 +2250,31 @@
                 totalDespesaCorp += dadosMensais[i].despesaCorp || 0;
             }
         }
+        
+        const totalDespesa = totalDespesaLoja + totalDespesaCorp;
+        const totalReceita = totalReceitaLoja + totalReceitaCorp;
         const resCorp = totalReceitaCorp - totalDespesaCorp;
         const resLoja = totalReceitaLoja - totalDespesaLoja;
-        const resCons = (totalReceitaLoja + totalReceitaCorp) - (totalDespesaLoja + totalDespesaCorp);
+        const resCons = totalReceita - totalDespesa;
 
         document.getElementById('dReceitaCorp').textContent = formatarMoeda(totalReceitaCorp);
         document.getElementById('dReceitaLoja').textContent = formatarMoeda(totalReceitaLoja);
+        document.getElementById('dDespesaTotal').textContent = formatarMoeda(totalDespesa);
+        
         const elCorp = document.getElementById('dResultCorp');
         elCorp.textContent = formatarMoeda(resCorp);
         elCorp.className = `value ${resCorp >= 0 ? 'green' : 'red'}`;
+        
         const elLoja = document.getElementById('dResultLoja');
         elLoja.textContent = formatarMoeda(resLoja);
         elLoja.className = `value ${resLoja >= 0 ? 'green' : 'red'}`;
+        
         document.getElementById('dConsolidado').textContent = formatarMoeda(resCons);
     }
 
+    // ============================================================
+    // ATUALIZAR CARDS INDICADORES
+    // ============================================================
     function atualizarCardsIndicadores() {
         let totalReceitaLoja = 0, totalReceitaCorp = 0, totalDespesaLoja = 0, totalDespesaCorp = 0;
         for (let i = 0; i < 12; i++) {
@@ -2183,16 +2310,38 @@
         document.getElementById('iConsMargem').textContent = `${margemCons.toFixed(1)}%`;
     }
 
+    // ============================================================
+    // ATUALIZAR TABELA RESULTADOS
+    // ============================================================
     function atualizarTabelaResultados() {
         const tbody = document.getElementById('tabelaResultados');
         if (!tbody) return;
-        let html = '';
+        
+        const mesesComDados = [];
         for (let i = 0; i < 12; i++) {
-            const d = (dadosMensais && dadosMensais[i]) ? dadosMensais[i] : { receitaLoja: 0, receitaCorp: 0, despesaLoja: 0, despesaCorp: 0 };
+            if (dadosMensais && dadosMensais[i]) {
+                const d = dadosMensais[i];
+                const temDados = d.receitaLoja > 0 || d.receitaCorp > 0 || 
+                                d.despesaLoja > 0 || d.despesaCorp > 0;
+                if (temDados) {
+                    mesesComDados.push(i);
+                }
+            }
+        }
+        
+        if (mesesComDados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">Nenhum dado disponível</td></tr>';
+            return;
+        }
+        
+        let html = '';
+        for (const i of mesesComDados) {
+            const d = dadosMensais[i];
             const resCorp = d.receitaCorp - d.despesaCorp;
             const resLoja = d.receitaLoja - d.despesaLoja;
             const cCorp = resCorp > 0 ? 'green' : (resCorp < 0 ? 'red' : '');
             const cLoja = resLoja > 0 ? 'green' : (resLoja < 0 ? 'red' : '');
+            
             html += `<tr>
                 <td style="font-weight:600;text-align:center;">${meses[i]}</td>
                 <td style="color:var(--purple);text-align:center;">${formatarMoeda(d.receitaCorp)}</td>
