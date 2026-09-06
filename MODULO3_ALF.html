@@ -3777,158 +3777,162 @@ function deletarConta(grupo, idx) {
 // FUNÇÕES DO DRE
 // ============================================================
 async function gerarDREComSupabase() {
-    console.log('🔄 [CORREÇÃO FINAL] Gerando DRE com comparação por CÓDIGO...');
+    console.log('🔄 GERANDO DRE A PARTIR DOS DADOS DAS TELAS...');
+    
     try {
         const corpo = document.getElementById('corpoDRE');
-        if (!corpo) return;
-        
-        // Função para extrair o código de um plano (ex: "100 - REC. DINHEIRO" -> "100")
-        function extrairCodigo(planoOuId) {
-            const texto = String(planoOuId || '');
-            return texto.trim().split(' ')[0];
-        }
-        
-        // Função para calcular o total de um plano em um mês
-        function calc(id, mes) {
-            let total = 0;
-            const codigoConta = extrairCodigo(id); // Ex: "100", "2"
-            
-            if (typeof receitasDataReais !== 'undefined') {
-                receitasDataReais.forEach(r => {
-                    const codigoPlano = extrairCodigo(r.plano);
-                    // CORREÇÃO: Comparar APENAS pelo código numérico
-                    if (extrairMes(r.data) === mes && codigoPlano === codigoConta) {
-                        total += Number(r.valor) || 0;
-                    }
-                });
-            }
-            if (typeof despesasDataReais !== 'undefined') {
-                despesasDataReais.forEach(d => {
-                    const codigoPlano = extrairCodigo(d.plano);
-                    if (extrairMes(d.data) === mes && codigoPlano === codigoConta) {
-                        total += Number(d.valor) || 0;
-                    }
-                });
-            }
-            if (typeof contasExtrasData !== 'undefined') {
-                contasExtrasData.forEach(s => {
-                    const codigoPlano = extrairCodigo(s.plano);
-                    if (extrairMes(s.dt_pagto) === mes && codigoPlano === codigoConta) {
-                        total += Number(s.valor) || 0;
-                    }
-                });
-            }
-            return total;
-        }
-        
-        // Função para adicionar linha
-        function add(cod, nome, vals, cls) {
-            const tr = document.createElement('tr');
-            tr.className = cls || '';
-            let total = 0;
-            let html = `<td>${cod ? cod + ' - ' + nome : nome}</td>`;
-            for (let i = 0; i < 12; i++) {
-                const v = vals[i] || 0;
-                total += v;
-                if (v !== 0) tr.classList.add('linha-com-movimentacao');
-                html += `<td class="${v >= 0 ? 'valor-positivo' : 'valor-negativo'}">${formatarMoeda(v)}</td>`;
-            }
-            html += `<td class="${total >= 0 ? 'valor-positivo' : 'valor-negativo'}">${formatarMoeda(total)}</td>`;
-            tr.innerHTML = html;
-            corpo.appendChild(tr);
+        if (!corpo) {
+            console.error('❌ corpoDRE não encontrado');
+            return;
         }
         
         corpo.innerHTML = '';
         
-        // ============================================
-        // RECEITAS
-        // ============================================
-        const recMensal = [];
-        for (let m = 0; m < 12; m++) {
-            let t = 0;
-            if (estruturaDRE && estruturaDRE.receitas) {
-                estruturaDRE.receitas.forEach(r => {
-                    const id = r.identificador || `${r.cod} - ${r.nome}`;
-                    t += calc(id, m);
+        function getTotalPorPlano(planoNome, mes) {
+            let total = 0;
+            
+            if (typeof receitasDataReais !== 'undefined') {
+                receitasDataReais.forEach(r => {
+                    const mesReceita = extrairMes(r.data);
+                    if (mesReceita === mes && r.plano && r.plano.includes(planoNome)) {
+                        total += Number(r.valor) || 0;
+                    }
                 });
             }
-            recMensal[m] = t;
+            
+            if (typeof despesasDataReais !== 'undefined') {
+                despesasDataReais.forEach(d => {
+                    const mesDespesa = extrairMes(d.data);
+                    if (mesDespesa === mes && d.plano && d.plano.includes(planoNome)) {
+                        total += Number(d.valor) || 0;
+                    }
+                });
+            }
+            
+            if (typeof contasExtrasData !== 'undefined' && contasExtrasData.length > 0) {
+                contasExtrasData.forEach(s => {
+                    const mesSangria = extrairMes(s.dt_pagto);
+                    if (mesSangria === mes && s.plano && s.plano.includes(planoNome)) {
+                        total += Number(s.valor) || 0;
+                    }
+                });
+            }
+            
+            return total;
         }
-        add('', 'RECEITAS TOTAIS', recMensal, 'dre-group-title');
         
+        // CALCULA RECEITAS
+        const receitasMensais = [];
+        for (let m = 0; m < 12; m++) {
+            let total = 0;
+            if (estruturaDRE && estruturaDRE.receitas) {
+                estruturaDRE.receitas.forEach(r => {
+                    total += getTotalPorPlano(r.nome, m);
+                });
+            }
+            receitasMensais[m] = total;
+        }
+        
+        // CALCULA DESPESAS VARIAVEIS
+        const despesasVarMensais = [];
+        for (let m = 0; m < 12; m++) {
+            let total = 0;
+            if (estruturaDRE && estruturaDRE.custosVariaveis) {
+                estruturaDRE.custosVariaveis.forEach(c => {
+                    total += getTotalPorPlano(c.nome, m);
+                });
+            }
+            despesasVarMensais[m] = -Math.abs(total);
+        }
+        
+        // CALCULA DESPESAS FIXAS
+        const despesasFixMensais = [];
+        for (let m = 0; m < 12; m++) {
+            let total = 0;
+            if (estruturaDRE && estruturaDRE.custosFixos) {
+                estruturaDRE.custosFixos.forEach(c => {
+                    total += getTotalPorPlano(c.nome, m);
+                });
+            }
+            despesasFixMensais[m] = -Math.abs(total);
+        }
+        
+        function addLinha(cod, nome, valores, classe) {
+            const tr = document.createElement('tr');
+            tr.className = classe || '';
+            
+            let totalAnual = 0;
+            let temMovimentacao = false;
+            
+            for (let i = 0; i < 12; i++) {
+                const v = valores[i] || 0;
+                totalAnual += v;
+                if (v !== 0) temMovimentacao = true;
+            }
+            
+            if (temMovimentacao || totalAnual !== 0) {
+                tr.classList.add('linha-com-movimentacao');
+            }
+            
+            let html = `<td style="text-align:left;">${cod ? cod + ' - ' + nome : nome}</td>`;
+            
+            for (let i = 0; i < 12; i++) {
+                const v = valores[i] || 0;
+                const className = v >= 0 ? 'valor-positivo' : 'valor-negativo';
+                html += `<td class="${className}">${formatarMoeda(v)}</td>`;
+            }
+            
+            const classNameTotal = totalAnual >= 0 ? 'valor-positivo' : 'valor-negativo';
+            html += `<td class="${classNameTotal}">${formatarMoeda(totalAnual)}</td>`;
+            
+            tr.innerHTML = html;
+            corpo.appendChild(tr);
+        }
+        
+        // MONTAR O DRE
+        addLinha('', 'RECEITAS TOTAIS', receitasMensais, 'dre-group-title');
         if (estruturaDRE && estruturaDRE.receitas) {
             estruturaDRE.receitas.forEach(r => {
                 const vals = [];
-                const id = r.identificador || `${r.cod} - ${r.nome}`;
-                for (let m = 0; m < 12; m++) vals[m] = calc(id, m);
-                add(r.cod, r.nome, vals, 'dre-subgroup');
+                for (let m = 0; m < 12; m++) {
+                    vals[m] = getTotalPorPlano(r.nome, m);
+                }
+                addLinha(r.cod, r.nome, vals, 'dre-subgroup');
             });
         }
         
-        // ============================================
-        // CUSTOS VARIAVEIS
-        // ============================================
-        const dvMensal = [];
-        for (let m = 0; m < 12; m++) {
-            let t = 0;
-            if (estruturaDRE && estruturaDRE.custosVariaveis) {
-                estruturaDRE.custosVariaveis.forEach(c => {
-                    const id = c.identificador || `${c.cod} - ${c.nome}`;
-                    t += calc(id, m);
-                });
-            }
-            dvMensal[m] = -Math.abs(t);
-        }
-        add('', 'CUSTOS VARIAVEIS', dvMensal, 'dre-group-title');
-        
+        const lucroBruto = receitasMensais.map((r, i) => r + despesasVarMensais[i]);
+        addLinha('', 'CUSTOS VARIAVEIS', despesasVarMensais, 'dre-group-title');
         if (estruturaDRE && estruturaDRE.custosVariaveis) {
             estruturaDRE.custosVariaveis.forEach(c => {
                 const vals = [];
-                const id = c.identificador || `${c.cod} - ${c.nome}`;
-                for (let m = 0; m < 12; m++) vals[m] = -Math.abs(calc(id, m));
-                add(c.cod, c.nome, vals, 'dre-subgroup');
+                for (let m = 0; m < 12; m++) {
+                    vals[m] = -Math.abs(getTotalPorPlano(c.nome, m));
+                }
+                addLinha(c.cod, c.nome, vals, 'dre-subgroup');
             });
         }
         
-        const lb = recMensal.map((r, i) => r + dvMensal[i]);
-        add('', 'LUCRO BRUTO', lb, 'dre-total-row');
+        addLinha('', 'LUCRO BRUTO', lucroBruto, 'dre-total-row');
         
-        // ============================================
-        // CUSTOS FIXOS
-        // ============================================
-        const dfMensal = [];
-        for (let m = 0; m < 12; m++) {
-            let t = 0;
-            if (estruturaDRE && estruturaDRE.custosFixos) {
-                estruturaDRE.custosFixos.forEach(c => {
-                    const id = c.identificador || `${c.cod} - ${c.nome}`;
-                    t += calc(id, m);
-                });
-            }
-            dfMensal[m] = -Math.abs(t);
-        }
-        add('', 'CUSTOS FIXOS', dfMensal, 'dre-group-title');
-        
+        addLinha('', 'CUSTOS FIXOS', despesasFixMensais.map(v => -Math.abs(v)), 'dre-group-title');
         if (estruturaDRE && estruturaDRE.custosFixos) {
             estruturaDRE.custosFixos.forEach(c => {
                 const vals = [];
-                const id = c.identificador || `${c.cod} - ${c.nome}`;
-                for (let m = 0; m < 12; m++) vals[m] = -Math.abs(calc(id, m));
-                add(c.cod, c.nome, vals, 'dre-subgroup');
+                for (let m = 0; m < 12; m++) {
+                    vals[m] = -Math.abs(getTotalPorPlano(c.nome, m));
+                }
+                addLinha(c.cod, c.nome, vals, 'dre-subgroup');
             });
         }
         
-        const ro = lb.map((l, i) => l + dfMensal[i]);
-        add('', 'RESULTADO OPERACIONAL', ro, 'dre-total-row');
+        const resultadoOp = lucroBruto.map((lb, i) => lb + despesasFixMensais[i]);
+        addLinha('', 'RESULTADO OPERACIONAL', resultadoOp, 'dre-total-row');
         
-        // ============================================
-        // EVENTOS DE CLIQUE
-        // ============================================
-        if (typeof adicionarEventosCliqueDRE === 'function') {
-            adicionarEventosCliqueDRE();
-        }
+        // ADICIONA EVENTOS DE CLIQUE PARA O POP-UP
+        adicionarEventosCliqueDRE();
         
-        console.log('✅ [CORREÇÃO FINAL] DRE GERADO COM SUCESSO!');
+        console.log('✅ DRE GERADO COM SUCESSO!');
         
     } catch (error) {
         console.error('❌ Erro ao gerar DRE:', error);
@@ -3938,6 +3942,7 @@ async function gerarDREComSupabase() {
         }
     }
 }
+
 // ============================================================
 // FUNÇÃO ADICIONAR EVENTOS DE CLIQUE NO DRE
 // ============================================================
@@ -12035,49 +12040,6 @@ console.log('📌 Para forçar a correção agora, execute: forcarCorrecaoAgora(
     console.log('✅ [RATEIO-DESEMPENHO] Integração completa!');
     console.log('📌 Rateio Fixo agora reflete na aba DESEMPENHO');
 
-})();
-<script>
-// ============================================================
-// CORREÇÃO FINAL - FORÇAR FUNÇÃO CORRETA NO DRE
-// ============================================================
-(function() {
-    console.log('🔄 [CORREÇÃO FINAL] Forçando função correta...');
-
-    // Esperar o sistema carregar
-    let tentativas = 0;
-    const intervalo = setInterval(() => {
-        tentativas++;
-        if (tentativas > 100) {
-            clearInterval(intervalo);
-            console.error('❌ Não foi possível aplicar a correção a tempo.');
-            return;
-        }
-
-        // Verificar se a função correta já existe
-        if (typeof window.gerarDREComSupabase === 'function') {
-            // A função correta já está definida, vamos travá-la para não ser sobrescrita
-            const funcaoCorreta = window.gerarDREComSupabase;
-            
-            // Travar a função no window (impede que scripts posteriores a sobrescrevam)
-            Object.defineProperty(window, 'gerarDREComSupabase', {
-                value: funcaoCorreta,
-                writable: false,      // Impede sobrescrita
-                configurable: false   // Impede remoção
-            });
-
-            // Re-executar a função para garantir que a tela seja renderizada corretamente
-            setTimeout(() => {
-                try {
-                    window.gerarDREComSupabase();
-                    console.log('✅ [CORREÇÃO FINAL] Função correta travada e executada!');
-                } catch (e) {
-                    console.error('❌ Erro ao executar função:', e);
-                }
-            }, 500);
-
-            clearInterval(intervalo);
-        }
-    }, 500);
 })();
 </script>
 </body>
