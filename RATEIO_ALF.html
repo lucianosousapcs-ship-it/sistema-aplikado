@@ -1057,7 +1057,6 @@
     function parseData(d) {
         if (!d) return null;
         
-        // Tenta diferentes formatos de data
         let dt = null;
         
         // Formato DD/MM/AAAA
@@ -1198,11 +1197,12 @@
     }
 
     // ============================================================
-    // CARREGAR DADOS DO SUPABASE
+    // CARREGAR DADOS DO SUPABASE - CORRIGIDO
     // ============================================================
     async function carregarDadosReais() {
         console.log('📥 Carregando dados do Supabase...');
         try {
+            // Carregar VENDAS
             let vendas = [];
             let page = 0;
             while (true) {
@@ -1215,8 +1215,9 @@
                 vendas.push(...data);
                 page++;
             }
-            console.log(` Vendas: ${vendas.length} registros`);
+            console.log(`📊 Vendas: ${vendas.length} registros`);
 
+            // Carregar DESPESAS
             let despesas = [];
             page = 0;
             while (true) {
@@ -1229,47 +1230,50 @@
                 despesas.push(...data);
                 page++;
             }
-            console.log(` Despesas: ${despesas.length} registros`);
+            console.log(`📊 Despesas: ${despesas.length} registros`);
 
+            // Carregar PLANO DE CONTAS
             const { data: planos, error: planosError } = await supabaseClient
                 .from('plano_contas')
                 .select('*')
                 .eq('ativo', true);
             if (!planosError) planosContas = planos || [];
 
-            // Processar RECEITAS
+            // ============================================================
+            // PROCESSAR RECEITAS
+            // ============================================================
             receitasData = vendas.map(v => {
                 const valor = Number(v['TOTAL NOTA'] || v.total || 0);
                 const tipo = v.tipo || v['TIPO'] || 'Balcao';
                 const cliente = v['CLIENTE/FORNECEDOR'] || v.cliente || 'N/I';
                 const canal = classificarReceita({ tipo, cliente });
                 
-                // Extrair data CORRETAMENTE
-                let dataStr = v.data || v['DATA'] || v.created_at || '01/01/2000';
+                // Extrair data da RECEITA
+                let dataStr = v.data || v['DATA'] || v.created_at || null;
                 
-                // Se for timestamp ISO, pega só a data
-                if (dataStr && dataStr.includes('T')) {
-                    dataStr = dataStr.split('T')[0];
-                }
-                
-                // Se for número (timestamp), converte
-                if (typeof dataStr === 'number') {
-                    const dt = new Date(dataStr);
-                    if (!isNaN(dt)) {
-                        dataStr = dt.toISOString().split('T')[0];
+                if (dataStr) {
+                    // Se for timestamp ISO, pega só a data
+                    if (typeof dataStr === 'string' && dataStr.includes('T')) {
+                        dataStr = dataStr.split('T')[0];
+                    }
+                    // Se for número (timestamp), converte
+                    else if (typeof dataStr === 'number') {
+                        const dt = new Date(dataStr);
+                        if (!isNaN(dt)) {
+                            dataStr = dt.toISOString().split('T')[0];
+                        }
+                    }
+                    // Se for string com barra (DD/MM/AAAA)
+                    else if (typeof dataStr === 'string' && dataStr.includes('/')) {
+                        const parts = dataStr.split('/');
+                        if (parts.length === 3) {
+                            dataStr = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+                        }
                     }
                 }
                 
-                // Garantir formato AAAA-MM-DD
-                if (dataStr && dataStr.includes('/')) {
-                    const parts = dataStr.split('/');
-                    if (parts.length === 3) {
-                        dataStr = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-                    }
-                }
-                
-                // Se ainda não tiver data válida, usa hoje
-                if (!dataStr || dataStr === '01/01/2000') {
+                // Se não tiver data válida, usa data atual
+                if (!dataStr) {
                     const hoje = new Date();
                     dataStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
                 }
@@ -1284,48 +1288,51 @@
                 };
             });
 
-            // Processar DESPESAS
+            // ============================================================
+            // PROCESSAR DESPESAS - CORRIGIDO PARA USAR A COLUNA CERTA
+            // ============================================================
             despesasData = despesas.map(d => {
                 let dataCorreta = null;
                 
-                // 1. Tentar do campo 'documento' (formato YYYYMMDD)
-                if (d.documento && /^\d{8}$/.test(d.documento)) {
-                    const ano = d.documento.substring(0, 4);
-                    const mes = d.documento.substring(4, 6);
-                    const dia = d.documento.substring(6, 8);
-                    dataCorreta = `${ano}-${mes}-${dia}`;
-                }
-                
-                // 2. Tentar do campo 'data'
-                if (!dataCorreta && d.data) {
-                    let dStr = String(d.data);
+                // 1. PRIORIDADE: usar a coluna 'vencimento' (data de vencimento)
+                if (d.vencimento) {
+                    let venc = String(d.vencimento);
+                    
                     // Se for timestamp ISO
-                    if (dStr.includes('T')) {
-                        dStr = dStr.split('T')[0];
+                    if (venc.includes('T')) {
+                        venc = venc.split('T')[0];
                     }
                     // Se for formato DD/MM/AAAA
-                    if (dStr.includes('/')) {
-                        const parts = dStr.split('/');
+                    else if (venc.includes('/')) {
+                        const parts = venc.split('/');
                         if (parts.length === 3) {
-                            dStr = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+                            venc = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
                         }
                     }
                     // Se for número (timestamp)
-                    if (typeof d.data === 'number') {
-                        const dt = new Date(d.data);
+                    else if (typeof d.vencimento === 'number') {
+                        const dt = new Date(d.vencimento);
                         if (!isNaN(dt)) {
-                            dStr = dt.toISOString().split('T')[0];
+                            venc = dt.toISOString().split('T')[0];
                         }
                     }
-                    dataCorreta = dStr;
+                    dataCorreta = venc;
                 }
                 
-                // 3. Tentar do campo 'created_at'
+                // 2. Tentar do campo 'created_at' (data de criação)
                 if (!dataCorreta && d.created_at) {
                     const dt = new Date(d.created_at);
                     if (!isNaN(dt)) {
                         dataCorreta = dt.toISOString().split('T')[0];
                     }
+                }
+                
+                // 3. Tentar do campo 'documento' (formato YYYYMMDD)
+                if (!dataCorreta && d.documento && /^\d{8}$/.test(d.documento)) {
+                    const ano = d.documento.substring(0, 4);
+                    const mes = d.documento.substring(4, 6);
+                    const dia = d.documento.substring(6, 8);
+                    dataCorreta = `${ano}-${mes}-${dia}`;
                 }
                 
                 // 4. Fallback: data atual
@@ -1340,9 +1347,24 @@
                     valor: Number(d.valor || 0),
                     fornecedor: d.fornecedor || 'N/I',
                     operacao: d.operacao || d.documento || 'DESPESA',
-                    plano_conta_id: d.plano_conta_id || null
+                    plano_conta_id: d.plano_conta_id || null,
+                    vencimento: d.vencimento,
+                    documento: d.documento
                 };
             });
+
+            // Log para debug - mostrar distribuição por mês
+            console.log('📅 Distribuição das DESPESAS por mês:');
+            const mesesDespesas = {};
+            despesasData.forEach(d => {
+                const mes = extrairMes(d.data);
+                if (mes >= 0 && mes <= 11) {
+                    mesesDespesas[mes] = (mesesDespesas[mes] || 0) + 1;
+                }
+            });
+            for (let i = 0; i < 12; i++) {
+                console.log(`  ${meses[i]}: ${mesesDespesas[i] || 0} registros`);
+            }
 
             await carregarRateiosFixos();
             carregarRateiosIndividuais();
@@ -1359,7 +1381,8 @@
             dadosCarregados = true;
 
             console.log('✅ Dados carregados com sucesso!');
-            console.log(` Receitas: ${receitasData.length} (${receitasData.filter(r => r.canal === 'CORPORATIVO').length} Corp, ${receitasData.filter(r => r.canal === 'LOJA_FISICA').length} Loja)`);
+            console.log(`📊 Receitas: ${receitasData.length} (${receitasData.filter(r => r.canal === 'CORPORATIVO').length} Corp, ${receitasData.filter(r => r.canal === 'LOJA_FISICA').length} Loja)`);
+            console.log(`📊 Despesas: ${despesasData.length}`);
 
             return { vendas: vendas.length, despesas: despesas.length };
         } catch (error) {
@@ -2042,7 +2065,7 @@
     // FUNÇÃO PRINCIPAL: CARREGAR DADOS
     // ============================================================
     function carregarDados() {
-        console.log(' Calculando resultados...');
+        console.log('🔄 Calculando resultados...');
         dadosMensais = criarArrayMeses();
         rateiosIndividuais = carregarRateiosIndividuais();
 
@@ -2439,7 +2462,7 @@
     // INICIALIZAÇÃO
     // ============================================================
     document.addEventListener('DOMContentLoaded', async function() {
-        console.log(' Inicializando sistema...');
+        console.log('🚀 Inicializando sistema...');
 
         document.getElementById('loginOverlay').classList.remove('hidden');
         document.getElementById('loginForm').style.display = 'block';
@@ -2454,7 +2477,7 @@
             await carregarRateiosFixos();
             carregarDados();
             carregarLancamentos();
-            console.log(' Dados carregados em background');
+            console.log('✅ Dados carregados em background');
         } catch (e) {
             console.error('❌ Erro ao carregar dados:', e);
         }
