@@ -14,6 +14,9 @@
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
         * {
             margin: 0;
@@ -809,10 +812,18 @@
         .popup-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             margin-bottom: 20px;
             padding-bottom: 12px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .popup-header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .popup-header h2 {
@@ -836,6 +847,7 @@
             padding: 4px 14px;
             border-radius: 20px;
             border: 1px solid rgba(255, 255, 255, 0.04);
+            display: inline-block;
         }
 
         .popup-close {
@@ -851,6 +863,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
         .popup-close:hover {
@@ -973,6 +986,28 @@
 
         .popup-footer-menu .menu-item.active {
             color: #f2c200;
+        }
+
+        /* Loading state */
+        .popup-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 30px 0;
+        }
+
+        .popup-loading .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(242, 194, 0, 0.10);
+            border-top: 3px solid #f2c200;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         @keyframes fadeIn {
@@ -1261,57 +1296,65 @@
     <div class="popup-overlay" id="popupEstatisticas">
         <div class="popup-container">
             <div class="popup-header">
-                <div>
+                <div class="popup-header-left">
                     <h2><i class="fas fa-chart-pie"></i> ESTATÍSTICAS</h2>
-                    <span class="popup-period"><i class="far fa-calendar-alt"></i> PERÍODO / MÊS 09/2026</span>
+                    <span class="popup-period"><i class="far fa-calendar-alt"></i> PERÍODO / MÊS <span id="periodoMes">09/2026</span></span>
                 </div>
                 <button class="popup-close" id="closePopup"><i class="fas fa-times"></i></button>
             </div>
 
-            <div class="popup-body">
-                <!-- Participação por Operação -->
-                <div class="popup-section">
-                    <div class="popup-section-title">PARTICIPAÇÃO POR OPERAÇÃO</div>
-                    <div class="popup-section-value">R$ 73.109,22</div>
-                    <div class="popup-tags">
-                        <span class="popup-tag highlight">VNF</span>
-                        <span class="popup-tag">DINHEIRO</span>
-                        <span class="popup-tag">DÉBITO</span>
-                        <span class="popup-tag">CRÉDITO</span>
-                        <span class="popup-tag">AG</span>
-                    </div>
+            <div class="popup-body" id="popupBody">
+                <!-- Loading -->
+                <div class="popup-loading" id="popupLoading">
+                    <div class="spinner"></div>
                 </div>
 
-                <div class="popup-divider"></div>
-
-                <!-- Participação por Classificação -->
-                <div class="popup-section">
-                    <div class="popup-section-title">PARTICIPAÇÃO POR CLASSIFICAÇÃO</div>
-                    <div class="popup-section-value">R$ 73.109,22</div>
-                    <div class="popup-classification">
-                        <div class="popup-classification-item">
-                            <div class="label">Lojas Físicas</div>
-                            <div class="value">11,7%</div>
-                            <div class="percent">R$ 8.553,78</div>
-                        </div>
-                        <div class="popup-classification-item">
-                            <div class="label">Corporativo</div>
-                            <div class="value">88,3%</div>
-                            <div class="percent">R$ 64.555,44</div>
+                <!-- Conteúdo -->
+                <div id="popupContent" style="display: none;">
+                    <!-- Participação por Operação -->
+                    <div class="popup-section">
+                        <div class="popup-section-title">PARTICIPAÇÃO POR OPERAÇÃO</div>
+                        <div class="popup-section-value" id="totalOperacao">R$ 73.109,22</div>
+                        <div class="popup-tags" id="tagsOperacao">
+                            <span class="popup-tag highlight">VNF</span>
+                            <span class="popup-tag">DINHEIRO</span>
+                            <span class="popup-tag">DÉBITO</span>
+                            <span class="popup-tag">CRÉDITO</span>
+                            <span class="popup-tag">AG</span>
                         </div>
                     </div>
-                </div>
 
-                <div class="popup-divider"></div>
+                    <div class="popup-divider"></div>
 
-                <!-- Menu inferior -->
-                <div class="popup-footer-menu">
-                    <span class="menu-item active">LANÇAMENTOS</span>
-                    <span class="menu-item">RECEITAS</span>
-                    <span class="menu-item">DESPESAS</span>
-                    <span class="menu-item">FECHAMENTOS</span>
-                    <span class="menu-item">RESULTADOS</span>
-                    <span class="menu-item active">ESTATÍSTICAS</span>
+                    <!-- Participação por Classificação -->
+                    <div class="popup-section">
+                        <div class="popup-section-title">PARTICIPAÇÃO POR CLASSIFICAÇÃO</div>
+                        <div class="popup-section-value" id="totalClassificacao">R$ 73.109,22</div>
+                        <div class="popup-classification" id="classificationItems">
+                            <div class="popup-classification-item">
+                                <div class="label">Lojas Físicas</div>
+                                <div class="value" id="pcLojasFisicas">11,7%</div>
+                                <div class="percent" id="vlLojasFisicas">R$ 8.553,78</div>
+                            </div>
+                            <div class="popup-classification-item">
+                                <div class="label">Corporativo</div>
+                                <div class="value" id="pcCorporativo">88,3%</div>
+                                <div class="percent" id="vlCorporativo">R$ 64.555,44</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="popup-divider"></div>
+
+                    <!-- Menu inferior -->
+                    <div class="popup-footer-menu">
+                        <span class="menu-item active">LANÇAMENTOS</span>
+                        <span class="menu-item">RECEITAS</span>
+                        <span class="menu-item">DESPESAS</span>
+                        <span class="menu-item">FECHAMENTOS</span>
+                        <span class="menu-item">RESULTADOS</span>
+                        <span class="menu-item active">ESTATÍSTICAS</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1351,15 +1394,109 @@
             window.location.href = 'RATEIO_ALF.html';
         });
 
-        // POPUP Estatísticas
+        // ============================================================
+        // SUPABASE CONFIGURAÇÃO
+        // ============================================================
+        // Substitua com suas credenciais do Supabase
+        const SUPABASE_URL = 'https://seu-projeto.supabase.co';
+        const SUPABASE_ANON_KEY = 'sua-chave-anon-aqui';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ============================================================
+        // POPUP ESTATÍSTICAS - Buscando dados do Supabase
+        // ============================================================
         const popup = document.getElementById('popupEstatisticas');
         const closePopup = document.getElementById('closePopup');
+        const popupLoading = document.getElementById('popupLoading');
+        const popupContent = document.getElementById('popupContent');
 
+        // Elementos para atualizar
+        const periodoMes = document.getElementById('periodoMes');
+        const totalOperacao = document.getElementById('totalOperacao');
+        const totalClassificacao = document.getElementById('totalClassificacao');
+        const pcLojasFisicas = document.getElementById('pcLojasFisicas');
+        const vlLojasFisicas = document.getElementById('vlLojasFisicas');
+        const pcCorporativo = document.getElementById('pcCorporativo');
+        const vlCorporativo = document.getElementById('vlCorporativo');
+
+        async function carregarEstatisticas() {
+            try {
+                // Mostra loading
+                popupLoading.style.display = 'flex';
+                popupContent.style.display = 'none';
+
+                // Busca dados da tabela 'estatisticas' - ajuste para o nome da sua tabela
+                const { data, error } = await supabase
+                    .from('estatisticas')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single();
+
+                if (error) {
+                    console.error('Erro ao buscar dados:', error);
+                    // Usa dados mockados em caso de erro
+                    usarDadosMock();
+                    return;
+                }
+
+                if (data) {
+                    // Atualiza os elementos com os dados do Supabase
+                    periodoMes.textContent = data.periodo || '09/2026';
+                    totalOperacao.textContent = formatarMoeda(data.total_operacao || 73109.22);
+                    totalClassificacao.textContent = formatarMoeda(data.total_classificacao || 73109.22);
+                    pcLojasFisicas.textContent = (data.pc_lojas_fisicas || 11.7).toFixed(1) + '%';
+                    vlLojasFisicas.textContent = formatarMoeda(data.vl_lojas_fisicas || 8553.78);
+                    pcCorporativo.textContent = (data.pc_corporativo || 88.3).toFixed(1) + '%';
+                    vlCorporativo.textContent = formatarMoeda(data.vl_corporativo || 64555.44);
+
+                    // Atualiza tags de operação se vier do banco
+                    if (data.operacoes && Array.isArray(data.operacoes)) {
+                        const tagsContainer = document.getElementById('tagsOperacao');
+                        tagsContainer.innerHTML = data.operacoes.map(op => 
+                            `<span class="popup-tag ${op.destaque ? 'highlight' : ''}">${op.nome}</span>`
+                        ).join('');
+                    }
+                } else {
+                    usarDadosMock();
+                }
+
+            } catch (err) {
+                console.error('Erro:', err);
+                usarDadosMock();
+            } finally {
+                popupLoading.style.display = 'none';
+                popupContent.style.display = 'block';
+            }
+        }
+
+        function usarDadosMock() {
+            // Dados mockados (exemplo da imagem)
+            periodoMes.textContent = '09/2026';
+            totalOperacao.textContent = 'R$ 73.109,22';
+            totalClassificacao.textContent = 'R$ 73.109,22';
+            pcLojasFisicas.textContent = '11,7%';
+            vlLojasFisicas.textContent = 'R$ 8.553,78';
+            pcCorporativo.textContent = '88,3%';
+            vlCorporativo.textContent = 'R$ 64.555,44';
+        }
+
+        function formatarMoeda(valor) {
+            return 'R$ ' + valor.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Abrir popup
         document.getElementById('linkEstatisticas').addEventListener('click', function(e) {
             e.preventDefault();
             popup.classList.add('active');
+            carregarEstatisticas();
         });
 
+        // Fechar popup
         closePopup.addEventListener('click', function() {
             popup.classList.remove('active');
         });
