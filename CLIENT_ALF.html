@@ -339,14 +339,11 @@
             align-items: center;
             gap: 12px;
             border-radius: 10px;
-            cursor: default;
-        }
-
-        .module-features li.clickable {
             cursor: pointer;
+            transition: all 0.3s;
         }
 
-        .module-features li.clickable:hover {
+        .module-features li:hover {
             background: rgba(242, 194, 0, 0.04);
             transform: translateX(4px);
         }
@@ -844,17 +841,17 @@
                 <div class="module-divider"></div>
 
                 <div class="module-features">
-                    <li class="clickable" id="linkDRE">
+                    <li id="linkDRE">
                         <span class="li-icon"><i class="fas fa-chevron-right"></i></span>
                         <span>Demonstrativo de resultados (DRE)</span>
                         <span class="status-icon active"><i class="fas fa-check-circle"></i></span>
                     </li>
-                    <li class="clickable" id="linkMargens">
+                    <li id="linkMargens">
                         <span class="li-icon"><i class="fas fa-chevron-right"></i></span>
                         <span>Análise de margens e Resultados</span>
                         <span class="status-icon active"><i class="fas fa-check-circle"></i></span>
                     </li>
-                    <li class="clickable" id="linkEstatisticas">
+                    <li id="linkEstatisticas">
                         <span class="li-icon"><i class="fas fa-chevron-right"></i></span>
                         <span>Estatísticas do Negócio</span>
                         <span class="status-icon active"><i class="fas fa-check-circle"></i></span>
@@ -960,6 +957,7 @@
         // ============================================================
         AOS.init({ duration: 500, once: true, offset: 15 });
 
+        // Menu mobile
         const mobileToggle = document.getElementById('mobileMenuToggle');
         const navMobile = document.getElementById('navMobile');
         mobileToggle.addEventListener('click', () => navMobile.classList.toggle('active'));
@@ -968,23 +966,33 @@
             link.addEventListener('click', () => navMobile.classList.remove('active'));
         });
 
+        // Botão Sair
         document.getElementById('btnSair').addEventListener('click', function(e) {
             e.preventDefault();
             window.location.href = 'index.html';
         });
 
+        // ============================================================
+        // LINKS DO MÓDULO III - CORRIGIDOS
+        // ============================================================
+        // Link DRE
         document.getElementById('linkDRE').addEventListener('click', function(e) {
             e.preventDefault();
+            console.log('🔗 Abrindo DRE...');
             window.location.href = 'MODULO3_ALF.html';
         });
 
+        // Link Margens
         document.getElementById('linkMargens').addEventListener('click', function(e) {
             e.preventDefault();
+            console.log('🔗 Abrindo Análise de Margens...');
             window.location.href = 'RATEIO_ALF.html';
         });
 
+        // Link Estatísticas
         document.getElementById('linkEstatisticas').addEventListener('click', function(e) {
             e.preventDefault();
+            console.log('🔗 Abrindo Estatísticas...');
             const popup = document.getElementById('popupEstatisticas');
             if (popup) {
                 popup.classList.add('active');
@@ -992,6 +1000,7 @@
             }
         });
 
+        // Fechar popup
         document.querySelector('.popup-close').addEventListener('click', function() {
             document.getElementById('popupEstatisticas').classList.remove('active');
         });
@@ -1011,6 +1020,9 @@
             }
         });
 
+        // ============================================================
+        // FUNÇÕES
+        // ============================================================
         function formatarMoeda(valor) {
             return 'R$ ' + Number(valor).toLocaleString('pt-BR', {
                 minimumFractionDigits: 2,
@@ -1028,6 +1040,7 @@
             content.style.display = 'none';
 
             try {
+                // Buscar vendas
                 const { data: vendas, error: erroVendas } = await supabase
                     .from('vendas_alf')
                     .select('*');
@@ -1035,6 +1048,7 @@
                 if (erroVendas) throw new Error('Erro ao buscar vendas: ' + erroVendas.message);
                 console.log('✅ Vendas:', vendas?.length || 0);
 
+                // Buscar despesas
                 const { data: despesas, error: erroDespesas } = await supabase
                     .from('dados_m2')
                     .select('*');
@@ -1042,6 +1056,7 @@
                 if (erroDespesas) throw new Error('Erro ao buscar despesas: ' + erroDespesas.message);
                 console.log('✅ Despesas:', despesas?.length || 0);
 
+                // Buscar DRE
                 const { data: dreLancamentos, error: erroDre } = await supabase
                     .from('dre_lancamentos')
                     .select('*');
@@ -1049,6 +1064,7 @@
                 if (erroDre) throw new Error('Erro ao buscar DRE: ' + erroDre.message);
                 console.log('✅ DRE:', dreLancamentos?.length || 0);
 
+                // Processar vendas
                 let totalVendas = 0;
                 let totalLojas = 0;
                 let totalCorporativo = 0;
@@ -1069,6 +1085,7 @@
                     });
                 }
 
+                // Processar despesas
                 let totalDespesas = 0;
                 if (despesas && despesas.length > 0) {
                     despesas.forEach(d => {
@@ -1076,6 +1093,7 @@
                     });
                 }
 
+                // Processar DRE
                 let receitaDre = 0;
                 if (dreLancamentos && dreLancamentos.length > 0) {
                     dreLancamentos.forEach(l => {
@@ -1085,15 +1103,18 @@
                     });
                 }
 
+                // Calcular totais
                 const receitaTotal = receitaDre > 0 ? receitaDre : totalVendas;
                 const resultado = receitaTotal - totalDespesas;
                 const totalGeral = totalVendas > 0 ? totalVendas : receitaTotal;
                 const pcLojas = totalGeral > 0 ? (totalLojas / totalGeral) * 100 : 0;
                 const pcCorporativo = totalGeral > 0 ? (totalCorporativo / totalGeral) * 100 : 0;
 
+                // Período
                 const hoje = new Date();
                 const periodo = `${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`;
 
+                // Atualizar popup
                 document.getElementById('periodoMes').textContent = periodo;
                 document.getElementById('totalOperacao').textContent = formatarMoeda(totalGeral);
 
@@ -1117,6 +1138,8 @@
                 loading.style.display = 'none';
                 content.style.display = 'block';
 
+                console.log('✅ Estatísticas carregadas com sucesso!');
+
             } catch (error) {
                 console.error('❌ Erro:', error.message);
                 loading.style.display = 'none';
@@ -1124,6 +1147,14 @@
                 document.getElementById('totalOperacao').textContent = 'Erro ao carregar';
             }
         }
+
+        // ============================================================
+        // VERIFICAR SE OS LINDS ESTÃO FUNCIONANDO
+        // ============================================================
+        console.log('🔗 Links do Módulo III configurados:');
+        console.log('  - DRE: MODULO3_ALF.html');
+        console.log('  - Margens: RATEIO_ALF.html');
+        console.log('  - Estatísticas: Popup');
     </script>
 </body>
 </html>
