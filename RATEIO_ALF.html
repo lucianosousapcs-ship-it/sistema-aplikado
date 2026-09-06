@@ -410,6 +410,68 @@
             background: var(--danger);
             color: #fff;
         }
+
+        /* Popup de Logout */
+        .logout-popup-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            z-index: 999999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .logout-popup-overlay.active {
+            display: flex;
+        }
+        .logout-popup {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: var(--radius);
+            padding: 32px 36px;
+            width: 90%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+        .logout-popup h2 {
+            color: var(--gold);
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+        .logout-popup p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .logout-popup .logout-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .logout-popup .logout-buttons .btn {
+            padding: 10px 28px;
+            font-size: 13px;
+            min-width: 100px;
+            justify-content: center;
+        }
+        .logout-popup .btn-danger-outline {
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+        .logout-popup .btn-danger-outline:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+        .logout-popup .btn-gold {
+            background: var(--gold);
+            color: #07090e;
+        }
+        .logout-popup .btn-gold:hover {
+            background: var(--gold-dark);
+        }
     </style>
 </head>
 <body>
@@ -470,6 +532,20 @@
         </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- LOGOUT POPUP -->
+    <!-- ============================================================ -->
+    <div id="logoutPopup" class="logout-popup-overlay">
+        <div class="logout-popup">
+            <h2>🔒 Sair do Sistema</h2>
+            <p>Tem certeza que deseja sair?</p>
+            <div class="logout-buttons">
+                <button class="btn btn-danger-outline" onclick="confirmarLogout()">Sair</button>
+                <button class="btn btn-gold" onclick="cancelarLogout()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">CARREGANDO DADOS...</div>
@@ -486,7 +562,7 @@
         <div class="topbar-actions">
             <div class="user-info-top" id="userInfoTop" style="display:none;">
                 <span class="user-name" id="userNameTop">Usuário</span>
-                <button class="btn-logout" onclick="MODULO3_ALF.Html">Sair</button>
+                <button class="btn-logout" onclick="abrirLogoutPopup()">Sair</button>
             </div>
             <button class="btn btn-outline" onclick="carregarTodosDados()">⟳ Atualizar</button>
             <button class="btn btn-gold" onclick="exportarExcel()"> Exportar</button>
@@ -549,7 +625,7 @@
             <div id="tabIndicadores" class="tab-content">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
                     <h2 style="color:var(--gold);font-size:18px;"> Indicadores</h2>
-                    <button class="btn btn-close" onclick="fazerLogout()">✕ Fechar</button>
+                    <button class="btn btn-close" onclick="abrirLogoutPopup()">✕ Fechar</button>
                 </div>
 
                 <div class="cards-grid" id="cardsIndicadores">
@@ -579,7 +655,7 @@
             <div id="tabRateio" class="tab-content">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
                     <h2 style="color:var(--gold);font-size:18px;"> Rateio</h2>
-                    <button class="btn btn-close" onclick="fazerLogout()">✕ Fechar</button>
+                    <button class="btn btn-close" onclick="abrirLogoutPopup()">✕ Fechar</button>
                 </div>
 
                 <div class="tabs" style="margin-bottom:14px;">
@@ -663,7 +739,7 @@
             <div id="tabLancamentos" class="tab-content">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
                     <h2 style="color:var(--gold);font-size:18px;"> Lançamentos</h2>
-                    <button class="btn btn-close" onclick="fazerLogout()">✕ Fechar</button>
+                    <button class="btn btn-close" onclick="abrirLogoutPopup()">✕ Fechar</button>
                 </div>
 
                 <div class="filter-bar" style="margin-bottom:14px;">
@@ -738,6 +814,29 @@
 
     const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     let toastTimeout = null;
+
+    // ============================================================
+    // FUNÇÕES DE LOGOUT - MODIFICADAS
+    // ============================================================
+    function abrirLogoutPopup() {
+        document.getElementById('logoutPopup').classList.add('active');
+    }
+
+    function fecharLogoutPopup() {
+        document.getElementById('logoutPopup').classList.remove('active');
+    }
+
+    function confirmarLogout() {
+        fecharLogoutPopup();
+        // Redirecionar para MODULO3_ALF.html
+        window.location.href = 'MODULO3_ALF.html';
+    }
+
+    function cancelarLogout() {
+        fecharLogoutPopup();
+        // Redirecionar para MODULO3_ALF.html
+        window.location.href = 'MODULO3_ALF.html';
+    }
 
     // ============================================================
     // CARREGAR USUÁRIOS PARA O SELECT
@@ -986,19 +1085,7 @@
         }
     }
 
-    function fazerLogout() {
-        usuarioAtual = null;
-        usuarioLogado = null;
-        document.getElementById('userInfoTop').style.display = 'none';
-        document.getElementById('loginOverlay').classList.remove('hidden');
-        document.getElementById('loginForm').style.display = 'block';
-        document.getElementById('changePasswordForm').style.display = 'none';
-        document.getElementById('loginError').textContent = '';
-        document.getElementById('loginPassword').value = '';
-        document.getElementById('loginUserSelect').value = '';
-        mostrarToast('ℹ️', 'Você saiu do sistema', '#f5b800');
-        registrarAuditoria('LOGOUT', 'Usuário saiu');
-    }
+    // A função fazerLogout foi removida e substituída por abrirLogoutPopup
 
     // ============================================================
     // UTILITÁRIOS
@@ -2252,21 +2339,17 @@
     }
 
     // ============================================================
-    // SWITCH TABS (Sidebar) - CORRIGIDO
+    // SWITCH TABS (Sidebar)
     // ============================================================
     document.querySelectorAll('.sidebar-item').forEach(item => {
         item.addEventListener('click', function() {
-            // Remover active de todos os itens da sidebar
             document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
             this.classList.add('active');
             
-            // Pegar o nome da tab
             const tab = this.dataset.tab;
             
-            // Remover active de todas as tabs
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             
-            // Mapeamento dos nomes das tabs para os IDs dos elementos
             const tabMap = {
                 'DESEMPENHO': 'tabDesempenho',
                 'INDICADORES': 'tabIndicadores',
@@ -2280,7 +2363,6 @@
                 if (target) target.classList.add('active');
             }
             
-            // Ações específicas por tab
             if (tab === 'RATEIO') {
                 carregarRateiosFixos();
                 carregarRateioIndividual();
@@ -2337,17 +2419,14 @@
     document.addEventListener('DOMContentLoaded', async function() {
         console.log(' Inicializando sistema...');
 
-        // SEMPRE mostrar popup de login
         document.getElementById('loginOverlay').classList.remove('hidden');
         document.getElementById('loginForm').style.display = 'block';
         document.getElementById('changePasswordForm').style.display = 'none';
         document.getElementById('loginError').textContent = '';
         document.getElementById('userInfoTop').style.display = 'none';
 
-        // Carregar lista de usuários para o select
         await carregarUsuariosSelect();
 
-        // Carregar dados em background
         try {
             await carregarDadosReais();
             await carregarRateiosFixos();
