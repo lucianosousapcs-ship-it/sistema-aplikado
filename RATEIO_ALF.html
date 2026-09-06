@@ -769,7 +769,6 @@
     // FUNÇÕES DE LOGOUT - REDIRECIONAMENTO DIRETO
     // ============================================================
     function fazerLogoutDireto() {
-        // Redirecionar diretamente para MODULO3_ALF.html
         window.location.href = 'MODULO3_ALF.html';
     }
 
@@ -1057,10 +1056,28 @@
 
     function parseData(d) {
         if (!d) return null;
+        
+        // Tenta diferentes formatos de data
+        let dt = null;
+        
+        // Formato DD/MM/AAAA
         let p = d.split('/');
-        if (p.length === 3) return new Date(p[2], p[1]-1, p[0]);
+        if (p.length === 3) {
+            dt = new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+            if (!isNaN(dt)) return dt;
+        }
+        
+        // Formato AAAA-MM-DD
         let p2 = d.split('-');
-        if (p2.length === 3) return new Date(p2[0], p2[1]-1, p2[2]);
+        if (p2.length === 3) {
+            dt = new Date(parseInt(p2[0]), parseInt(p2[1]) - 1, parseInt(p2[2]));
+            if (!isNaN(dt)) return dt;
+        }
+        
+        // Tenta criar diretamente
+        dt = new Date(d);
+        if (!isNaN(dt)) return dt;
+        
         return null;
     }
 
@@ -1220,15 +1237,46 @@
                 .eq('ativo', true);
             if (!planosError) planosContas = planos || [];
 
+            // Processar RECEITAS
             receitasData = vendas.map(v => {
                 const valor = Number(v['TOTAL NOTA'] || v.total || 0);
                 const tipo = v.tipo || v['TIPO'] || 'Balcao';
                 const cliente = v['CLIENTE/FORNECEDOR'] || v.cliente || 'N/I';
                 const canal = classificarReceita({ tipo, cliente });
-
+                
+                // Extrair data CORRETAMENTE
+                let dataStr = v.data || v['DATA'] || v.created_at || '01/01/2000';
+                
+                // Se for timestamp ISO, pega só a data
+                if (dataStr && dataStr.includes('T')) {
+                    dataStr = dataStr.split('T')[0];
+                }
+                
+                // Se for número (timestamp), converte
+                if (typeof dataStr === 'number') {
+                    const dt = new Date(dataStr);
+                    if (!isNaN(dt)) {
+                        dataStr = dt.toISOString().split('T')[0];
+                    }
+                }
+                
+                // Garantir formato AAAA-MM-DD
+                if (dataStr && dataStr.includes('/')) {
+                    const parts = dataStr.split('/');
+                    if (parts.length === 3) {
+                        dataStr = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+                    }
+                }
+                
+                // Se ainda não tiver data válida, usa hoje
+                if (!dataStr || dataStr === '01/01/2000') {
+                    const hoje = new Date();
+                    dataStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+                }
+                
                 return {
                     id: v.id,
-                    data: v.data || '01/01/2000',
+                    data: dataStr,
                     valor: valor,
                     cliente: cliente,
                     tipo: tipo,
@@ -1236,22 +1284,56 @@
                 };
             });
 
+            // Processar DESPESAS
             despesasData = despesas.map(d => {
                 let dataCorreta = null;
-
+                
+                // 1. Tentar do campo 'documento' (formato YYYYMMDD)
                 if (d.documento && /^\d{8}$/.test(d.documento)) {
-                    const dia = d.documento.substring(0, 2);
-                    const mes = d.documento.substring(2, 4);
-                    const ano = d.documento.substring(4, 8);
+                    const ano = d.documento.substring(0, 4);
+                    const mes = d.documento.substring(4, 6);
+                    const dia = d.documento.substring(6, 8);
                     dataCorreta = `${ano}-${mes}-${dia}`;
                 }
-
-                if (!dataCorreta && d.created_at) {
-                    dataCorreta = d.created_at.split('T')[0];
+                
+                // 2. Tentar do campo 'data'
+                if (!dataCorreta && d.data) {
+                    let dStr = String(d.data);
+                    // Se for timestamp ISO
+                    if (dStr.includes('T')) {
+                        dStr = dStr.split('T')[0];
+                    }
+                    // Se for formato DD/MM/AAAA
+                    if (dStr.includes('/')) {
+                        const parts = dStr.split('/');
+                        if (parts.length === 3) {
+                            dStr = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+                        }
+                    }
+                    // Se for número (timestamp)
+                    if (typeof d.data === 'number') {
+                        const dt = new Date(d.data);
+                        if (!isNaN(dt)) {
+                            dStr = dt.toISOString().split('T')[0];
+                        }
+                    }
+                    dataCorreta = dStr;
                 }
-
-                if (!dataCorreta) dataCorreta = '01/01/2000';
-
+                
+                // 3. Tentar do campo 'created_at'
+                if (!dataCorreta && d.created_at) {
+                    const dt = new Date(d.created_at);
+                    if (!isNaN(dt)) {
+                        dataCorreta = dt.toISOString().split('T')[0];
+                    }
+                }
+                
+                // 4. Fallback: data atual
+                if (!dataCorreta) {
+                    const hoje = new Date();
+                    dataCorreta = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+                }
+                
                 return {
                     id: d.id,
                     data: dataCorreta,
