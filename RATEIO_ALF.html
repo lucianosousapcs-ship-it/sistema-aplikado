@@ -1,0 +1,2368 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Gestão Financeira</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #07090e;
+            --bg-card: #0c1018;
+            --bg-card-hover: #121926;
+            --border: rgba(255,255,255,0.06);
+            --border-glow: rgba(230,160,23,0.2);
+            --gold: #f5b800;
+            --gold-dark: #d4a300;
+            --gold-glow: rgba(245,184,0,0.15);
+            --text: #e8edf2;
+            --text-secondary: rgba(255,255,255,0.6);
+            --text-muted: rgba(255,255,255,0.3);
+            --success: #10b981;
+            --success-glow: rgba(16,185,129,0.15);
+            --danger: #ef4444;
+            --danger-glow: rgba(239,68,68,0.15);
+            --purple: #8b5cf6;
+            --purple-glow: rgba(139,92,246,0.15);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; padding: 20px; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-card); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
+
+        .topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 64px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 24px; flex-wrap: wrap; gap: 10px; }
+        .logo { font-size: 24px; font-weight: 900; letter-spacing: -0.5px; cursor: pointer; background: linear-gradient(135deg, #fff 30%, var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo span { -webkit-text-fill-color: var(--gold); }
+        .topbar-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+        .btn { padding: 8px 18px; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; border: none; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .btn-gold { background: var(--gold); color: #07090e; }
+        .btn-gold:hover { background: var(--gold-dark); transform: translateY(-1px); box-shadow: 0 4px 20px var(--gold-glow); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+        .btn-outline:hover { background: var(--bg-card-hover); border-color: var(--gold); color: var(--gold); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #0d9668; transform: translateY(-1px); box-shadow: 0 4px 20px var(--success-glow); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: #dc2626; transform: translateY(-1px); box-shadow: 0 4px 20px var(--danger-glow); }
+        .btn-purple { background: var(--purple); color: #fff; }
+        .btn-purple:hover { background: #7c3aed; transform: translateY(-1px); box-shadow: 0 4px 20px var(--purple-glow); }
+        .btn-sm { padding: 4px 12px; font-size: 10px; }
+        .btn-close { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 4px 12px; border-radius: var(--radius-sm); font-size: 16px; cursor: pointer; transition: all 0.2s ease; }
+        .btn-close:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+        .dashboard { display: grid; grid-template-columns: 240px 1fr; gap: 24px; }
+        @media (max-width: 1024px) { .dashboard { grid-template-columns: 1fr; } }
+
+        .sidebar { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; height: fit-content; position: sticky; top: 20px; }
+        .sidebar-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 12px; font-weight: 700; }
+        .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s ease; color: var(--text-secondary); font-weight: 500; font-size: 13px; margin-bottom: 2px; }
+        .sidebar-item:hover { background: var(--bg-card-hover); color: var(--text); }
+        .sidebar-item.active { background: var(--gold-glow); color: var(--gold); border: 1px solid var(--border-glow); }
+        .sidebar-item .icon { font-size: 18px; width: 28px; text-align: center; }
+        .sidebar-item .badge { margin-left: auto; background: var(--bg-card-hover); padding: 2px 10px; border-radius: 20px; font-size: 10px; color: var(--text-muted); }
+
+        .main-content { display: flex; flex-direction: column; gap: 20px; }
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; transition: all 0.3s ease; }
+        .stat-card:hover { border-color: var(--border-glow); transform: translateY(-2px); }
+        .stat-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 600; }
+        .stat-card .value { font-size: 20px; font-weight: 800; margin-top: 4px; letter-spacing: -0.5px; }
+        .stat-card .value.gold { color: var(--gold); }
+        .stat-card .value.green { color: var(--success); }
+        .stat-card .value.red { color: var(--danger); }
+        .stat-card .value.purple { color: var(--purple); }
+
+        .tabs { display: flex; gap: 4px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; overflow-x: auto; }
+        .tab-btn { padding: 8px 18px; border: none; background: transparent; color: var(--text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.2s ease; white-space: nowrap; }
+        .tab-btn:hover { color: var(--text); background: var(--bg-card-hover); }
+        .tab-btn.active { background: var(--gold); color: #07090e; }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 110px; }
+        .filter-group label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 600; }
+        .filter-group input, .filter-group select { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; color: var(--text); font-size: 12px; transition: all 0.2s ease; }
+        .filter-group input:focus, .filter-group select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+
+        .table-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        .table-header { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
+        .table-header h3 { font-size: 13px; font-weight: 700; }
+        .table-header .count { font-size: 11px; color: var(--text-muted); background: var(--bg); padding: 3px 14px; border-radius: 20px; }
+        .table-scroll { overflow-x: auto; max-height: 450px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table th { background: var(--bg); padding: 10px 12px; text-align: left; font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 2; }
+        table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        table tbody tr { transition: background 0.15s ease; }
+        table tbody tr:hover { background: var(--bg-card-hover); }
+        .tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 9px; font-weight: 600; }
+        .tag-green { background: var(--success-glow); color: var(--success); }
+        .tag-purple { background: var(--purple-glow); color: var(--purple); }
+        .tag-gold { background: var(--gold-glow); color: var(--gold); }
+        .tag-red { background: var(--danger-glow); color: var(--danger); }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            min-height: 340px;
+        }
+        .chart-card h4 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+        .chart-card .chart-wrap {
+            position: relative;
+            height: 280px;
+            width: 100%;
+        }
+        #tabIndicadores .chart-card .chart-wrap {
+            height: 300px;
+        }
+
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+            .chart-card .chart-wrap {
+                height: 240px;
+            }
+        }
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+            .chart-card {
+                min-height: 280px;
+                padding: 16px;
+            }
+            .chart-card .chart-wrap {
+                height: 220px;
+            }
+            #tabIndicadores .chart-card .chart-wrap {
+                height: 220px;
+            }
+        }
+
+        .rateio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+        .rateio-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; transition: all 0.2s ease; }
+        .rateio-card:hover { border-color: var(--border-glow); }
+        .rateio-card .op-name { font-weight: 600; font-size: 12px; margin-bottom: 6px; }
+        .rateio-card .op-percent { display: flex; gap: 14px; font-size: 11px; }
+        .rateio-card .op-percent .loja { color: var(--success); }
+        .rateio-card .op-percent .corp { color: var(--purple); }
+        .rateio-card .op-actions { margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap; }
+
+        .input-sm { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; color: var(--text); font-size: 11px; width: 50px; text-align: center; }
+        .input-sm:focus { outline: none; border-color: var(--gold); }
+        .input-sm.auto { border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.06); }
+
+        .badge-auto { font-size: 8px; background: var(--success-glow); color: var(--success); padding: 1px 8px; border-radius: 10px; margin-left: 4px; }
+
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--bg-card); border: 1px solid var(--border-glow); border-radius: var(--radius); padding: 14px 24px; z-index: 99999; box-shadow: var(--shadow); display: none; max-width: 90%; animation: slideUp 0.3s ease; }
+        .toast.show { display: block; }
+        @keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        .toast .toast-title { font-weight: 700; color: var(--gold); }
+        .toast .toast-close { background: none; border: none; color: var(--text-muted); cursor: pointer; float: right; font-size: 18px; }
+
+        .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 99998; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 20px; }
+        .loading-overlay.active { display: flex; }
+        .loading-spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-weight: 600; color: var(--gold); letter-spacing: 1px; font-size: 13px; }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .topbar { padding: 0 12px; height: auto; min-height: 56px; }
+            .stat-card .value { font-size: 17px; }
+            .filter-bar { flex-direction: column; }
+            .filter-group { min-width: 100%; }
+            .sidebar { position: static; }
+            .tabs { flex-wrap: nowrap; }
+            .tab-btn { padding: 6px 12px; font-size: 9px; }
+            .dashboard { grid-template-columns: 1fr; }
+        }
+
+        .tipo-selector {
+            display: flex;
+            gap: 4px;
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            padding: 3px;
+            border: 1px solid var(--border);
+        }
+        .tipo-selector .tipo-btn {
+            padding: 4px 14px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .tipo-selector .tipo-btn:hover {
+            color: var(--text);
+            background: var(--bg-card-hover);
+        }
+        .tipo-selector .tipo-btn.active {
+            background: var(--gold);
+            color: #07090e;
+        }
+
+        /* === LOGIN POPUP - COM LISTA DE USUÁRIOS === */
+        #loginOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.92);
+            backdrop-filter: blur(12px);
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #loginOverlay.hidden { display: none; }
+        .login-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: var(--radius);
+            padding: 40px 36px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+        .login-box .login-title {
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 4px;
+            color: var(--gold);
+        }
+        .login-box .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 28px;
+        }
+        .login-box .login-error {
+            color: var(--danger);
+            font-size: 12px;
+            text-align: center;
+            margin-bottom: 12px;
+            min-height: 20px;
+        }
+        .login-box .login-toggle {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 16px;
+        }
+        .login-box .login-toggle a {
+            color: var(--gold);
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .login-box .login-toggle a:hover { text-decoration: underline; }
+        .login-box .input-group {
+            margin-bottom: 14px;
+        }
+        .login-box .input-group label {
+            display: block;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .login-box .input-group input,
+        .login-box .input-group select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .login-box .input-group select option {
+            background: var(--bg-card);
+        }
+        .login-box .input-group input:focus,
+        .login-box .input-group select:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px var(--gold-glow);
+        }
+        .login-box .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: var(--gold);
+            color: #07090e;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .login-box .btn-login:hover {
+            background: var(--gold-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px var(--gold-glow);
+        }
+        .login-box .btn-login:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .login-box .loading-users {
+            text-align: center;
+            padding: 10px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        /* Mudar senha - primeiro acesso */
+        .change-password-box {
+            margin-top: 12px;
+            padding: 14px;
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+        .change-password-box .input-group {
+            margin-bottom: 10px;
+        }
+        .change-password-box .input-group label {
+            font-size: 9px;
+        }
+        .change-password-box .input-group input {
+            font-size: 12px;
+            padding: 6px 10px;
+        }
+        .change-password-box .btn-sm {
+            font-size: 10px;
+            padding: 4px 12px;
+        }
+        .change-password-box .senha-info {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        /* User info no topo (quando logado) */
+        .user-info-top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--bg);
+            padding: 6px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+        .user-info-top .user-name {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--gold);
+        }
+        .user-info-top .btn-logout {
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 3px 12px;
+            border-radius: 6px;
+            font-size: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .user-info-top .btn-logout:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================================ -->
+    <!-- LOGIN POPUP - COM LISTA DE USUÁRIOS CADASTRADOS -->
+    <!-- ============================================================ -->
+    <div id="loginOverlay">
+        <div class="login-box">
+            <div class="login-title"> Acesso ao Sistema</div>
+            <div class="subtitle">Selecione seu usuário</div>
+            
+            <div id="loginError" class="login-error"></div>
+
+            <!-- Login Form -->
+            <div id="loginForm">
+                <div class="input-group">
+                    <label> Selecione o Usuário</label>
+                    <select id="loginUserSelect">
+                        <option value="">-- Carregando usuários... --</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>🔑 Senha</label>
+                    <input type="password" id="loginPassword" placeholder="Digite sua senha" autocomplete="off">
+                </div>
+                <button class="btn-login" id="btnLogin" onclick="fazerLogin()">Entrar</button>
+                <div class="login-toggle">
+                    <a onclick="mostrarPrimeiroAcesso()">🔑 Primeiro acesso?</a>
+                </div>
+            </div>
+
+            <!-- Change password on first access -->
+            <div id="changePasswordForm" style="display:none;">
+                <div class="change-password-box">
+                    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;text-align:center;">
+                        🔐 Primeiro acesso! Defina sua nova senha.
+                    </p>
+                    <div class="input-group">
+                        <label>Usuário</label>
+                        <input type="text" id="changeUser" readonly style="background:rgba(255,255,255,0.05);">
+                    </div>
+                    <div class="input-group">
+                        <label>Nova Senha</label>
+                        <input type="password" id="changeNewPassword" placeholder="Nova senha (mínimo 6 caracteres)">
+                    </div>
+                    <div class="input-group">
+                        <label>Confirmar Nova Senha</label>
+                        <input type="password" id="changeConfirmPassword" placeholder="Confirme a nova senha">
+                    </div>
+                    <div class="senha-info">💡 A senha padrão será substituída pela nova senha.</div>
+                    <button class="btn-login" onclick="alterarSenhaPrimeiroAcesso()" style="margin-top:0;">Alterar Senha</button>
+                    <div class="login-toggle" style="margin-top:10px;">
+                        <a onclick="voltarParaLogin()">← Voltar para login</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">CARREGANDO DADOS...</div>
+    </div>
+
+    <div id="toast" class="toast">
+        <button class="toast-close" onclick="fecharToast()">✕</button>
+        <div class="toast-title" id="toastTitle">Sucesso</div>
+        <div id="toastText">Mensagem</div>
+    </div>
+
+    <header class="topbar">
+        <div class="logo">Apli<span>kado</span></div>
+        <div class="topbar-actions">
+            <div class="user-info-top" id="userInfoTop" style="display:none;">
+                <span class="user-name" id="userNameTop">Usuário</span>
+                <button class="btn-logout" onclick="fazerLogout()">Sair</button>
+            </div>
+            <button class="btn btn-outline" onclick="carregarTodosDados()">⟳ Atualizar</button>
+            <button class="btn btn-gold" onclick="exportarExcel()"> Exportar</button>
+        </div>
+    </header>
+
+    <div class="dashboard">
+
+        <nav class="sidebar">
+            <div class="sidebar-title">Navegação</div>
+            <div class="sidebar-item active" data-tab="DESEMPENHO"><span class="icon"></span> Desempenho</div>
+            <div class="sidebar-item" data-tab="INDICADORES"><span class="icon"></span> Indicadores</div>
+            <div class="sidebar-item" data-tab="RATEIO"><span class="icon"></span> Rateio <span class="badge" id="rateioBadge">0</span></div>
+            <div class="sidebar-item" data-tab="LANCAMENTOS"><span class="icon"></span> Lançamentos <span class="badge" id="lancamentosBadge">0</span></div>
+        </nav>
+
+        <div class="main-content">
+
+            <!-- TAB DESEMPENHO -->
+            <div id="tabDesempenho" class="tab-content active">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                    <h2 style="color:var(--gold);font-size:18px;"> Desempenho</h2>
+                </div>
+
+                <div class="cards-grid" id="cardsDesempenho">
+                    <div class="stat-card"><div class="label">Receita Corporativo</div><div class="value gold" id="dReceitaCorp">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Receita Loja Física</div><div class="value gold" id="dReceitaLoja">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Resultado Corporativo</div><div class="value" id="dResultCorp">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Resultado Loja Física</div><div class="value" id="dResultLoja">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Resultado Consolidado</div><div class="value purple" id="dConsolidado">R$ 0,00</div></div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header"><h3>Resultados Mensais</h3><span class="count" id="periodoInfo">Todos os meses</span></div>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr>
+                                <th style="text-align:center;">Mês</th>
+                                <th style="color:var(--purple);text-align:center;">Receita Corp</th>
+                                <th style="color:var(--success);text-align:center;">Receita Loja</th>
+                                <th style="color:var(--danger);text-align:center;">Despesa Corp</th>
+                                <th style="color:var(--danger);text-align:center;">Despesa Loja</th>
+                                <th style="color:var(--purple);text-align:center;">Resultado Corp</th>
+                                <th style="color:var(--success);text-align:center;">Resultado Loja</th>
+                            </tr></thead>
+                            <tbody id="tabelaResultados"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card"><h4>Evolução Corporativo</h4><div class="chart-wrap"><canvas id="chartCorp"></canvas></div></div>
+                    <div class="chart-card"><h4>Evolução Loja Física</h4><div class="chart-wrap"><canvas id="chartLoja"></canvas></div></div>
+                    <div class="chart-card"><h4>Participação Despesas</h4><div class="chart-wrap"><canvas id="chartPart"></canvas></div></div>
+                    <div class="chart-card"><h4>Lucro / Prejuízo</h4><div class="chart-wrap"><canvas id="chartLucro"></canvas></div></div>
+                </div>
+            </div>
+
+            <!-- TAB INDICADORES -->
+            <div id="tabIndicadores" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                    <h2 style="color:var(--gold);font-size:18px;"> Indicadores</h2>
+                    <button class="btn btn-close" onclick="fazerLogout()">✕ Fechar</button>
+                </div>
+
+                <div class="cards-grid" id="cardsIndicadores">
+                    <div class="stat-card"><div class="label">Corp - Receita</div><div class="value gold" id="iCorpReceita">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Corp - Despesa</div><div class="value red" id="iCorpDespesa">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Corp - Resultado</div><div class="value" id="iCorpResultado">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Corp - Margem</div><div class="value gold" id="iCorpMargem">0%</div></div>
+                    <div class="stat-card"><div class="label">Loja - Receita</div><div class="value gold" id="iLojaReceita">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Loja - Despesa</div><div class="value red" id="iLojaDespesa">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Loja - Resultado</div><div class="value" id="iLojaResultado">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Loja - Margem</div><div class="value gold" id="iLojaMargem">0%</div></div>
+                    <div class="stat-card"><div class="label">Consolidado - Receita</div><div class="value gold" id="iConsReceita">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Consolidado - Despesa</div><div class="value red" id="iConsDespesa">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Consolidado - Resultado</div><div class="value purple" id="iConsResultado">R$ 0,00</div></div>
+                    <div class="stat-card"><div class="label">Consolidado - Margem</div><div class="value gold" id="iConsMargem">0%</div></div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card"><h4>Evolução Corporativo</h4><div class="chart-wrap"><canvas id="chartICorp"></canvas></div></div>
+                    <div class="chart-card"><h4>Evolução Loja Física</h4><div class="chart-wrap"><canvas id="chartILoja"></canvas></div></div>
+                    <div class="chart-card"><h4>Participação Despesas</h4><div class="chart-wrap"><canvas id="chartIPart"></canvas></div></div>
+                    <div class="chart-card"><h4>Lucro / Prejuízo</h4><div class="chart-wrap"><canvas id="chartILucro"></canvas></div></div>
+                </div>
+            </div>
+
+            <!-- TAB RATEIO -->
+            <div id="tabRateio" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                    <h2 style="color:var(--gold);font-size:18px;"> Rateio</h2>
+                    <button class="btn btn-close" onclick="fazerLogout()">✕ Fechar</button>
+                </div>
+
+                <div class="tabs" style="margin-bottom:14px;">
+                    <button class="tab-btn active" onclick="switchRateioTab('individual', this)">Individual</button>
+                    <button class="tab-btn" onclick="switchRateioTab('fixo', this)">Fixo</button>
+                    <button class="tab-btn" onclick="switchRateioTab('auditoria', this)">Auditoria</button>
+                </div>
+
+                <!-- Rateio Individual -->
+                <div id="rateioIndividual" class="tab-content active">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                            <span style="font-weight:700; font-size:14px; color:var(--gold);"> Rateio Individual</span>
+                            <span class="count" id="totalRateioInd">0 registros</span>
+                            <span class="count">Salvos: <span id="rateiosSalvos">0</span></span>
+                        </div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button class="btn btn-success btn-sm" onclick="aplicarTodosRateiosFixos()">Aplicar Fixos</button>
+                            <button class="btn btn-danger btn-sm" onclick="limparTodosRateiosIndividuais()">Limpar Todos</button>
+                        </div>
+                    </div>
+
+                    <div class="filter-bar" style="margin-bottom:12px;">
+                        <div class="filter-group"><label>Buscar</label><input type="text" id="buscaRateio" placeholder="Operação, fornecedor..." oninput="carregarRateioIndividual()"></div>
+                        <div class="filter-group"><label>Data Início</label><input type="date" id="dataInicioRateio" onchange="carregarRateioIndividual()"></div>
+                        <div class="filter-group"><label>Data Fim</label><input type="date" id="dataFimRateio" onchange="carregarRateioIndividual()"></div>
+                        <div style="display:flex; gap:6px; align-items:flex-end; flex-wrap:wrap;">
+                            <button class="btn btn-outline btn-sm" onclick="limparFiltrosRateio()">Limpar</button>
+                            <button class="btn btn-gold btn-sm" onclick="salvarTodosRateiosIndividuais()">Salvar Todos</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <div class="table-scroll">
+                            <table>
+                                <thead><tr>
+                                    <th>Data</th>
+                                    <th>Fornecedor</th>
+                                    <th>Operação</th>
+                                    <th style="text-align:right;">Valor</th>
+                                    <th style="text-align:center;">Loja %</th>
+                                    <th style="text-align:center;">Corp %</th>
+                                    <th style="text-align:center;">Ações</th>
+                                </tr></thead>
+                                <tbody id="rateioIndividualBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rateio Fixo -->
+                <div id="rateioFixo" class="tab-content">
+                    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                        <button class="btn btn-gold btn-sm" onclick="abrirFormRateioFixo()">➕ Novo Rateio Fixo</button>
+                        <button class="btn btn-success btn-sm" onclick="aplicarRateioPadraoFixo()">50/50 para todos</button>
+                        <button class="btn btn-purple btn-sm" onclick="aplicarRateioLojaFixo()">Loja 70 / Corp 30</button>
+                        <button class="btn btn-sm" style="background:#f59e0b;color:#07090e;" onclick="aplicarRateioCorpFixo()">Corp 70 / Loja 30</button>
+                        <span class="count" style="margin-left:auto;" id="totalRateiosFixos">Total: 0</span>
+                    </div>
+                    <div class="rateio-grid" id="rateiosFixosList"></div>
+                </div>
+
+                <!-- Auditoria -->
+                <div id="rateioAuditoria" class="tab-content">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                        <span class="count" id="totalAuditoria">0 registros</span>
+                        <button class="btn btn-danger btn-sm" onclick="limparAuditoria()">Limpar Histórico</button>
+                    </div>
+                    <div class="table-container">
+                        <div class="table-scroll">
+                            <table>
+                                <thead><tr><th>Data/Hora</th><th>Usuário</th><th>Ação</th><th>Descrição</th></tr></thead>
+                                <tbody id="auditoriaBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB LANÇAMENTOS -->
+            <div id="tabLancamentos" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                    <h2 style="color:var(--gold);font-size:18px;"> Lançamentos</h2>
+                    <button class="btn btn-close" onclick="fazerLogout()">✕ Fechar</button>
+                </div>
+
+                <div class="filter-bar" style="margin-bottom:14px;">
+                    <div class="filter-group"><label>Buscar</label><input type="text" id="buscaLancamentos" placeholder="Cliente, fornecedor..." oninput="carregarLancamentos()"></div>
+                    <div class="filter-group">
+                        <label>Tipo</label>
+                        <div class="tipo-selector" id="tipoSelector">
+                            <button class="tipo-btn active" data-tipo="TODOS" onclick="setTipoFiltro('TODOS', this)">Todos</button>
+                            <button class="tipo-btn" data-tipo="RECEITA" onclick="setTipoFiltro('RECEITA', this)">Receitas</button>
+                            <button class="tipo-btn" data-tipo="DESPESA" onclick="setTipoFiltro('DESPESA', this)">Despesas</button>
+                        </div>
+                    </div>
+                    <div class="filter-group"><label>Data Início</label><input type="date" id="lancDataInicio" onchange="carregarLancamentos()"></div>
+                    <div class="filter-group"><label>Data Fim</label><input type="date" id="lancDataFim" onchange="carregarLancamentos()"></div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header"><h3>Lançamentos</h3><span class="count" id="totalLancamentos">0 registros</span></div>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Cliente/Fornecedor</th>
+                                <th>Operação</th>
+                                <th style="text-align:right;">Valor</th>
+                                <th>Canal</th>
+                                <th>Plano</th>
+                            </tr></thead>
+                            <tbody id="lancamentosBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+    // ============================================================
+    // SUPABASE CONFIG
+    // ============================================================
+    const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ============================================================
+    // USUÁRIOS PRÉ-CADASTRADOS (fallback)
+    // ============================================================
+    const USUARIOS_PRE_CADASTRADOS = [
+        { nome: 'LUCIANO SOUSA', usuario: 'LUCIANO SOUSA', senha: '@100*' },
+        { nome: 'ANDRE LUIZ', usuario: 'ANDRE LUIZ', senha: '@200*' }
+    ];
+
+    // ============================================================
+    // ESTADO GLOBAL
+    // ============================================================
+    let dadosMensais = [];
+    let receitasData = [];
+    let despesasData = [];
+    let rateiosFixos = [];
+    let rateiosIndividuais = {};
+    let auditoriaLog = [];
+    let charts = {};
+    let operacoesUnicas = [];
+    let planosContas = [];
+    let dadosCarregados = false;
+    let tipoFiltroAtual = 'TODOS';
+    let usuarioAtual = null;
+    let usuarioLogado = null;
+    let usuariosCadastrados = [];
+
+    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    let toastTimeout = null;
+
+    // ============================================================
+    // CARREGAR USUÁRIOS PARA O SELECT
+    // ============================================================
+    async function carregarUsuariosSelect() {
+        const select = document.getElementById('loginUserSelect');
+        select.innerHTML = '<option value="">-- Carregando... --</option>';
+        
+        try {
+            const { data: usuarios, error } = await supabaseClient
+                .from('usuarios')
+                .select('nome')
+                .order('nome');
+
+            if (!error && usuarios && usuarios.length > 0) {
+                usuariosCadastrados = usuarios;
+                const nomesExistentes = new Set(usuarios.map(u => u.nome.toUpperCase()));
+                for (const pre of USUARIOS_PRE_CADASTRADOS) {
+                    if (!nomesExistentes.has(pre.usuario)) {
+                        usuariosCadastrados.push({ nome: pre.usuario });
+                    }
+                }
+            } else {
+                usuariosCadastrados = USUARIOS_PRE_CADASTRADOS.map(u => ({ nome: u.usuario }));
+            }
+
+            select.innerHTML = '<option value="">-- Selecione um usuário --</option>';
+            for (const u of usuariosCadastrados) {
+                const nome = u.nome || u.usuario;
+                if (nome) {
+                    const opt = document.createElement('option');
+                    opt.value = nome.toUpperCase();
+                    opt.textContent = nome;
+                    select.appendChild(opt);
+                }
+            }
+
+        } catch (e) {
+            console.error('Erro ao carregar usuários:', e);
+            usuariosCadastrados = USUARIOS_PRE_CADASTRADOS.map(u => ({ nome: u.usuario }));
+            select.innerHTML = '<option value="">-- Selecione um usuário --</option>';
+            for (const u of usuariosCadastrados) {
+                const opt = document.createElement('option');
+                opt.value = u.nome.toUpperCase();
+                opt.textContent = u.nome;
+                select.appendChild(opt);
+            }
+        }
+    }
+
+    // ============================================================
+    // LOGIN / AUTH
+    // ============================================================
+    function mostrarPrimeiroAcesso() {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('changePasswordForm').style.display = 'block';
+        document.getElementById('loginError').textContent = '';
+        document.getElementById('changeUser').value = '';
+        document.getElementById('changeNewPassword').value = '';
+        document.getElementById('changeConfirmPassword').value = '';
+    }
+
+    function voltarParaLogin() {
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('changePasswordForm').style.display = 'none';
+        document.getElementById('loginError').textContent = '';
+    }
+
+    async function fazerLogin() {
+        const select = document.getElementById('loginUserSelect');
+        const usuario = select.value;
+        const senha = document.getElementById('loginPassword').value;
+        const btn = document.getElementById('btnLogin');
+        const errorEl = document.getElementById('loginError');
+
+        if (!usuario) {
+            errorEl.textContent = 'Selecione um usuário';
+            return;
+        }
+
+        if (!senha) {
+            errorEl.textContent = 'Digite a senha';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Entrando...';
+        errorEl.textContent = '';
+
+        try {
+            const { data: usuarios, error } = await supabaseClient
+                .from('usuarios')
+                .select('*')
+                .ilike('nome', usuario);
+
+            if (error) throw error;
+
+            const usuarioEncontrado = usuarios && usuarios.length > 0 ? usuarios[0] : null;
+
+            if (!usuarioEncontrado) {
+                const preCadastrado = USUARIOS_PRE_CADASTRADOS.find(u => u.usuario === usuario);
+                if (preCadastrado && preCadastrado.senha === senha) {
+                    document.getElementById('changeUser').value = usuario;
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('changePasswordForm').style.display = 'block';
+                    document.getElementById('loginError').textContent = '';
+                    btn.disabled = false;
+                    btn.textContent = 'Entrar';
+                    mostrarToast('🔐', 'Primeiro acesso! Defina sua nova senha.', '#f5b800');
+                    return;
+                } else {
+                    errorEl.textContent = 'Usuário ou senha incorretos';
+                    btn.disabled = false;
+                    btn.textContent = 'Entrar';
+                    return;
+                }
+            }
+
+            if (usuarioEncontrado.senha !== senha) {
+                errorEl.textContent = 'Usuário ou senha incorretos';
+                btn.disabled = false;
+                btn.textContent = 'Entrar';
+                return;
+            }
+
+            if (usuarioEncontrado.primeiro_acesso) {
+                document.getElementById('changeUser').value = usuarioEncontrado.nome;
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('changePasswordForm').style.display = 'block';
+                document.getElementById('loginError').textContent = '';
+                btn.disabled = false;
+                btn.textContent = 'Entrar';
+                mostrarToast('🔐', 'Primeiro acesso! Defina sua nova senha.', '#f5b800');
+                return;
+            }
+
+            usuarioAtual = usuarioEncontrado;
+            usuarioLogado = usuarioEncontrado;
+
+            registrarAuditoria('LOGIN', `Usuário ${usuarioEncontrado.nome} logou`);
+            mostrarToast('', `Bem-vindo, ${usuarioEncontrado.nome}!`);
+
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('userNameTop').textContent = usuarioEncontrado.nome;
+            document.getElementById('userInfoTop').style.display = 'flex';
+
+            await carregarTodosDados();
+
+        } catch (error) {
+            errorEl.textContent = error.message || 'Erro ao fazer login';
+            mostrarToast('❌', error.message, '#ef4444');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Entrar';
+        }
+    }
+
+    async function alterarSenhaPrimeiroAcesso() {
+        const usuario = document.getElementById('changeUser').value.trim().toUpperCase();
+        const novaSenha = document.getElementById('changeNewPassword').value;
+        const confirmarSenha = document.getElementById('changeConfirmPassword').value;
+        const errorEl = document.getElementById('loginError');
+        const btn = document.querySelector('#changePasswordForm .btn-login');
+
+        if (!usuario) {
+            errorEl.textContent = 'Usuário não identificado';
+            return;
+        }
+
+        if (novaSenha.length < 6) {
+            errorEl.textContent = 'Nova senha deve ter no mínimo 6 caracteres';
+            return;
+        }
+
+        if (novaSenha !== confirmarSenha) {
+            errorEl.textContent = 'As senhas não coincidem';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Alterando...';
+        errorEl.textContent = '';
+
+        try {
+            const { data: usuarios, error: buscaError } = await supabaseClient
+                .from('usuarios')
+                .select('*')
+                .ilike('nome', usuario);
+
+            if (buscaError) throw buscaError;
+
+            let usuarioEncontrado = usuarios && usuarios.length > 0 ? usuarios[0] : null;
+            const preCadastrado = USUARIOS_PRE_CADASTRADOS.find(u => u.usuario === usuario);
+
+            if (!usuarioEncontrado && preCadastrado) {
+                const { data: novoUsuario, error: createError } = await supabaseClient
+                    .from('usuarios')
+                    .insert({
+                        nome: usuario,
+                        senha: novaSenha,
+                        primeiro_acesso: false,
+                        created_at: new Date().toISOString()
+                    })
+                    .select();
+
+                if (createError) throw createError;
+                usuarioEncontrado = novoUsuario[0];
+                mostrarToast('✅', 'Usuário criado e senha alterada com sucesso!');
+            } else if (usuarioEncontrado) {
+                const { error: updateError } = await supabaseClient
+                    .from('usuarios')
+                    .update({
+                        senha: novaSenha,
+                        primeiro_acesso: false,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', usuarioEncontrado.id);
+
+                if (updateError) throw updateError;
+                mostrarToast('✅', 'Senha alterada com sucesso!');
+            } else {
+                errorEl.textContent = 'Usuário não encontrado';
+                btn.disabled = false;
+                btn.textContent = 'Alterar Senha';
+                return;
+            }
+
+            usuarioAtual = usuarioEncontrado;
+            usuarioLogado = usuarioEncontrado;
+
+            registrarAuditoria('PRIMEIRO_ACESSO', `Usuário ${usuarioEncontrado.nome} alterou a senha`);
+
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('userNameTop').textContent = usuarioEncontrado.nome;
+            document.getElementById('userInfoTop').style.display = 'flex';
+            document.getElementById('loginError').textContent = '';
+
+            await carregarTodosDados();
+
+        } catch (error) {
+            errorEl.textContent = error.message || 'Erro ao alterar senha';
+            mostrarToast('❌', error.message, '#ef4444');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Alterar Senha';
+        }
+    }
+
+    function fazerLogout() {
+        usuarioAtual = null;
+        usuarioLogado = null;
+        document.getElementById('userInfoTop').style.display = 'none';
+        document.getElementById('loginOverlay').classList.remove('hidden');
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('changePasswordForm').style.display = 'none';
+        document.getElementById('loginError').textContent = '';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('loginUserSelect').value = '';
+        mostrarToast('ℹ️', 'Você saiu do sistema', '#f5b800');
+        registrarAuditoria('LOGOUT', 'Usuário saiu');
+    }
+
+    // ============================================================
+    // UTILITÁRIOS
+    // ============================================================
+    function criarArrayMeses() {
+        const arr = [];
+        for (let i = 0; i < 12; i++) {
+            arr[i] = { receitaLoja: 0, receitaCorp: 0, despesaLoja: 0, despesaCorp: 0 };
+        }
+        return arr;
+    }
+
+    function mostrarLoading(show) {
+        document.getElementById('loadingOverlay').classList.toggle('active', show);
+    }
+
+    function formatarMoeda(v) {
+        if (v === undefined || v === null || isNaN(v)) return 'R$ 0,00';
+        const sinal = v < 0 ? '-' : '';
+        return `${sinal}R$ ${Math.abs(v).toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    }
+
+    function formatarDataBr(d) {
+        if (!d) return '-';
+        const parts = d.split('-');
+        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        return d;
+    }
+
+    function parseData(d) {
+        if (!d) return null;
+        let p = d.split('/');
+        if (p.length === 3) return new Date(p[2], p[1]-1, p[0]);
+        let p2 = d.split('-');
+        if (p2.length === 3) return new Date(p2[0], p2[1]-1, p2[2]);
+        return null;
+    }
+
+    function extrairMes(d) {
+        const dt = parseData(d);
+        return dt ? dt.getMonth() : -1;
+    }
+
+    function escapeHtml(t) { if (!t) return ''; return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // ============================================================
+    // CLASSIFICAR RECEITA
+    // ============================================================
+    function classificarReceita(receita) {
+        const tipo = (receita.tipo || '').toLowerCase();
+        const cliente = (receita.cliente || '').toLowerCase();
+
+        const corpKeywords = ['corporativa', 'corporativo', 'venda corporativa', 'pj', 'jurídica', 'empresa', 'cnpj'];
+        const lojaKeywords = ['balcao', 'balcão', 'loja', 'pdv', 'física', 'consumidor', 'cpf'];
+
+        for (const kw of corpKeywords) {
+            if (tipo.includes(kw) || cliente.includes(kw)) return 'CORPORATIVO';
+        }
+
+        for (const kw of lojaKeywords) {
+            if (tipo.includes(kw) || cliente.includes(kw)) return 'LOJA_FISICA';
+        }
+
+        return 'LOJA_FISICA';
+    }
+
+    // ============================================================
+    // TOAST
+    // ============================================================
+    function mostrarToast(titulo, texto, cor = '#f5b800') {
+        const toast = document.getElementById('toast');
+        document.getElementById('toastTitle').textContent = titulo;
+        document.getElementById('toastTitle').style.color = cor;
+        document.getElementById('toastText').textContent = texto;
+        toast.classList.add('show');
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => toast.classList.remove('show'), 5000);
+    }
+    function fecharToast() { document.getElementById('toast').classList.remove('show'); }
+
+    // ============================================================
+    // AUDITORIA
+    // ============================================================
+    function registrarAuditoria(acao, desc) {
+        const usuario = usuarioAtual ? usuarioAtual.nome : 'Sistema';
+        const log = {
+            id: Date.now(),
+            data: new Date().toISOString(),
+            usuario: usuario,
+            acao,
+            descricao: desc
+        };
+        auditoriaLog.unshift(log);
+        if (auditoriaLog.length > 500) auditoriaLog.pop();
+        localStorage.setItem('auditoria_rateio', JSON.stringify(auditoriaLog));
+        carregarAuditoria();
+    }
+
+    function carregarAuditoria() {
+        const saved = localStorage.getItem('auditoria_rateio');
+        if (saved) try { auditoriaLog = JSON.parse(saved); } catch(e) {}
+        document.getElementById('totalAuditoria').textContent = `${auditoriaLog.length} registros`;
+        const tbody = document.getElementById('auditoriaBody');
+        if (!tbody) return;
+        if (auditoriaLog.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-muted);">Nenhum registro</td></tr>';
+            return;
+        }
+        let html = '';
+        for (const a of auditoriaLog.slice(0, 100)) {
+            const dt = new Date(a.data);
+            html += `<tr>
+                <td style="font-size:10px;">${dt.toLocaleDateString('pt-BR')} ${dt.toLocaleTimeString('pt-BR')}</td>
+                <td style="font-size:10px;">${escapeHtml(a.usuario)}</td>
+                <td style="font-size:10px;font-weight:600;">${escapeHtml(a.acao)}</td>
+                <td style="font-size:10px;">${escapeHtml(a.descricao)}</td>
+            </tr>`;
+        }
+        tbody.innerHTML = html;
+    }
+
+    function limparAuditoria() {
+        if (!confirm('Limpar todo o histórico de auditoria?')) return;
+        auditoriaLog = [];
+        localStorage.setItem('auditoria_rateio', JSON.stringify(auditoriaLog));
+        carregarAuditoria();
+        mostrarToast('✅', 'Histórico limpo!');
+    }
+
+    // ============================================================
+    // RATEIOS INDIVIDUAIS
+    // ============================================================
+    function carregarRateiosIndividuais() {
+        const saved = localStorage.getItem('rateios_individuais');
+        if (saved) try { rateiosIndividuais = JSON.parse(saved); } catch(e) { rateiosIndividuais = {}; }
+        else rateiosIndividuais = {};
+        return rateiosIndividuais;
+    }
+
+    function salvarRateiosIndividuais() {
+        localStorage.setItem('rateios_individuais', JSON.stringify(rateiosIndividuais));
+        const count = Object.keys(rateiosIndividuais).length;
+        document.getElementById('rateiosSalvos').textContent = count;
+        document.getElementById('rateioBadge').textContent = count;
+    }
+
+    // ============================================================
+    // INICIALIZAR DADOS MENSAIS
+    // ============================================================
+    function inicializarDadosMensais() {
+        dadosMensais = criarArrayMeses();
+        return dadosMensais;
+    }
+
+    // ============================================================
+    // CARREGAR DADOS DO SUPABASE
+    // ============================================================
+    async function carregarDadosReais() {
+        console.log('📥 Carregando dados do Supabase...');
+        try {
+            let vendas = [];
+            let page = 0;
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('vendas_alf')
+                    .select('*')
+                    .range(page * 1000, (page + 1) * 1000 - 1);
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+                vendas.push(...data);
+                page++;
+            }
+            console.log(` Vendas: ${vendas.length} registros`);
+
+            let despesas = [];
+            page = 0;
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('dados_m2')
+                    .select('*')
+                    .range(page * 1000, (page + 1) * 1000 - 1);
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+                despesas.push(...data);
+                page++;
+            }
+            console.log(` Despesas: ${despesas.length} registros`);
+
+            const { data: planos, error: planosError } = await supabaseClient
+                .from('plano_contas')
+                .select('*')
+                .eq('ativo', true);
+            if (!planosError) planosContas = planos || [];
+
+            receitasData = vendas.map(v => {
+                const valor = Number(v['TOTAL NOTA'] || v.total || 0);
+                const tipo = v.tipo || v['TIPO'] || 'Balcao';
+                const cliente = v['CLIENTE/FORNECEDOR'] || v.cliente || 'N/I';
+                const canal = classificarReceita({ tipo, cliente });
+
+                return {
+                    id: v.id,
+                    data: v.data || '01/01/2000',
+                    valor: valor,
+                    cliente: cliente,
+                    tipo: tipo,
+                    canal: canal
+                };
+            });
+
+            despesasData = despesas.map(d => {
+                let dataCorreta = null;
+
+                if (d.documento && /^\d{8}$/.test(d.documento)) {
+                    const dia = d.documento.substring(0, 2);
+                    const mes = d.documento.substring(2, 4);
+                    const ano = d.documento.substring(4, 8);
+                    dataCorreta = `${ano}-${mes}-${dia}`;
+                }
+
+                if (!dataCorreta && d.created_at) {
+                    dataCorreta = d.created_at.split('T')[0];
+                }
+
+                if (!dataCorreta) dataCorreta = '01/01/2000';
+
+                return {
+                    id: d.id,
+                    data: dataCorreta,
+                    valor: Number(d.valor || 0),
+                    fornecedor: d.fornecedor || 'N/I',
+                    operacao: d.operacao || d.documento || 'DESPESA',
+                    plano_conta_id: d.plano_conta_id || null
+                };
+            });
+
+            await carregarRateiosFixos();
+            carregarRateiosIndividuais();
+
+            const savedAudit = localStorage.getItem('auditoria_rateio');
+            if (savedAudit) try { auditoriaLog = JSON.parse(savedAudit); } catch(e) {}
+
+            const ops = new Set();
+            despesasData.forEach(d => { if (d.operacao) ops.add(d.operacao); });
+            planosContas.forEach(p => { if (p.nome) ops.add(p.nome); });
+            operacoesUnicas = Array.from(ops).sort();
+
+            inicializarDadosMensais();
+            dadosCarregados = true;
+
+            console.log('✅ Dados carregados com sucesso!');
+            console.log(` Receitas: ${receitasData.length} (${receitasData.filter(r => r.canal === 'CORPORATIVO').length} Corp, ${receitasData.filter(r => r.canal === 'LOJA_FISICA').length} Loja)`);
+
+            return { vendas: vendas.length, despesas: despesas.length };
+        } catch (error) {
+            console.error('❌ Erro ao carregar dados:', error);
+            mostrarToast('❌ Erro', error.message, '#ef4444');
+            throw error;
+        }
+    }
+
+    // ============================================================
+    // RATEIOS FIXOS (Supabase)
+    // ============================================================
+    async function carregarRateiosFixos() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('rateios_plano_contas')
+                .select(`
+                    *,
+                    plano_contas:plano_conta_id (id, nome, codigo, tipo)
+                `)
+                .eq('ativo', true)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            rateiosFixos = (data || [])
+                .filter(r => r.plano_contas && r.plano_contas.nome)
+                .map(r => ({
+                    id: r.id,
+                    operacao: r.plano_contas.nome,
+                    plano_conta_id: r.plano_conta_id,
+                    loja_fisica: r.loja_fisica,
+                    corporativo: r.corporativo,
+                    ativo: r.ativo,
+                    tipo: r.tipo
+                }));
+
+            document.getElementById('totalRateiosFixos').textContent = `Total: ${rateiosFixos.length}`;
+            renderizarRateiosFixos();
+        } catch (error) {
+            console.error('Erro ao carregar rateios fixos:', error);
+            rateiosFixos = [];
+        }
+    }
+
+    function renderizarRateiosFixos() {
+        const container = document.getElementById('rateiosFixosList');
+        if (!container) return;
+        if (rateiosFixos.length === 0) {
+            container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-muted);">Nenhum rateio fixo configurado</div>`;
+            return;
+        }
+        let html = '';
+        rateiosFixos.forEach(r => {
+            html += `
+                <div class="rateio-card">
+                    <div class="op-name">${escapeHtml(r.operacao)}</div>
+                    <div class="op-percent">
+                        <span class="loja">🟢 Loja: <strong>${r.loja_fisica}%</strong></span>
+                        <span class="corp">🟣 Corp: <strong>${r.corporativo}%</strong></span>
+                    </div>
+                    <div class="op-actions">
+                        <button class="btn btn-outline btn-sm" onclick="editarRateioFixo(${r.id})">✏️ Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="excluirRateioFixo(${r.id})">🗑️</button>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    async function criarRateioFixo(plano_conta_id, operacao, loja, corp) {
+        try {
+            await supabaseClient.from('rateios_plano_contas').insert({
+                plano_conta_id,
+                loja_fisica: loja,
+                corporativo: corp,
+                ativo: true,
+                tipo: 'DESPESA',
+                criado_por: usuarioAtual ? usuarioAtual.nome : 'Sistema',
+                updated_at: new Date().toISOString()
+            });
+            registrarAuditoria('RATEIO_FIXO_CRIADO', `${operacao}: ${loja}%/${corp}%`);
+            await carregarRateiosFixos();
+            carregarRateioIndividual();
+            mostrarToast('✅', 'Rateio fixo criado!');
+        } catch (error) {
+            mostrarToast('❌', error.message, '#ef4444');
+        }
+    }
+
+    async function editarRateioFixo(id) {
+        const r = rateiosFixos.find(x => x.id === id);
+        if (!r) return;
+        const loja = parseFloat(prompt('Novo % Loja:', r.loja_fisica));
+        if (isNaN(loja) || loja < 0 || loja > 100) return;
+        const corp = parseFloat(prompt('Novo % Corporativo:', r.corporativo));
+        if (isNaN(corp) || corp < 0 || corp > 100) return;
+        if (loja + corp !== 100) { mostrarToast('⚠️', 'Soma deve ser 100%', '#f59e0b'); return; }
+        try {
+            await supabaseClient.from('rateios_plano_contas')
+                .update({ loja_fisica: loja, corporativo: corp, updated_at: new Date().toISOString() })
+                .eq('id', id);
+            registrarAuditoria('RATEIO_FIXO_EDITADO', `ID ${id}: ${loja}%/${corp}%`);
+            await carregarRateiosFixos();
+            carregarRateioIndividual();
+            mostrarToast('✅', 'Rateio atualizado!');
+        } catch (error) {
+            mostrarToast('❌', error.message, '#ef4444');
+        }
+    }
+
+    async function excluirRateioFixo(id) {
+        if (!confirm('Excluir este rateio fixo?')) return;
+        try {
+            await supabaseClient.from('rateios_plano_contas').delete().eq('id', id);
+            registrarAuditoria('RATEIO_FIXO_EXCLUIDO', `ID ${id}`);
+            await carregarRateiosFixos();
+            carregarRateioIndividual();
+            mostrarToast('✅', 'Rateio excluído!');
+        } catch (error) {
+            mostrarToast('❌', error.message, '#ef4444');
+        }
+    }
+
+    // ============================================================
+    // FORM RATEIO FIXO
+    // ============================================================
+    function abrirFormRateioFixo() {
+        const planosDespesa = planosContas.filter(p => p.tipo === 'DESPESA' && p.ativo !== false);
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position:fixed; inset:0; background:rgba(0,0,0,0.92); backdrop-filter:blur(8px);
+            z-index:999999; display:flex; align-items:center; justify-content:center;
+        `;
+        let opts = '<option value="">Selecione...</option>';
+        planosDespesa.forEach(p => opts += `<option value="${p.id}">${p.nome}</option>`);
+        modal.innerHTML = `
+            <div style="background:var(--bg-card);border:1px solid var(--border-glow);border-radius:var(--radius);padding:24px;width:90%;max-width:460px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <h2 style="color:var(--gold);font-size:18px;">Novo Rateio Fixo</h2>
+                    <button onclick="this.closest('div[style]').remove()" style="background:none;border:none;color:var(--text-muted);font-size:24px;cursor:pointer;">✕</button>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px;">Plano de Contas</label>
+                    <select id="selectPlanoRateio" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);">
+                        ${opts}
+                    </select>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div><label style="font-size:12px;color:var(--text-muted);">Loja %</label><input type="number" id="lojaRateioFixo" value="50" min="0" max="100" step="5" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);"></div>
+                    <div><label style="font-size:12px;color:var(--text-muted);">Corp %</label><input type="number" id="corpRateioFixo" value="50" min="0" max="100" step="5" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);"></div>
+                </div>
+                <div id="somaRateioMsg" style="text-align:center;margin:10px 0;font-size:13px;color:var(--success);">Soma: 100%</div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+                    <button onclick="this.closest('div[style]').remove()" class="btn btn-outline btn-sm">Cancelar</button>
+                    <button onclick="confirmarRateioFixo()" class="btn btn-gold btn-sm">Criar</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('lojaRateioFixo').addEventListener('input', validarSomaRateio);
+        document.getElementById('corpRateioFixo').addEventListener('input', validarSomaRateio);
+    }
+
+    function validarSomaRateio() {
+        const loja = parseFloat(document.getElementById('lojaRateioFixo').value) || 0;
+        const corp = parseFloat(document.getElementById('corpRateioFixo').value) || 0;
+        const msg = document.getElementById('somaRateioMsg');
+        if (loja + corp !== 100) {
+            msg.textContent = `Soma: ${loja + corp}% - Deve ser 100%`;
+            msg.style.color = '#ef4444';
+        } else {
+            msg.textContent = `Soma: 100% ✓`;
+            msg.style.color = '#10b981';
+        }
+    }
+
+    function confirmarRateioFixo() {
+        const select = document.getElementById('selectPlanoRateio');
+        const planoId = select.value;
+        if (!planoId) { mostrarToast('⚠️', 'Selecione um plano de contas', '#f59e0b'); return; }
+        const plano = planosContas.find(p => p.id === parseInt(planoId));
+        if (!plano) return;
+        if (rateiosFixos.some(r => r.plano_conta_id === parseInt(planoId))) {
+            mostrarToast('⚠️', 'Já existe rateio para esta operação', '#f59e0b');
+            return;
+        }
+        const loja = parseFloat(document.getElementById('lojaRateioFixo').value) || 0;
+        const corp = parseFloat(document.getElementById('corpRateioFixo').value) || 0;
+        if (loja + corp !== 100) { mostrarToast('⚠️', 'Soma deve ser 100%', '#f59e0b'); return; }
+        document.querySelector('#selectPlanoRateio').closest('div[style]').remove();
+        criarRateioFixo(planoId, plano.nome, loja, corp);
+    }
+
+    // ============================================================
+    // AÇÕES RÁPIDAS - RATEIO FIXO
+    // ============================================================
+    async function aplicarRateioPadraoFixo() {
+        if (!confirm('Aplicar 50% Loja / 50% Corp para TODAS as operações sem rateio?')) return;
+        const { data: planos, error } = await supabaseClient
+            .from('plano_contas')
+            .select('id, nome')
+            .eq('tipo', 'DESPESA')
+            .eq('ativo', true);
+        if (error) { mostrarToast('❌', error.message, '#ef4444'); return; }
+        const planosSemRateio = planos.filter(p => !rateiosFixos.some(r => r.plano_conta_id === p.id));
+        if (planosSemRateio.length === 0) { mostrarToast('ℹ️', 'Todas as operações já têm rateio', '#f5b800'); return; }
+        let criados = 0;
+        for (const plano of planosSemRateio) {
+            try {
+                await supabaseClient.from('rateios_plano_contas').insert({
+                    plano_conta_id: plano.id,
+                    loja_fisica: 50,
+                    corporativo: 50,
+                    ativo: true,
+                    tipo: 'DESPESA',
+                    criado_por: 'Sistema',
+                    updated_at: new Date().toISOString()
+                });
+                criados++;
+            } catch(e) {}
+        }
+        registrarAuditoria('RATEIO_FIXO_PADRAO', `${criados} rateios 50/50 criados`);
+        await carregarRateiosFixos();
+        carregarRateioIndividual();
+        carregarDados();
+        mostrarToast('✅', `${criados} rateios criados!`);
+    }
+
+    async function aplicarRateioLojaFixo() {
+        if (!confirm('Aplicar 70% Loja / 30% Corp para TODAS as operações sem rateio?')) return;
+        const { data: planos, error } = await supabaseClient
+            .from('plano_contas')
+            .select('id, nome')
+            .eq('tipo', 'DESPESA')
+            .eq('ativo', true);
+        if (error) { mostrarToast('❌', error.message, '#ef4444'); return; }
+        const planosSemRateio = planos.filter(p => !rateiosFixos.some(r => r.plano_conta_id === p.id));
+        if (planosSemRateio.length === 0) { mostrarToast('ℹ️', 'Todas as operações já têm rateio', '#f5b800'); return; }
+        let criados = 0;
+        for (const plano of planosSemRateio) {
+            try {
+                await supabaseClient.from('rateios_plano_contas').insert({
+                    plano_conta_id: plano.id,
+                    loja_fisica: 70,
+                    corporativo: 30,
+                    ativo: true,
+                    tipo: 'DESPESA',
+                    criado_por: 'Sistema',
+                    updated_at: new Date().toISOString()
+                });
+                criados++;
+            } catch(e) {}
+        }
+        registrarAuditoria('RATEIO_FIXO_LOJA', `${criados} rateios 70/30 criados`);
+        await carregarRateiosFixos();
+        carregarRateioIndividual();
+        carregarDados();
+        mostrarToast('✅', `${criados} rateios criados!`);
+    }
+
+    async function aplicarRateioCorpFixo() {
+        if (!confirm('Aplicar 30% Loja / 70% Corp para TODAS as operações sem rateio?')) return;
+        const { data: planos, error } = await supabaseClient
+            .from('plano_contas')
+            .select('id, nome')
+            .eq('tipo', 'DESPESA')
+            .eq('ativo', true);
+        if (error) { mostrarToast('❌', error.message, '#ef4444'); return; }
+        const planosSemRateio = planos.filter(p => !rateiosFixos.some(r => r.plano_conta_id === p.id));
+        if (planosSemRateio.length === 0) { mostrarToast('ℹ️', 'Todas as operações já têm rateio', '#f5b800'); return; }
+        let criados = 0;
+        for (const plano of planosSemRateio) {
+            try {
+                await supabaseClient.from('rateios_plano_contas').insert({
+                    plano_conta_id: plano.id,
+                    loja_fisica: 30,
+                    corporativo: 70,
+                    ativo: true,
+                    tipo: 'DESPESA',
+                    criado_por: 'Sistema',
+                    updated_at: new Date().toISOString()
+                });
+                criados++;
+            } catch(e) {}
+        }
+        registrarAuditoria('RATEIO_FIXO_CORP', `${criados} rateios 30/70 criados`);
+        await carregarRateiosFixos();
+        carregarRateioIndividual();
+        carregarDados();
+        mostrarToast('✅', `${criados} rateios criados!`);
+    }
+
+    // ============================================================
+    // APLICAR RATEIOS FIXOS AUTOMATICAMENTE
+    // ============================================================
+    function aplicarTodosRateiosFixos() {
+        if (!despesasData || despesasData.length === 0) return 0;
+        let aplicados = 0;
+        for (const d of despesasData) {
+            if (rateiosIndividuais[d.id]) continue;
+            const fixo = rateiosFixos.find(r =>
+                (d.plano_conta_id && r.plano_conta_id === d.plano_conta_id) ||
+                (d.operacao && (r.operacao || '').toLowerCase().trim() === (d.operacao || '').toLowerCase().trim())
+            );
+            if (fixo) {
+                rateiosIndividuais[d.id] = { lojaFisica: fixo.loja_fisica, corporativo: fixo.corporativo };
+                localStorage.setItem(`rateio_manual_${d.id}`, 'true');
+                aplicados++;
+            }
+        }
+        if (aplicados > 0) {
+            salvarRateiosIndividuais();
+            registrarAuditoria('RATEIO_FIXO_AUTO', `${aplicados} aplicados`);
+        }
+        return aplicados;
+    }
+
+    // ============================================================
+    // RATEIO INDIVIDUAL - CARREGAR
+    // ============================================================
+    async function carregarRateioIndividual() {
+        const tbody = document.getElementById('rateioIndividualBody');
+        if (!tbody) return;
+        carregarRateiosIndividuais();
+
+        const busca = document.getElementById('buscaRateio')?.value.toLowerCase() || '';
+        const dataInicio = document.getElementById('dataInicioRateio')?.value;
+        const dataFim = document.getElementById('dataFimRateio')?.value;
+
+        let alterouAlgo = false;
+        for (const d of despesasData) {
+            if (!rateiosIndividuais[d.id]) {
+                const fixo = rateiosFixos.find(r =>
+                    (d.plano_conta_id && r.plano_conta_id === d.plano_conta_id) ||
+                    (d.operacao && (r.operacao || '').toLowerCase().trim() === (d.operacao || '').toLowerCase().trim())
+                );
+                if (fixo) {
+                    rateiosIndividuais[d.id] = { lojaFisica: fixo.loja_fisica, corporativo: fixo.corporativo };
+                    localStorage.setItem(`rateio_manual_${d.id}`, 'true');
+                    alterouAlgo = true;
+                }
+            }
+        }
+        if (alterouAlgo) salvarRateiosIndividuais();
+
+        let filtradas = despesasData.filter(d => {
+            if (busca) {
+                const f = (d.fornecedor || '').toLowerCase();
+                const o = (d.operacao || '').toLowerCase();
+                if (!f.includes(busca) && !o.includes(busca)) return false;
+            }
+            if (dataInicio && d.data < dataInicio) return false;
+            if (dataFim && d.data > dataFim) return false;
+            return true;
+        });
+
+        filtradas.sort((a,b) => (parseData(b.data) || 0) - (parseData(a.data) || 0));
+
+        document.getElementById('totalRateioInd').textContent = `${filtradas.length} registros`;
+        const count = Object.keys(rateiosIndividuais).length;
+        document.getElementById('rateiosSalvos').textContent = count;
+        document.getElementById('rateioBadge').textContent = count;
+
+        if (filtradas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">Nenhuma despesa encontrada</td></tr>';
+            return;
+        }
+
+        let html = '';
+        for (const d of filtradas) {
+            const rateio = rateiosIndividuais[d.id];
+            const lojaVal = rateio?.lojaFisica ?? '';
+            const corpVal = rateio?.corporativo ?? '';
+            const hasRateio = rateio && (lojaVal !== '' || corpVal !== '');
+            const isAuto = hasRateio && rateiosFixos.some(r =>
+                (d.plano_conta_id && r.plano_conta_id === d.plano_conta_id) ||
+                ((r.operacao || '').toLowerCase().trim() === (d.operacao || '').toLowerCase().trim())
+            ) && !localStorage.getItem(`rateio_manual_${d.id}`);
+
+            html += `
+                <tr id="row_${d.id}" style="${isAuto ? 'background:rgba(16,185,129,0.05);' : ''}">
+                    <td>${formatarDataBr(d.data)}</td>
+                    <td>${escapeHtml((d.fornecedor || '-').substring(0, 20))}</td>
+                    <td><strong>${escapeHtml((d.operacao || '-').substring(0, 25))}</strong>${isAuto ? ' <span class="badge-auto">fixo</span>' : ''}</td>
+                    <td style="text-align:right;color:var(--gold);font-weight:600;">R$ ${d.valor.toFixed(2)}</td>
+                    <td style="text-align:center;">
+                        <input class="input-sm ${isAuto ? 'auto' : ''}" id="loja_${d.id}" value="${lojaVal}" min="0" max="100" step="5" placeholder="%" style="width:50px;">
+                    </td>
+                    <td style="text-align:center;">
+                        <input class="input-sm" id="corp_${d.id}" value="${corpVal}" min="0" max="100" step="5" placeholder="%" style="width:50px;">
+                    </td>
+                    <td style="text-align:center;font-size:10px;">
+                        <button class="btn btn-success btn-sm" onclick="salvarRateioIndividual(${d.id})">Salvar</button>
+                        ${hasRateio ? `<button class="btn btn-danger btn-sm" onclick="removerRateioIndividual(${d.id})">Remover</button>` : ''}
+                        <span id="status_${d.id}" style="font-size:10px;">${hasRateio ? (isAuto ? 'auto' : '✓') : ''}</span>
+                    </td>
+                </tr>
+            `;
+        }
+        tbody.innerHTML = html;
+    }
+
+    // ============================================================
+    // RATEIO INDIVIDUAL - AÇÕES
+    // ============================================================
+    function salvarRateioIndividual(id) {
+        const lojaInput = document.getElementById(`loja_${id}`);
+        const corpInput = document.getElementById(`corp_${id}`);
+        const status = document.getElementById(`status_${id}`);
+        if (!lojaInput || !corpInput) return;
+
+        const lojaVal = lojaInput.value.trim();
+        const corpVal = corpInput.value.trim();
+        const loja = lojaVal !== '' ? parseFloat(lojaVal) : null;
+        const corp = corpVal !== '' ? parseFloat(corpVal) : null;
+
+        if (loja !== null && corp !== null) {
+            if (isNaN(loja) || isNaN(corp) || loja + corp !== 100) {
+                mostrarToast('⚠️', 'Soma deve ser 100%', '#f59e0b');
+                return;
+            }
+            rateiosIndividuais[id] = { lojaFisica: loja, corporativo: corp };
+            localStorage.setItem(`rateio_manual_${id}`, 'true');
+            if (status) status.innerHTML = '✓';
+        } else if (loja === null && corp === null) {
+            delete rateiosIndividuais[id];
+            localStorage.removeItem(`rateio_manual_${id}`);
+            if (status) status.innerHTML = '';
+        } else {
+            mostrarToast('⚠️', 'Preencha ambos ou deixe ambos vazios', '#f59e0b');
+            return;
+        }
+        salvarRateiosIndividuais();
+        registrarAuditoria('RATEIO_INDIVIDUAL', `ID ${id}: ${loja||0}%/${corp||0}%`);
+        carregarDados();
+        const row = document.getElementById(`row_${id}`);
+        if (row) {
+            row.style.background = '';
+            const l = document.getElementById(`loja_${id}`);
+            const c = document.getElementById(`corp_${id}`);
+            if (l) { l.classList.remove('auto'); l.style.borderColor = ''; }
+            if (c) { c.classList.remove('auto'); c.style.borderColor = ''; }
+            const badge = row.querySelector('.badge-auto');
+            if (badge) badge.remove();
+        }
+        mostrarToast('✅', 'Rateio salvo!');
+    }
+
+    function removerRateioIndividual(id) {
+        if (!confirm(`Remover rateio da despesa ID ${id}?`)) return;
+        delete rateiosIndividuais[id];
+        localStorage.removeItem(`rateio_manual_${id}`);
+        salvarRateiosIndividuais();
+        registrarAuditoria('RATEIO_INDIVIDUAL_REMOVIDO', `ID ${id}`);
+        const l = document.getElementById(`loja_${id}`);
+        const c = document.getElementById(`corp_${id}`);
+        if (l) { l.value = ''; l.classList.remove('auto'); l.style.borderColor = ''; }
+        if (c) { c.value = ''; c.classList.remove('auto'); c.style.borderColor = ''; }
+        const status = document.getElementById(`status_${id}`);
+        if (status) status.innerHTML = '';
+        const row = document.getElementById(`row_${id}`);
+        if (row) {
+            row.style.background = 'rgba(239,68,68,0.1)';
+            const badge = row.querySelector('.badge-auto');
+            if (badge) badge.remove();
+            setTimeout(() => row.style.background = '', 1000);
+        }
+        carregarDados();
+        mostrarToast('✅', 'Rateio removido!');
+    }
+
+    function salvarTodosRateiosIndividuais() {
+        const inputs = document.querySelectorAll('#rateioIndividualBody input[id^="loja_"]');
+        let salvos = 0, erros = 0;
+        for (const input of inputs) {
+            const id = parseInt(input.id.replace('loja_', ''));
+            const corp = document.getElementById(`corp_${id}`);
+            if (!corp) continue;
+            const lojaVal = input.value.trim() !== '' ? parseFloat(input.value) : null;
+            const corpVal = corp.value.trim() !== '' ? parseFloat(corp.value) : null;
+            if (lojaVal !== null && corpVal !== null) {
+                if (lojaVal + corpVal !== 100) { erros++; continue; }
+                rateiosIndividuais[id] = { lojaFisica: lojaVal, corporativo: corpVal };
+                localStorage.setItem(`rateio_manual_${id}`, 'true');
+                salvos++;
+                const status = document.getElementById(`status_${id}`);
+                if (status) status.innerHTML = '✓';
+                const row = document.getElementById(`row_${id}`);
+                if (row) {
+                    row.style.background = 'rgba(16,185,129,0.1)';
+                    const badge = row.querySelector('.badge-auto');
+                    if (badge) badge.remove();
+                    const l = document.getElementById(`loja_${id}`);
+                    const c = document.getElementById(`corp_${id}`);
+                    if (l) { l.classList.remove('auto'); l.style.borderColor = ''; }
+                    if (c) { c.classList.remove('auto'); c.style.borderColor = ''; }
+                    setTimeout(() => row.style.background = '', 1500);
+                }
+            } else if (lojaVal === null && corpVal === null) {
+                delete rateiosIndividuais[id];
+                localStorage.removeItem(`rateio_manual_${id}`);
+                const status = document.getElementById(`status_${id}`);
+                if (status) status.innerHTML = '';
+            } else { erros++; }
+        }
+        salvarRateiosIndividuais();
+        registrarAuditoria('RATEIO_INDIVIDUAL_LOTE', `${salvos} salvos, ${erros} erros`);
+        carregarDados();
+        mostrarToast('✅', `${salvos} salvos | ${erros} erros`);
+    }
+
+    function limparTodosRateiosIndividuais() {
+        const total = Object.keys(rateiosIndividuais).length;
+        if (total === 0) {
+            mostrarToast('ℹ️', 'Nenhum rateio para limpar', '#f5b800');
+            return;
+        }
+        if (!confirm(`⚠️ Remover TODOS os ${total} rateios individuais?\n\nEsta ação não pode ser desfeita!`)) return;
+        if (!confirm(`🔴 Última confirmação: remover ${total} rateios?`)) return;
+
+        rateiosIndividuais = {};
+        const keys = Object.keys(localStorage);
+        keys.forEach(k => { if (k.startsWith('rateio_manual_')) localStorage.removeItem(k); });
+
+        (async function() {
+            try {
+                const { data: fixos, error: fetchError } = await supabaseClient
+                    .from('rateios_plano_contas')
+                    .select('id')
+                    .eq('ativo', true);
+
+                if (!fetchError && fixos && fixos.length > 0) {
+                    const ids = fixos.map(r => r.id);
+                    await supabaseClient.from('rateios_plano_contas').delete().in('id', ids);
+                    console.log(`🗑️ ${ids.length} rateios fixos removidos`);
+                }
+
+                salvarRateiosIndividuais();
+                registrarAuditoria('RATEIO_LIMPEZA_TOTAL', `${total} rateios individuais e fixos removidos`);
+                await carregarRateiosFixos();
+                carregarRateioIndividual();
+                carregarDados();
+                mostrarToast('🗑️', `${total} rateios removidos!`, '#ef4444');
+            } catch (e) {
+                console.error('Erro ao limpar rateios fixos:', e);
+                salvarRateiosIndividuais();
+                carregarRateioIndividual();
+                carregarDados();
+                mostrarToast('⚠️', 'Rateios individuais removidos, mas houve erro ao remover fixos', '#f59e0b');
+            }
+        })();
+    }
+
+    function limparFiltrosRateio() {
+        document.getElementById('buscaRateio').value = '';
+        document.getElementById('dataInicioRateio').value = '';
+        document.getElementById('dataFimRateio').value = '';
+        carregarRateioIndividual();
+    }
+
+    // ============================================================
+    // TIPO FILTRO
+    // ============================================================
+    function setTipoFiltro(tipo, btn) {
+        tipoFiltroAtual = tipo;
+        document.querySelectorAll('#tipoSelector .tipo-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        carregarLancamentos();
+    }
+
+    // ============================================================
+    // CARREGAR LANÇAMENTOS
+    // ============================================================
+    function carregarLancamentos() {
+        const tbody = document.getElementById('lancamentosBody');
+        if (!tbody) return;
+        const busca = document.getElementById('buscaLancamentos')?.value.toLowerCase() || '';
+        const tipo = tipoFiltroAtual || 'TODOS';
+        const inicio = document.getElementById('lancDataInicio')?.value;
+        const fim = document.getElementById('lancDataFim')?.value;
+
+        let items = [];
+
+        if (tipo === 'TODOS' || tipo === 'RECEITA') {
+            receitasData.forEach(r => {
+                const canalLabel = r.canal === 'CORPORATIVO' ? 'Corporativo' : 'Loja Física';
+                items.push({
+                    ...r,
+                    _tipo: 'RECEITA',
+                    _nome: r.cliente,
+                    _canal: canalLabel,
+                    _canalClass: r.canal === 'CORPORATIVO' ? 'tag-purple' : 'tag-green'
+                });
+            });
+        }
+
+        if (tipo === 'TODOS' || tipo === 'DESPESA') {
+            despesasData.forEach(d => {
+                let canalLabel = 'Não definido';
+                let canalClass = 'tag-red';
+
+                const rateio = rateiosIndividuais[d.id];
+                if (rateio) {
+                    if (rateio.lojaFisica > rateio.corporativo) {
+                        canalLabel = 'Loja Física';
+                        canalClass = 'tag-green';
+                    } else if (rateio.corporativo > rateio.lojaFisica) {
+                        canalLabel = 'Corporativo';
+                        canalClass = 'tag-purple';
+                    } else {
+                        canalLabel = 'Rateio 50/50';
+                        canalClass = 'tag-gold';
+                    }
+                } else {
+                    const fixo = rateiosFixos.find(r =>
+                        (d.plano_conta_id && r.plano_conta_id === d.plano_conta_id) ||
+                        (d.operacao && (r.operacao || '').toLowerCase().trim() === (d.operacao || '').toLowerCase().trim())
+                    );
+                    if (fixo) {
+                        if (fixo.loja_fisica > fixo.corporativo) {
+                            canalLabel = 'Loja Física';
+                            canalClass = 'tag-green';
+                        } else if (fixo.corporativo > fixo.loja_fisica) {
+                            canalLabel = 'Corporativo';
+                            canalClass = 'tag-purple';
+                        } else {
+                            canalLabel = 'Rateio 50/50';
+                            canalClass = 'tag-gold';
+                        }
+                    }
+                }
+
+                items.push({
+                    ...d,
+                    _tipo: 'DESPESA',
+                    _nome: d.fornecedor,
+                    _canal: canalLabel,
+                    _canalClass: canalClass,
+                    operacao: d.operacao
+                });
+            });
+        }
+
+        if (busca) items = items.filter(i => (i._nome || '').toLowerCase().includes(busca) || (i.operacao || '').toLowerCase().includes(busca));
+        if (inicio) items = items.filter(i => i.data >= inicio);
+        if (fim) items = items.filter(i => i.data <= fim);
+
+        items.sort((a,b) => (parseData(b.data) || 0) - (parseData(a.data) || 0));
+
+        document.getElementById('totalLancamentos').textContent = `${items.length} registros`;
+        document.getElementById('lancamentosBadge').textContent = items.length;
+
+        if (items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">Nenhum lançamento encontrado</td></tr>';
+            return;
+        }
+
+        let html = '';
+        for (const i of items.slice(0, 200)) {
+            const tagClass = i._tipo === 'RECEITA' ? 'tag-green' : 'tag-red';
+            const tagText = i._tipo === 'RECEITA' ? 'Receita' : 'Despesa';
+            html += `
+                <tr>
+                    <td>${formatarDataBr(i.data)}</td>
+                    <td><span class="tag ${tagClass}">${tagText}</span></td>
+                    <td>${escapeHtml((i._nome || '-').substring(0, 25))}</td>
+                    <td>${escapeHtml((i.operacao || '-').substring(0, 30))}</td>
+                    <td style="text-align:right;font-weight:600;color:${i._tipo === 'RECEITA' ? 'var(--success)' : 'var(--danger)'};">R$ ${i.valor.toFixed(2)}</td>
+                    <td><span class="tag ${i._canalClass}">${i._canal}</span></td>
+                    <td style="font-size:10px;color:var(--text-muted);">${i.plano || '-'}</td>
+                </tr>
+            `;
+        }
+        tbody.innerHTML = html;
+    }
+
+    // ============================================================
+    // FUNÇÃO PRINCIPAL: CARREGAR DADOS
+    // ============================================================
+    function carregarDados() {
+        console.log(' Calculando resultados...');
+        dadosMensais = criarArrayMeses();
+        rateiosIndividuais = carregarRateiosIndividuais();
+
+        if (receitasData && receitasData.length > 0) {
+            receitasData.forEach(r => {
+                const mes = extrairMes(r.data);
+                if (mes >= 0 && mes <= 11 && dadosMensais[mes]) {
+                    const valor = Number(r.valor || 0);
+                    if (r.canal === 'CORPORATIVO') {
+                        dadosMensais[mes].receitaCorp += valor;
+                    } else {
+                        dadosMensais[mes].receitaLoja += valor;
+                    }
+                }
+            });
+        }
+
+        if (despesasData && despesasData.length > 0) {
+            for (const d of despesasData) {
+                const mes = extrairMes(d.data);
+                if (mes < 0 || mes > 11 || !dadosMensais[mes]) continue;
+                const valor = Number(d.valor || 0);
+
+                let lojaPct = 50, corpPct = 50;
+
+                if (rateiosIndividuais && rateiosIndividuais[d.id]) {
+                    const r = rateiosIndividuais[d.id];
+                    lojaPct = r.lojaFisica !== undefined && r.lojaFisica !== null ? r.lojaFisica : 50;
+                    corpPct = r.corporativo !== undefined && r.corporativo !== null ? r.corporativo : 50;
+                } else {
+                    const fixo = rateiosFixos.find(r =>
+                        (d.plano_conta_id && r.plano_conta_id === d.plano_conta_id) ||
+                        (d.operacao && (r.operacao || '').toLowerCase().trim() === (d.operacao || '').toLowerCase().trim())
+                    );
+                    if (fixo) {
+                        lojaPct = fixo.loja_fisica || 50;
+                        corpPct = fixo.corporativo || 50;
+                    }
+                }
+
+                dadosMensais[mes].despesaLoja += (valor * lojaPct) / 100;
+                dadosMensais[mes].despesaCorp += (valor * corpPct) / 100;
+            }
+        }
+
+        try {
+            atualizarCardsDesempenho();
+            atualizarCardsIndicadores();
+            atualizarTabelaResultados();
+            atualizarGraficos();
+            atualizarPeriodo();
+        } catch (e) {}
+    }
+
+    // ============================================================
+    // ATUALIZAR CARDS
+    // ============================================================
+    function atualizarCardsDesempenho() {
+        let totalReceitaLoja = 0, totalReceitaCorp = 0, totalDespesaLoja = 0, totalDespesaCorp = 0;
+        for (let i = 0; i < 12; i++) {
+            if (dadosMensais && dadosMensais[i]) {
+                totalReceitaLoja += dadosMensais[i].receitaLoja || 0;
+                totalReceitaCorp += dadosMensais[i].receitaCorp || 0;
+                totalDespesaLoja += dadosMensais[i].despesaLoja || 0;
+                totalDespesaCorp += dadosMensais[i].despesaCorp || 0;
+            }
+        }
+        const resCorp = totalReceitaCorp - totalDespesaCorp;
+        const resLoja = totalReceitaLoja - totalDespesaLoja;
+        const resCons = (totalReceitaLoja + totalReceitaCorp) - (totalDespesaLoja + totalDespesaCorp);
+
+        document.getElementById('dReceitaCorp').textContent = formatarMoeda(totalReceitaCorp);
+        document.getElementById('dReceitaLoja').textContent = formatarMoeda(totalReceitaLoja);
+        const elCorp = document.getElementById('dResultCorp');
+        elCorp.textContent = formatarMoeda(resCorp);
+        elCorp.className = `value ${resCorp >= 0 ? 'green' : 'red'}`;
+        const elLoja = document.getElementById('dResultLoja');
+        elLoja.textContent = formatarMoeda(resLoja);
+        elLoja.className = `value ${resLoja >= 0 ? 'green' : 'red'}`;
+        document.getElementById('dConsolidado').textContent = formatarMoeda(resCons);
+    }
+
+    function atualizarCardsIndicadores() {
+        let totalReceitaLoja = 0, totalReceitaCorp = 0, totalDespesaLoja = 0, totalDespesaCorp = 0;
+        for (let i = 0; i < 12; i++) {
+            if (dadosMensais && dadosMensais[i]) {
+                totalReceitaLoja += dadosMensais[i].receitaLoja || 0;
+                totalReceitaCorp += dadosMensais[i].receitaCorp || 0;
+                totalDespesaLoja += dadosMensais[i].despesaLoja || 0;
+                totalDespesaCorp += dadosMensais[i].despesaCorp || 0;
+            }
+        }
+
+        const resCorp = totalReceitaCorp - totalDespesaCorp;
+        const margemCorp = totalReceitaCorp > 0 ? (resCorp / totalReceitaCorp) * 100 : 0;
+        document.getElementById('iCorpReceita').textContent = formatarMoeda(totalReceitaCorp);
+        document.getElementById('iCorpDespesa').textContent = formatarMoeda(totalDespesaCorp);
+        document.getElementById('iCorpResultado').textContent = formatarMoeda(resCorp);
+        document.getElementById('iCorpMargem').textContent = `${margemCorp.toFixed(1)}%`;
+
+        const resLoja = totalReceitaLoja - totalDespesaLoja;
+        const margemLoja = totalReceitaLoja > 0 ? (resLoja / totalReceitaLoja) * 100 : 0;
+        document.getElementById('iLojaReceita').textContent = formatarMoeda(totalReceitaLoja);
+        document.getElementById('iLojaDespesa').textContent = formatarMoeda(totalDespesaLoja);
+        document.getElementById('iLojaResultado').textContent = formatarMoeda(resLoja);
+        document.getElementById('iLojaMargem').textContent = `${margemLoja.toFixed(1)}%`;
+
+        const totalReceita = totalReceitaLoja + totalReceitaCorp;
+        const totalDespesa = totalDespesaLoja + totalDespesaCorp;
+        const resCons = totalReceita - totalDespesa;
+        const margemCons = totalReceita > 0 ? (resCons / totalReceita) * 100 : 0;
+        document.getElementById('iConsReceita').textContent = formatarMoeda(totalReceita);
+        document.getElementById('iConsDespesa').textContent = formatarMoeda(totalDespesa);
+        document.getElementById('iConsResultado').textContent = formatarMoeda(resCons);
+        document.getElementById('iConsMargem').textContent = `${margemCons.toFixed(1)}%`;
+    }
+
+    function atualizarTabelaResultados() {
+        const tbody = document.getElementById('tabelaResultados');
+        if (!tbody) return;
+        let html = '';
+        for (let i = 0; i < 12; i++) {
+            const d = (dadosMensais && dadosMensais[i]) ? dadosMensais[i] : { receitaLoja: 0, receitaCorp: 0, despesaLoja: 0, despesaCorp: 0 };
+            const resCorp = d.receitaCorp - d.despesaCorp;
+            const resLoja = d.receitaLoja - d.despesaLoja;
+            const cCorp = resCorp > 0 ? 'green' : (resCorp < 0 ? 'red' : '');
+            const cLoja = resLoja > 0 ? 'green' : (resLoja < 0 ? 'red' : '');
+            html += `<tr>
+                <td style="font-weight:600;text-align:center;">${meses[i]}</td>
+                <td style="color:var(--purple);text-align:center;">${formatarMoeda(d.receitaCorp)}</td>
+                <td style="color:var(--success);text-align:center;">${formatarMoeda(d.receitaLoja)}</td>
+                <td style="color:var(--danger);text-align:center;">${formatarMoeda(d.despesaCorp)}</td>
+                <td style="color:var(--danger);text-align:center;">${formatarMoeda(d.despesaLoja)}</td>
+                <td style="text-align:center;font-weight:700;color:${cCorp};">${formatarMoeda(resCorp)}</td>
+                <td style="text-align:center;font-weight:700;color:${cLoja};">${formatarMoeda(resLoja)}</td>
+            </tr>`;
+        }
+        tbody.innerHTML = html;
+    }
+
+    function atualizarPeriodo() {
+        document.getElementById('periodoInfo').textContent = 'Todos os meses';
+    }
+
+    // ============================================================
+    // GRAFICOS
+    // ============================================================
+    function atualizarGraficos() {
+        const resCorp = dadosMensais.map(d => (d?.receitaCorp || 0) - (d?.despesaCorp || 0));
+        const resLoja = dadosMensais.map(d => (d?.receitaLoja || 0) - (d?.despesaLoja || 0));
+        const desLoja = dadosMensais.map(d => d?.despesaLoja || 0);
+        const desCorp = dadosMensais.map(d => d?.despesaCorp || 0);
+
+        function renderChart(id, config) {
+            const ctx = document.getElementById(id)?.getContext('2d');
+            if (!ctx) return;
+            if (charts[id]) charts[id].destroy();
+            charts[id] = new Chart(ctx, config);
+        }
+
+        const fontColor = '#e8edf2';
+        const gridColor = 'rgba(255,255,255,0.06)';
+
+        renderChart('chartCorp', {
+            type: 'line',
+            data: { labels: meses, datasets: [{ label: 'Resultado Corp', data: resCorp, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.15)', fill: true, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#8b5cf6', borderWidth: 3 }] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: fontColor, font: { size: 12, weight: '600' } } },
+                    tooltip: { callbacks: { label: ctx => formatarMoeda(ctx.raw) } }
+                },
+                scales: {
+                    y: { ticks: { color: fontColor, callback: v => formatarMoeda(v) }, grid: { color: gridColor } },
+                    x: { ticks: { color: fontColor }, grid: { color: gridColor } }
+                }
+            }
+        });
+
+        renderChart('chartLoja', {
+            type: 'line',
+            data: { labels: meses, datasets: [{ label: 'Resultado Loja', data: resLoja, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#10b981', borderWidth: 3 }] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: fontColor, font: { size: 12, weight: '600' } } },
+                    tooltip: { callbacks: { label: ctx => formatarMoeda(ctx.raw) } }
+                },
+                scales: {
+                    y: { ticks: { color: fontColor, callback: v => formatarMoeda(v) }, grid: { color: gridColor } },
+                    x: { ticks: { color: fontColor }, grid: { color: gridColor } }
+                }
+            }
+        });
+
+        const totalDespLoja = desLoja.reduce((a,b) => a+b, 0);
+        const totalDespCorp = desCorp.reduce((a,b) => a+b, 0);
+        renderChart('chartPart', {
+            type: 'doughnut',
+            data: { labels: ['Loja Física', 'Corporativo'], datasets: [{ data: [totalDespLoja, totalDespCorp], backgroundColor: ['#10b981', '#8b5cf6'], borderWidth: 0, cutout: '65%' }] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: fontColor, font: { size: 12, weight: '500' }, padding: 20 } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatarMoeda(ctx.raw)} (${((ctx.raw/(totalDespLoja+totalDespCorp))*100).toFixed(1)}%)` } }
+                }
+            }
+        });
+
+        renderChart('chartLucro', {
+            type: 'bar',
+            data: { labels: meses, datasets: [
+                { label: 'Loja Física', data: resLoja, backgroundColor: '#10b981', borderRadius: 8, borderSkipped: false },
+                { label: 'Corporativo', data: resCorp, backgroundColor: '#8b5cf6', borderRadius: 8, borderSkipped: false }
+            ] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: fontColor, font: { size: 12, weight: '500' }, padding: 20 } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatarMoeda(ctx.raw)}` } }
+                },
+                scales: {
+                    y: { ticks: { color: fontColor, callback: v => formatarMoeda(v) }, grid: { color: gridColor } },
+                    x: { ticks: { color: fontColor }, grid: { color: gridColor } }
+                }
+            }
+        });
+
+        renderChart('chartICorp', {
+            type: 'line',
+            data: { labels: meses, datasets: [{ label: 'Resultado Corp', data: resCorp, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.15)', fill: true, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#8b5cf6', borderWidth: 3 }] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: fontColor, font: { size: 12, weight: '600' } } },
+                    tooltip: { callbacks: { label: ctx => formatarMoeda(ctx.raw) } }
+                },
+                scales: {
+                    y: { ticks: { color: fontColor, callback: v => formatarMoeda(v) }, grid: { color: gridColor } },
+                    x: { ticks: { color: fontColor }, grid: { color: gridColor } }
+                }
+            }
+        });
+
+        renderChart('chartILoja', {
+            type: 'line',
+            data: { labels: meses, datasets: [{ label: 'Resultado Loja', data: resLoja, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#10b981', borderWidth: 3 }] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: fontColor, font: { size: 12, weight: '600' } } },
+                    tooltip: { callbacks: { label: ctx => formatarMoeda(ctx.raw) } }
+                },
+                scales: {
+                    y: { ticks: { color: fontColor, callback: v => formatarMoeda(v) }, grid: { color: gridColor } },
+                    x: { ticks: { color: fontColor }, grid: { color: gridColor } }
+                }
+            }
+        });
+
+        renderChart('chartIPart', {
+            type: 'doughnut',
+            data: { labels: ['Loja Física', 'Corporativo'], datasets: [{ data: [totalDespLoja, totalDespCorp], backgroundColor: ['#10b981', '#8b5cf6'], borderWidth: 0, cutout: '65%' }] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: fontColor, font: { size: 12, weight: '500' }, padding: 20 } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatarMoeda(ctx.raw)} (${((ctx.raw/(totalDespLoja+totalDespCorp))*100).toFixed(1)}%)` } }
+                }
+            }
+        });
+
+        renderChart('chartILucro', {
+            type: 'bar',
+            data: { labels: meses, datasets: [
+                { label: 'Loja Física', data: resLoja, backgroundColor: '#10b981', borderRadius: 8, borderSkipped: false },
+                { label: 'Corporativo', data: resCorp, backgroundColor: '#8b5cf6', borderRadius: 8, borderSkipped: false }
+            ] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: fontColor, font: { size: 12, weight: '500' }, padding: 20 } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatarMoeda(ctx.raw)}` } }
+                },
+                scales: {
+                    y: { ticks: { color: fontColor, callback: v => formatarMoeda(v) }, grid: { color: gridColor } },
+                    x: { ticks: { color: fontColor }, grid: { color: gridColor } }
+                }
+            }
+        });
+    }
+
+    // ============================================================
+    // EXPORTAR
+    // ============================================================
+    function exportarExcel() {
+        let csv = 'Mês;Receita Corp;Receita Loja;Despesa Corp;Despesa Loja;Resultado Corp;Resultado Loja\n';
+        for (let i = 0; i < 12; i++) {
+            const d = dadosMensais[i] || { receitaLoja: 0, receitaCorp: 0, despesaLoja: 0, despesaCorp: 0 };
+            csv += `${meses[i]};${d.receitaCorp.toFixed(2)};${d.receitaLoja.toFixed(2)};${d.despesaCorp.toFixed(2)};${d.despesaLoja.toFixed(2)};${(d.receitaCorp-d.despesaCorp).toFixed(2)};${(d.receitaLoja-d.despesaLoja).toFixed(2)}\n`;
+        }
+        const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `resultados_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        mostrarToast('✅', 'Exportação concluída!');
+    }
+
+    // ============================================================
+    // SWITCH TABS (Sidebar) - CORRIGIDO
+    // ============================================================
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.addEventListener('click', function() {
+            // Remover active de todos os itens da sidebar
+            document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Pegar o nome da tab
+            const tab = this.dataset.tab;
+            
+            // Remover active de todas as tabs
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            // Mapeamento dos nomes das tabs para os IDs dos elementos
+            const tabMap = {
+                'DESEMPENHO': 'tabDesempenho',
+                'INDICADORES': 'tabIndicadores',
+                'RATEIO': 'tabRateio',
+                'LANCAMENTOS': 'tabLancamentos'
+            };
+            
+            const targetId = tabMap[tab];
+            if (targetId) {
+                const target = document.getElementById(targetId);
+                if (target) target.classList.add('active');
+            }
+            
+            // Ações específicas por tab
+            if (tab === 'RATEIO') {
+                carregarRateiosFixos();
+                carregarRateioIndividual();
+                carregarAuditoria();
+            }
+            if (tab === 'LANCAMENTOS') carregarLancamentos();
+            if (tab === 'DESEMPENHO' || tab === 'INDICADORES') carregarDados();
+        });
+    });
+
+    // ============================================================
+    // SWITCH RATEIO TABS
+    // ============================================================
+    function switchRateioTab(tab, btn) {
+        document.querySelectorAll('#tabRateio .tab-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        document.querySelectorAll('#tabRateio .tab-content').forEach(t => t.classList.remove('active'));
+        const target = document.getElementById(`rateio${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+        if (target) target.classList.add('active');
+        if (tab === 'individual') carregarRateioIndividual();
+        if (tab === 'fixo') carregarRateiosFixos();
+        if (tab === 'auditoria') carregarAuditoria();
+    }
+
+    // ============================================================
+    // CARREGAR TODOS OS DADOS
+    // ============================================================
+    async function carregarTodosDados() {
+        if (!usuarioAtual) {
+            mostrarToast('⚠️', 'Faça login primeiro', '#f59e0b');
+            return;
+        }
+        mostrarLoading(true);
+        try {
+            await carregarDadosReais();
+            await carregarRateiosFixos();
+            const aplicados = aplicarTodosRateiosFixos();
+            carregarRateioIndividual();
+            carregarAuditoria();
+            carregarDados();
+            carregarLancamentos();
+            if (aplicados > 0) mostrarToast('✅', `${aplicados} rateios fixos aplicados!`);
+            else mostrarToast('', 'Dados atualizados!', '#f5b800');
+        } catch (e) {
+            mostrarToast('❌', e.message, '#ef4444');
+        } finally {
+            mostrarLoading(false);
+        }
+    }
+
+    // ============================================================
+    // INICIALIZAÇÃO
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', async function() {
+        console.log(' Inicializando sistema...');
+
+        // SEMPRE mostrar popup de login
+        document.getElementById('loginOverlay').classList.remove('hidden');
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('changePasswordForm').style.display = 'none';
+        document.getElementById('loginError').textContent = '';
+        document.getElementById('userInfoTop').style.display = 'none';
+
+        // Carregar lista de usuários para o select
+        await carregarUsuariosSelect();
+
+        // Carregar dados em background
+        try {
+            await carregarDadosReais();
+            await carregarRateiosFixos();
+            carregarDados();
+            carregarLancamentos();
+            console.log(' Dados carregados em background');
+        } catch (e) {
+            console.error('❌ Erro ao carregar dados:', e);
+        }
+
+        console.log('📊 Sistema de Gestão Financeira');
+        console.log('🔗 Conectado ao Supabase');
+        console.log('👤 Selecione um usuário para entrar');
+        console.log('🔐 Aguardando login...');
+    });
+    </script>
+</body>
+</html>
