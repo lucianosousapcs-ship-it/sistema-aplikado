@@ -351,6 +351,32 @@
             font-size: 13px;
         }
 
+        /* Botão Cancelar no login */
+        .login-box .btn-cancel {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .login-box .btn-cancel:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+        .login-box .login-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
         /* Mudar senha - primeiro acesso */
         .change-password-box {
             margin-top: 12px;
@@ -410,68 +436,6 @@
             background: var(--danger);
             color: #fff;
         }
-
-        /* Popup de Logout */
-        .logout-popup-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(8px);
-            z-index: 999999;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-        .logout-popup-overlay.active {
-            display: flex;
-        }
-        .logout-popup {
-            background: var(--bg-card);
-            border: 1px solid var(--border-glow);
-            border-radius: var(--radius);
-            padding: 32px 36px;
-            width: 90%;
-            max-width: 420px;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-        }
-        .logout-popup h2 {
-            color: var(--gold);
-            font-size: 20px;
-            margin-bottom: 8px;
-        }
-        .logout-popup p {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin-bottom: 24px;
-        }
-        .logout-popup .logout-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-        }
-        .logout-popup .logout-buttons .btn {
-            padding: 10px 28px;
-            font-size: 13px;
-            min-width: 100px;
-            justify-content: center;
-        }
-        .logout-popup .btn-danger-outline {
-            background: transparent;
-            border: 1px solid var(--danger);
-            color: var(--danger);
-        }
-        .logout-popup .btn-danger-outline:hover {
-            background: var(--danger);
-            color: #fff;
-        }
-        .logout-popup .btn-gold {
-            background: var(--gold);
-            color: #07090e;
-        }
-        .logout-popup .btn-gold:hover {
-            background: var(--gold-dark);
-        }
     </style>
 </head>
 <body>
@@ -498,7 +462,10 @@
                     <label>🔑 Senha</label>
                     <input type="password" id="loginPassword" placeholder="Digite sua senha" autocomplete="off">
                 </div>
-                <button class="btn-login" id="btnLogin" onclick="fazerLogin()">Entrar</button>
+                <div class="login-buttons">
+                    <button class="btn-login" id="btnLogin" onclick="fazerLogin()">Entrar</button>
+                    <button class="btn-cancel" onclick="cancelarLogin()">Cancelar</button>
+                </div>
                 <div class="login-toggle">
                     <a onclick="mostrarPrimeiroAcesso()">🔑 Primeiro acesso?</a>
                 </div>
@@ -532,20 +499,6 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- LOGOUT POPUP -->
-    <!-- ============================================================ -->
-    <div id="logoutPopup" class="logout-popup-overlay">
-        <div class="logout-popup">
-            <h2>🔒 Sair do Sistema</h2>
-            <p>Tem certeza que deseja sair?</p>
-            <div class="logout-buttons">
-                <button class="btn btn-danger-outline" onclick="confirmarLogout()">Sair</button>
-                <button class="btn btn-gold" onclick="cancelarLogout()">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">CARREGANDO DADOS...</div>
@@ -562,7 +515,7 @@
         <div class="topbar-actions">
             <div class="user-info-top" id="userInfoTop" style="display:none;">
                 <span class="user-name" id="userNameTop">Usuário</span>
-                <button class="btn-logout" onclick="abrirLogoutPopup()">Sair</button>
+                <button class="btn-logout" onclick="fazerLogoutDireto()">Sair</button>
             </div>
             <button class="btn btn-outline" onclick="carregarTodosDados()">⟳ Atualizar</button>
             <button class="btn btn-gold" onclick="exportarExcel()"> Exportar</button>
@@ -625,7 +578,6 @@
             <div id="tabIndicadores" class="tab-content">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
                     <h2 style="color:var(--gold);font-size:18px;"> Indicadores</h2>
-                    <button class="btn btn-close" onclick="abrirLogoutPopup()">✕ Fechar</button>
                 </div>
 
                 <div class="cards-grid" id="cardsIndicadores">
@@ -655,7 +607,6 @@
             <div id="tabRateio" class="tab-content">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
                     <h2 style="color:var(--gold);font-size:18px;"> Rateio</h2>
-                    <button class="btn btn-close" onclick="abrirLogoutPopup()">✕ Fechar</button>
                 </div>
 
                 <div class="tabs" style="margin-bottom:14px;">
@@ -739,7 +690,6 @@
             <div id="tabLancamentos" class="tab-content">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
                     <h2 style="color:var(--gold);font-size:18px;"> Lançamentos</h2>
-                    <button class="btn btn-close" onclick="abrirLogoutPopup()">✕ Fechar</button>
                 </div>
 
                 <div class="filter-bar" style="margin-bottom:14px;">
@@ -816,25 +766,17 @@
     let toastTimeout = null;
 
     // ============================================================
-    // FUNÇÕES DE LOGOUT - MODIFICADAS
+    // FUNÇÕES DE LOGOUT - REDIRECIONAMENTO DIRETO
     // ============================================================
-    function abrirLogoutPopup() {
-        document.getElementById('logoutPopup').classList.add('active');
-    }
-
-    function fecharLogoutPopup() {
-        document.getElementById('logoutPopup').classList.remove('active');
-    }
-
-    function confirmarLogout() {
-        fecharLogoutPopup();
-        // Redirecionar para MODULO3_ALF.html
+    function fazerLogoutDireto() {
+        // Redirecionar diretamente para MODULO3_ALF.html
         window.location.href = 'MODULO3_ALF.html';
     }
 
-    function cancelarLogout() {
-        fecharLogoutPopup();
-        // Redirecionar para MODULO3_ALF.html
+    // ============================================================
+    // FUNÇÃO CANCELAR LOGIN
+    // ============================================================
+    function cancelarLogin() {
         window.location.href = 'MODULO3_ALF.html';
     }
 
@@ -1084,8 +1026,6 @@
             btn.textContent = 'Alterar Senha';
         }
     }
-
-    // A função fazerLogout foi removida e substituída por abrirLogoutPopup
 
     // ============================================================
     // UTILITÁRIOS
