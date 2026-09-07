@@ -5874,9 +5874,8 @@ async function carregarPlanoContasSupabase() {
         
         if (data && data.length > 0) {
             // ==========================================
-            // ✅ CORREÇÃO: INCLUIR TODAS AS RECEITAS
+            // RECEITAS - APENAS o que realmente é RECEITA
             // ==========================================
-            // Buscar TODAS as contas com tipo = 'RECEITA'
             const receitas = data.filter(p => 
                 p.tipo === 'RECEITA' || 
                 p.tipo_classificacao === 'RECEITAS' || 
@@ -5893,12 +5892,34 @@ async function carregarPlanoContasSupabase() {
                 }
             }
             
-            const despesasVariaveis = data.filter(p => 
+            // ==========================================
+            // DESPESAS VARIAVEIS
+            // ==========================================
+            let despesasVariaveis = data.filter(p => 
                 p.tipo_classificacao === 'DESPESAS VARIAVEIS' || 
                 p.tipo_classificacao === 'DESPESAS FINANCEIRAS' || 
                 p.tipo_classificacao === 'IMPOSTOS'
             );
             
+            // ==========================================
+            // 🔧 CORREÇÃO DEFINITIVA: Mover 121 para DESPESAS
+            // ==========================================
+            // Verificar se o plano 121 está em RECEITAS e movê-lo para DESPESAS VARIAVEIS
+            const plano121ComoReceita = receitas.findIndex(p => p.codigo === '121');
+            if (plano121ComoReceita !== -1) {
+                const plano121 = receitas.splice(plano121ComoReceita, 1)[0];
+                // Adicionar como despesa variavel
+                despesasVariaveis.push({
+                    ...plano121,
+                    grupo_dre: '4 DESPESAS ADMINISTRATIVAS',
+                    tipo_classificacao: 'DESPESAS VARIAVEIS'
+                });
+                console.log(`✅ Plano 121 movido de RECEITAS para DESPESAS VARIAVEIS`);
+            }
+            
+            // ==========================================
+            // DESPESAS FIXAS
+            // ==========================================
             const despesasFixas = data.filter(p => 
                 p.tipo_classificacao === 'DESPESAS FIXAS'
             );
@@ -5907,6 +5928,9 @@ async function carregarPlanoContasSupabase() {
             console.log(`📊 Despesas Variáveis: ${despesasVariaveis.length}`);
             console.log(`📊 Despesas Fixas: ${despesasFixas.length}`);
             
+            // ==========================================
+            // MONTAR ESTRUTURA DRE
+            // ==========================================
             estruturaDRE = {
                 receitas: receitas.map(p => ({ 
                     cod: p.codigo, 
