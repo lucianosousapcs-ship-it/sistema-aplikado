@@ -160,6 +160,147 @@
         }
 
         /* ============================================================
+                   LOADING OVERLAY - ESTILO ERP MODERNO (SEM SPINNER E LOGO)
+                   ============================================================ */
+        #loadingOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            background: radial-gradient(ellipse at center, #11161F 0%, #0B0E14 70%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
+            overflow: hidden;
+        }
+        #loadingOverlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        #loadingOverlay::before {
+            content: '';
+            position: absolute;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 70%);
+            animation: loadingPulse 4s ease-in-out infinite;
+        }
+        #loadingOverlay::after {
+            content: '';
+            position: absolute;
+            width: 400px; height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
+            animation: loadingPulse 4s ease-in-out infinite 2s;
+        }
+        @keyframes loadingPulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.15); opacity: 1; }
+        }
+
+        .loading-progress-wrap {
+            position: relative;
+            z-index: 2;
+            width: 320px;
+            max-width: 80vw;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .loading-progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .loading-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold-dark), var(--accent-gold));
+            background-size: 200% 100%;
+            border-radius: 10px;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: shimmer 2s linear infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .loading-status {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
+        }
+        .loading-status .status-text {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+        .loading-status .status-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent-gold);
+            animation: dotPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes dotPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.7); }
+        }
+        .loading-status .status-pct {
+            font-weight: 700;
+            color: var(--accent-gold);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .loading-steps {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            gap: 24px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .loading-step {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+        .loading-step.active { color: var(--accent-gold); }
+        .loading-step.done { color: var(--accent-green); }
+        .loading-step .step-icon {
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+        }
+        .loading-step.done .step-icon::after { content: '✓'; }
+
+        /* ============================================================
                    TOPBAR
                    ============================================================ */
         .topbar {
@@ -1352,6 +1493,7 @@
                 padding: 6px 12px;
                 font-size: 10px;
             }
+            .loading-progress-wrap { width: 260px; }
         }
 
         @media (max-width: 480px) {
@@ -1527,6 +1669,31 @@
     </style>
 </head>
 <body>
+
+    <!-- ============================================================
+         LOADING OVERLAY - ESTILO ERP MODERNO (SEM SPINNER E LOGO)
+         ============================================================ -->
+    <div id="loadingOverlay">
+        <div class="loading-progress-wrap">
+            <div class="loading-progress-bar">
+                <div class="loading-progress-fill" id="loadingProgressFill"></div>
+            </div>
+            <div class="loading-status">
+                <div class="status-text">
+                    <span class="status-dot"></span>
+                    <span id="loadingStatusText">Inicializando sistema...</span>
+                </div>
+                <div class="status-pct" id="loadingProgressPct">0%</div>
+            </div>
+        </div>
+        <div class="loading-steps" id="loadingSteps">
+            <div class="loading-step" data-step="1"><span class="step-icon"></span> Conexão</div>
+            <div class="loading-step" data-step="2"><span class="step-icon"></span> Plano de Contas</div>
+            <div class="loading-step" data-step="3"><span class="step-icon"></span> Regras</div>
+            <div class="loading-step" data-step="4"><span class="step-icon"></span> Lançamentos</div>
+            <div class="loading-step" data-step="5"><span class="step-icon"></span> Processando DRE</div>
+        </div>
+    </div>
 
     <!-- ============================================================
     TOPBAR
@@ -2513,6 +2680,46 @@
     ============================================================ -->
     <script>
         // ============================================================
+        // LOADING OVERLAY - CONTROLE CORRIGIDO
+        // ============================================================
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingProgressFill = document.getElementById('loadingProgressFill');
+        const loadingProgressPct = document.getElementById('loadingProgressPct');
+        const loadingStatusText = document.getElementById('loadingStatusText');
+        const loadingSteps = document.getElementById('loadingSteps');
+
+        let loadingProgresso = 0;
+        let loadingEscondido = false;
+
+        function atualizarLoading(progresso, status, stepAtivo) {
+            if (loadingEscondido) return;
+            loadingProgresso = Math.max(loadingProgresso, progresso);
+            if (loadingProgressFill) loadingProgressFill.style.width = loadingProgresso + '%';
+            if (loadingProgressPct) loadingProgressPct.textContent = Math.floor(loadingProgresso) + '%';
+            if (status && loadingStatusText) loadingStatusText.textContent = status;
+
+            const steps = loadingSteps ? loadingSteps.querySelectorAll('.loading-step') : [];
+            steps.forEach((step) => {
+                const num = parseInt(step.dataset.step);
+                step.classList.remove('active', 'done');
+                if (num < stepAtivo) step.classList.add('done');
+                else if (num === stepAtivo) step.classList.add('active');
+            });
+        }
+
+        function esconderLoading() {
+            if (loadingEscondido) return;
+            loadingEscondido = true;
+            atualizarLoading(100, 'Concluído!', 5);
+            setTimeout(() => {
+                if (loadingOverlay) loadingOverlay.classList.add('hidden');
+                setTimeout(() => {
+                    if (loadingOverlay && loadingOverlay.parentNode) loadingOverlay.parentNode.removeChild(loadingOverlay);
+                }, 700);
+            }, 400);
+        }
+
+        // ============================================================
         // CONFIGURAÇÃO SUPABASE
         // ============================================================
         const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
@@ -2807,19 +3014,25 @@
             const iframe = document.getElementById('pdfIframe');
             const loading = document.getElementById('pdfLoading');
 
-            loading.style.display = 'flex';
-            iframe.src = url;
+            if (loading) loading.style.display = 'flex';
+            if (iframe) iframe.src = url;
 
-            iframe.onload = function() {
-                loading.style.display = 'none';
-            };
+            if (iframe) {
+                iframe.onload = function() {
+                    if (loading) loading.style.display = 'none';
+                };
+            }
 
-            setTimeout(() => { loading.style.display = 'none'; }, 3000);
+            setTimeout(() => { if (loading) loading.style.display = 'none'; }, 3000);
 
-            document.getElementById('pdfTitulo').textContent = titulo || 'Visualização do PDF';
-            document.getElementById('pdfInfoNome').textContent = nomeArquivo;
-            document.getElementById('pdfInfoStatus').textContent = `Gerado em ${new Date().toLocaleString('pt-BR')}`;
-            document.getElementById('modalVisualizarPDF').classList.add('active');
+            const pdfTitulo = document.getElementById('pdfTitulo');
+            if (pdfTitulo) pdfTitulo.textContent = titulo || 'Visualização do PDF';
+            const pdfInfoNome = document.getElementById('pdfInfoNome');
+            if (pdfInfoNome) pdfInfoNome.textContent = nomeArquivo;
+            const pdfInfoStatus = document.getElementById('pdfInfoStatus');
+            if (pdfInfoStatus) pdfInfoStatus.textContent = `Gerado em ${new Date().toLocaleString('pt-BR')}`;
+            const modal = document.getElementById('modalVisualizarPDF');
+            if (modal) modal.classList.add('active');
         }
 
         function baixarPDFAtual() {
@@ -2845,7 +3058,8 @@
         function fecharModalVisualizarPDF() {
             const iframe = document.getElementById('pdfIframe');
             if (iframe) iframe.src = 'about:blank';
-            document.getElementById('modalVisualizarPDF').classList.remove('active');
+            const modal = document.getElementById('modalVisualizarPDF');
+            if (modal) modal.classList.remove('active');
             pdfBlobAtual = null;
             pdfNomeAtual = '';
         }
@@ -2855,7 +3069,6 @@
         // ============================================================
         function gerarPDFPopUp(elemento, opcoes, nomeArquivo, titulo) {
             return new Promise((resolve, reject) => {
-                // Cria um container temporário (oculto) para o elemento
                 const tempContainer = document.createElement('div');
                 tempContainer.style.cssText = 'position:fixed; left:-99999px; top:0; width:210mm; background:#FFFFFF; z-index:-1;';
                 tempContainer.appendChild(elemento);
@@ -4662,11 +4875,9 @@
                     toggle.innerHTML = barVisible ? '▼' : '▲';
                     toggle.title = barVisible ? 'Esconder Barra' : 'Mostrar Barra';
                 }
-                // Remove qualquer botão de restauração existente
                 const restoreEl = document.getElementById('restoreCmdBar');
                 if (restoreEl) restoreEl.remove();
                 
-                // Se a barra está escondida, cria um botão para restaurar
                 if (!barVisible) {
                     const btn = document.createElement('button');
                     btn.id = 'restoreCmdBar';
@@ -5806,7 +6017,6 @@
                 const nomeArquivo = `DRE_${mesesSelecionados.join('_')}_${new Date().toISOString().slice(0,10)}.pdf`;
                 const titulo = `DRE - ${mesesSelecionados.join(' a ')}`;
 
-                // Gera o PDF em modo POP-UP
                 await gerarPDFPopUp(conteudoPDF, {
                     margin: [0.3, 0.3, 0.3, 0.3],
                     orientation: 'portrait'
@@ -5994,7 +6204,6 @@
 
     const periodoDesc = mesAtual ? 'Mês Atual' : (diasSel.length > 0 ? `${diasSel.length} dia(s) selecionado(s)` : `${mesesSel.length} mês(es) selecionado(s)`);
 
-    // CORREÇÃO: adiciona padding-bottom extra e garante que a tabela não seja cortada
     const html = `<!DOCTYPE html>
                 <html><head><meta charset="UTF-8"><title>Fechamento de Caixa</title>
                 <style>
@@ -6015,7 +6224,7 @@
                     .total-row td { padding: 8px 4px; }
                     .footer { margin-top: 20px; text-align: center; font-size: 8pt; color: #666; border-top: 1px solid #ccc; padding-top: 10px; }
                     .aviso { margin-top: 15px; padding: 8px; background: #f5f5f5; border-left: 3px solid #f59e0b; font-size: 8pt; }
-                    .spacer-final { height: 40px; } /* CORREÇÃO: espaço extra no final para não cortar a última linha */
+                    .spacer-final { height: 40px; }
                 </style></head>
                 <body>
                     <div class="header"><h1>FECHAMENTO DE CAIXA</h1><p>Aplikado Soluções | Módulo III</p></div>
@@ -6048,12 +6257,12 @@
     const nomeArquivo = `Fechamento_Caixa_${new Date().toISOString().slice(0,10)}.pdf`;
     const titulo = `Fechamento de Caixa - ${periodoDesc}`;
 
-    // CORREÇÃO: usa html2canvas com opções que evitam corte
     await gerarPDFPopUp(temp, {
         margin: [0.3, 0.3, 0.3, 0.3],
         orientation: 'landscape'
     }, nomeArquivo, titulo);
 }
+
         // ============================================================
         // BUSCAR ÚLTIMA ATUALIZAÇÃO
         // ============================================================
@@ -6253,57 +6462,74 @@
         }
 
         // ============================================================
-        // INICIALIZAÇÃO
+        // INICIALIZAÇÃO - CORRIGIDA COM TRATAMENTO DE ERRO
         // ============================================================
         document.addEventListener('DOMContentLoaded', async function() {
-            carregarPreferenciaTema();
+            try {
+                atualizarLoading(10, 'Carregando preferências...', 1);
+                carregarPreferenciaTema();
 
-            const savedBar = localStorage.getItem('command_bar_visivel');
-            if (savedBar !== null) {
-                barVisible = savedBar === 'true';
-                const bar = document.getElementById('commandBar');
-                if (bar) {
-                    bar.classList.toggle('hidden', !barVisible);
-                    const toggle = document.getElementById('toggleCmdBar');
-                    if (toggle) toggle.innerHTML = barVisible ? '▼' : '▲';
+                const savedBar = localStorage.getItem('command_bar_visivel');
+                if (savedBar !== null) {
+                    barVisible = savedBar === 'true';
+                    const bar = document.getElementById('commandBar');
+                    if (bar) {
+                        bar.classList.toggle('hidden', !barVisible);
+                        const toggle = document.getElementById('toggleCmdBar');
+                        if (toggle) toggle.innerHTML = barVisible ? '▼' : '▲';
+                    }
+                    if (barVisible) {
+                        const restoreEl = document.getElementById('restoreCmdBar');
+                        if (restoreEl) restoreEl.remove();
+                    }
                 }
-                if (barVisible) {
-                    const restoreEl = document.getElementById('restoreCmdBar');
-                    if (restoreEl) restoreEl.remove();
+
+                atualizarLoading(20, 'Carregando plano de contas...', 2);
+                carregarPlanoContas();
+                await carregarRegrasConversaoSupabase();
+                atualizarLoading(35, 'Carregando regras...', 3);
+                await carregarPlanoContasSupabase();
+                atualizarLoading(50, 'Carregando lançamentos...', 4);
+                await carregarDadosReaisLancamentos();
+                atualizarLoading(65, 'Carregando contas extras...', 4);
+                await carregarContasExtras();
+                await carregarCoresDoSupabase();
+                carregarSaidasCaixa();
+                carregarDadosComparativos();
+                await carregarComparativosSupabase();
+
+                atualizarLoading(80, 'Carregando vendas e compras...', 4);
+                carregarVendas();
+                carregarCompras();
+
+                atualizarLoading(90, 'Processando DRE...', 5);
+                await gerarDREComSupabase();
+
+                buscarUltimaAtualizacao();
+
+                document.getElementById('btnFiltrarMovimento').innerText = 'Filtrar Movimento';
+
+                const badge = document.getElementById('badgeErrosIntegracao');
+                if (badge) {
+                    badge.innerHTML = '0';
+                    badge.className = 'badge-notif zero-erros';
                 }
+
+                atualizarLoading(100, 'Concluído!', 5);
+                console.log('Aplikado Módulo III - Inicializado com sucesso!');
+            } catch (error) {
+                console.error('Erro na inicialização:', error);
+                atualizarLoading(100, 'Erro ao carregar. Verifique o console.', 5);
+            } finally {
+                // GARANTIR QUE O LOADING SEMPRE SEJA ESCONDIDO
+                esconderLoading();
             }
-
-            carregarPlanoContas();
-            await carregarRegrasConversaoSupabase();
-            await carregarPlanoContasSupabase();
-            await carregarDadosReaisLancamentos();
-            await carregarContasExtras();
-            await carregarCoresDoSupabase();
-            carregarSaidasCaixa();
-            carregarDadosComparativos();
-            await carregarComparativosSupabase();
-
-            carregarVendas();
-            carregarCompras();
-
-            await gerarDREComSupabase();
-
-            buscarUltimaAtualizacao();
-
-            document.getElementById('btnFiltrarMovimento').innerText = 'Filtrar Movimento';
-
-            const badge = document.getElementById('badgeErrosIntegracao');
-            if (badge) {
-                badge.innerHTML = '0';
-                badge.className = 'badge-notif zero-erros';
-            }
-
-            console.log('Aplikado Módulo III - Inicializado com sucesso!');
         });
 
-        setTimeout(async () => {
-            await gerarDREComSupabase();
-        }, 1000);
+        // FALLBACK: Esconder loading após 15 segundos no máximo
+        setTimeout(() => {
+            esconderLoading();
+        }, 15000);
     </script>
 </body>
 </html>
