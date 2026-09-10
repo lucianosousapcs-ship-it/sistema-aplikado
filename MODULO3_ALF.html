@@ -5,12 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Aplikado - Módulo III | DRE e Lançamentos</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         /* ============================================================
                    ROOT E TEMA
@@ -1095,6 +1092,182 @@
         }
 
         /* ============================================================
+                   POP-UP DE PREVIEW DE PDF
+                   ============================================================ */
+        .pdf-preview-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .pdf-preview-overlay.active {
+            display: flex;
+        }
+
+        .pdf-preview-modal {
+            background: #FFFFFF;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 1200px;
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            animation: pdfModalPop 0.3s ease;
+        }
+        @keyframes pdfModalPop {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .pdf-preview-header {
+            background: #000000;
+            color: #FFFFFF;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .pdf-preview-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #FFFFFF;
+        }
+
+        .pdf-preview-title-icon {
+            width: 32px;
+            height: 32px;
+            background: #F59E0B;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .pdf-preview-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pdf-preview-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .pdf-preview-btn-primary {
+            background: #F59E0B;
+            color: #000000;
+        }
+        .pdf-preview-btn-primary:hover {
+            background: #D97706;
+        }
+
+        .pdf-preview-btn-success {
+            background: #10B981;
+            color: #FFFFFF;
+        }
+        .pdf-preview-btn-success:hover {
+            background: #059669;
+        }
+
+        .pdf-preview-btn-outline {
+            background: transparent;
+            color: #FFFFFF;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .pdf-preview-btn-outline:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.6);
+        }
+
+        .pdf-preview-body {
+            flex: 1;
+            background: #525659;
+            overflow: hidden;
+            padding: 8px;
+            position: relative;
+            min-height: 500px;
+        }
+
+        .pdf-preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #FFFFFF;
+            border-radius: 4px;
+            min-height: 500px;
+        }
+
+        .pdf-preview-loading {
+            position: absolute;
+            inset: 8px;
+            background: #FFFFFF;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: #000000;
+            z-index: 5;
+        }
+
+        .pdf-preview-loading .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #E5E7EB;
+            border-top-color: #F59E0B;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .pdf-preview-loading .loading-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: #000000;
+        }
+
+        .pdf-preview-info {
+            background: #F3F4F6;
+            padding: 8px 24px;
+            font-size: 11px;
+            color: #374151;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        /* ============================================================
                    RESPONSIVIDADE
                    ============================================================ */
         @media (max-width: 768px) {
@@ -1168,6 +1341,16 @@
             .auditoria-sidebar .status-card {
                 flex: 1;
                 min-width: 100px;
+            }
+            .pdf-preview-header {
+                padding: 12px 16px;
+            }
+            .pdf-preview-title {
+                font-size: 13px;
+            }
+            .pdf-preview-btn {
+                padding: 6px 12px;
+                font-size: 10px;
             }
         }
 
@@ -2296,6 +2479,36 @@
     </div>
 
     <!-- ============================================================
+         POP-UP DE PREVIEW DE PDF (universal)
+         ============================================================ -->
+    <div id="modalVisualizarPDF" class="pdf-preview-overlay">
+        <div class="pdf-preview-modal">
+            <div class="pdf-preview-header">
+                <div class="pdf-preview-title">
+                    <div class="pdf-preview-title-icon">📄</div>
+                    <span id="pdfTitulo">Visualização do PDF</span>
+                </div>
+                <div class="pdf-preview-actions">
+                    <button class="pdf-preview-btn pdf-preview-btn-success" onclick="baixarPDFAtual()">⬇ Baixar PDF</button>
+                    <button class="pdf-preview-btn pdf-preview-btn-primary" onclick="imprimirPDFAtual()">🖨 Imprimir</button>
+                    <button class="pdf-preview-btn pdf-preview-btn-outline" onclick="fecharModalVisualizarPDF()">✕ Fechar</button>
+                </div>
+            </div>
+            <div class="pdf-preview-body">
+                <div class="pdf-preview-loading" id="pdfLoading">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Gerando PDF...</div>
+                </div>
+                <iframe id="pdfIframe" class="pdf-preview-iframe" src="about:blank"></iframe>
+            </div>
+            <div class="pdf-preview-info">
+                <span id="pdfInfoNome">-</span>
+                <span id="pdfInfoStatus">Pronto para visualização</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
     SCRIPT - TODAS AS FUNCIONALIDADES
     ============================================================ -->
     <script>
@@ -2578,6 +2791,103 @@
                 }
             }
             return total;
+        }
+
+        // ============================================================
+        // VISUALIZAÇÃO DE PDF EM POP-UP
+        // ============================================================
+        let pdfBlobAtual = null;
+        let pdfNomeAtual = '';
+
+        function visualizarPDF(blob, nomeArquivo, titulo) {
+            pdfBlobAtual = blob;
+            pdfNomeAtual = nomeArquivo;
+
+            const url = URL.createObjectURL(blob);
+            const iframe = document.getElementById('pdfIframe');
+            const loading = document.getElementById('pdfLoading');
+
+            loading.style.display = 'flex';
+            iframe.src = url;
+
+            iframe.onload = function() {
+                loading.style.display = 'none';
+            };
+
+            setTimeout(() => { loading.style.display = 'none'; }, 3000);
+
+            document.getElementById('pdfTitulo').textContent = titulo || 'Visualização do PDF';
+            document.getElementById('pdfInfoNome').textContent = nomeArquivo;
+            document.getElementById('pdfInfoStatus').textContent = `Gerado em ${new Date().toLocaleString('pt-BR')}`;
+            document.getElementById('modalVisualizarPDF').classList.add('active');
+        }
+
+        function baixarPDFAtual() {
+            if (!pdfBlobAtual) return alert('Nenhum PDF carregado.');
+            const url = URL.createObjectURL(pdfBlobAtual);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = pdfNomeAtual;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function imprimirPDFAtual() {
+            const iframe = document.getElementById('pdfIframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            }
+        }
+
+        function fecharModalVisualizarPDF() {
+            const iframe = document.getElementById('pdfIframe');
+            if (iframe) iframe.src = 'about:blank';
+            document.getElementById('modalVisualizarPDF').classList.remove('active');
+            pdfBlobAtual = null;
+            pdfNomeAtual = '';
+        }
+
+        // ============================================================
+        // FUNÇÃO AUXILIAR: Gera PDF em modo POP-UP (Blob)
+        // ============================================================
+        function gerarPDFPopUp(elemento, opcoes, nomeArquivo, titulo) {
+            return new Promise((resolve, reject) => {
+                // Cria um container temporário (oculto) para o elemento
+                const tempContainer = document.createElement('div');
+                tempContainer.style.cssText = 'position:fixed; left:-99999px; top:0; width:210mm; background:#FFFFFF; z-index:-1;';
+                tempContainer.appendChild(elemento);
+                document.body.appendChild(tempContainer);
+
+                const opt = {
+                    margin: opcoes.margin || [0.3, 0.3, 0.3, 0.3],
+                    filename: nomeArquivo,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: {
+                        scale: 2,
+                        backgroundColor: '#FFFFFF',
+                        useCORS: true,
+                        allowTaint: true,
+                        logging: false
+                    },
+                    jsPDF: {
+                        unit: 'in',
+                        format: 'a4',
+                        orientation: opcoes.orientation || 'portrait'
+                    }
+                };
+
+                html2pdf().set(opt).from(elemento).outputPdf('blob').then(blob => {
+                    document.body.removeChild(tempContainer);
+                    visualizarPDF(blob, nomeArquivo, titulo);
+                    resolve(blob);
+                }).catch(err => {
+                    if (tempContainer.parentNode) document.body.removeChild(tempContainer);
+                    reject(err);
+                });
+            });
         }
 
         // ============================================================
@@ -4363,7 +4673,6 @@
                     btn.className = 'cmd-btn cmd-btn-primary';
                     btn.innerHTML = '▲ Mostrar Barra';
                     btn.onclick = function() {
-                        // Força a barra a aparecer e remove o botão
                         barVisible = true;
                         const bar2 = document.getElementById('commandBar');
                         if (bar2) bar2.classList.remove('hidden');
@@ -5034,503 +5343,485 @@
         }
 
         // ============================================================
-        // PDF - DRE COM PERÍODO SELECIONADO
+        // PDF - DRE COM PERÍODO SELECIONADO (EM POP-UP)
         // ============================================================
-function confirmarGeracaoPDFDRE() {
-    const mesAtual = document.getElementById('radioDREMesAtual').checked;
-    const selecionarMes = document.getElementById('radioDRESelecionarMes').checked;
-    const trimestre = document.getElementById('radioDRETrimestre').checked;
-    const anoCompleto = document.getElementById('radioDREAnoCompleto').checked;
-    
-    let mesInicio = 0, mesFim = 11;
-    
-    if (mesAtual) {
-        const hoje = new Date();
-        mesInicio = hoje.getMonth();
-        mesFim = mesInicio;
-    } else if (selecionarMes) {
-        const mes = parseInt(document.getElementById('dreMesSelecionado').value);
-        mesInicio = mes;
-        mesFim = mes;
-    } else if (trimestre) {
-        const t = parseInt(document.getElementById('dreTrimestreSelecionado').value);
-        mesInicio = t * 3;
-        mesFim = mesInicio + 2;
-    } else if (anoCompleto) {
-        mesInicio = 0;
-        mesFim = 11;
-    }
-    
-    fecharModalPeriodoDREPDF();
-    gerarPDFDREComPeriodo(mesInicio, mesFim);
-}
-
-async function gerarPDFDREComPeriodo(mesInicio, mesFim) {
-    try {
-        await gerarDREComSupabase();
-        
-        const tabelaDRE = document.getElementById('dreTable');
-        if (!tabelaDRE) { 
-            alert('Erro: Tabela do DRE não encontrada.'); 
-            return; 
-        }
-        
-        function extrairNumeroDaCelula(cell) {
-            if (!cell) return 0;
-            let text = cell.innerText.trim();
-            let numeroTexto = text.replace(/R\$\s*/g, '').replace(/\s/g, '');
-            let isNegative = numeroTexto.startsWith('-');
-            if (isNegative) numeroTexto = numeroTexto.substring(1);
-            let numero = parseFloat(numeroTexto.replace(/\./g, '').replace(',', '.'));
-            if (isNaN(numero)) return 0;
-            return isNegative ? -numero : numero;
-        }
-
-        function formatarMoedaBR(valor) {
-            if (valor === undefined || valor === null) return '0,00';
-            return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        const mesesLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-        let mesesSelecionados = [];
-        for (let i = mesInicio; i <= mesFim; i++) {
-            mesesSelecionados.push(mesesLabels[i]);
-        }
-        
-        const linhasCorpo = tabelaDRE.querySelectorAll('tbody tr');
-        let dadosLinhas = [];
-        let totalReceita = 0, totalCustoVariavel = 0, totalCustoFixo = 0;
-        let resultadoOperacional = 0, lucroBruto = 0;
-        let topReceitas = [], topDespesas = [];
-        let resultadoMensal = [];
-        
-        for (const linha of linhasCorpo) {
-            const colunas = linha.querySelectorAll('td');
-            if (colunas.length === 0) continue;
-            const descricao = colunas[0].innerText.trim();
+        function confirmarGeracaoPDFDRE() {
+            const mesAtual = document.getElementById('radioDREMesAtual').checked;
+            const selecionarMes = document.getElementById('radioDRESelecionarMes').checked;
+            const trimestre = document.getElementById('radioDRETrimestre').checked;
+            const anoCompleto = document.getElementById('radioDREAnoCompleto').checked;
             
-            let valores = [];
-            let totalPeriodo = 0;
-            for (let i = mesInicio + 1; i <= mesFim + 1; i++) {
-                if (i < colunas.length) {
-                    const valor = extrairNumeroDaCelula(colunas[i]);
-                    valores.push(valor);
-                    totalPeriodo += valor;
+            let mesInicio = 0, mesFim = 11;
+            
+            if (mesAtual) {
+                const hoje = new Date();
+                mesInicio = hoje.getMonth();
+                mesFim = mesInicio;
+            } else if (selecionarMes) {
+                const mes = parseInt(document.getElementById('dreMesSelecionado').value);
+                mesInicio = mes;
+                mesFim = mes;
+            } else if (trimestre) {
+                const t = parseInt(document.getElementById('dreTrimestreSelecionado').value);
+                mesInicio = t * 3;
+                mesFim = mesInicio + 2;
+            } else if (anoCompleto) {
+                mesInicio = 0;
+                mesFim = 11;
+            }
+            
+            fecharModalPeriodoDREPDF();
+            gerarPDFDREComPeriodo(mesInicio, mesFim);
+        }
+
+        async function gerarPDFDREComPeriodo(mesInicio, mesFim) {
+            try {
+                await gerarDREComSupabase();
+                
+                const tabelaDRE = document.getElementById('dreTable');
+                if (!tabelaDRE) { 
+                    alert('Erro: Tabela do DRE não encontrada.'); 
+                    return; 
                 }
-            }
-            
-            let tipo = 'item';
-            if (linha.classList.contains('dre-group-title')) tipo = 'grupo';
-            if (linha.classList.contains('dre-total-row')) tipo = 'total';
-            
-            let codigo = '', nome = descricao;
-            const separador = descricao.indexOf(' - ');
-            if (separador !== -1) {
-                codigo = descricao.substring(0, separador);
-                nome = descricao.substring(separador + 3);
-            }
-            
-            const temMov = totalPeriodo !== 0 || tipo === 'total' || tipo === 'grupo';
-            if (temMov || linha.classList.contains('linha-com-movimentacao')) {
-                dadosLinhas.push({ tipo, codigo, nome, valores, total: totalPeriodo });
-            }
-            
-            if (descricao === 'RECEITAS TOTAIS') totalReceita = totalPeriodo;
-            else if (descricao === 'CUSTOS VARIAVEIS') totalCustoVariavel = Math.abs(totalPeriodo);
-            else if (descricao === 'CUSTOS FIXOS') totalCustoFixo = Math.abs(totalPeriodo);
-            else if (descricao === 'LUCRO BRUTO') lucroBruto = totalPeriodo;
-            else if (descricao === 'RESULTADO OPERACIONAL') {
-                resultadoOperacional = totalPeriodo;
-                // Pega os valores mensais do resultado
-                for (let i = 0; i < valores.length; i++) {
-                    const mesIdx = mesInicio + i;
-                    if (mesIdx < 12) {
-                        resultadoMensal.push({ mes: mesesLabels[mesIdx], valor: valores[i] });
+                
+                function extrairNumeroDaCelula(cell) {
+                    if (!cell) return 0;
+                    let text = cell.innerText.trim();
+                    let numeroTexto = text.replace(/R\$\s*/g, '').replace(/\s/g, '');
+                    let isNegative = numeroTexto.startsWith('-');
+                    if (isNegative) numeroTexto = numeroTexto.substring(1);
+                    let numero = parseFloat(numeroTexto.replace(/\./g, '').replace(',', '.'));
+                    if (isNaN(numero)) return 0;
+                    return isNegative ? -numero : numero;
+                }
+
+                function formatarMoedaBR(valor) {
+                    if (valor === undefined || valor === null) return '0,00';
+                    return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+
+                const mesesLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+                let mesesSelecionados = [];
+                for (let i = mesInicio; i <= mesFim; i++) {
+                    mesesSelecionados.push(mesesLabels[i]);
+                }
+                
+                const linhasCorpo = tabelaDRE.querySelectorAll('tbody tr');
+                let dadosLinhas = [];
+                let totalReceita = 0, totalCustoVariavel = 0, totalCustoFixo = 0;
+                let resultadoOperacional = 0, lucroBruto = 0;
+                let topReceitas = [], topDespesas = [];
+                let resultadoMensal = [];
+                
+                for (const linha of linhasCorpo) {
+                    const colunas = linha.querySelectorAll('td');
+                    if (colunas.length === 0) continue;
+                    const descricao = colunas[0].innerText.trim();
+                    
+                    let valores = [];
+                    let totalPeriodo = 0;
+                    for (let i = mesInicio + 1; i <= mesFim + 1; i++) {
+                        if (i < colunas.length) {
+                            const valor = extrairNumeroDaCelula(colunas[i]);
+                            valores.push(valor);
+                            totalPeriodo += valor;
+                        }
+                    }
+                    
+                    let tipo = 'item';
+                    if (linha.classList.contains('dre-group-title')) tipo = 'grupo';
+                    if (linha.classList.contains('dre-total-row')) tipo = 'total';
+                    
+                    let codigo = '', nome = descricao;
+                    const separador = descricao.indexOf(' - ');
+                    if (separador !== -1) {
+                        codigo = descricao.substring(0, separador);
+                        nome = descricao.substring(separador + 3);
+                    }
+                    
+                    const temMov = totalPeriodo !== 0 || tipo === 'total' || tipo === 'grupo';
+                    if (temMov || linha.classList.contains('linha-com-movimentacao')) {
+                        dadosLinhas.push({ tipo, codigo, nome, valores, total: totalPeriodo });
+                    }
+                    
+                    if (descricao === 'RECEITAS TOTAIS') totalReceita = totalPeriodo;
+                    else if (descricao === 'CUSTOS VARIAVEIS') totalCustoVariavel = Math.abs(totalPeriodo);
+                    else if (descricao === 'CUSTOS FIXOS') totalCustoFixo = Math.abs(totalPeriodo);
+                    else if (descricao === 'LUCRO BRUTO') lucroBruto = totalPeriodo;
+                    else if (descricao === 'RESULTADO OPERACIONAL') {
+                        resultadoOperacional = totalPeriodo;
+                        for (let i = 0; i < valores.length; i++) {
+                            const mesIdx = mesInicio + i;
+                            if (mesIdx < 12) {
+                                resultadoMensal.push({ mes: mesesLabels[mesIdx], valor: valores[i] });
+                            }
+                        }
+                    }
+                    
+                    if (descricao.match(/^\d+ - /) && descricao !== 'RECEITAS TOTAIS' && descricao !== 'CUSTOS VARIAVEIS' && descricao !== 'CUSTOS FIXOS' && descricao !== 'LUCRO BRUTO' && descricao !== 'RESULTADO OPERACIONAL') {
+                        if (totalPeriodo > 0) {
+                            topReceitas.push({ nome: descricao, valor: totalPeriodo });
+                        } else if (totalPeriodo < 0) {
+                            topDespesas.push({ nome: descricao, valor: Math.abs(totalPeriodo) });
+                        }
                     }
                 }
-            }
-            
-            // Coleta top receitas e despesas
-            if (descricao.match(/^\d+ - /) && descricao !== 'RECEITAS TOTAIS' && descricao !== 'CUSTOS VARIAVEIS' && descricao !== 'CUSTOS FIXOS' && descricao !== 'LUCRO BRUTO' && descricao !== 'RESULTADO OPERACIONAL') {
-                if (totalPeriodo > 0) {
-                    topReceitas.push({ nome: descricao, valor: totalPeriodo });
-                } else if (totalPeriodo < 0) {
-                    topDespesas.push({ nome: descricao, valor: Math.abs(totalPeriodo) });
-                }
-            }
-        }
 
-        topReceitas.sort((a, b) => b.valor - a.valor);
-        topReceitas = topReceitas.slice(0, 5);
-        topDespesas.sort((a, b) => b.valor - a.valor);
-        topDespesas = topDespesas.slice(0, 5);
+                topReceitas.sort((a, b) => b.valor - a.valor);
+                topReceitas = topReceitas.slice(0, 5);
+                topDespesas.sort((a, b) => b.valor - a.valor);
+                topDespesas = topDespesas.slice(0, 5);
 
-        let melhorMes = { mes: '-', valor: -999999999 };
-        let piorMes = { mes: '-', valor: 999999999 };
-        resultadoMensal.forEach(item => {
-            if (item.valor > melhorMes.valor) melhorMes = item;
-            if (item.valor < piorMes.valor) piorMes = item;
-        });
-
-        // Cria a página de resumo
-        function criarPaginaResumo(numeroPagina, totalPaginas) {
-            const pagina = document.createElement('div');
-            pagina.style.cssText = 'padding:20px 15px; font-family:Arial,Helvetica,sans-serif; background:#FFFFFF; color:#000000; page-break-after:always; min-height:100%; width:100%;';
-            
-            const header = document.createElement('div');
-            header.style.cssText = 'text-align:center; margin-bottom:15px; padding-bottom:10px; border-bottom:2px solid #000000;';
-            
-            const titulo = document.createElement('div');
-            titulo.textContent = 'DRE - RESUMO EXECUTIVO';
-            titulo.style.cssText = 'font-size:18pt; font-weight:bold; color:#000000;';
-            header.appendChild(titulo);
-            
-            const subtitulo = document.createElement('div');
-            subtitulo.textContent = 'Aplikado Soluções | Módulo III';
-            subtitulo.style.cssText = 'font-size:10pt; color:#000000; margin-top:2px;';
-            header.appendChild(subtitulo);
-            
-            const periodo = document.createElement('div');
-            const periodoLabel = mesInicio === mesFim ? mesesLabels[mesInicio] : `${mesesLabels[mesInicio]} a ${mesesLabels[mesFim]}`;
-            periodo.textContent = `Período: ${periodoLabel} de ${new Date().getFullYear()}`;
-            periodo.style.cssText = 'font-size:9pt; color:#000000; margin-top:2px;';
-            header.appendChild(periodo);
-            
-            const dataHora = document.createElement('div');
-            dataHora.textContent = `Emissão: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')} | Página ${numeroPagina}`;
-            dataHora.style.cssText = 'font-size:8pt; color:#000000; margin-top:4px;';
-            header.appendChild(dataHora);
-            pagina.appendChild(header);
-
-            // Tabela de indicadores
-            const tabela1 = document.createElement('table');
-            tabela1.style.cssText = 'width:100%; border-collapse:collapse; margin-bottom:16px; font-size:9pt;';
-            const trHead1 = document.createElement('tr');
-            const th1 = document.createElement('th');
-            th1.textContent = 'INDICADOR';
-            th1.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:6px 12px; text-align:center; font-weight:bold;';
-            trHead1.appendChild(th1);
-            const th2 = document.createElement('th');
-            th2.textContent = 'VALOR';
-            th2.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:6px 12px; text-align:center; font-weight:bold;';
-            trHead1.appendChild(th2);
-            const th3 = document.createElement('th');
-            th3.textContent = '%';
-            th3.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:6px 12px; text-align:center; font-weight:bold;';
-            trHead1.appendChild(th3);
-            tabela1.appendChild(trHead1);
-            
-            const margemBruta = totalReceita > 0 ? (lucroBruto / totalReceita) * 100 : 0;
-            const margemLiquida = totalReceita > 0 ? (resultadoOperacional / totalReceita) * 100 : 0;
-            
-            const dadosKPI = [
-                ['Receita Total', `R$ ${formatarMoedaBR(totalReceita)}`, '100,0%'],
-                ['Lucro Bruto', `R$ ${formatarMoedaBR(lucroBruto)}`, `${margemBruta.toFixed(1)}%`],
-                ['Resultado Operacional', `${resultadoOperacional >= 0 ? 'R$ ' : '-R$ '}${formatarMoedaBR(Math.abs(resultadoOperacional))}`, `${margemLiquida.toFixed(1)}%`]
-            ];
-            
-            dadosKPI.forEach(([label, valor, pct]) => {
-                const tr = document.createElement('tr');
-                const td1 = document.createElement('td');
-                td1.textContent = label;
-                td1.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:left;';
-                tr.appendChild(td1);
-                const td2 = document.createElement('td');
-                td2.textContent = valor;
-                td2.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:right;';
-                tr.appendChild(td2);
-                const td3 = document.createElement('td');
-                td3.textContent = pct;
-                td3.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:right;';
-                tr.appendChild(td3);
-                tabela1.appendChild(tr);
-            });
-            
-            const trMargem = document.createElement('tr');
-            trMargem.style.cssText = 'background:#F0F0F0; font-weight:bold;';
-            const tdMargemLabel = document.createElement('td');
-            tdMargemLabel.textContent = 'Margem Líquida';
-            tdMargemLabel.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:left;';
-            trMargem.appendChild(tdMargemLabel);
-            const tdMargem = document.createElement('td');
-            tdMargem.colSpan = 2;
-            tdMargem.textContent = `${margemLiquida.toFixed(1)}% ${margemLiquida >= 0 ? '(Positiva)' : '(Atenção)'}`;
-            tdMargem.style.cssText = 'border:1px solid #000000; padding:4px 6px; font-size:8.5px; color:#000000; text-align:center;';
-            trMargem.appendChild(tdMargem);
-            tabela1.appendChild(trMargem);
-            pagina.appendChild(tabela1);
-
-            // Estrutura de Receita
-            if (topReceitas.length > 0) {
-                const tabela2 = document.createElement('table');
-                tabela2.style.cssText = 'width:100%; border-collapse:collapse; margin-bottom:12px; font-size:9pt;';
-                const trTitle2 = document.createElement('tr');
-                const thTitle2 = document.createElement('th');
-                thTitle2.colSpan = 2;
-                thTitle2.textContent = 'ESTRUTURA DE RECEITA';
-                thTitle2.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:5px 12px; text-align:center; font-weight:bold;';
-                trTitle2.appendChild(thTitle2);
-                tabela2.appendChild(trTitle2);
-                topReceitas.forEach(item => {
-                    const tr = document.createElement('tr');
-                    const td1 = document.createElement('td');
-                    td1.textContent = item.nome.substring(0, 35);
-                    td1.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:left;';
-                    tr.appendChild(td1);
-                    const td2 = document.createElement('td');
-                    td2.textContent = `R$ ${formatarMoedaBR(item.valor)} (${(item.valor/totalReceita*100).toFixed(1)}%)`;
-                    td2.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:right;';
-                    tr.appendChild(td2);
-                    tabela2.appendChild(tr);
+                let melhorMes = { mes: '-', valor: -999999999 };
+                let piorMes = { mes: '-', valor: 999999999 };
+                resultadoMensal.forEach(item => {
+                    if (item.valor > melhorMes.valor) melhorMes = item;
+                    if (item.valor < piorMes.valor) piorMes = item;
                 });
-                pagina.appendChild(tabela2);
-            }
 
-            // Estrutura de Custos
-            if (topDespesas.length > 0) {
-                const tabela3 = document.createElement('table');
-                tabela3.style.cssText = 'width:100%; border-collapse:collapse; margin-bottom:12px; font-size:9pt;';
-                const trTitle3 = document.createElement('tr');
-                const thTitle3 = document.createElement('th');
-                thTitle3.colSpan = 2;
-                thTitle3.textContent = 'ESTRUTURA DE CUSTOS';
-                thTitle3.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:5px 12px; text-align:center; font-weight:bold;';
-                trTitle3.appendChild(thTitle3);
-                tabela3.appendChild(trTitle3);
-                topDespesas.forEach(item => {
-                    const tr = document.createElement('tr');
-                    const td1 = document.createElement('td');
-                    td1.textContent = item.nome.substring(0, 35);
-                    td1.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:left;';
-                    tr.appendChild(td1);
-                    const td2 = document.createElement('td');
-                    td2.textContent = `R$ ${formatarMoedaBR(item.valor)} (${(item.valor/totalReceita*100).toFixed(1)}%)`;
-                    td2.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:right;';
-                    tr.appendChild(td2);
-                    tabela3.appendChild(tr);
-                });
-                pagina.appendChild(tabela3);
-            }
+                function criarPaginaResumo(numeroPagina, totalPaginas) {
+                    const pagina = document.createElement('div');
+                    pagina.style.cssText = 'padding:20px 15px; font-family:Arial,Helvetica,sans-serif; background:#FFFFFF; color:#000000; page-break-after:always; min-height:100%; width:100%;';
+                    
+                    const header = document.createElement('div');
+                    header.style.cssText = 'text-align:center; margin-bottom:15px; padding-bottom:10px; border-bottom:2px solid #000000;';
+                    
+                    const titulo = document.createElement('div');
+                    titulo.textContent = 'DRE - RESUMO EXECUTIVO';
+                    titulo.style.cssText = 'font-size:18pt; font-weight:bold; color:#000000;';
+                    header.appendChild(titulo);
+                    
+                    const subtitulo = document.createElement('div');
+                    subtitulo.textContent = 'Aplikado Soluções | Módulo III';
+                    subtitulo.style.cssText = 'font-size:10pt; color:#000000; margin-top:2px;';
+                    header.appendChild(subtitulo);
+                    
+                    const periodo = document.createElement('div');
+                    const periodoLabel = mesInicio === mesFim ? mesesLabels[mesInicio] : `${mesesLabels[mesInicio]} a ${mesesLabels[mesFim]}`;
+                    periodo.textContent = `Período: ${periodoLabel} de ${new Date().getFullYear()}`;
+                    periodo.style.cssText = 'font-size:9pt; color:#000000; margin-top:2px;';
+                    header.appendChild(periodo);
+                    
+                    const dataHora = document.createElement('div');
+                    dataHora.textContent = `Emissão: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')} | Página ${numeroPagina}`;
+                    dataHora.style.cssText = 'font-size:8pt; color:#000000; margin-top:4px;';
+                    header.appendChild(dataHora);
+                    pagina.appendChild(header);
 
-            // Alertas
-            const tabela4 = document.createElement('table');
-            tabela4.style.cssText = 'width:100%; border-collapse:collapse; margin-bottom:12px; font-size:9pt;';
-            const trTitle4 = document.createElement('tr');
-            const thTitle4 = document.createElement('th');
-            thTitle4.textContent = 'PRINCIPAIS ALERTAS';
-            thTitle4.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:5px 12px; text-align:center; font-weight:bold;';
-            trTitle4.appendChild(thTitle4);
-            tabela4.appendChild(trTitle4);
-            const trAlertas = document.createElement('tr');
-            const tdAlertas = document.createElement('td');
-            tdAlertas.style.cssText = 'border:1px solid #000000; padding:6px 12px; font-size:8.5px; color:#000000;';
-            let alertasText = '';
-            alertasText += `• Resultado ${resultadoOperacional >= 0 ? 'positivo' : 'negativo'} (${margemLiquida.toFixed(1)}%)\n`;
-            if (piorMes.valor < 0) alertasText += `• ${piorMes.mes}: deterioração (R$ ${formatarMoedaBR(piorMes.valor)})\n`;
-            if (topReceitas.length > 0 && topReceitas[0].valor / totalReceita > 0.4) {
-                alertasText += `• Dependência de ${topReceitas[0].nome.substring(0, 25)} (${(topReceitas[0].valor/totalReceita*100).toFixed(1)}%)\n`;
-            }
-            if (totalReceita > 0) {
-                alertasText += `• Custos variáveis: ${(totalCustoVariavel/totalReceita*100).toFixed(1)}% da receita`;
-            }
-            tdAlertas.textContent = alertasText;
-            tdAlertas.style.whiteSpace = 'pre-line';
-            trAlertas.appendChild(tdAlertas);
-            tabela4.appendChild(trAlertas);
-            pagina.appendChild(tabela4);
+                    const tabela1 = document.createElement('table');
+                    tabela1.style.cssText = 'width:100%; border-collapse:collapse; margin-bottom:16px; font-size:9pt;';
+                    const trHead1 = document.createElement('tr');
+                    const th1 = document.createElement('th');
+                    th1.textContent = 'INDICADOR';
+                    th1.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:6px 12px; text-align:center; font-weight:bold;';
+                    trHead1.appendChild(th1);
+                    const th2 = document.createElement('th');
+                    th2.textContent = 'VALOR';
+                    th2.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:6px 12px; text-align:center; font-weight:bold;';
+                    trHead1.appendChild(th2);
+                    const th3 = document.createElement('th');
+                    th3.textContent = '%';
+                    th3.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:6px 12px; text-align:center; font-weight:bold;';
+                    trHead1.appendChild(th3);
+                    tabela1.appendChild(trHead1);
+                    
+                    const margemBruta = totalReceita > 0 ? (lucroBruto / totalReceita) * 100 : 0;
+                    const margemLiquida = totalReceita > 0 ? (resultadoOperacional / totalReceita) * 100 : 0;
+                    
+                    const dadosKPI = [
+                        ['Receita Total', `R$ ${formatarMoedaBR(totalReceita)}`, '100,0%'],
+                        ['Lucro Bruto', `R$ ${formatarMoedaBR(lucroBruto)}`, `${margemBruta.toFixed(1)}%`],
+                        ['Resultado Operacional', `${resultadoOperacional >= 0 ? 'R$ ' : '-R$ '}${formatarMoedaBR(Math.abs(resultadoOperacional))}`, `${margemLiquida.toFixed(1)}%`]
+                    ];
+                    
+                    dadosKPI.forEach(([label, valor, pct]) => {
+                        const tr = document.createElement('tr');
+                        const td1 = document.createElement('td');
+                        td1.textContent = label;
+                        td1.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:left;';
+                        tr.appendChild(td1);
+                        const td2 = document.createElement('td');
+                        td2.textContent = valor;
+                        td2.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:right;';
+                        tr.appendChild(td2);
+                        const td3 = document.createElement('td');
+                        td3.textContent = pct;
+                        td3.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:right;';
+                        tr.appendChild(td3);
+                        tabela1.appendChild(tr);
+                    });
+                    
+                    const trMargem = document.createElement('tr');
+                    trMargem.style.cssText = 'background:#F0F0F0; font-weight:bold;';
+                    const tdMargemLabel = document.createElement('td');
+                    tdMargemLabel.textContent = 'Margem Líquida';
+                    tdMargemLabel.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:left;';
+                    trMargem.appendChild(tdMargemLabel);
+                    const tdMargem = document.createElement('td');
+                    tdMargem.colSpan = 2;
+                    tdMargem.textContent = `${margemLiquida.toFixed(1)}% ${margemLiquida >= 0 ? '(Positiva)' : '(Atenção)'}`;
+                    tdMargem.style.cssText = 'border:1px solid #000000; padding:4px 6px; font-size:8.5px; color:#000000; text-align:center;';
+                    trMargem.appendChild(tdMargem);
+                    tabela1.appendChild(trMargem);
+                    pagina.appendChild(tabela1);
 
-            // Conclusão
-            const tabela5 = document.createElement('table');
-            tabela5.style.cssText = 'width:100%; border-collapse:collapse; margin-bottom:12px; font-size:9pt;';
-            const trTitle5 = document.createElement('tr');
-            const thTitle5 = document.createElement('th');
-            thTitle5.textContent = 'CONCLUSÃO EXECUTIVA';
-            thTitle5.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:5px 12px; text-align:center; font-weight:bold;';
-            trTitle5.appendChild(thTitle5);
-            tabela5.appendChild(trTitle5);
-            const trConclusao = document.createElement('tr');
-            const tdConclusao = document.createElement('td');
-            tdConclusao.style.cssText = 'border:1px solid #000000; padding:8px 12px; font-size:8.5px; color:#000000; line-height:1.5;';
-            tdConclusao.textContent = `A operação apresenta faturamento consistente (R$ ${formatarMoedaBR(totalReceita)}), com margem operacional ${margemLiquida.toFixed(1)}%. Recomenda-se ${resultadoOperacional < 0 ? 'controle de despesas' : 'manutenção dos custos'}.`;
-            trConclusao.appendChild(tdConclusao);
-            tabela5.appendChild(trConclusao);
-            pagina.appendChild(tabela5);
+                    if (topReceitas.length > 0) {
+                        const tabela2 = document.createElement('table');
+                        tabela2.style.cssText = 'width:100%; border-collapse:collapse; margin-bottom:12px; font-size:9pt;';
+                        const trTitle2 = document.createElement('tr');
+                        const thTitle2 = document.createElement('th');
+                        thTitle2.colSpan = 2;
+                        thTitle2.textContent = 'ESTRUTURA DE RECEITA';
+                        thTitle2.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:5px 12px; text-align:center; font-weight:bold;';
+                        trTitle2.appendChild(thTitle2);
+                        tabela2.appendChild(trTitle2);
+                        topReceitas.forEach(item => {
+                            const tr = document.createElement('tr');
+                            const td1 = document.createElement('td');
+                            td1.textContent = item.nome.substring(0, 35);
+                            td1.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:left;';
+                            tr.appendChild(td1);
+                            const td2 = document.createElement('td');
+                            td2.textContent = `R$ ${formatarMoedaBR(item.valor)} (${(item.valor/totalReceita*100).toFixed(1)}%)`;
+                            td2.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:right;';
+                            tr.appendChild(td2);
+                            tabela2.appendChild(tr);
+                        });
+                        pagina.appendChild(tabela2);
+                    }
 
-            const footer = document.createElement('div');
-            footer.textContent = `Aplikado Soluções - Gestão Financeira | Emissão: ${new Date().toLocaleDateString('pt-BR')}`;
-            footer.style.cssText = 'text-align:center; font-size:7pt; color:#000000; margin-top:16px; padding-top:8px; border-top:1px solid #CCCCCC;';
-            pagina.appendChild(footer);
-            
-            return pagina;
-        }
+                    if (topDespesas.length > 0) {
+                        const tabela3 = document.createElement('table');
+                        tabela3.style.cssText = 'width:100%; border-collapse:collapse; margin-bottom:12px; font-size:9pt;';
+                        const trTitle3 = document.createElement('tr');
+                        const thTitle3 = document.createElement('th');
+                        thTitle3.colSpan = 2;
+                        thTitle3.textContent = 'ESTRUTURA DE CUSTOS';
+                        thTitle3.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:5px 12px; text-align:center; font-weight:bold;';
+                        trTitle3.appendChild(thTitle3);
+                        tabela3.appendChild(trTitle3);
+                        topDespesas.forEach(item => {
+                            const tr = document.createElement('tr');
+                            const td1 = document.createElement('td');
+                            td1.textContent = item.nome.substring(0, 35);
+                            td1.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:left;';
+                            tr.appendChild(td1);
+                            const td2 = document.createElement('td');
+                            td2.textContent = `R$ ${formatarMoedaBR(item.valor)} (${(item.valor/totalReceita*100).toFixed(1)}%)`;
+                            td2.style.cssText = 'border:1px solid #000000; padding:4px 8px; font-size:9px; color:#000000; text-align:right;';
+                            tr.appendChild(td2);
+                            tabela3.appendChild(tr);
+                        });
+                        pagina.appendChild(tabela3);
+                    }
 
-        // Cria a página da tabela DRE
-        function criarPaginaDRE(tituloSecao, dadosLinhas, numeroPagina, totalPaginas) {
-            const pagina = document.createElement('div');
-            pagina.style.cssText = 'padding:20px 15px; font-family:Arial,Helvetica,sans-serif; background:#FFFFFF; color:#000000; page-break-after:always; min-height:100%; width:100%;';
-            
-            const header = document.createElement('div');
-            header.style.cssText = 'text-align:center; margin-bottom:15px; padding-bottom:10px; border-bottom:2px solid #000000;';
-            const titulo = document.createElement('div');
-            titulo.textContent = 'DRE - DEMONSTRATIVO DE RESULTADO DO EXERCÍCIO';
-            titulo.style.cssText = 'font-size:16px; font-weight:bold; color:#000000; margin-bottom:5px;';
-            header.appendChild(titulo);
-            
-            const periodoLabel = mesInicio === mesFim ? mesesLabels[mesInicio] : `${mesesLabels[mesInicio]} a ${mesesLabels[mesFim]}`;
-            const periodo = document.createElement('div');
-            periodo.textContent = `Período: ${periodoLabel} de ${new Date().getFullYear()}`;
-            periodo.style.cssText = 'font-size:10px; color:#000000; margin-bottom:6px;';
-            header.appendChild(periodo);
-            
-            const info = document.createElement('div');
-            info.style.cssText = 'display:flex; justify-content:space-between; font-size:8px; color:#000000; margin-top:6px; padding-top:4px; border-top:1px solid #000000;';
-            const emissao = document.createElement('span');
-            emissao.textContent = `Emissão: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`;
-            info.appendChild(emissao);
-            const paginaNum = document.createElement('span');
-            paginaNum.textContent = `Página ${numeroPagina} de ${totalPaginas}`;
-            info.appendChild(paginaNum);
-            header.appendChild(info);
-            pagina.appendChild(header);
+                    const tabela4 = document.createElement('table');
+                    tabela4.style.cssText = 'width:100%; border-collapse:collapse; margin-bottom:12px; font-size:9pt;';
+                    const trTitle4 = document.createElement('tr');
+                    const thTitle4 = document.createElement('th');
+                    thTitle4.textContent = 'PRINCIPAIS ALERTAS';
+                    thTitle4.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:5px 12px; text-align:center; font-weight:bold;';
+                    trTitle4.appendChild(thTitle4);
+                    tabela4.appendChild(trTitle4);
+                    const trAlertas = document.createElement('tr');
+                    const tdAlertas = document.createElement('td');
+                    tdAlertas.style.cssText = 'border:1px solid #000000; padding:6px 12px; font-size:8.5px; color:#000000;';
+                    let alertasText = '';
+                    alertasText += `• Resultado ${resultadoOperacional >= 0 ? 'positivo' : 'negativo'} (${margemLiquida.toFixed(1)}%)\n`;
+                    if (piorMes.valor < 0) alertasText += `• ${piorMes.mes}: deterioração (R$ ${formatarMoedaBR(piorMes.valor)})\n`;
+                    if (topReceitas.length > 0 && topReceitas[0].valor / totalReceita > 0.4) {
+                        alertasText += `• Dependência de ${topReceitas[0].nome.substring(0, 25)} (${(topReceitas[0].valor/totalReceita*100).toFixed(1)}%)\n`;
+                    }
+                    if (totalReceita > 0) {
+                        alertasText += `• Custos variáveis: ${(totalCustoVariavel/totalReceita*100).toFixed(1)}% da receita`;
+                    }
+                    tdAlertas.textContent = alertasText;
+                    tdAlertas.style.whiteSpace = 'pre-line';
+                    trAlertas.appendChild(tdAlertas);
+                    tabela4.appendChild(trAlertas);
+                    pagina.appendChild(tabela4);
 
-            const tituloSeccao = document.createElement('div');
-            tituloSeccao.textContent = tituloSecao;
-            tituloSeccao.style.cssText = 'background:#D3D3D3; color:#000000; padding:10px 15px; margin:10px 0 12px 0; font-size:14px; font-weight:bold; text-align:center; border:1px solid #000000;';
-            pagina.appendChild(tituloSeccao);
+                    const tabela5 = document.createElement('table');
+                    tabela5.style.cssText = 'width:100%; border-collapse:collapse; margin-bottom:12px; font-size:9pt;';
+                    const trTitle5 = document.createElement('tr');
+                    const thTitle5 = document.createElement('th');
+                    thTitle5.textContent = 'CONCLUSÃO EXECUTIVA';
+                    thTitle5.style.cssText = 'background:#E0E0E0; border:1px solid #000000; padding:5px 12px; text-align:center; font-weight:bold;';
+                    trTitle5.appendChild(thTitle5);
+                    tabela5.appendChild(trTitle5);
+                    const trConclusao = document.createElement('tr');
+                    const tdConclusao = document.createElement('td');
+                    tdConclusao.style.cssText = 'border:1px solid #000000; padding:8px 12px; font-size:8.5px; color:#000000; line-height:1.5;';
+                    tdConclusao.textContent = `A operação apresenta faturamento consistente (R$ ${formatarMoedaBR(totalReceita)}), com margem operacional ${margemLiquida.toFixed(1)}%. Recomenda-se ${resultadoOperacional < 0 ? 'controle de despesas' : 'manutenção dos custos'}.`;
+                    trConclusao.appendChild(tdConclusao);
+                    tabela5.appendChild(trConclusao);
+                    pagina.appendChild(tabela5);
 
-            const tabela = document.createElement('table');
-            tabela.style.cssText = 'width:100%; border-collapse:collapse; font-size:9px; margin-bottom:15px; table-layout:fixed;';
-            
-            const thead = document.createElement('thead');
-            const headerRow = document.createElement('tr');
-            
-            // Coluna de descrição
-            const thDesc = document.createElement('th');
-            thDesc.textContent = 'Descrição';
-            thDesc.style.cssText = 'width:16%; background:#E0E0E0; border:1px solid #000000; padding:6px 4px; text-align:center; font-weight:bold; font-size:9px; white-space:nowrap;';
-            headerRow.appendChild(thDesc);
-            
-            // Colunas dos meses selecionados
-            for (const mes of mesesSelecionados) {
-                const th = document.createElement('th');
-                th.textContent = mes;
-                th.style.cssText = `width:${Math.floor(60/mesesSelecionados.length)}%; background:#E0E0E0; border:1px solid #000000; padding:6px 4px; text-align:center; font-weight:bold; font-size:9px; white-space:nowrap;`;
-                headerRow.appendChild(th);
-            }
-            
-            // Coluna total
-            const thTotal = document.createElement('th');
-            thTotal.textContent = 'Total';
-            thTotal.style.cssText = 'width:8%; background:#E0E0E0; border:1px solid #000000; padding:6px 4px; text-align:center; font-weight:bold; font-size:9px; white-space:nowrap;';
-            headerRow.appendChild(thTotal);
-            
-            thead.appendChild(headerRow);
-            tabela.appendChild(thead);
+                    const footer = document.createElement('div');
+                    footer.textContent = `Aplikado Soluções - Gestão Financeira | Emissão: ${new Date().toLocaleDateString('pt-BR')}`;
+                    footer.style.cssText = 'text-align:center; font-size:7pt; color:#000000; margin-top:16px; padding-top:8px; border-top:1px solid #CCCCCC;';
+                    pagina.appendChild(footer);
+                    
+                    return pagina;
+                }
 
-            const tbody = document.createElement('tbody');
-            for (const item of dadosLinhas) {
-                const tr = document.createElement('tr');
-                const isTotalRow = (item.tipo === 'total');
-                const isGroupRow = (item.tipo === 'grupo');
-                const bgColor = isTotalRow ? '#F0F0F0' : (isGroupRow ? '#E8E8E8' : '#FFFFFF');
-                const fontWeight = (isTotalRow || isGroupRow) ? 'bold' : 'normal';
+                function criarPaginaDRE(tituloSecao, dadosLinhas, numeroPagina, totalPaginas) {
+                    const pagina = document.createElement('div');
+                    pagina.style.cssText = 'padding:20px 15px; font-family:Arial,Helvetica,sans-serif; background:#FFFFFF; color:#000000; page-break-after:always; min-height:100%; width:100%;';
+                    
+                    const header = document.createElement('div');
+                    header.style.cssText = 'text-align:center; margin-bottom:15px; padding-bottom:10px; border-bottom:2px solid #000000;';
+                    const titulo = document.createElement('div');
+                    titulo.textContent = 'DRE - DEMONSTRATIVO DE RESULTADO DO EXERCÍCIO';
+                    titulo.style.cssText = 'font-size:16px; font-weight:bold; color:#000000; margin-bottom:5px;';
+                    header.appendChild(titulo);
+                    
+                    const periodoLabel = mesInicio === mesFim ? mesesLabels[mesInicio] : `${mesesLabels[mesInicio]} a ${mesesLabels[mesFim]}`;
+                    const periodo = document.createElement('div');
+                    periodo.textContent = `Período: ${periodoLabel} de ${new Date().getFullYear()}`;
+                    periodo.style.cssText = 'font-size:10px; color:#000000; margin-bottom:6px;';
+                    header.appendChild(periodo);
+                    
+                    const info = document.createElement('div');
+                    info.style.cssText = 'display:flex; justify-content:space-between; font-size:8px; color:#000000; margin-top:6px; padding-top:4px; border-top:1px solid #000000;';
+                    const emissao = document.createElement('span');
+                    emissao.textContent = `Emissão: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`;
+                    info.appendChild(emissao);
+                    const paginaNum = document.createElement('span');
+                    paginaNum.textContent = `Página ${numeroPagina} de ${totalPaginas}`;
+                    info.appendChild(paginaNum);
+                    header.appendChild(info);
+                    pagina.appendChild(header);
+
+                    const tituloSeccao = document.createElement('div');
+                    tituloSeccao.textContent = tituloSecao;
+                    tituloSeccao.style.cssText = 'background:#D3D3D3; color:#000000; padding:10px 15px; margin:10px 0 12px 0; font-size:14px; font-weight:bold; text-align:center; border:1px solid #000000;';
+                    pagina.appendChild(tituloSeccao);
+
+                    const tabela = document.createElement('table');
+                    tabela.style.cssText = 'width:100%; border-collapse:collapse; font-size:9px; margin-bottom:15px; table-layout:fixed;';
+                    
+                    const thead = document.createElement('thead');
+                    const headerRow = document.createElement('tr');
+                    
+                    const thDesc = document.createElement('th');
+                    thDesc.textContent = 'Descrição';
+                    thDesc.style.cssText = 'width:16%; background:#E0E0E0; border:1px solid #000000; padding:6px 4px; text-align:center; font-weight:bold; font-size:9px; white-space:nowrap;';
+                    headerRow.appendChild(thDesc);
+                    
+                    for (const mes of mesesSelecionados) {
+                        const th = document.createElement('th');
+                        th.textContent = mes;
+                        th.style.cssText = `width:${Math.floor(60/mesesSelecionados.length)}%; background:#E0E0E0; border:1px solid #000000; padding:6px 4px; text-align:center; font-weight:bold; font-size:9px; white-space:nowrap;`;
+                        headerRow.appendChild(th);
+                    }
+                    
+                    const thTotal = document.createElement('th');
+                    thTotal.textContent = 'Total';
+                    thTotal.style.cssText = 'width:8%; background:#E0E0E0; border:1px solid #000000; padding:6px 4px; text-align:center; font-weight:bold; font-size:9px; white-space:nowrap;';
+                    headerRow.appendChild(thTotal);
+                    
+                    thead.appendChild(headerRow);
+                    tabela.appendChild(thead);
+
+                    const tbody = document.createElement('tbody');
+                    for (const item of dadosLinhas) {
+                        const tr = document.createElement('tr');
+                        const isTotalRow = (item.tipo === 'total');
+                        const isGroupRow = (item.tipo === 'grupo');
+                        const bgColor = isTotalRow ? '#F0F0F0' : (isGroupRow ? '#E8E8E8' : '#FFFFFF');
+                        const fontWeight = (isTotalRow || isGroupRow) ? 'bold' : 'normal';
+                        
+                        const tdDesc = document.createElement('td');
+                        let descricao = item.nome;
+                        if (item.codigo && item.codigo !== '') descricao = `${item.codigo} - ${item.nome}`;
+                        tdDesc.textContent = descricao;
+                        tdDesc.style.cssText = `border:1px solid #000000; padding:5px 6px; text-align:left; font-size:9px; word-break:break-word; background:${bgColor}; font-weight:${fontWeight}; color:#000000;`;
+                        tr.appendChild(tdDesc);
+                        
+                        for (const v of item.valores) {
+                            const td = document.createElement('td');
+                            const valorFormatado = v.toFixed(2).replace('.', ',');
+                            td.textContent = valorFormatado;
+                            td.style.cssText = `border:1px solid #000000; padding:5px 4px; text-align:center; font-size:9px; white-space:nowrap; background:${bgColor}; font-weight:${fontWeight}; color:#000000;`;
+                            tr.appendChild(td);
+                        }
+                        
+                        const tdTotal = document.createElement('td');
+                        const totalFormatado = item.total.toFixed(2).replace('.', ',');
+                        tdTotal.textContent = totalFormatado;
+                        tdTotal.style.cssText = `border:1px solid #000000; padding:5px 4px; text-align:center; font-size:9px; white-space:nowrap; font-weight:bold; background:${bgColor}; color:#000000;`;
+                        tr.appendChild(tdTotal);
+                        tbody.appendChild(tr);
+                    }
+                    tabela.appendChild(tbody);
+                    pagina.appendChild(tabela);
+
+                    const footer = document.createElement('div');
+                    footer.textContent = 'Aplikado Soluções - Sistema de Gestão Financeira';
+                    footer.style.cssText = 'text-align:center; font-size:7px; color:#000000; margin-top:10px; padding-top:5px; border-top:1px solid #000000;';
+                    pagina.appendChild(footer);
+                    
+                    return pagina;
+                }
+
+                const conteudoPDF = document.createElement('div');
+                let numeroPagina = 1;
+                let totalPaginas = 1;
                 
-                const tdDesc = document.createElement('td');
-                let descricao = item.nome;
-                if (item.codigo && item.codigo !== '') descricao = `${item.codigo} - ${item.nome}`;
-                tdDesc.textContent = descricao;
-                tdDesc.style.cssText = `border:1px solid #000000; padding:5px 6px; text-align:left; font-size:9px; word-break:break-word; background:${bgColor}; font-weight:${fontWeight}; color:#000000;`;
-                tr.appendChild(tdDesc);
-                
-                for (const v of item.valores) {
-                    const td = document.createElement('td');
-                    const valorFormatado = v.toFixed(2).replace('.', ',');
-                    td.textContent = valorFormatado;
-                    td.style.cssText = `border:1px solid #000000; padding:5px 4px; text-align:center; font-size:9px; white-space:nowrap; background:${bgColor}; font-weight:${fontWeight}; color:#000000;`;
-                    tr.appendChild(td);
+                let paginasTabela = 0;
+                const secoes = [
+                    { titulo: 'RECEITAS OPERACIONAIS', linhas: [] },
+                    { titulo: 'CUSTOS VARIÁVEIS', linhas: [] },
+                    { titulo: 'CUSTOS FIXOS', linhas: [] },
+                    { titulo: 'RESULTADO DO EXERCÍCIO', linhas: [] }
+                ];
+                let secaoAtual = secoes[0];
+                for (const linha of dadosLinhas) {
+                    if (linha.nome === 'RECEITAS TOTAIS') { secaoAtual = secoes[0]; secaoAtual.linhas.push(linha); }
+                    else if (linha.nome === 'CUSTOS VARIAVEIS') { secaoAtual = secoes[1]; secaoAtual.linhas.push(linha); }
+                    else if (linha.nome === 'CUSTOS FIXOS') { secaoAtual = secoes[2]; secaoAtual.linhas.push(linha); }
+                    else if (linha.nome === 'RESULTADO OPERACIONAL') { secaoAtual = secoes[3]; secaoAtual.linhas.push(linha); }
+                    else if (secaoAtual) { secaoAtual.linhas.push(linha); }
                 }
                 
-                const tdTotal = document.createElement('td');
-                const totalFormatado = item.total.toFixed(2).replace('.', ',');
-                tdTotal.textContent = totalFormatado;
-                tdTotal.style.cssText = `border:1px solid #000000; padding:5px 4px; text-align:center; font-size:9px; white-space:nowrap; font-weight:bold; background:${bgColor}; color:#000000;`;
-                tr.appendChild(tdTotal);
-                tbody.appendChild(tr);
-            }
-            tabela.appendChild(tbody);
-            pagina.appendChild(tabela);
+                for (const secao of secoes) {
+                    if (secao.linhas.length === 0) continue;
+                    paginasTabela += Math.ceil(secao.linhas.length / 18);
+                }
+                totalPaginas = 1 + paginasTabela;
+                
+                conteudoPDF.appendChild(criarPaginaResumo(numeroPagina++, totalPaginas));
+                
+                for (const secao of secoes) {
+                    if (secao.linhas.length === 0) continue;
+                    const linhasPorPagina = 18;
+                    for (let i = 0; i < secao.linhas.length; i += linhasPorPagina) {
+                        const paginasLinhas = secao.linhas.slice(i, i + linhasPorPagina);
+                        const pagina = criarPaginaDRE(secao.titulo, paginasLinhas, numeroPagina++, totalPaginas);
+                        conteudoPDF.appendChild(pagina);
+                    }
+                }
 
-            const footer = document.createElement('div');
-            footer.textContent = 'Aplikado Soluções - Sistema de Gestão Financeira';
-            footer.style.cssText = 'text-align:center; font-size:7px; color:#000000; margin-top:10px; padding-top:5px; border-top:1px solid #000000;';
-            pagina.appendChild(footer);
-            
-            return pagina;
-        }
+                const nomeArquivo = `DRE_${mesesSelecionados.join('_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+                const titulo = `DRE - ${mesesSelecionados.join(' a ')}`;
 
-        // Monta o PDF completo
-        const conteudoPDF = document.createElement('div');
-        let numeroPagina = 1;
-        let totalPaginas = 1;
-        
-        // Conta quantas páginas serão necessárias
-        let paginasTabela = 0;
-        const secoes = [
-            { titulo: 'RECEITAS OPERACIONAIS', linhas: [] },
-            { titulo: 'CUSTOS VARIÁVEIS', linhas: [] },
-            { titulo: 'CUSTOS FIXOS', linhas: [] },
-            { titulo: 'RESULTADO DO EXERCÍCIO', linhas: [] }
-        ];
-        let secaoAtual = secoes[0];
-        for (const linha of dadosLinhas) {
-            if (linha.nome === 'RECEITAS TOTAIS') { secaoAtual = secoes[0]; secaoAtual.linhas.push(linha); }
-            else if (linha.nome === 'CUSTOS VARIAVEIS') { secaoAtual = secoes[1]; secaoAtual.linhas.push(linha); }
-            else if (linha.nome === 'CUSTOS FIXOS') { secaoAtual = secoes[2]; secaoAtual.linhas.push(linha); }
-            else if (linha.nome === 'RESULTADO OPERACIONAL') { secaoAtual = secoes[3]; secaoAtual.linhas.push(linha); }
-            else if (secaoAtual) { secaoAtual.linhas.push(linha); }
-        }
-        
-        for (const secao of secoes) {
-            if (secao.linhas.length === 0) continue;
-            paginasTabela += Math.ceil(secao.linhas.length / 18);
-        }
-        totalPaginas = 1 + paginasTabela;
-        
-        // Adiciona página de resumo
-        conteudoPDF.appendChild(criarPaginaResumo(numeroPagina++, totalPaginas));
-        
-        // Adiciona páginas da tabela
-        for (const secao of secoes) {
-            if (secao.linhas.length === 0) continue;
-            const linhasPorPagina = 18;
-            for (let i = 0; i < secao.linhas.length; i += linhasPorPagina) {
-                const paginasLinhas = secao.linhas.slice(i, i + linhasPorPagina);
-                const pagina = criarPaginaDRE(secao.titulo, paginasLinhas, numeroPagina++, totalPaginas);
-                conteudoPDF.appendChild(pagina);
+                // Gera o PDF em modo POP-UP
+                await gerarPDFPopUp(conteudoPDF, {
+                    margin: [0.3, 0.3, 0.3, 0.3],
+                    orientation: 'portrait'
+                }, nomeArquivo, titulo);
+
+            } catch (error) {
+                console.error('Erro ao gerar PDF do DRE:', error);
+                alert('Erro ao gerar PDF: ' + error.message);
             }
         }
-
-        // Gera o PDF
-        const opt = {
-            margin: [0.3, 0.3, 0.3, 0.3],
-            filename: `DRE_${mesesSelecionados.join('_')}_${new Date().toISOString().slice(0,10)}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2.5, backgroundColor: '#FFFFFF', letterRendering: true, useCORS: true },
-            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-        };
-        
-        html2pdf().set(opt).from(conteudoPDF).save();
-        
-    } catch (error) {
-        console.error('Erro ao gerar PDF do DRE:', error);
-        alert('Erro ao gerar PDF: ' + error.message);
-    }
-}
 
         // ============================================================
-        // PDF - DESPESAS
+        // PDF - DESPESAS (EM POP-UP)
         // ============================================================
-        function gerarRelatorioPorPeriodo() {
+        async function gerarRelatorioPorPeriodo() {
             const periodo = document.getElementById('selectPeriodoRelatorio').value;
             fecharModalPeriodoPDF();
             const hoje = new Date();
@@ -5579,17 +5870,17 @@ async function gerarPDFDREComPeriodo(mesInicio, mesFim) {
 
             const temp = document.createElement('div');
             temp.innerHTML = html;
-            document.body.appendChild(temp);
-            html2pdf().set({
+            const nomeArquivo = `Relatorio_Despesas_${nomePeriodo.replace(/ /g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+            const titulo = `Relatório de Despesas - ${nomePeriodo}`;
+
+            await gerarPDFPopUp(temp, {
                 margin: [0.5, 0.5, 0.5, 0.5],
-                filename: `Relatorio_Despesas_${nomePeriodo.replace(/ /g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`,
-                html2canvas: { scale: 2, backgroundColor: '#ffffff' },
-                jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
-            }).from(temp).save().then(() => temp.remove());
+                orientation: 'landscape'
+            }, nomeArquivo, titulo);
         }
 
         // ============================================================
-        // PDF - CAIXA
+        // PDF - CAIXA (EM POP-UP)
         // ============================================================
         function toggleDiasContainer(show) {
             document.getElementById('diasDisponiveisContainer').style.display = show ? 'block' : 'none';
@@ -5652,103 +5943,117 @@ async function gerarPDFDREComPeriodo(mesInicio, mesFim) {
             gerarPDFCaixaComFiltro(isMesAtual, diasSel, mesesSel);
         }
 
-        function gerarPDFCaixaComFiltro(mesAtual, diasSel, mesesSel) {
-            const grupos = gerarDadosCaixa();
-            let dados = Array.from(grupos.entries()).map(([data, row]) => ({ data, row }));
-            dados.sort((a, b) => { const da = parseDataBr(a.data), db = parseDataBr(b.data); return db - da; });
-            if (mesAtual) {
-                const hoje = new Date();
-                dados = dados.filter(item => { const d = parseDataBr(item.data); return d && d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear(); });
-            } else if (diasSel.length > 0) {
-                dados = dados.filter(item => diasSel.includes(item.data));
-            } else if (mesesSel.length > 0) {
-                dados = dados.filter(item => mesesSel.includes(getMesAno(item.data)));
-            }
-            if (dados.length === 0) return alert('Nenhum dado para o período selecionado.');
+       async function gerarPDFCaixaComFiltro(mesAtual, diasSel, mesesSel) {
+    const grupos = gerarDadosCaixa();
+    let dados = Array.from(grupos.entries()).map(([data, row]) => ({ data, row }));
+    dados.sort((a, b) => { const da = parseDataBr(a.data), db = parseDataBr(b.data); return db - da; });
+    if (mesAtual) {
+        const hoje = new Date();
+        dados = dados.filter(item => { const d = parseDataBr(item.data); return d && d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear(); });
+    } else if (diasSel.length > 0) {
+        dados = dados.filter(item => diasSel.includes(item.data));
+    } else if (mesesSel.length > 0) {
+        dados = dados.filter(item => mesesSel.includes(getMesAno(item.data)));
+    }
+    if (dados.length === 0) return alert('Nenhum dado para o período selecionado.');
 
-            let totalDin = 0, totalDeb = 0, totalCred = 0, totalCredParc = 0, totalAg = 0, totalPix = 0, totalVnf = 0, totalSaida = 0, totalEntradas = 0;
-            let linhas = '';
-            for (const { data, row } of dados) {
-                const saida = todasSaidasPorData[data] || 0;
-                const entradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0);
-                const totalDia = entradas - saida;
-                totalDin += row.DINHEIRO || 0;
-                totalDeb += row.DEBITO || 0;
-                totalCred += row.CREDITO || 0;
-                totalCredParc += row.CREDITO_PARCELADO || 0;
-                totalAg += row.AG || 0;
-                totalPix += row.PIX || 0;
-                totalVnf += row.VNF || 0;
-                totalSaida += saida;
-                totalEntradas += entradas;
-                const flag = flagsSalvas[data] ? ' *' : '';
-                const cor = linhaCorSelecionada[data];
-                let cls = '';
-                if (cor === 'amarelo') cls = 'background:#FEF9C3;';
-                else if (cor === 'verde') cls = 'background:#D1FAE5;';
-                else if (cor === 'vermelho') cls = 'background:#FECACA;';
-                linhas += `<tr style="${cls}">
-                            <td style="padding:6px 4px; border-bottom:1px solid #ccc;">${data}${flag}</td>
-                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.DINHEIRO || 0)}</td>
-                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.DEBITO || 0)}</td>
-                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.CREDITO || 0)}</td>
-                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.CREDITO_PARCELADO || 0)}</td>
-                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.AG || 0)}</td>
-                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.PIX || 0)}</td>
-                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.VNF || 0)}</td>
-                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(saida)}</td>
-                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc; font-weight:700;">R$ ${formatMoneySimple(totalDia)}</td>
-                        </tr>`;
-            }
+    let totalDin = 0, totalDeb = 0, totalCred = 0, totalCredParc = 0, totalAg = 0, totalPix = 0, totalVnf = 0, totalSaida = 0, totalEntradas = 0;
+    let linhas = '';
+    for (const { data, row } of dados) {
+        const saida = todasSaidasPorData[data] || 0;
+        const entradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0);
+        const totalDia = entradas - saida;
+        totalDin += row.DINHEIRO || 0;
+        totalDeb += row.DEBITO || 0;
+        totalCred += row.CREDITO || 0;
+        totalCredParc += row.CREDITO_PARCELADO || 0;
+        totalAg += row.AG || 0;
+        totalPix += row.PIX || 0;
+        totalVnf += row.VNF || 0;
+        totalSaida += saida;
+        totalEntradas += entradas;
+        const flag = flagsSalvas[data] ? ' *' : '';
+        const cor = linhaCorSelecionada[data];
+        let cls = '';
+        if (cor === 'amarelo') cls = 'background:#FEF9C3;';
+        else if (cor === 'verde') cls = 'background:#D1FAE5;';
+        else if (cor === 'vermelho') cls = 'background:#FECACA;';
+        linhas += `<tr style="${cls}">
+                    <td style="padding:6px 4px; border-bottom:1px solid #ccc;">${data}${flag}</td>
+                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.DINHEIRO || 0)}</td>
+                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.DEBITO || 0)}</td>
+                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.CREDITO || 0)}</td>
+                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.CREDITO_PARCELADO || 0)}</td>
+                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.AG || 0)}</td>
+                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.PIX || 0)}</td>
+                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.VNF || 0)}</td>
+                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(saida)}</td>
+                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc; font-weight:700;">R$ ${formatMoneySimple(totalDia)}</td>
+                </tr>`;
+    }
 
-            const periodoDesc = mesAtual ? 'Mês Atual' : (diasSel.length > 0 ? `${diasSel.length} dia(s) selecionado(s)` : `${mesesSel.length} mês(es) selecionado(s)`);
-            const html = `<!DOCTYPE html>
-                        <html><head><meta charset="UTF-8"><title>Fechamento de Caixa</title>
-                        <style>body{font-family:Arial,sans-serif;padding:20px;background:#fff;color:#000;}
-                        .header{text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px;}
-                        .header h1{font-size:18pt;}
-                        .periodo{background:#f5f5f5;padding:10px;text-align:center;margin-bottom:20px;}
-                        table{width:100%;border-collapse:collapse;font-size:8.5pt;}
-                        th{background:#f5f5f5;border:1px solid #ccc;padding:8px 4px;text-align:center;font-weight:bold;}
-                        td{border:1px solid #ccc;padding:6px 4px;}
-                        .total-row{background:#f5f5f5;border-top:2px solid #000;font-weight:700;}
-                        .footer{margin-top:20px;text-align:center;font-size:8pt;color:#666;border-top:1px solid #ccc;padding-top:10px;}
-                        .aviso{margin-top:15px;padding:8px;background:#f5f5f5;border-left:3px solid #f59e0b;font-size:8pt;}
-                        </style></head>
-                        <body>
-                            <div class="header"><h1>FECHAMENTO DE CAIXA</h1><p>Aplikado Soluções | Módulo III</p></div>
-                            <div class="periodo"><strong>${periodoDesc}</strong><br>Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</div>
-                            <table>
-                                <thead><tr><th>Data</th><th>Dinheiro</th><th>Débito</th><th>Crédito</th><th>Crédito Parc.</th><th>AG</th><th>PIX</th><th>VNF</th><th>Saída</th><th>Total Dia</th></tr></thead>
-                                <tbody>${linhas}
-                                    <tr class="total-row"><td>TOTAL</td>
-                                        <td>R$ ${formatMoneySimple(totalDin)}</td>
-                                        <td>R$ ${formatMoneySimple(totalDeb)}</td>
-                                        <td>R$ ${formatMoneySimple(totalCred)}</td>
-                                        <td>R$ ${formatMoneySimple(totalCredParc)}</td>
-                                        <td>R$ ${formatMoneySimple(totalAg)}</td>
-                                        <td>R$ ${formatMoneySimple(totalPix)}</td>
-                                        <td>R$ ${formatMoneySimple(totalVnf)}</td>
-                                        <td>R$ ${formatMoneySimple(totalSaida)}</td>
-                                        <td>R$ ${formatMoneySimple(totalEntradas - totalSaida)}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <div class="aviso"><strong>ATENÇÃO:</strong> Dias com * indicam destaque para revisão.</div>
-                            <div class="footer">Documento gerado por Aplikado Gestão</div>
-                        </body></html>`;
+    const periodoDesc = mesAtual ? 'Mês Atual' : (diasSel.length > 0 ? `${diasSel.length} dia(s) selecionado(s)` : `${mesesSel.length} mês(es) selecionado(s)`);
 
-            const temp = document.createElement('div');
-            temp.innerHTML = html;
-            document.body.appendChild(temp);
-            html2pdf().set({
-                margin: [0.3, 0.3, 0.3, 0.3],
-                filename: `Fechamento_Caixa_${new Date().toISOString().slice(0,10)}.pdf`,
-                html2canvas: { scale: 2, backgroundColor: '#ffffff' },
-                jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
-            }).from(temp).save().then(() => temp.remove());
-        }
+    // CORREÇÃO: adiciona padding-bottom extra e garante que a tabela não seja cortada
+    const html = `<!DOCTYPE html>
+                <html><head><meta charset="UTF-8"><title>Fechamento de Caixa</title>
+                <style>
+                    @page { size: A4 landscape; margin: 10mm; }
+                    html, body { margin: 0; padding: 0; }
+                    body { font-family: Arial, sans-serif; padding: 20px 20px 80px 20px; background: #fff; color: #000; }
+                    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+                    .header h1 { font-size: 18pt; margin: 0; }
+                    .header p { margin: 4px 0 0 0; }
+                    .periodo { background: #f5f5f5; padding: 10px; text-align: center; margin-bottom: 20px; }
+                    table { width: 100%; border-collapse: collapse; font-size: 8.5pt; page-break-inside: auto; }
+                    tr { page-break-inside: avoid; page-break-after: auto; }
+                    thead { display: table-header-group; }
+                    tfoot { display: table-footer-group; }
+                    th { background: #f5f5f5; border: 1px solid #ccc; padding: 8px 4px; text-align: center; font-weight: bold; }
+                    td { border: 1px solid #ccc; padding: 6px 4px; }
+                    .total-row { background: #f5f5f5; border-top: 2px solid #000; font-weight: 700; }
+                    .total-row td { padding: 8px 4px; }
+                    .footer { margin-top: 20px; text-align: center; font-size: 8pt; color: #666; border-top: 1px solid #ccc; padding-top: 10px; }
+                    .aviso { margin-top: 15px; padding: 8px; background: #f5f5f5; border-left: 3px solid #f59e0b; font-size: 8pt; }
+                    .spacer-final { height: 40px; } /* CORREÇÃO: espaço extra no final para não cortar a última linha */
+                </style></head>
+                <body>
+                    <div class="header"><h1>FECHAMENTO DE CAIXA</h1><p>Aplikado Soluções | Módulo III</p></div>
+                    <div class="periodo"><strong>${periodoDesc}</strong><br>Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</div>
+                    <table>
+                        <thead><tr><th>Data</th><th>Dinheiro</th><th>Débito</th><th>Crédito</th><th>Crédito Parc.</th><th>AG</th><th>PIX</th><th>VNF</th><th>Saída</th><th>Total Dia</th></tr></thead>
+                        <tbody>
+                            ${linhas}
+                            <tr class="total-row">
+                                <td>TOTAL</td>
+                                <td>R$ ${formatMoneySimple(totalDin)}</td>
+                                <td>R$ ${formatMoneySimple(totalDeb)}</td>
+                                <td>R$ ${formatMoneySimple(totalCred)}</td>
+                                <td>R$ ${formatMoneySimple(totalCredParc)}</td>
+                                <td>R$ ${formatMoneySimple(totalAg)}</td>
+                                <td>R$ ${formatMoneySimple(totalPix)}</td>
+                                <td>R$ ${formatMoneySimple(totalVnf)}</td>
+                                <td>R$ ${formatMoneySimple(totalSaida)}</td>
+                                <td>R$ ${formatMoneySimple(totalEntradas - totalSaida)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="aviso"><strong>ATENÇÃO:</strong> Dias com * indicam destaque para revisão.</div>
+                    <div class="footer">Documento gerado por Aplikado Gestão</div>
+                    <div class="spacer-final"></div>
+                </body></html>`;
 
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    const nomeArquivo = `Fechamento_Caixa_${new Date().toISOString().slice(0,10)}.pdf`;
+    const titulo = `Fechamento de Caixa - ${periodoDesc}`;
+
+    // CORREÇÃO: usa html2canvas com opções que evitam corte
+    await gerarPDFPopUp(temp, {
+        margin: [0.3, 0.3, 0.3, 0.3],
+        orientation: 'landscape'
+    }, nomeArquivo, titulo);
+}
         // ============================================================
         // BUSCAR ÚLTIMA ATUALIZAÇÃO
         // ============================================================
@@ -5962,7 +6267,6 @@ async function gerarPDFDREComPeriodo(mesInicio, mesFim) {
                     const toggle = document.getElementById('toggleCmdBar');
                     if (toggle) toggle.innerHTML = barVisible ? '▼' : '▲';
                 }
-                // Remove botão de restauração se a barra estiver visível
                 if (barVisible) {
                     const restoreEl = document.getElementById('restoreCmdBar');
                     if (restoreEl) restoreEl.remove();
