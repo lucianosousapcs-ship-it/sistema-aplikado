@@ -6090,7 +6090,7 @@
         }
 
         // ============================================================
-        // PDF - CAIXA (EM POP-UP)
+        // PDF - CAIXA (EM POP-UP) - COM PÁGINA DE CONCILIAÇÃO CORRIGIDA
         // ============================================================
         function toggleDiasContainer(show) {
             document.getElementById('diasDisponiveisContainer').style.display = show ? 'block' : 'none';
@@ -6153,115 +6153,204 @@
             gerarPDFCaixaComFiltro(isMesAtual, diasSel, mesesSel);
         }
 
-       async function gerarPDFCaixaComFiltro(mesAtual, diasSel, mesesSel) {
-    const grupos = gerarDadosCaixa();
-    let dados = Array.from(grupos.entries()).map(([data, row]) => ({ data, row }));
-    dados.sort((a, b) => { const da = parseDataBr(a.data), db = parseDataBr(b.data); return db - da; });
-    if (mesAtual) {
-        const hoje = new Date();
-        dados = dados.filter(item => { const d = parseDataBr(item.data); return d && d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear(); });
-    } else if (diasSel.length > 0) {
-        dados = dados.filter(item => diasSel.includes(item.data));
-    } else if (mesesSel.length > 0) {
-        dados = dados.filter(item => mesesSel.includes(getMesAno(item.data)));
-    }
-    if (dados.length === 0) return alert('Nenhum dado para o período selecionado.');
+        async function gerarPDFCaixaComFiltro(mesAtual, diasSel, mesesSel) {
+            const grupos = gerarDadosCaixa();
+            let dados = Array.from(grupos.entries()).map(([data, row]) => ({ data, row }));
+            dados.sort((a, b) => { const da = parseDataBr(a.data), db = parseDataBr(b.data); return db - da; });
+            if (mesAtual) {
+                const hoje = new Date();
+                dados = dados.filter(item => { const d = parseDataBr(item.data); return d && d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear(); });
+            } else if (diasSel.length > 0) {
+                dados = dados.filter(item => diasSel.includes(item.data));
+            } else if (mesesSel.length > 0) {
+                dados = dados.filter(item => mesesSel.includes(getMesAno(item.data)));
+            }
+            if (dados.length === 0) return alert('Nenhum dado para o período selecionado.');
 
-    let totalDin = 0, totalDeb = 0, totalCred = 0, totalCredParc = 0, totalAg = 0, totalPix = 0, totalVnf = 0, totalSaida = 0, totalEntradas = 0;
-    let linhas = '';
-    for (const { data, row } of dados) {
-        const saida = todasSaidasPorData[data] || 0;
-        const entradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0);
-        const totalDia = entradas - saida;
-        totalDin += row.DINHEIRO || 0;
-        totalDeb += row.DEBITO || 0;
-        totalCred += row.CREDITO || 0;
-        totalCredParc += row.CREDITO_PARCELADO || 0;
-        totalAg += row.AG || 0;
-        totalPix += row.PIX || 0;
-        totalVnf += row.VNF || 0;
-        totalSaida += saida;
-        totalEntradas += entradas;
-        const flag = flagsSalvas[data] ? ' *' : '';
-        const cor = linhaCorSelecionada[data];
-        let cls = '';
-        if (cor === 'amarelo') cls = 'background:#FEF9C3;';
-        else if (cor === 'verde') cls = 'background:#D1FAE5;';
-        else if (cor === 'vermelho') cls = 'background:#FECACA;';
-        linhas += `<tr style="${cls}">
-                    <td style="padding:6px 4px; border-bottom:1px solid #ccc;">${data}${flag}</td>
-                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.DINHEIRO || 0)}</td>
-                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.DEBITO || 0)}</td>
-                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.CREDITO || 0)}</td>
-                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.CREDITO_PARCELADO || 0)}</td>
-                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.AG || 0)}</td>
-                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.PIX || 0)}</td>
-                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.VNF || 0)}</td>
-                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(saida)}</td>
-                    <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc; font-weight:700;">R$ ${formatMoneySimple(totalDia)}</td>
+            let totalDin = 0, totalDeb = 0, totalCred = 0, totalCredParc = 0, totalAg = 0, totalPix = 0, totalVnf = 0, totalSaida = 0, totalEntradas = 0;
+            let linhas = '';
+            for (const { data, row } of dados) {
+                const saida = todasSaidasPorData[data] || 0;
+                const entradas = (row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0);
+                const totalDia = entradas - saida;
+                totalDin += row.DINHEIRO || 0;
+                totalDeb += row.DEBITO || 0;
+                totalCred += row.CREDITO || 0;
+                totalCredParc += row.CREDITO_PARCELADO || 0;
+                totalAg += row.AG || 0;
+                totalPix += row.PIX || 0;
+                totalVnf += row.VNF || 0;
+                totalSaida += saida;
+                totalEntradas += entradas;
+                const flag = flagsSalvas[data] ? ' *' : '';
+                const cor = linhaCorSelecionada[data];
+                let cls = '';
+                if (cor === 'amarelo') cls = 'background:#FEF9C3;';
+                else if (cor === 'verde') cls = 'background:#D1FAE5;';
+                else if (cor === 'vermelho') cls = 'background:#FECACA;';
+                linhas += `<tr style="${cls}">
+                            <td style="padding:6px 4px; border-bottom:1px solid #ccc;">${data}${flag}</td>
+                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.DINHEIRO || 0)}</td>
+                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.DEBITO || 0)}</td>
+                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.CREDITO || 0)}</td>
+                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.CREDITO_PARCELADO || 0)}</td>
+                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.AG || 0)}</td>
+                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.PIX || 0)}</td>
+                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(row.VNF || 0)}</td>
+                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(saida)}</td>
+                            <td style="padding:6px 4px; text-align:right; border-bottom:1px solid #ccc; font-weight:700;">R$ ${formatMoneySimple(totalDia)}</td>
+                        </tr>`;
+            }
+
+            const periodoDesc = mesAtual ? 'Mês Atual' : (diasSel.length > 0 ? `${diasSel.length} dia(s) selecionado(s)` : `${mesesSel.length} mês(es) selecionado(s)`);
+
+            // ============================================================
+            // PÁGINA DE CONCILIAÇÃO - CORRIGIDA: Preenche Loja Física, Corporativo e Total Geral
+            // ============================================================
+            let conciliacaoLinhasHTML = '';
+            for (const { data, row } of dados) {
+                // Totais oficiais do Fechamento de Caixa (ERP)
+                const saidaOficial = todasSaidasPorData[data] || 0;
+                const totalGeralOficial = ((row.DINHEIRO || 0) + (row.DEBITO || 0) + (row.CREDITO || 0) + (row.CREDITO_PARCELADO || 0) + (row.AG || 0) + (row.PIX || 0) + (row.VNF || 0)) - saidaOficial;
+                
+                // Calcular Loja Física e Corporativo com base nas vendas do dia
+                const dataBusca = data; // formato DD/MM/AAAA
+                let totalLojaOficial = 0;
+                let totalCorpOficial = 0;
+                
+                // Filtrar vendas do dia e classificar
+                if (typeof vendasData !== 'undefined' && vendasData.length > 0) {
+                    const vendasDoDia = vendasData.filter(v => formatarDataExibicao(v.data_nota) === dataBusca);
+                    vendasDoDia.forEach(v => {
+                        if (v.classificacao === 'Balcao') {
+                            totalLojaOficial += v.total;
+                        } else if (v.classificacao === 'Venda Corporativa') {
+                            totalCorpOficial += v.total;
+                        }
+                    });
+                }
+                
+                // Se não houver vendas classificadas, usar o total geral como fallback
+                if (totalLojaOficial === 0 && totalCorpOficial === 0 && totalGeralOficial !== 0) {
+                    // Fallback: assume que tudo é Loja Física se não classificado
+                    totalLojaOficial = totalGeralOficial;
+                }
+                
+                // Total Geral (Caixa N.Iguaçu) = Loja Física + Corporativo
+                const totalGeralNovaIguacu = totalLojaOficial + totalCorpOficial;
+                
+                // Valor do Comparativo (ERP) - total geral do fechamento
+                const totalGeralComparativo = totalGeralOficial;
+                
+                // Verificar divergência
+                const diff = totalGeralNovaIguacu - totalGeralComparativo;
+                const hasDivergencia = Math.abs(diff) > 0.01;
+                const corLinha = hasDivergencia ? 'background:#FECACA;' : '';
+                
+                conciliacaoLinhasHTML += `<tr style="${corLinha}">
+                    <td style="padding:6px 8px; border-bottom:1px solid #ccc; font-weight:600;">${data}</td>
+                    <td style="padding:6px 8px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(totalLojaOficial)}</td>
+                    <td style="padding:6px 8px; text-align:right; border-bottom:1px solid #ccc;">R$ ${formatMoneySimple(totalCorpOficial)}</td>
+                    <td style="padding:6px 8px; text-align:right; border-bottom:1px solid #ccc; font-weight:600;">R$ ${formatMoneySimple(totalGeralComparativo)}</td>
+                    <td style="padding:6px 8px; text-align:right; border-bottom:1px solid #ccc; font-weight:600; color:${hasDivergencia ? '#DC2626' : '#10B981'};">R$ ${formatMoneySimple(totalGeralNovaIguacu)}</td>
                 </tr>`;
-    }
+            }
 
-    const periodoDesc = mesAtual ? 'Mês Atual' : (diasSel.length > 0 ? `${diasSel.length} dia(s) selecionado(s)` : `${mesesSel.length} mês(es) selecionado(s)`);
+            const dataGeracao = new Date().toLocaleDateString('pt-BR');
+            const horaGeracao = new Date().toLocaleTimeString('pt-BR');
 
-    const html = `<!DOCTYPE html>
-                <html><head><meta charset="UTF-8"><title>Fechamento de Caixa</title>
-                <style>
-                    @page { size: A4 landscape; margin: 10mm; }
-                    html, body { margin: 0; padding: 0; }
-                    body { font-family: Arial, sans-serif; padding: 20px 20px 80px 20px; background: #fff; color: #000; }
-                    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-                    .header h1 { font-size: 18pt; margin: 0; }
-                    .header p { margin: 4px 0 0 0; }
-                    .periodo { background: #f5f5f5; padding: 10px; text-align: center; margin-bottom: 20px; }
-                    table { width: 100%; border-collapse: collapse; font-size: 8.5pt; page-break-inside: auto; }
-                    tr { page-break-inside: avoid; page-break-after: auto; }
-                    thead { display: table-header-group; }
-                    tfoot { display: table-footer-group; }
-                    th { background: #f5f5f5; border: 1px solid #ccc; padding: 8px 4px; text-align: center; font-weight: bold; }
-                    td { border: 1px solid #ccc; padding: 6px 4px; }
-                    .total-row { background: #f5f5f5; border-top: 2px solid #000; font-weight: 700; }
-                    .total-row td { padding: 8px 4px; }
-                    .footer { margin-top: 20px; text-align: center; font-size: 8pt; color: #666; border-top: 1px solid #ccc; padding-top: 10px; }
-                    .aviso { margin-top: 15px; padding: 8px; background: #f5f5f5; border-left: 3px solid #f59e0b; font-size: 8pt; }
-                    .spacer-final { height: 40px; }
-                </style></head>
-                <body>
-                    <div class="header"><h1>FECHAMENTO DE CAIXA</h1><p>Aplikado Soluções | Módulo III</p></div>
-                    <div class="periodo"><strong>${periodoDesc}</strong><br>Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</div>
-                    <table>
-                        <thead><tr><th>Data</th><th>Dinheiro</th><th>Débito</th><th>Crédito</th><th>Crédito Parc.</th><th>AG</th><th>PIX</th><th>VNF</th><th>Saída</th><th>Total Dia</th></tr></thead>
-                        <tbody>
-                            ${linhas}
-                            <tr class="total-row">
-                                <td>TOTAL</td>
-                                <td>R$ ${formatMoneySimple(totalDin)}</td>
-                                <td>R$ ${formatMoneySimple(totalDeb)}</td>
-                                <td>R$ ${formatMoneySimple(totalCred)}</td>
-                                <td>R$ ${formatMoneySimple(totalCredParc)}</td>
-                                <td>R$ ${formatMoneySimple(totalAg)}</td>
-                                <td>R$ ${formatMoneySimple(totalPix)}</td>
-                                <td>R$ ${formatMoneySimple(totalVnf)}</td>
-                                <td>R$ ${formatMoneySimple(totalSaida)}</td>
-                                <td>R$ ${formatMoneySimple(totalEntradas - totalSaida)}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div class="aviso"><strong>ATENÇÃO:</strong> Dias com * indicam destaque para revisão.</div>
-                    <div class="footer">Documento gerado por Aplikado Gestão</div>
-                    <div class="spacer-final"></div>
-                </body></html>`;
+            // ============================================================
+            // HTML COMPLETO DO PDF (INCLUI A PÁGINA DE CONCILIAÇÃO)
+            // ============================================================
+            const html = `<!DOCTYPE html>
+                        <html><head><meta charset="UTF-8"><title>Fechamento de Caixa</title>
+                        <style>
+                            @page { size: A4 landscape; margin: 10mm; }
+                            html, body { margin: 0; padding: 0; }
+                            body { font-family: Arial, sans-serif; padding: 20px 20px 80px 20px; background: #fff; color: #000; }
+                            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+                            .header h1 { font-size: 18pt; margin: 0; }
+                            .header p { margin: 4px 0 0 0; }
+                            .periodo { background: #f5f5f5; padding: 10px; text-align: center; margin-bottom: 20px; }
+                            .periodo-info { background: #f5f5f5; padding: 10px; text-align: center; margin-bottom: 20px; }
+                            table { width: 100%; border-collapse: collapse; font-size: 8.5pt; page-break-inside: auto; }
+                            tr { page-break-inside: avoid; page-break-after: auto; }
+                            thead { display: table-header-group; }
+                            tfoot { display: table-footer-group; }
+                            th { background: #f5f5f5; border: 1px solid #ccc; padding: 8px 4px; text-align: center; font-weight: bold; }
+                            td { border: 1px solid #ccc; padding: 6px 4px; }
+                            .total-row { background: #f5f5f5; border-top: 2px solid #000; font-weight: 700; }
+                            .total-row td { padding: 8px 4px; }
+                            .footer { margin-top: 20px; text-align: center; font-size: 8pt; color: #666; border-top: 1px solid #ccc; padding-top: 10px; }
+                            .aviso { margin-top: 15px; padding: 8px; background: #f5f5f5; border-left: 3px solid #f59e0b; font-size: 8pt; }
+                            .spacer-final { height: 40px; }
+                            .page-break { page-break-before: always; }
+                        </style></head>
+                        <body>
+                            <!-- PÁGINA 1: FECHAMENTO DE CAIXA -->
+                            <div class="header"><h1>FECHAMENTO DE CAIXA</h1><p>Aplikado Soluções | Módulo III</p></div>
+                            <div class="periodo"><strong>${periodoDesc}</strong><br>Gerado em: ${dataGeracao} às ${horaGeracao}</div>
+                            <table>
+                                <thead><tr><th>Data</th><th>Dinheiro</th><th>Débito</th><th>Crédito</th><th>Crédito Parc.</th><th>AG</th><th>PIX</th><th>VNF</th><th>Saída</th><th>Total Dia</th></tr></thead>
+                                <tbody>
+                                    ${linhas}
+                                    <tr class="total-row">
+                                        <td>TOTAL</td>
+                                        <td>R$ ${formatMoneySimple(totalDin)}</td>
+                                        <td>R$ ${formatMoneySimple(totalDeb)}</td>
+                                        <td>R$ ${formatMoneySimple(totalCred)}</td>
+                                        <td>R$ ${formatMoneySimple(totalCredParc)}</td>
+                                        <td>R$ ${formatMoneySimple(totalAg)}</td>
+                                        <td>R$ ${formatMoneySimple(totalPix)}</td>
+                                        <td>R$ ${formatMoneySimple(totalVnf)}</td>
+                                        <td>R$ ${formatMoneySimple(totalSaida)}</td>
+                                        <td>R$ ${formatMoneySimple(totalEntradas - totalSaida)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="aviso"><strong>ATENÇÃO:</strong> Dias com * indicam destaque para revisão.</div>
+                            <div class="footer">Documento gerado por Aplikado Gestão</div>
+                            
+                            <!-- PÁGINA 2: CONCILIAÇÃO DE FECHAMENTO DE CAIXA -->
+                            <div class="page-break"></div>
+                            <div class="header"><h1>CONCILIAÇÃO DE FECHAMENTO DE CAIXA</h1><p>Aplikado Soluções | Módulo III</p></div>
+                            <div class="periodo-info">
+                                <strong>PERÍODO:</strong> ${periodoDesc}<br>
+                                <span>Comparativo vs Fechamento Sistema (ERP)</span><br>
+                                <span>Gerado em: ${dataGeracao} às ${horaGeracao}</span>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 14%;">DATA</th>
+                                        <th style="width: 15%;">LOJA FÍSICA<br><span style="font-size:8px;">Fechamento ERP</span></th>
+                                        <th style="width: 15%;">CORPORATIVO<br><span style="font-size:8px;">Fechamento ERP</span></th>
+                                        <th style="width: 15%;">TOTAL GERAL<br><span style="font-size:8px;">Fechamento ERP</span></th>
+                                        <th style="width: 15%;">TOTAL GERAL<br><span style="font-size:8px;">Caixa N.Iguaçu</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${conciliacaoLinhasHTML}
+                                </tbody>
+                            </table>
+                            <div class="aviso">
+                                <strong>ATENÇÃO:</strong> Linhas destacadas em <span style="background-color:#FECACA; padding:2px 6px;">VERMELHO</span> indicam divergência entre o valor do Fechamento de Caixa (ERP) e o valor do Caixa N.Iguaçu. 
+                                Cores aplicadas: 🟡 Amarelo (dados não informados) | 🟢 Verde (dados conformes) | 🔴 Vermelho (divergência/sem conformidade)
+                            </div>
+                            <div class="footer">Documento gerado por Aplikado Gestão - Conciliação de Fechamento de Caixa</div>
+                            <div class="spacer-final"></div>
+                        </body></html>`;
 
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-    const nomeArquivo = `Fechamento_Caixa_${new Date().toISOString().slice(0,10)}.pdf`;
-    const titulo = `Fechamento de Caixa - ${periodoDesc}`;
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            const nomeArquivo = `Fechamento_Caixa_${dataGeracao.replace(/\//g, '_')}.pdf`;
+            const titulo = `Fechamento de Caixa - ${periodoDesc}`;
 
-    await gerarPDFPopUp(temp, {
-        margin: [0.3, 0.3, 0.3, 0.3],
-        orientation: 'landscape'
-    }, nomeArquivo, titulo);
-}
+            await gerarPDFPopUp(temp, {
+                margin: [0.3, 0.3, 0.3, 0.3],
+                orientation: 'landscape'
+            }, nomeArquivo, titulo);
+        }
 
         // ============================================================
         // BUSCAR ÚLTIMA ATUALIZAÇÃO
