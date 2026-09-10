@@ -71,6 +71,150 @@
         ::-webkit-scrollbar-track { background: var(--bg-secondary); }
         ::-webkit-scrollbar-thumb { background: var(--accent-gold); border-radius: 10px; }
 
+        /* ============================================================
+           LOADING OVERLAY - ESTILO ERP MODERNO (SEM SPINNER E LOGO)
+           ============================================================ */
+        #loadingOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            background: radial-gradient(ellipse at center, #11161F 0%, #0B0E14 70%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
+            overflow: hidden;
+        }
+        #loadingOverlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        #loadingOverlay::before {
+            content: '';
+            position: absolute;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 70%);
+            animation: loadingPulse 4s ease-in-out infinite;
+        }
+        #loadingOverlay::after {
+            content: '';
+            position: absolute;
+            width: 400px; height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
+            animation: loadingPulse 4s ease-in-out infinite 2s;
+        }
+        @keyframes loadingPulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.15); opacity: 1; }
+        }
+
+        .loading-progress-wrap {
+            position: relative;
+            z-index: 2;
+            width: 320px;
+            max-width: 80vw;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .loading-progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .loading-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold-dark), var(--accent-gold));
+            background-size: 200% 100%;
+            border-radius: 10px;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: shimmer 2s linear infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .loading-status {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
+        }
+        .loading-status .status-text {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+        .loading-status .status-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent-gold);
+            animation: dotPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes dotPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.7); }
+        }
+        .loading-status .status-pct {
+            font-weight: 700;
+            color: var(--accent-gold);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .loading-steps {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            gap: 24px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .loading-step {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+        .loading-step.active { color: var(--accent-gold); }
+        .loading-step.done { color: var(--accent-green); }
+        .loading-step .step-icon {
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+        }
+        .loading-step.done .step-icon::after { content: '✓'; }
+
+        /* ============================================================
+           TOPBAR / GERAL
+           ============================================================ */
         .topbar {
             position: sticky; top: 0; z-index: 100;
             display: flex; align-items: center; justify-content: space-between;
@@ -440,7 +584,7 @@
         .btn-voltar:hover { background: var(--bg-input-hover); color: var(--text-primary); border-color: var(--accent-gold); }
 
         /* ============================================================
-           RELATÓRIO EM POP-UP - MODAL
+           RELATÓRIO EM POP-UP - MODAL (FONTES AUMENTADAS)
            ============================================================ */
         .relatorio-overlay {
             display: none; position: fixed; inset: 0;
@@ -457,7 +601,7 @@
             background: #FFFFFF;
             border-radius: 12px;
             width: 100%;
-            max-width: 1200px;
+            max-width: 1400px;
             max-height: 92vh;
             overflow-y: auto;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -473,7 +617,7 @@
         .relatorio-actions {
             position: sticky; top: 0;
             display: flex; justify-content: flex-end; gap: 8px;
-            padding: 12px 20px;
+            padding: 14px 24px;
             background: #000000;
             border-bottom: 1px solid #000000;
             z-index: 10;
@@ -482,8 +626,8 @@
 
         .relatorio-actions button {
             display: inline-flex; align-items: center; gap: 6px;
-            padding: 8px 18px; border-radius: 6px;
-            font-size: 12px; font-weight: 600; cursor: pointer;
+            padding: 10px 22px; border-radius: 6px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
             border: 1px solid #FFFFFF; background: #FFFFFF;
             color: #000000; font-family: 'Inter', sans-serif;
             transition: all 0.2s;
@@ -493,99 +637,97 @@
         .relatorio-actions .btn-print:hover { background: #D97706; }
 
         .relatorio-container {
-            padding: 24px 32px 32px;
+            padding: 28px 40px 40px;
             background: #FFFFFF;
             color: #000000;
         }
 
         .relatorio-header {
             display: flex; align-items: center; justify-content: space-between;
-            padding-bottom: 16px;
-            border-bottom: 3px solid #000000; margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #000000; margin-bottom: 24px;
             gap: 20px; flex-wrap: wrap;
         }
 
         .relatorio-header .titulo-area h1 {
-            font-size: 22px; font-weight: 900; color: #000000;
-            letter-spacing: -0.5px; margin-bottom: 2px;
+            font-size: 28px; font-weight: 900; color: #000000;
+            letter-spacing: -0.5px; margin-bottom: 4px;
         }
 
         .relatorio-header .titulo-area .sub {
-            font-size: 12px; color: #000000; font-weight: 500;
+            font-size: 15px; color: #000000; font-weight: 500;
         }
 
         .relatorio-header .meta-info {
-            text-align: right; font-size: 10px; color: #000000; line-height: 1.7;
+            text-align: right; font-size: 13px; color: #000000; line-height: 1.8;
         }
         .relatorio-header .meta-info strong { font-weight: 700; }
 
-        .relatorio-section { margin-bottom: 20px; }
+        .relatorio-section { margin-bottom: 28px; }
 
         .relatorio-section h2 {
-            font-size: 13px; font-weight: 800; color: #000000;
+            font-size: 17px; font-weight: 800; color: #000000;
             text-transform: uppercase; letter-spacing: 0.04em;
-            padding: 8px 0; border-bottom: 2px solid #000000;
-            margin-bottom: 12px;
+            padding: 10px 0; border-bottom: 2px solid #000000;
+            margin-bottom: 16px;
         }
 
-        /* SUMÁRIO - QUADRANTES LADO A LADO */
         .relatorio-sumario-grid {
             display: grid !important;
             grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-            gap: 10px !important;
-            margin-bottom: 16px;
+            gap: 14px !important;
+            margin-bottom: 20px;
             width: 100%;
         }
 
         .relatorio-quadrante {
             border: 1.5px solid #000000;
-            border-radius: 6px;
-            padding: 12px 14px;
+            border-radius: 8px;
+            padding: 16px 18px;
             background: #FFFFFF;
             min-width: 0;
             overflow: hidden;
         }
 
         .relatorio-quadrante .quad-label {
-            font-size: 9px; font-weight: 700; color: #000000;
+            font-size: 12px; font-weight: 700; color: #000000;
             text-transform: uppercase; letter-spacing: 0.03em;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             border-bottom: 1px solid #E5E7EB;
-            padding-bottom: 5px;
+            padding-bottom: 7px;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
         .relatorio-quadrante .quad-valor {
-            font-size: 16px; font-weight: 800; color: #000000;
-            line-height: 1.15; margin-bottom: 4px;
+            font-size: 24px; font-weight: 800; color: #000000;
+            line-height: 1.15; margin-bottom: 6px;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
         .relatorio-quadrante .quad-sub {
-            font-size: 9px; color: #000000; line-height: 1.3;
+            font-size: 13px; color: #000000; line-height: 1.4;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
         .relatorio-quadrante .quad-detalhe {
-            font-size: 8px; color: #000000; margin-top: 6px;
-            padding-top: 5px; border-top: 1px dashed #D1D5DB;
-            line-height: 1.3;
+            font-size: 11px; color: #000000; margin-top: 8px;
+            padding-top: 7px; border-top: 1px dashed #D1D5DB;
+            line-height: 1.4;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
-        /* TABELAS */
         .relatorio-table {
             width: 100%; border-collapse: collapse;
-            font-size: 10px; margin-bottom: 16px;
+            font-size: 14px; margin-bottom: 20px;
             border: 1.5px solid #000000;
             table-layout: fixed;
         }
 
         .relatorio-table th {
             background: #F3F4F6; color: #000000;
-            font-weight: 800; font-size: 9px;
+            font-weight: 800; font-size: 12px;
             text-transform: uppercase; letter-spacing: 0.03em;
-            padding: 7px 8px; text-align: left;
+            padding: 10px 12px; text-align: left;
             border-bottom: 1.5px solid #000000;
             border-right: 1px solid #D1D5DB;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -594,10 +736,10 @@
         .relatorio-table th.num { text-align: right; }
 
         .relatorio-table td {
-            padding: 6px 8px; color: #000000;
+            padding: 9px 12px; color: #000000;
             border-bottom: 1px solid #D1D5DB;
             border-right: 1px solid #E5E7EB;
-            font-size: 10px;
+            font-size: 14px;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             vertical-align: middle;
         }
@@ -606,7 +748,7 @@
         .relatorio-table td.bold { font-weight: 800; }
 
         .relatorio-table tr.total-row td {
-            background: #F3F4F6; font-weight: 800; font-size: 10px;
+            background: #F3F4F6; font-weight: 800; font-size: 14px;
             border-top: 1.5px solid #000000;
         }
 
@@ -615,22 +757,24 @@
         .relatorio-diagnostico {
             background: #F9FAFB; border: 1.5px solid #000000;
             border-left: 5px solid #000000;
-            padding: 12px 16px; margin-bottom: 10px;
-            font-size: 11px; color: #000000; line-height: 1.6;
+            padding: 16px 20px; margin-bottom: 12px;
+            font-size: 15px; color: #000000; line-height: 1.7;
         }
         .relatorio-diagnostico strong { font-weight: 800; }
 
         .relatorio-footer {
-            margin-top: 20px; padding-top: 14px;
+            margin-top: 26px; padding-top: 18px;
             border-top: 3px solid #000000;
             display: flex; justify-content: space-between;
             align-items: center; flex-wrap: wrap; gap: 10px;
-            font-size: 10px; color: #000000;
+            font-size: 13px; color: #000000;
         }
 
-        .relatorio-footer .footer-brand { font-weight: 800; }
+        .relatorio-footer .footer-brand { font-weight: 800; font-size: 15px; }
 
-        /* IMPRESSÃO */
+        /* ============================================================
+           IMPRESSÃO — EM A3 LANDSCAPE (PAISAGEM)
+           ============================================================ */
         @media print {
             body * { visibility: hidden; }
             .relatorio-overlay, .relatorio-overlay * { visibility: visible; }
@@ -649,13 +793,33 @@
             .relatorio-actions { display: none !important; }
             .relatorio-container { padding: 0; }
             .relatorio-section { page-break-inside: avoid; }
-            @page { margin: 1cm; size: A4 portrait; }
-            .relatorio-table { font-size: 8.5px; }
-            .relatorio-table th { font-size: 8px; padding: 5px 6px; }
-            .relatorio-table td { font-size: 8.5px; padding: 4px 6px; }
-            .relatorio-quadrante .quad-valor { font-size: 13px; }
-            .relatorio-quadrante .quad-label { font-size: 8px; }
-            .relatorio-quadrante .quad-sub, .relatorio-quadrante .quad-detalhe { font-size: 8px; }
+
+            @page {
+                size: A3 landscape;
+                margin: 1.2cm 1.5cm;
+            }
+
+            .relatorio-table { font-size: 11px; }
+            .relatorio-table th { font-size: 10px; padding: 8px 10px; }
+            .relatorio-table td { font-size: 11px; padding: 7px 10px; }
+            .relatorio-table tr.total-row td { font-size: 11px; }
+            .relatorio-quadrante .quad-valor { font-size: 20px; }
+            .relatorio-quadrante .quad-label { font-size: 11px; }
+            .relatorio-quadrante .quad-sub { font-size: 11px; }
+            .relatorio-quadrante .quad-detalhe { font-size: 10px; }
+            .relatorio-header .titulo-area h1 { font-size: 26px; }
+            .relatorio-header .titulo-area .sub { font-size: 13px; }
+            .relatorio-header .meta-info { font-size: 11px; }
+            .relatorio-section h2 { font-size: 15px; }
+            .relatorio-diagnostico { font-size: 12px; }
+            .relatorio-footer { font-size: 11px; }
+            .relatorio-footer .footer-brand { font-size: 13px; }
+
+            .relatorio-sumario-grid {
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 12px !important;
+            }
+
             .relatorio-table th { background: #F3F4F6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .relatorio-table tr.total-row td { background: #F3F4F6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .relatorio-diagnostico { background: #F9FAFB !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -680,6 +844,7 @@
             .relatorio-header { flex-direction: column; align-items: flex-start; }
             .relatorio-header .meta-info { text-align: left; }
             .relatorio-container { padding: 16px; }
+            .loading-progress-wrap { width: 260px; }
         }
         @media (max-width: 480px) {
             .topbar { padding: 0 10px; height: 52px; }
@@ -689,6 +854,31 @@
     </style>
 </head>
 <body>
+
+    <!-- ============================================================
+         LOADING OVERLAY - ESTILO ERP MODERNO (SEM SPINNER E LOGO)
+         ============================================================ -->
+    <div id="loadingOverlay">
+        <div class="loading-progress-wrap">
+            <div class="loading-progress-bar">
+                <div class="loading-progress-fill" id="loadingProgressFill"></div>
+            </div>
+            <div class="loading-status">
+                <div class="status-text">
+                    <span class="status-dot"></span>
+                    <span id="loadingStatusText">Inicializando sistema...</span>
+                </div>
+                <div class="status-pct" id="loadingProgressPct">0%</div>
+            </div>
+        </div>
+        <div class="loading-steps" id="loadingSteps">
+            <div class="loading-step" data-step="1"><span class="step-icon"></span> Conexão</div>
+            <div class="loading-step" data-step="2"><span class="step-icon"></span> Plano de Contas</div>
+            <div class="loading-step" data-step="3"><span class="step-icon"></span> Dados de Vendas</div>
+            <div class="loading-step" data-step="4"><span class="step-icon"></span> Dados de Compras</div>
+            <div class="loading-step" data-step="5"><span class="step-icon"></span> Processando DRE</div>
+        </div>
+    </div>
 
     <header class="topbar">
         <a href="javascript:void(0);" class="logo" onclick="window.location.href='CLIENT_ALF.html'">Apli<span>kado</span></a>
@@ -914,6 +1104,45 @@
     </div>
 
     <script>
+        // ============================================================
+        // LOADING OVERLAY - CONTROLE
+        // ============================================================
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingProgressFill = document.getElementById('loadingProgressFill');
+        const loadingProgressPct = document.getElementById('loadingProgressPct');
+        const loadingStatusText = document.getElementById('loadingStatusText');
+        const loadingSteps = document.getElementById('loadingSteps');
+
+        let loadingProgresso = 0;
+
+        function atualizarLoading(progresso, status, stepAtivo) {
+            loadingProgresso = Math.max(loadingProgresso, progresso);
+            loadingProgressFill.style.width = loadingProgresso + '%';
+            loadingProgressPct.textContent = Math.floor(loadingProgresso) + '%';
+            if (status) loadingStatusText.textContent = status;
+
+            const steps = loadingSteps.querySelectorAll('.loading-step');
+            steps.forEach((step) => {
+                const num = parseInt(step.dataset.step);
+                step.classList.remove('active', 'done');
+                if (num < stepAtivo) step.classList.add('done');
+                else if (num === stepAtivo) step.classList.add('active');
+            });
+        }
+
+        function esconderLoading() {
+            atualizarLoading(100, 'Concluído!', 5);
+            setTimeout(() => {
+                loadingOverlay.classList.add('hidden');
+                setTimeout(() => {
+                    if (loadingOverlay.parentNode) loadingOverlay.parentNode.removeChild(loadingOverlay);
+                }, 700);
+            }, 400);
+        }
+
+        // ============================================================
+        // RESTO DO CÓDIGO
+        // ============================================================
         const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -2299,9 +2528,13 @@
 
         async function carregarDadosReaisLancamentos() {
             try {
+                atualizarLoading(10, 'Carregando regras de conversão...', 1);
                 await carregarRegrasConversaoSupabase();
+
+                atualizarLoading(20, 'Carregando plano de contas...', 2);
                 await carregarPlanoContasSupabase();
 
+                atualizarLoading(35, 'Buscando dados de vendas...', 3);
                 let todasVendas = [], page = 0;
                 while (true) {
                     const { data, error } = await supabaseClient.from('vendas_alf').select('*').range(page * 1000, (page + 1) * 1000 - 1);
@@ -2310,7 +2543,9 @@
                     todasVendas.push(...data);
                     page++;
                 }
+                atualizarLoading(55, `${todasVendas.length} vendas carregadas.`, 3);
 
+                atualizarLoading(60, 'Buscando dados de compras...', 4);
                 let todasCompras = [], page2 = 0;
                 while (true) {
                     const { data, error } = await supabaseClient.from('dados_m2').select('*').range(page2 * 1000, (page2 + 1) * 1000 - 1);
@@ -2319,6 +2554,7 @@
                     todasCompras.push(...data);
                     page2++;
                 }
+                atualizarLoading(75, `${todasCompras.length} compras carregadas.`, 4);
 
                 const { data: extras } = await supabaseClient.from('contas_extras').select('*').order('dt_pagto', { ascending: false });
                 contasExtrasData = extras ? extras.map(item => ({
@@ -2360,8 +2596,11 @@
                     cond_pag: item['COND.PAG'] || item.cond_pag || '-'
                 }));
 
+                atualizarLoading(85, 'Processando demonstrativo...', 5);
                 buscarUltimaAtualizacao();
                 await gerarDREComSupabase();
+
+                atualizarLoading(95, 'Finalizando...', 5);
             } catch (e) { console.error('Erro dados:', e); }
         }
 
@@ -2427,11 +2666,13 @@
         }
 
         document.addEventListener('DOMContentLoaded', async function() {
+            atualizarLoading(5, 'Inicializando sistema...', 1);
             carregarPreferenciaTema();
             carregarPlanoContas();
             await carregarDadosReaisLancamentos();
             await gerarDREComSupabase();
             buscarUltimaAtualizacao();
+            esconderLoading();
             console.log('Aplikado DRE - OK!');
         });
     </script>
