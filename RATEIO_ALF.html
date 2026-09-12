@@ -2372,7 +2372,7 @@
         function formatarMoeda(v) {
             if (v === undefined || v === null || isNaN(v)) return 'R$ 0,00';
             const sinal = v < 0 ? '-' : '';
-            return `${sinal}R$ ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            return `${sinal}R$ ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
 
         function formatarNumero(v) {
@@ -2381,8 +2381,8 @@
         }
 
         function formatarPercentual(v) {
-            if (v === undefined || v === null || isNaN(v)) return '0%';
-            return `${v.toFixed(1)}%`;
+            if (v === undefined || v === null || isNaN(v)) return '0,00%';
+            return `${v.toFixed(2).replace('.', ',')}%`;
         }
 
         function escapeHtml(t) {
@@ -3066,7 +3066,6 @@
                     const valor = Number(d.valor) || 0;
                     let lojaPct = 50, corpPct = 50;
 
-                    // Verifica rateio individual
                     if (rateiosIndividuais[d.id]) {
                         const r = rateiosIndividuais[d.id];
                         lojaPct = r.lojaFisica !== undefined ? r.lojaFisica : 50;
@@ -3076,10 +3075,8 @@
                         corpPct = rateioFixoGlobal.corp || 50;
                     }
 
-                    // Aplica o rateio para despesa Loja e Corp
                     dadosMensais[mes].despesaLoja += (valor * lojaPct) / 100;
                     dadosMensais[mes].despesaCorp += (valor * corpPct) / 100;
-                    // Total despesa permanece o valor original
                     dadosMensais[mes].despesa += valor;
                 }
             });
@@ -3618,7 +3615,7 @@
 
         function abrirModalInfo(id) {
             const el = document.getElementById(id);
-            if (!el || el.textContent === 'R$ 0,00' || el.textContent === '0%' || el.textContent === '0') {
+            if (!el || el.textContent === 'R$ 0,00' || el.textContent === '0,00%' || el.textContent === '0') {
                 abrirModal('Sem dados', 'Não há informações para exibir', 'R$ 0,00', '', [], []);
                 return;
             }
@@ -3887,7 +3884,6 @@
 
             salvarRateiosIndividuais();
             carregarRateioCompleto();
-            // Recarrega os dados para refletir nas projeções
             processarDados();
             atualizarKPIs();
             atualizarSegmentos();
@@ -4020,14 +4016,12 @@
             atualizarInfoNegocio();
             atualizarGrafico();
 
-            const descricao = await buscarDescricaoDespesa(id);
             await registrarAuditoria('Rateio Salvo (Tabela)', `ID ${id}: ${loja || '-'}/${corp || '-'}`);
             mostrarToast('Rateio salvo', '');
         }
 
         async function removerRateioTabela(id) {
             if (!confirm('Remover rateio da despesa?')) return;
-            const descricao = await buscarDescricaoDespesa(id);
             delete rateiosIndividuais[id];
             salvarRateiosIndividuais();
             carregarRateioCompleto();
@@ -4212,7 +4206,7 @@
             document.getElementById('loginOverlay').classList.remove('hidden');
             await carregarUsuarios();
 
-            console.log('Dashboard - Versão 4.1');
+            console.log('Dashboard - Versão 4.2 (2 casas decimais)');
             console.log('Tabelas: vendas_alf, dados_m2, contas_extras, usuarios, auditoria_rateios');
         });
     </script>
