@@ -3972,11 +3972,16 @@
             
             // Vincular eventos aos botões de ação (via addEventListener — sempre funciona)
             tbody.querySelectorAll('button[data-action]').forEach(btn => {
-                btn.addEventListener('click', function(e) {
+                // Remove event listeners antigos clonando o botão
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                
+                newBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     const dia = parseInt(this.dataset.dia);
                     const action = this.dataset.action;
+                    console.log('Botão clicado:', action, 'dia:', dia);
                     if (action === 'folga-bh') {
                         toggleFolgaBH(dia);
                     } else if (action === 'falta-atestado') {
@@ -4181,14 +4186,31 @@
         }
 
         // ============================================================
-        // FUNÇÕES TOGGLE (GLOBAIS)
+        // FUNÇÕES TOGGLE (GLOBAIS) - VERSÃO CORRIGIDA
         // ============================================================
         function toggleFolgaBH(dia) {
             console.log('toggleFolgaBH dia:', dia);
             const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
-            if (!tr) { console.warn('Linha não encontrada para dia', dia); return; }
+            if (!tr) { 
+                console.warn('Linha não encontrada para dia', dia); 
+                const tbody = document.getElementById('editorTbody');
+                if (tbody && tbody.children[dia - 1]) {
+                    const trFallback = tbody.children[dia - 1];
+                    console.log('Usando fallback para dia', dia);
+                    return toggleFolgaBH_Internal(trFallback, dia);
+                }
+                return; 
+            }
+            toggleFolgaBH_Internal(tr, dia);
+        }
+
+        function toggleFolgaBH_Internal(tr, dia) {
             const btnFolga = tr.querySelector('button[data-action="folga-bh"]');
             const btnFalta = tr.querySelector('button[data-action="falta-atestado"]');
+            if (!btnFolga) { 
+                console.warn('Botão folga-bh não encontrado na linha', dia);
+                return; 
+            }
             const elTG = document.getElementById(`edit_total_geral_${dia}`);
             
             if (btnFolga.classList.contains('ativo-folga-bh')) {
@@ -4211,7 +4233,7 @@
             } else {
                 // Ativar
                 btnFolga.classList.add('ativo-folga-bh');
-                btnFalta.classList.remove('ativo-falta');
+                if (btnFalta) btnFalta.classList.remove('ativo-falta');
                 tr.classList.add('linha-folga-bh');
                 tr.classList.remove('linha-falta-atestado');
                 delete tr.dataset.abonado;
@@ -4234,9 +4256,25 @@
         async function toggleFaltaAtestado(dia) {
             console.log('toggleFaltaAtestado dia:', dia);
             const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
-            if (!tr) { console.warn('Linha não encontrada para dia', dia); return; }
+            if (!tr) { 
+                console.warn('Linha não encontrada para dia', dia);
+                const tbody = document.getElementById('editorTbody');
+                if (tbody && tbody.children[dia - 1]) {
+                    const trFallback = tbody.children[dia - 1];
+                    return toggleFaltaAtestado_Internal(trFallback, dia);
+                }
+                return; 
+            }
+            toggleFaltaAtestado_Internal(tr, dia);
+        }
+
+        async function toggleFaltaAtestado_Internal(tr, dia) {
             const btnFolga = tr.querySelector('button[data-action="folga-bh"]');
             const btnFalta = tr.querySelector('button[data-action="falta-atestado"]');
+            if (!btnFalta) { 
+                console.warn('Botão falta-atestado não encontrado na linha', dia);
+                return; 
+            }
             const elTG = document.getElementById(`edit_total_geral_${dia}`);
             
             if (btnFalta.classList.contains('ativo-falta')) {
@@ -4268,7 +4306,7 @@
             }
             // Ativar
             btnFalta.classList.add('ativo-falta');
-            btnFolga.classList.remove('ativo-folga-bh');
+            if (btnFolga) btnFolga.classList.remove('ativo-folga-bh');
             tr.classList.add('linha-falta-atestado');
             tr.classList.remove('linha-folga-bh');
             tr.dataset.abonado = 'true';
