@@ -603,7 +603,11 @@
         .editor-table tbody tr.linha-feriado { background: rgba(253,126,20,0.14); }
         .editor-table tbody tr.linha-feriado td { border-bottom-color: rgba(253,126,20,0.3); }
         .editor-table tbody tr.linha-folga-bh { background: rgba(108,117,125,0.14); }
+        .editor-table tbody tr.linha-folga-bh td { background: rgba(108,117,125,0.14); }
         .editor-table tbody tr.linha-falta-atestado { background: rgba(111,66,193,0.14); }
+        .editor-table tbody tr.linha-falta-atestado td { background: rgba(111,66,193,0.14); }
+        .editor-table tbody tr.linha-ferias { background: rgba(0,64,133,0.14); }
+        .editor-table tbody tr.linha-ferias td { background: rgba(0,64,133,0.14); }
         .editor-table input[type="time"],
         .editor-table input[type="text"] {
             font-family: 'Poppins', sans-serif; width: 100%; min-width: 68px;
@@ -731,7 +735,7 @@
         <button class="sidebar-btn" onclick="abrirErros()"><i class="fas fa-exclamation-triangle"></i> Erros de Marcação <span class="badge-sidebar" id="badgeErros" style="display:none;">0</span></button>
         <div class="sidebar-label"><i class="fas fa-users-cog"></i> Administração</div>
         <button class="sidebar-btn" onclick="abrirModalPerfis()"><i class="fas fa-user-shield"></i> Perfis de Usuário</button>
-        <button class="sidebar-btn" onclick="window.location.href='index.html'" style="color:#dc3545;"><i class="fas fa-sign-out-alt" style="color:#dc3545;"></i> Sair</button>
+        <button class="sidebar-btn" onclick="fazerLogout()" style="color:#dc3545;"><i class="fas fa-sign-out-alt" style="color:#dc3545;"></i> Sair</button>
     </nav>
 
     <!-- HEADER -->
@@ -905,6 +909,8 @@
                     </div>
                     <button class="btn-action btn-secondary btn-sm" onclick="abrirSelecaoFolgaBH()"><i class="fas fa-clock"></i> Folga BH</button>
                     <button class="btn-action btn-purple btn-sm" onclick="abrirSelecaoFaltaAtestado()"><i class="fas fa-notes-medical"></i> Falta c/ Atestado</button>
+                    <button class="btn-action btn-info btn-sm" onclick="preencherDiasVazios()"><i class="fas fa-magic"></i> Preencher Vazios</button>
+                    <button class="btn-action btn-warning btn-sm" onclick="marcarFeriadosEditor()"><i class="fas fa-star"></i> Marcar Feriados</button>
                     <span style="margin-left:auto;font-size:11px;font-weight:600;color:#1a0a00;" id="editorModoMsg"><i class="fas fa-info-circle"></i> Modo: Visualização</span>
                 </div>
                 <div class="editor-layout">
@@ -925,6 +931,7 @@
                         </div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;">
                             <button class="btn-action btn-secondary btn-sm" onclick="limparImagem()" id="btnLimparImagem"><i class="fas fa-times"></i> Remover imagem</button>
+                            <button class="btn-action btn-primary btn-sm" onclick="salvarImagemCartaoEditor()" id="btnSalvarImagem"><i class="fas fa-save"></i> Salvar Imagem no Cartão</button>
                         </div>
                     </div>
                     <div>
@@ -977,11 +984,15 @@
                             <div class="item" style="background:#e2d4f5;color:#4a2c91;border-color:#6f42c1;">
                                 <i class="fas fa-notes-medical"></i> Faltas c/ atestado: <strong id="editorQtdFaltaAtestado">0</strong>
                             </div>
+                            <div class="item" style="background:#cce5ff;color:#004085;border-color:#004085;">
+                                <i class="fas fa-umbrella-beach"></i> Férias: <strong id="editorQtdFerias">0</strong>
+                            </div>
                         </div>
                         <div style="margin-top:8px;font-size:10px;color:#7a3a00;display:flex;flex-wrap:wrap;gap:10px;">
                             <span><span style="display:inline-block;width:12px;height:12px;background:#ffe0b0;border:1px solid #fd7e14;border-radius:3px;vertical-align:middle;"></span> Feriado</span>
-                            <span><span style="display:inline-block;width:12px;height:12px;background:#e2e3e5;border:1px solid #6c757d;border-radius:3px;vertical-align:middle;"></span> Folga BH</span>
+                            <span><span style="display:inline-block;width:12px;height:12px;background:#d6d8db;border:1px solid #495057;border-radius:3px;vertical-align:middle;"></span> Folga BH</span>
                             <span><span style="display:inline-block;width:12px;height:12px;background:#e2d4f5;border:1px solid #6f42c1;border-radius:3px;vertical-align:middle;"></span> Falta c/ Atestado</span>
+                            <span><span style="display:inline-block;width:12px;height:12px;background:#cce5ff;border:1px solid #004085;border-radius:3px;vertical-align:middle;"></span> Férias</span>
                         </div>
                     </div>
                 </div>
@@ -1266,6 +1277,10 @@
         let diaOrigemCalendario = null;
         let cacheDiasSemAnotacao = {};
 
+        // ✅ NOVO: controla o mês/ano que estava sendo visualizado no editor
+        let editorMesAtual = null;
+        let editorAnoAtual = null;
+
         const ROLE_LABELS = { 'viewer': 'Visualizador', 'user': 'Usuário', 'admin': 'Administrador' };
         const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
         const JORNADA_PADRAO_MINUTOS = 480;
@@ -1284,6 +1299,9 @@
         const MODULO_VT_URL       = 'MODULO1_QVT.html';
         const MODULO_MEDICINA_URL = 'MED_QNUTRI.html';
         const MODULO_FERIAS_URL   = 'MODULO1_QFERIAS.html';
+
+        // ✅ NOVO: chave do localStorage
+        const STORAGE_KEY = 'aplikado_usuario_ponto';
 
         // ============================================================
         // HELPERS
@@ -1499,22 +1517,14 @@
                 if (error) throw error;
                 if (data && data.senha === senha) {
                     usuarioAtual = { id: data.id, nome: data.nome, role: data.role };
-                    document.getElementById('modalLogin').classList.remove('active');
-                    document.getElementById('modalLogin').style.display = 'none';
-                    document.getElementById('mainHeader').style.display = 'flex';
-                    document.getElementById('sidebar').style.display = 'flex';
-                    document.getElementById('sidebarToggle').style.display = 'flex';
-                    document.getElementById('mainContainer').style.display = 'flex';
-                    document.getElementById('sidebarUserName').textContent = data.nome;
-                    document.getElementById('sidebarUserRole').textContent = ROLE_LABELS[data.role] || 'Viewer';
-                    document.getElementById('headerUserName').textContent = data.nome;
-                    document.getElementById('headerUserRole').textContent = ROLE_LABELS[data.role] || 'Viewer';
+                    // ✅ NOVO: persiste sessão
+                    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(usuarioAtual)); } catch(e) {}
+                    aplicarSessaoUsuario();
                     mostrarToast('✅ Bem-vindo, ' + nome + '!');
                     erro.style.display = 'none';
                     document.getElementById('loginSenha').value = '';
                     await carregarFuncionarios();
                     await atualizarBadgeCartoes();
-                    atualizarUI();
                 } else {
                     erro.textContent = '❌ Usuário ou senha incorretos!';
                     erro.style.display = 'block';
@@ -1527,6 +1537,28 @@
                 btnEntrar.disabled = false;
                 btnEntrar.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
             }
+        }
+
+        // ✅ NOVO: aplica visual da sessão (chamado no login E no onload)
+        function aplicarSessaoUsuario() {
+            if (!usuarioAtual) return;
+            document.getElementById('modalLogin').classList.remove('active');
+            document.getElementById('modalLogin').style.display = 'none';
+            document.getElementById('mainHeader').style.display = 'flex';
+            document.getElementById('sidebar').style.display = 'flex';
+            document.getElementById('sidebarToggle').style.display = 'flex';
+            document.getElementById('mainContainer').style.display = 'flex';
+            document.getElementById('sidebarUserName').textContent = usuarioAtual.nome;
+            document.getElementById('sidebarUserRole').textContent = ROLE_LABELS[usuarioAtual.role] || 'Viewer';
+            document.getElementById('headerUserName').textContent = usuarioAtual.nome;
+            document.getElementById('headerUserRole').textContent = ROLE_LABELS[usuarioAtual.role] || 'Viewer';
+            atualizarUI();
+        }
+
+        function fazerLogout() {
+            try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+            usuarioAtual = null;
+            window.location.reload();
         }
 
         function atualizarUI() {
@@ -2381,14 +2413,18 @@
                 const btnEditorPonto = semControle ? '' : `<button class="btn-action btn-primary" onclick="abrirEditorPontoFuncionario('${id}')"><i class="fas fa-edit"></i> Editor de Ponto</button>`;
                 const abaPontoBtn = semControle ? '' : `<button class="tab-btn" onclick="trocarAbaModal('ponto', this)" data-aba-modal="ponto"><i class="fas fa-clock"></i> Ponto ${erros.length > 0 ? `<span class="badge-sidebar" style="background:#dc3545;color:#fff;font-size:8px;padding:1px 6px;border-radius:8px;margin-left:4px;">${erros.length}</span>` : ''}</button>`;
 
+                // ✅ CORRIGIDO: lembra mês/ano do editor
+                const mesInicial = editorMesAtual || MESES[new Date().getMonth()];
+                const anoInicial = editorAnoAtual || new Date().getFullYear();
+
                 const abaPontoContent = semControle ? '' : `
                     <div id="aba-modal-ponto" class="tab-content">
                         <div class="ponto-tab-toolbar">
                             <div class="form-group"><label><i class="fas fa-calendar"></i> Mês</label>
-                                <select id="modalPontoMes" onchange="carregarPontoNoModal()">${MESES.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
+                                <select id="modalPontoMes" onchange="carregarPontoNoModal()">${MESES.map(m => `<option value="${m}" ${m === mesInicial ? 'selected' : ''}>${m}</option>`).join('')}</select>
                             </div>
                             <div class="form-group"><label><i class="fas fa-calendar-alt"></i> Ano</label>
-                                <input type="number" id="modalPontoAno" value="${new Date().getFullYear()}" min="2020" max="2030" onchange="carregarPontoNoModal()">
+                                <input type="number" id="modalPontoAno" value="${anoInicial}" min="2020" max="2030" onchange="carregarPontoNoModal()">
                             </div>
                             <button class="btn-action btn-primary" onclick="abrirEditorPontoFuncionario('${id}')"><i class="fas fa-edit"></i> Abrir Editor</button>
                             <span class="status-anexado nao" id="modalPontoStatusAnexo"><i class="fas fa-paperclip"></i> Sem cartão</span>
@@ -2752,8 +2788,6 @@
 
                 funcionarioAtual = func;
                 if (!semControle) {
-                    document.getElementById('modalPontoMes').value = MESES[new Date().getMonth()];
-                    document.getElementById('modalPontoAno').value = new Date().getFullYear();
                     await carregarPontoNoModal();
                 }
                 document.getElementById('atTabListaAtestados').innerHTML = renderizarAtestadosTab();
@@ -2931,8 +2965,7 @@
                 });
                 await recarregarAbaAtestados(funcId);
                 await recarregarAbaCalendario(funcId);
-                await carregarPontoNoModal();
-                mostrarToast('✅ Atestado refletido no ponto e cronograma!', 'info');
+                mostrarToast('✅ Atestado refletido no cronograma!', 'info');
             } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
 
@@ -2961,7 +2994,6 @@
                 mostrarToast('✅ Atestado excluído!');
                 await recarregarAbaAtestados(funcionarioAtual.id);
                 await recarregarAbaCalendario(funcionarioAtual.id);
-                await carregarPontoNoModal();
             } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
 
@@ -3348,7 +3380,6 @@
                 if (error) throw error;
                 mostrarToast('✅ Férias adicionadas!');
                 await recarregarAbaCalendario(id);
-                await carregarPontoNoModal();
                 setTimeout(() => abrirModalFuncionario(id), 400);
             } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
@@ -3360,7 +3391,6 @@
                 if (error) throw error;
                 mostrarToast('✅ Férias cancelada!');
                 await recarregarAbaCalendario(funcId);
-                await carregarPontoNoModal();
                 setTimeout(() => abrirModalFuncionario(funcId), 400);
             } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
@@ -3395,33 +3425,6 @@
             const mesIndex = MESES.indexOf(mes);
             const analise = analisarDadosPonto(dadosPonto, diasDoMes, mesIndex, parseInt(ano));
 
-            // Buscar atestados do mês para refletir na tabela
-            let atestadosDoMes = [];
-            try {
-                const inicioISO = `${ano}-${String(mesIndex + 1).padStart(2, '0')}-01`;
-                const ultimoDia = new Date(parseInt(ano), mesIndex + 1, 0).getDate();
-                const fimISO = `${ano}-${String(mesIndex + 1).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
-                const { data: atestData } = await supabaseClient
-                    .from('atestados').select('*')
-                    .eq('funcionario_id', func.id)
-                    .lte('data_inicio', fimISO)
-                    .gte('data_fim', inicioISO);
-                atestadosDoMes = atestData || [];
-            } catch(e) { console.warn('Erro atestados ponto:', e); }
-
-            // Mapear atestados por dia
-            const atestadoPorDia = {};
-            atestadosDoMes.forEach(a => {
-                const dtIni = parseDataLocal(a.data_inicio);
-                const dtFim = parseDataLocal(a.data_fim);
-                if (!dtIni || !dtFim) return;
-                for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
-                    if (d.getMonth() === mesIndex && d.getFullYear() === parseInt(ano)) {
-                        atestadoPorDia[d.getDate()] = a;
-                    }
-                }
-            });
-
             let totalMin = 0, totalHE = 0, contMarc = 0, contErros = 0;
 
             for (let i = 1; i <= diasDoMes; i++) {
@@ -3438,9 +3441,7 @@
                 const msgErro = temErro ? temErro.join('; ') : '';
                 const feriado = isFeriado(i, mesIndex, parseInt(ano));
                 const folgaBH = d.folga_bh || false;
-                const atestadoDia = atestadoPorDia[i];
-                const temAtestado = !!atestadoDia;
-                const faltaAtestado = d.falta_atestado || temAtestado;
+                const faltaAtestado = d.falta_atestado || false;
 
                 totalMin += totalMinDia;
                 if (temHE) totalHE += totalMinDia - JORNADA_PADRAO_MINUTOS;
@@ -3466,10 +3467,7 @@
                 }
                 if (faltaAtestado) {
                     classeLinha = 'linha-falta-atestado';
-                    const tituloAtestado = atestadoDia 
-                        ? `Atestado: ${atestadoDia.tipo || 'Médico'}${atestadoDia.cid ? ' - CID ' + atestadoDia.cid : ''}${atestadoDia.medico ? ' - Dr(a). ' + atestadoDia.medico : ''}`
-                        : 'Falta c/ Atestado';
-                    badgeDia += `<span class="badge-falta-atestado" title="${tituloAtestado}"><i class="fas fa-notes-medical"></i></span>`;
+                    badgeDia += `<span class="badge-falta-atestado" title="Falta c/ Atestado"><i class="fas fa-notes-medical"></i></span>`;
                 }
 
                 const diaSemana = getDiaSemana(i, mesIndex, parseInt(ano));
@@ -3589,8 +3587,9 @@
             
             const selMes = document.getElementById('editorMes');
             selMes.innerHTML = MESES.map(m => `<option value="${m}">${m}</option>`).join('');
-            selMes.value = MESES[new Date().getMonth()];
-            document.getElementById('editorAno').value = new Date().getFullYear();
+            // ✅ CORRIGIDO: usa editorMesAtual se existir, senão o mês atual
+            selMes.value = editorMesAtual || MESES[new Date().getMonth()];
+            document.getElementById('editorAno').value = editorAnoAtual || new Date().getFullYear();
             
             fecharModalFuncionario();
             document.getElementById('editorFuncNome').textContent = func.nome;
@@ -3604,6 +3603,9 @@
         }
 
         async function mudarMesEditor() {
+            // ✅ NOVO: grava mês/ano que está sendo editado
+            editorMesAtual = document.getElementById('editorMes').value;
+            editorAnoAtual = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
             await inicializarEditorPonto();
         }
 
@@ -3613,6 +3615,10 @@
             const mesIndex = MESES.indexOf(mes);
             const dias = obterDiasDoMes(mes, ano);
             const isUser = usuarioAtual && (usuarioAtual.role === 'user' || usuarioAtual.role === 'admin');
+
+            // ✅ NOVO: grava mês/ano atual sempre que inicializa
+            editorMesAtual = mes;
+            editorAnoAtual = ano;
             
             let dadosExistentes = {};
             try {
@@ -3644,29 +3650,6 @@
                 }
             } catch(e) {}
             
-            // Buscar atestados do mês para marcar automaticamente no editor
-            let atestadoPorDia = {};
-            try {
-                const ultimoDia = new Date(ano, mesIndex + 1, 0).getDate();
-                const inicioISO = `${ano}-${String(mesIndex + 1).padStart(2, '0')}-01`;
-                const fimISO = `${ano}-${String(mesIndex + 1).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
-                const { data: atestData } = await supabaseClient
-                    .from('atestados').select('*')
-                    .eq('funcionario_id', funcionarioAtual.id)
-                    .lte('data_inicio', fimISO)
-                    .gte('data_fim', inicioISO);
-                (atestData || []).forEach(a => {
-                    const dtIni = parseDataLocal(a.data_inicio);
-                    const dtFim = parseDataLocal(a.data_fim);
-                    if (!dtIni || !dtFim) return;
-                    for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
-                        if (d.getMonth() === mesIndex && d.getFullYear() === ano) {
-                            atestadoPorDia[d.getDate()] = a;
-                        }
-                    }
-                });
-            } catch(e) { console.warn('Erro atestados editor:', e); }
-            
             const tbody = document.getElementById('editorTbody');
             tbody.innerHTML = '';
             
@@ -3675,8 +3658,7 @@
                 const diaSemana = getDiaSemana(i, mesIndex, ano);
                 const feriado = isFeriado(i, mesIndex, ano);
                 const folgaBH = d.folga_bh || false;
-                const temAtestado = !!atestadoPorDia[i];
-                const faltaAtestado = d.falta_atestado || temAtestado;
+                const faltaAtestado = d.falta_atestado || false;
                 
                 let classesTr = '';
                 if (feriado) classesTr += ' linha-feriado';
@@ -3697,7 +3679,6 @@
                     <td class="dia-cell">
                         <span class="dia-num">${String(i).padStart(2, '0')}</span>
                         <span class="dia-sem">${diaSemana}</span>
-                        ${temAtestado ? `<span class="badge-falta-atestado" title="Atestado: ${atestadoPorDia[i].tipo || 'Médico'}${atestadoPorDia[i].cid ? ' - CID ' + atestadoPorDia[i].cid : ''}" style="margin-left:4px;"><i class="fas fa-notes-medical"></i></span>` : ''}
                     </td>
                     <td><input type="time" id="edit_e1_${i}" value="${d.e1 || ''}" ${!isUser ? 'disabled' : ''} oninput="recalcularLinha(${i})" onchange="recalcularLinha(${i})"></td>
                     <td><input type="time" id="edit_s1_${i}" value="${d.s1 || ''}" ${!isUser ? 'disabled' : ''} oninput="recalcularLinha(${i})" onchange="recalcularLinha(${i})"></td>
@@ -3944,10 +3925,17 @@
                 if (result.error) throw result.error;
                 
                 pontosPorFuncionario[func.nome] = dadosParaSalvar;
+                // ✅ NOVO: grava o mês/ano que foi salvo para reabrir nele
+                editorMesAtual = mes;
+                editorAnoAtual = ano;
+                try { sessionStorage.setItem('editorMes_' + func.id, mes); sessionStorage.setItem('editorAno_' + func.id, String(ano)); } catch(e) {}
+                
                 mostrarToast('✅ Dados salvos!');
                 fecharModalEditor();
                 await carregarDiasSemAnotacaoParaTodos();
                 await carregarFuncionarios();
+                // ✅ NOVO: reabre a pasta no mês/ano correto para o usuário ver
+                setTimeout(() => abrirModalFuncionario(func.id), 300);
             } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
 
@@ -3995,6 +3983,25 @@
 
         function resetZoom() {
             document.getElementById('imgDisplay').style.backgroundSize = 'contain';
+        }
+
+        // ✅ NOVO: salva a imagem carregada no editor na tabela imagens_cartao
+        async function salvarImagemCartaoEditor() {
+            if (!funcionarioAtual) { mostrarToast('⚠️ Nenhum funcionário ativo', 'warning'); return; }
+            if (!anexoAtualBase64) { mostrarToast('⚠️ Nenhuma imagem carregada', 'warning'); return; }
+            const mes = document.getElementById('editorMes').value;
+            const ano = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
+            try {
+                const { error } = await supabaseClient.from('imagens_cartao').upsert({
+                    funcionario_id: funcionarioAtual.id, mes, ano,
+                    imagem_url: anexoAtualBase64, imagem_base64: anexoAtualBase64,
+                    nome_arquivo: nomeArquivoAnexo || 'cartao_ponto.jpg',
+                    uploaded_at: new Date().toISOString()
+                }, { onConflict: 'funcionario_id,mes,ano' });
+                if (error) throw error;
+                mostrarToast('✅ Imagem salva no cartão!');
+                await atualizarBadgeCartoes();
+            } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
 
         function preencherDiasVazios() {
@@ -4458,14 +4465,40 @@
         // ============================================================
         // INICIALIZAÇÃO
         // ============================================================
-        window.onload = function() {
+        window.onload = async function() {
             console.log('🚀 Iniciando Ponto...');
-            const modalLogin = document.getElementById('modalLogin');
-            modalLogin.classList.add('active');
-            modalLogin.style.display = 'flex';
-            document.getElementById('mainContainer').style.display = 'none';
             
-            carregarUsuariosSupabase();
+            // ✅ NOVO: verifica se há sessão salva
+            let sessaoRestaurada = false;
+            try {
+                const salvo = localStorage.getItem(STORAGE_KEY);
+                if (salvo) {
+                    const u = JSON.parse(salvo);
+                    if (u && u.nome && u.role) {
+                        usuarioAtual = u;
+                        aplicarSessaoUsuario();
+                        sessaoRestaurada = true;
+                        console.log('✅ Sessão restaurada:', u.nome);
+                    }
+                }
+            } catch(e) { console.warn('Erro ao restaurar sessão:', e); }
+            
+            // Se NÃO restaurou, mostra login
+            if (!sessaoRestaurada) {
+                const modalLogin = document.getElementById('modalLogin');
+                modalLogin.classList.add('active');
+                modalLogin.style.display = 'flex';
+                document.getElementById('mainContainer').style.display = 'none';
+                carregarUsuariosSupabase();
+            } else {
+                // Se restaurou, carrega dados
+                try {
+                    await carregarFuncionarios();
+                    await atualizarBadgeCartoes();
+                } catch(e) {
+                    console.error('Erro ao carregar dados iniciais:', e);
+                }
+            }
             
             const mesAtual = new Date().getMonth();
             const anoAtual = new Date().getFullYear();
