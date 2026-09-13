@@ -131,6 +131,22 @@
             padding: 2px 10px; border-radius: 10px;
             text-transform: uppercase; letter-spacing: 0.4px;
         }
+        .funcionario-card .dias-sem-anotacao {
+            display: inline-block;
+            margin-top: 6px;
+            background: #fff3cd;
+            color: #856404;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 10px;
+            border: 1px solid #ffc107;
+        }
+        .funcionario-card .dias-sem-anotacao.zero {
+            background: #d4edda;
+            color: #155724;
+            border-color: #28a745;
+        }
 
         /* =====================================================
            CARDS DE CARTÕES NÃO ANEXADOS - LADO A LADO (GRID)
@@ -1004,6 +1020,7 @@
         let calendarioAnoAtual = new Date().getFullYear();
         let diaCalendarioSelecionado = null;
         let diaOrigemCalendario = null;
+        let cacheDiasSemAnotacao = {}; // Cache para dias sem anotação
 
         const ROLE_LABELS = { 'viewer': 'Visualizador', 'user': 'Usuário', 'admin': 'Administrador' };
         const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -1022,6 +1039,33 @@
         const MODULO_VT_URL       = 'MODULO1_QVT.html';
         const MODULO_MEDICINA_URL = 'MED_QNUTRI.html';
         const MODULO_FERIAS_URL   = 'MODULO1_QFERIAS.html';
+
+        // ============================================================
+        // FUNÇÃO AUXILIAR - CONTAR DIAS SEM ANOTAÇÃO NO MÊS ATUAL
+        // ============================================================
+        function contarDiasSemAnotacao(funcionarioId, pontos) {
+            const hoje = new Date();
+            const mesAtual = hoje.getMonth();
+            const anoAtual = hoje.getFullYear();
+            const mesNome = MESES[mesAtual];
+            
+            // Se não tem pontos para este funcionário/mês, retorna todos os dias do mês até hoje
+            if (!pontos) {
+                return hoje.getDate(); // Do dia 1 até hoje
+            }
+
+            let count = 0;
+            const diasDoMes = hoje.getDate(); // Só conta do dia 1 até o dia atual
+
+            for (let dia = 1; dia <= diasDoMes; dia++) {
+                const d = pontos[dia];
+                const temAlguma = d && (d.e1 || d.s1 || d.e2 || d.s2);
+                if (!temAlguma) {
+                    count++;
+                }
+            }
+            return count;
+        }
 
         // ============================================================
         // UPDATE TOLERANTE — ignora colunas inexistentes no Supabase
@@ -1248,11 +1292,63 @@
                     selectUnidade.appendChild(opt);
                 });
                 document.getElementById('totalFuncionarios').textContent = funcionarios.length;
+
+                // Carregar dias sem anotação para cada funcionário (em paralelo)
+                await carregarDiasSemAnotacaoParaTodos();
+
                 filtrarFuncionarios();
                 mostrarToast(`✅ ${funcionarios.length} funcionários carregados!`);
             } catch (error) {
                 console.error('Erro:', error);
                 container.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:#dc3545;"></i><p>Erro: ${error.message}</p></div>`;
+            }
+        }
+
+        async function carregarDiasSemAnotacaoParaTodos() {
+            const hoje = new Date();
+            const mesAtual = hoje.getMonth();
+            const anoAtual = hoje.getFullYear();
+            const mesNome = MESES[mesAtual];
+
+            // Buscar todas as marcações do mês atual de uma vez
+            try {
+                const { data, error } = await supabaseClient
+                    .from('marcacoes_ponto')
+                    .select('funcionario_id, dados')
+                    .eq('mes', mesNome)
+                    .eq('ano', anoAtual);
+                
+                if (error && error.code !== 'PGRST116') throw error;
+                
+                // Montar mapa de funcionario_id -> dados
+                const mapa = {};
+                (data || []).forEach(m => {
+                    let dados = {};
+                    try { 
+                        dados = typeof m.dados === 'string' ? JSON.parse(m.dados) : m.dados; 
+                    } catch(e) { dados = {}; }
+                    mapa[m.funcionario_id] = dados;
+                });
+
+                // Calcular para cada funcionário
+                funcionarios.forEach(f => {
+                    if (f.sem_controle_ponto) {
+                        cacheDiasSemAnotacao[f.id] = null; // não se aplica
+                    } else {
+                        const pontos = mapa[f.id] || {};
+                        cacheDiasSemAnotacao[f.id] = contarDiasSemAnotacao(f.id, pontos);
+                    }
+                });
+            } catch (e) {
+                console.warn('Erro ao carregar marcações para contagem:', e);
+                // Fallback: contar todos os dias até hoje como sem anotação
+                funcionarios.forEach(f => {
+                    if (f.sem_controle_ponto) {
+                        cacheDiasSemAnotacao[f.id] = null;
+                    } else {
+                        cacheDiasSemAnotacao[f.id] = hoje.getDate();
+                    }
+                });
             }
         }
 
@@ -1312,6 +1408,20 @@
             const tagSemControle = semControle
                 ? `<div class="tag-sem-controle"><i class="fas fa-user-slash"></i> Sem controle de ponto</div>`
                 : '';
+
+            // Dias sem anotação (apenas para funcionários com controle de ponto)
+            let diasSemAnotacaoHTML = '';
+            if (!semControle) {
+                const dias = cacheDiasSemAnotacao[f.id];
+                if (dias !== undefined && dias !== null) {
+                    const classe = dias === 0 ? 'dias-sem-anotacao zero' : 'dias-sem-anotacao';
+                    const texto = dias === 0 
+                        ? 'Todos os dias anotados' 
+                        : `${dias} dia${dias > 1 ? 's' : ''} sem anotação`;
+                    diasSemAnotacaoHTML = `<div class="${classe}">${texto}</div>`;
+                }
+            }
+
             return `
                 <div class="funcionario-card ${semControle ? 'sem-controle' : ''}" onclick="abrirModalFuncionario('${f.id}')">
                     <div class="foto">${fotoHTML}</div>
@@ -1325,6 +1435,7 @@
                             <span><i class="fas fa-briefcase"></i> ${f.cargo || 'Sem cargo'}</span>
                         </div>
                         ${tagSemControle}
+                        ${diasSemAnotacaoHTML}
                     </div>
                 </div>
             `;
