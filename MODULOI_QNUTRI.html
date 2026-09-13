@@ -179,6 +179,7 @@
         .ponto-table input { font-family: 'Poppins', sans-serif; width: 72px; padding: 3px 4px; border: 1px solid rgba(255, 140, 0, 0.2); border-radius: 5px; text-align: center; background: #f5f5f5; outline: none; font-size: 11px; color: #1a0a00; font-weight: 600; }
         .ponto-table input[readonly] { background: rgba(0,0,0,0.03); font-weight: 700; }
         .ponto-table .hora-extra { background: rgba(40,167,69,0.1); color: #28a745; font-weight: 700; }
+        .ponto-table .abonado { background: rgba(111,66,193,0.1); color: #6f42c1; font-weight: 700; }
         .ponto-table .dia-cell { font-weight: 700; }
         .ponto-table tr.linha-trabalho { background: rgba(40,167,69,0.05); }
         .ponto-table tr.linha-erro { background: rgba(220,53,69,0.08); }
@@ -370,6 +371,7 @@
         .editor-table input[type="time"]:focus, .editor-table input[type="text"]:focus { border-color: #FF8C00; box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.15); }
         .editor-table input[readonly] { background: #f5f5f5; font-weight: 700; color: #7a3a00; }
         .editor-table input.total-geral { background: rgba(255,140,0,0.08); color: #cc7000; font-weight: 800; }
+        .editor-table input.total-geral.abonado { background: rgba(111,66,193,0.1); color: #6f42c1; }
         .editor-table .dia-cell { font-weight: 700; font-size: 11px; padding: 4px 6px; white-space: nowrap; text-align: left; }
         .editor-table .dia-cell .dia-num { display: inline-block; min-width: 22px; font-size: 12px; }
         .editor-table .dia-cell .dia-sem { display: inline-block; font-size: 9px; color: #7a3a00; font-weight: 600; margin-left: 2px; }
@@ -985,6 +987,9 @@
         let editorMesAtual = null;
         let editorAnoAtual = null;
 
+        // NOVO: mapa de dias abonados (atestado) por funcionário/mês/ano
+        let mapaDiasAbonados = {};
+
         // ✅ NOVO: Armazenamento seguro (fallback para file://)
         const SafeStorage = (() => {
             let mem = {};
@@ -1517,19 +1522,65 @@
         }
 
         // ============================================================
-        // ANÁLISE DE PONTO
+        // ANÁLISE DE PONTO (com suporte a dias abonados por atestado)
         // ============================================================
-        function analisarDadosPonto(dados, diasDoMes, mes, ano) {
+        async function carregarMapaDiasAbonados(funcId, mes, ano) {
+            // Busca atestados que cobrem o mês/ano e retorna um Set de dias abonados
+            const diasAbonados = new Set();
+            try {
+                const totalDias = new Date(ano, MESES.indexOf(mes) + 1, 0).getDate();
+                const inicioISO = `${ano}-${String(MESES.indexOf(mes)+1).padStart(2,'0')}-01`;
+                const fimISO = `${ano}-${String(MESES.indexOf(mes)+1).padStart(2,'0')}-${String(totalDias).padStart(2,'0')}`;
+                const { data, error } = await supabaseClient.from('atestados')
+                    .select('data_inicio, data_fim, tipo')
+                    .eq('funcionario_id', funcId)
+                    .lte('data_inicio', fimISO)
+                    .gte('data_fim', inicioISO);
+                if (error) throw error;
+                (data || []).forEach(a => {
+                    const dtIni = parseDataLocal(a.data_inicio);
+                    const dtFim = parseDataLocal(a.data_fim);
+                    if (!dtIni || !dtFim) return;
+                    for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
+                        if (d.getMonth() === MESES.indexOf(mes) && d.getFullYear() === ano) {
+                            diasAbonados.add(d.getDate());
+                        }
+                    }
+                });
+                // Também considera falta_atestado nas marcações de ponto
+                const { data: mp } = await supabaseClient.from('marcacoes_ponto')
+                    .select('dados')
+                    .eq('funcionario_id', funcId).eq('mes', mes).eq('ano', ano).maybeSingle();
+                if (mp && mp.dados) {
+                    let json = {};
+                    try { json = typeof mp.dados === 'string' ? JSON.parse(mp.dados) : mp.dados; } catch(e) {}
+                    Object.keys(json || {}).forEach(k => {
+                        if (json[k] && json[k].falta_atestado) diasAbonados.add(parseInt(k));
+                    });
+                }
+            } catch(e) { console.warn('Erro ao carregar mapa de abonados:', e); }
+            return diasAbonados;
+        }
+
+        function analisarDadosPonto(dados, diasDoMes, mes, ano, diasAbonados = new Set()) {
             const erros = [];
             const diasComErro = {};
             const diasComMarcacao = {};
             const diasComHoraExtra = {};
+            let totalHorasAbonadas = 0;
             for (let dia = 1; dia <= diasDoMes; dia++) {
+                const abonado = diasAbonados.has(dia);
                 const d = dados[dia] || {};
                 const temE1 = !!d.e1, temS1 = !!d.s1, temE2 = !!d.e2, temS2 = !!d.s2;
                 const temExtraE1 = !!d.extra_e1, temExtraS1 = !!d.extra_s1;
-                const temAlguma = temE1 || temS1 || temE2 || temS2 || temExtraE1 || temExtraS1 || d.folga_bh || d.falta_atestado;
+                const temAlguma = temE1 || temS1 || temE2 || temS2 || temExtraE1 || temExtraS1 || d.folga_bh || d.falta_atestado || abonado;
                 if (temAlguma) diasComMarcacao[dia] = true;
+                if (abonado) {
+                    // Considera a jornada padrão como horas abonadas
+                    totalHorasAbonadas += JORNADA_PADRAO_MINUTOS;
+                    // Não considera como hora extra
+                    continue;
+                }
                 const errosDia = [];
                 if (temE1 && !temS1) errosDia.push(`Entrada (${d.e1}) sem saída no 1º turno`);
                 if (!temE1 && temS1) errosDia.push(`Saída (${d.s1}) sem entrada no 1º turno`);
@@ -1547,7 +1598,7 @@
                 const totalMin = converterParaMinutos(diff1) + converterParaMinutos(diff2) + converterParaMinutos(diffExtra);
                 if (totalMin > JORNADA_PADRAO_MINUTOS) diasComHoraExtra[dia] = true;
             }
-            return { erros, diasComErro, diasComMarcacao, diasComHoraExtra };
+            return { erros, diasComErro, diasComMarcacao, diasComHoraExtra, totalHorasAbonadas };
         }
 
         async function verificarErrosFuncionario(funcId, mes, ano) {
@@ -1557,14 +1608,15 @@
                     .from('marcacoes_ponto').select('*')
                     .eq('funcionario_id', funcId).eq('mes', mesNome).eq('ano', ano).maybeSingle();
                 if (error && error.code !== 'PGRST116') throw error;
-                if (!data || !data.dados) return { erros: [], diasComErro: {}, diasComMarcacao: {}, diasComHoraExtra: {} };
+                const diasAbonados = await carregarMapaDiasAbonados(funcId, mesNome, ano);
+                if (!data || !data.dados) return { erros: [], diasComErro: {}, diasComMarcacao: {}, diasComHoraExtra: {}, totalHorasAbonadas: 0, diasAbonados };
                 let dados = {};
                 try { dados = typeof data.dados === 'string' ? JSON.parse(data.dados) : data.dados; } catch(e) { dados = {}; }
                 const dias = obterDiasDoMes(mesNome, ano);
-                return analisarDadosPonto(dados, dias, mes, ano);
+                return { ...analisarDadosPonto(dados, dias, mes, ano, diasAbonados), diasAbonados };
             } catch (e) {
                 console.warn('Erro verificarErros:', e);
-                return { erros: [], diasComErro: {}, diasComMarcacao: {}, diasComHoraExtra: {} };
+                return { erros: [], diasComErro: {}, diasComMarcacao: {}, diasComHoraExtra: {}, totalHorasAbonadas: 0, diasAbonados: new Set() };
             }
         }
 
@@ -1956,7 +2008,7 @@
                 calendarioMesAtual = new Date().getMonth();
                 calendarioAnoAtual = new Date().getFullYear();
                 await carregarCalendario(id, calendarioMesAtual, calendarioAnoAtual);
-                let analise = { erros: [], diasComErro: {}, diasComMarcacao: {}, diasComHoraExtra: {} };
+                let analise = { erros: [], diasComErro: {}, diasComMarcacao: {}, diasComHoraExtra: {}, totalHorasAbonadas: 0, diasAbonados: new Set() };
                 if (!semControle) {
                     analise = await verificarErrosFuncionario(id, calendarioMesAtual, calendarioAnoAtual);
                 }
@@ -2021,7 +2073,7 @@
                             <div class="item"><span class="cor" style="background:#f8d7da;border:1px solid #dc3545;"></span> Com erro</div>
                             <div class="item"><span class="cor" style="background:#ffe0b0;border:1px solid #fd7e14;"></span> Feriado</div>
                             <div class="item"><span class="cor" style="background:#e2e3e5;border:1px solid #6c757d;"></span> Folga BH</div>
-                            <div class="item"><span class="cor" style="background:#e2d4f5;border:1px solid #6f42c1;"></span> Falta c/ Atestado</div>
+                            <div class="item"><span class="cor" style="background:#e2d4f5;border:1px solid #6f42c1;"></span> Atestado (abonado)</div>
                             <div class="item"><span class="cor" style="background:#fafafa;border:1px solid #ddd;"></span> Sem marcação</div>
                         </div>
                         <div class="ponto-table-wrapper">
@@ -2958,7 +3010,7 @@
         }
 
         // ============================================================
-        // PONTO (aba da pasta)
+        // PONTO (aba da pasta) — com abono de atestados
         // ============================================================
         async function carregarPontoNoModal() {
             if (!funcionarioAtual) return;
@@ -2982,17 +3034,21 @@
             pontosPorFuncionario[func.nome] = dadosPonto;
             const diasDoMes = obterDiasDoMes(mes, parseInt(ano));
             const mesIndex = MESES.indexOf(mes);
-            const analise = analisarDadosPonto(dadosPonto, diasDoMes, mesIndex, parseInt(ano));
-            let totalMin = 0, totalHE = 0, contMarc = 0, contErros = 0;
+            // Carrega dias abonados (atestados)
+            const diasAbonados = await carregarMapaDiasAbonados(func.id, mes, parseInt(ano));
+            mapaDiasAbonados[`${func.id}_${mes}_${ano}`] = diasAbonados;
+            const analise = analisarDadosPonto(dadosPonto, diasDoMes, mesIndex, parseInt(ano), diasAbonados);
+            let totalMin = 0, totalHE = 0, contMarc = 0, contErros = 0, contAbonados = 0, totalAbonadoMin = 0;
             for (let i = 1; i <= diasDoMes; i++) {
                 const d = dadosPonto[i] || {};
+                const abonado = diasAbonados.has(i) || d.falta_atestado || false;
                 const diff1 = calcularDiferenca(d.e1, d.s1);
                 const diff2 = calcularDiferenca(d.e2, d.s2);
                 const diffExtra = calcularDiferenca(d.extra_e1, d.extra_s1);
                 const total = somarHoras(somarHoras(diff1, diff2), diffExtra);
                 const totalMinDia = converterParaMinutos(total);
                 const he = totalMinDia > JORNADA_PADRAO_MINUTOS ? formatarHoras(totalMinDia - JORNADA_PADRAO_MINUTOS) : '00:00';
-                const temHE = totalMinDia > JORNADA_PADRAO_MINUTOS;
+                const temHE = totalMinDia > JORNADA_PADRAO_MINUTOS && !abonado;
                 const temMarc = analise.diasComMarcacao[i];
                 const temErro = analise.diasComErro[i];
                 const msgErro = temErro ? temErro.join('; ') : '';
@@ -3003,13 +3059,20 @@
                 if (temHE) totalHE += totalMinDia - JORNADA_PADRAO_MINUTOS;
                 if (temMarc) contMarc++;
                 if (temErro) contErros++;
+                if (abonado) { contAbonados++; totalAbonadoMin += JORNADA_PADRAO_MINUTOS; }
                 let classeLinha = 'linha-vazia';
                 let badgeDia = '';
-                if (temErro) { classeLinha = 'linha-erro'; badgeDia = `<span class="badge-erro" title="${msgErro}"><i class="fas fa-exclamation"></i></span>`; }
+                let totalGeralDisplay = total;
+                let totalGeralClass = '';
+                if (abonado) {
+                    classeLinha = 'linha-falta-atestado';
+                    badgeDia = `<span class="badge-falta-atestado" title="Atestado (abonado)"><i class="fas fa-notes-medical"></i></span>`;
+                    totalGeralDisplay = 'ABONADO';
+                    totalGeralClass = 'abonado';
+                } else if (temErro) { classeLinha = 'linha-erro'; badgeDia = `<span class="badge-erro" title="${msgErro}"><i class="fas fa-exclamation"></i></span>`; }
                 else if (temMarc) { classeLinha = 'linha-trabalho'; badgeDia = `<span class="badge-ok" title="Marcação OK"><i class="fas fa-check"></i></span>`; }
                 if (feriado) { classeLinha = 'linha-feriado'; badgeDia += `<span class="badge-feriado" title="Feriado"><i class="fas fa-star"></i></span>`; }
                 if (folgaBH) { classeLinha = 'linha-folga-bh'; badgeDia += `<span class="badge-folga-bh" title="Folga BH"><i class="fas fa-clock"></i></span>`; }
-                if (faltaAtestado) { classeLinha = 'linha-falta-atestado'; badgeDia += `<span class="badge-falta-atestado" title="Falta c/ Atestado"><i class="fas fa-notes-medical"></i></span>`; }
                 const diaSemana = getDiaSemana(i, mesIndex, parseInt(ano));
                 const tr = document.createElement('tr');
                 tr.className = classeLinha;
@@ -3025,8 +3088,8 @@
                     <td><input type="time" value="${d.extra_e1 || ''}" readonly></td>
                     <td><input type="time" value="${d.extra_s1 || ''}" readonly></td>
                     <td><input type="text" value="${diffExtra}" readonly></td>
-                    <td><input type="text" value="${total}" readonly style="font-weight:700;background:rgba(255,140,0,0.05);"></td>
-                    <td><input type="text" value="${he}" readonly class="hora-extra" style="font-weight:700;"></td>
+                    <td><input type="text" value="${totalGeralDisplay}" readonly class="${totalGeralClass}" style="font-weight:700;background:rgba(255,140,0,0.05);"></td>
+                    <td><input type="text" value="${abonado ? '—' : he}" readonly class="hora-extra" style="font-weight:700;"></td>
                 `;
                 tbody.appendChild(tr);
             }
@@ -3036,6 +3099,7 @@
                     <div class="item" style="background:#fff3cd;color:#856404;border-color:#ffc107;"><i class="fas fa-calendar-day"></i> Dias com marcação: <strong>${contMarc}</strong></div>
                     <div class="item" style="background:#d4edda;color:#155724;border-color:#28a745;"><i class="fas fa-clock"></i> Total trabalhado: <strong>${formatarHoras(totalMin)}</strong></div>
                     <div class="item" style="background:#d1ecf1;color:#0c5460;border-color:#17a2b8;"><i class="fas fa-hourglass-half"></i> Hora extra: <strong style="color:${corTotal};">${formatarHoras(totalHE)}</strong></div>
+                    <div class="item" style="background:#e2d4f5;color:#4a2c91;border-color:#6f42c1;"><i class="fas fa-notes-medical"></i> Dias abonados: <strong>${contAbonados}</strong> (${formatarHoras(totalAbonadoMin)})</div>
                     <div class="item" style="background:${contErros > 0 ? '#f8d7da' : '#d4edda'};color:${contErros > 0 ? '#721c24' : '#155724'};border-color:${contErros > 0 ? '#dc3545' : '#28a745'};"><i class="fas fa-exclamation-triangle"></i> Erros: <strong>${contErros}</strong></div>
                 `;
             }
@@ -3104,7 +3168,7 @@
         }
 
         // ============================================================
-        // ✅✅✅ EDITOR DE PONTO — CORRIGIDO ✅✅✅
+        // EDITOR DE PONTO — com abono de atestados
         // ============================================================
         async function abrirEditorPontoFuncionario(id) {
             const func = funcionarios.find(f => String(f.id) === String(id)) || funcionarioAtual;
@@ -3160,6 +3224,10 @@
             
             pontosPorFuncionario[funcionarioAtual.nome] = dadosExistentes;
             
+            // Carrega dias abonados (atestados)
+            const diasAbonados = await carregarMapaDiasAbonados(funcionarioAtual.id, mes, ano);
+            mapaDiasAbonados[`${funcionarioAtual.id}_${mes}_${ano}`] = diasAbonados;
+            
             try {
                 const { data: cartao, error: cartaoError } = await supabaseClient
                     .from('imagens_cartao').select('*')
@@ -3181,9 +3249,9 @@
             const tbody = document.getElementById('editorTbody');
             tbody.innerHTML = '';
             
-            // ✅ CORRIGIDO: garante que os inputs sejam criados com valores corretos
             for (let i = 1; i <= dias; i++) {
                 const d = dadosExistentes[i] || {};
+                const abonado = diasAbonados.has(i) || d.falta_atestado || false;
                 const diaSemana = getDiaSemana(i, mesIndex, ano);
                 const feriado = isFeriado(i, mesIndex, ano);
                 const folgaBH = d.folga_bh || false;
@@ -3192,7 +3260,7 @@
                 let classesTr = '';
                 if (feriado) classesTr += ' linha-feriado';
                 if (folgaBH) classesTr += ' linha-folga-bh';
-                if (faltaAtestado) classesTr += ' linha-falta-atestado';
+                if (faltaAtestado || abonado) classesTr += ' linha-falta-atestado';
                 
                 const diff1 = calcularDiferenca(d.e1, d.s1);
                 const diff2 = calcularDiferenca(d.e2, d.s2);
@@ -3202,9 +3270,8 @@
                 const tr = document.createElement('tr');
                 tr.className = classesTr;
                 tr.dataset.dia = i;
+                if (abonado) tr.dataset.abonado = 'true';
                 
-                // ✅ IMPORTANTE: usar `value` do objeto d diretamente
-                // e garantir que o input tenha o atributo `value` setado
                 const valE1 = d.e1 || '';
                 const valS1 = d.s1 || '';
                 const valE2 = d.e2 || '';
@@ -3212,34 +3279,36 @@
                 const valExtraE1 = d.extra_e1 || '';
                 const valExtraS1 = d.extra_s1 || '';
                 
+                const totalGeralDisplay = abonado ? 'ABONADO' : total;
+                const totalGeralClass = abonado ? 'total-geral abonado' : 'total-geral';
+                
                 tr.innerHTML = `
                     <td class="dia-cell">
                         <span class="dia-num">${String(i).padStart(2, '0')}</span>
-                        <span class="dia-sem">${diaSemana}</span>
+                        <span class="dia-sem">${diaSemana}${abonado ? ' 🏥' : ''}</span>
                     </td>
-                    <td><input type="time" id="edit_e1_${i}" value="${valE1}" ${!isUser ? 'disabled' : ''}></td>
-                    <td><input type="time" id="edit_s1_${i}" value="${valS1}" ${!isUser ? 'disabled' : ''}></td>
-                    <td><input type="text" id="edit_total1_${i}" value="${diff1}" readonly></td>
-                    <td><input type="time" id="edit_e2_${i}" value="${valE2}" ${!isUser ? 'disabled' : ''}></td>
-                    <td><input type="time" id="edit_s2_${i}" value="${valS2}" ${!isUser ? 'disabled' : ''}></td>
-                    <td><input type="text" id="edit_total2_${i}" value="${diff2}" readonly></td>
-                    <td><input type="time" id="edit_extra_e1_${i}" value="${valExtraE1}" ${!isUser ? 'disabled' : ''}></td>
-                    <td><input type="time" id="edit_extra_s1_${i}" value="${valExtraS1}" ${!isUser ? 'disabled' : ''}></td>
-                    <td><input type="text" id="edit_total_extra_${i}" value="${diffExtra}" readonly></td>
-                    <td><input type="text" id="edit_total_geral_${i}" value="${total}" readonly class="total-geral"></td>
+                    <td><input type="time" id="edit_e1_${i}" value="${valE1}" ${!isUser || abonado ? 'disabled' : ''}></td>
+                    <td><input type="time" id="edit_s1_${i}" value="${valS1}" ${!isUser || abonado ? 'disabled' : ''}></td>
+                    <td><input type="text" id="edit_total1_${i}" value="${abonado ? '—' : diff1}" readonly></td>
+                    <td><input type="time" id="edit_e2_${i}" value="${valE2}" ${!isUser || abonado ? 'disabled' : ''}></td>
+                    <td><input type="time" id="edit_s2_${i}" value="${valS2}" ${!isUser || abonado ? 'disabled' : ''}></td>
+                    <td><input type="text" id="edit_total2_${i}" value="${abonado ? '—' : diff2}" readonly></td>
+                    <td><input type="time" id="edit_extra_e1_${i}" value="${valExtraE1}" ${!isUser || abonado ? 'disabled' : ''}></td>
+                    <td><input type="time" id="edit_extra_s1_${i}" value="${valExtraS1}" ${!isUser || abonado ? 'disabled' : ''}></td>
+                    <td><input type="text" id="edit_total_extra_${i}" value="${abonado ? '—' : diffExtra}" readonly></td>
+                    <td><input type="text" id="edit_total_geral_${i}" value="${totalGeralDisplay}" readonly class="${totalGeralClass}"></td>
                     <td>
                         <button type="button" class="btn-dia-acao ${folgaBH ? 'ativo-folga-bh' : ''}" onclick="toggleFolgaBH(${i})" title="Folga BH"><i class="fas fa-clock"></i></button>
-                        <button type="button" class="btn-dia-acao ${faltaAtestado ? 'ativo-falta' : ''}" onclick="toggleFaltaAtestado(${i})" title="Falta c/ Atestado"><i class="fas fa-notes-medical"></i></button>
+                        <button type="button" class="btn-dia-acao ${faltaAtestado || abonado ? 'ativo-falta' : ''}" onclick="toggleFaltaAtestado(${i})" title="Falta c/ Atestado"><i class="fas fa-notes-medical"></i></button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             }
             
-            // ✅ CRÍTICO: registrar os event listeners via JS (mais confiável que oninput inline)
             for (let i = 1; i <= dias; i++) {
                 ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(campo => {
                     const inp = document.getElementById(`edit_${campo}_${i}`);
-                    if (inp) {
+                    if (inp && !inp.disabled) {
                         inp.addEventListener('input', () => recalcularLinha(i));
                         inp.addEventListener('change', () => recalcularLinha(i));
                     }
@@ -3255,10 +3324,12 @@
                     : '<i class="fas fa-eye" style="color:#FF8C00;"></i> Modo: Visualização';
             }
             
-            console.log('✅ Editor inicializado:', { mes, ano, dias, dadosCarregados: Object.keys(dadosExistentes).length });
+            console.log('✅ Editor inicializado:', { mes, ano, dias, dadosCarregados: Object.keys(dadosExistentes).length, abonados: diasAbonados.size });
         }
 
         function recalcularLinha(dia) {
+            const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
+            if (tr && tr.dataset.abonado === 'true') return;
             const e1 = document.getElementById(`edit_e1_${dia}`)?.value || '';
             const s1 = document.getElementById(`edit_s1_${dia}`)?.value || '';
             const e2 = document.getElementById(`edit_e2_${dia}`)?.value || '';
@@ -3276,7 +3347,7 @@
             if (elT1) elT1.value = diff1;
             if (elT2) elT2.value = diff2;
             if (elTE) elTE.value = diffExtra;
-            if (elTG) elTG.value = total;
+            if (elTG) { elTG.value = total; elTG.classList.remove('abonado'); }
             recalcularTotaisEditor();
         }
 
@@ -3285,9 +3356,15 @@
             const ano = parseInt(document.getElementById('editorAno')?.value) || new Date().getFullYear();
             if (!mes) return;
             const dias = obterDiasDoMes(mes, ano);
-            let total1 = 0, total2 = 0, totalExtra = 0, totalGeral = 0, totalHE = 0;
-            let qtdDias = 0, qtdFolgaBH = 0, qtdFaltaAtestado = 0;
+            let total1 = 0, total2 = 0, totalExtra = 0, totalGeral = 0, totalHE = 0, totalAbonado = 0;
+            let qtdDias = 0, qtdFolgaBH = 0, qtdFaltaAtestado = 0, qtdAbonados = 0;
             for (let i = 1; i <= dias; i++) {
+                const tr = document.querySelector(`#editorTbody tr[data-dia="${i}"]`);
+                if (tr && tr.dataset.abonado === 'true') {
+                    qtdAbonados++;
+                    totalAbonado += JORNADA_PADRAO_MINUTOS;
+                    continue;
+                }
                 const t1 = document.getElementById(`edit_total1_${i}`)?.value || '00:00';
                 const t2 = document.getElementById(`edit_total2_${i}`)?.value || '00:00';
                 const tE = document.getElementById(`edit_total_extra_${i}`)?.value || '00:00';
@@ -3302,7 +3379,6 @@
                 totalGeral += mG;
                 if (mG > 0) qtdDias++;
                 if (mG > JORNADA_PADRAO_MINUTOS) totalHE += mG - JORNADA_PADRAO_MINUTOS;
-                const tr = document.querySelector(`#editorTbody tr[data-dia="${i}"]`);
                 if (tr) {
                     const btnFolga = tr.querySelector('button[title="Folga BH"]');
                     const btnFalta = tr.querySelector('button[title="Falta c/ Atestado"]');
@@ -3317,7 +3393,18 @@
             document.getElementById('editorQtdDias').textContent = qtdDias;
             document.getElementById('editorHoraExtraTotal').textContent = formatarHoras(totalHE);
             document.getElementById('editorQtdFolgaBH').textContent = qtdFolgaBH;
-            document.getElementById('editorQtdFaltaAtestado').textContent = qtdFaltaAtestado;
+            document.getElementById('editorQtdFaltaAtestado').textContent = qtdFaltaAtestado + qtdAbonados;
+            // Adiciona resumo de abonados
+            const resumo = document.getElementById('editorResumo');
+            if (resumo && !document.getElementById('editorQtdAbonados')) {
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.style.cssText = 'background:#e2d4f5;color:#4a2c91;border-color:#6f42c1;';
+                div.innerHTML = `<i class="fas fa-notes-medical"></i> Horas abonadas: <strong id="editorTotalAbonado">00:00</strong>`;
+                resumo.appendChild(div);
+            }
+            const elAbon = document.getElementById('editorTotalAbonado');
+            if (elAbon) elAbon.textContent = formatarHoras(totalAbonado);
         }
 
         function toggleFolgaBH(dia) {
@@ -3333,9 +3420,10 @@
                 btnFalta.classList.remove('ativo-falta');
                 tr.classList.add('linha-folga-bh');
                 tr.classList.remove('linha-falta-atestado');
+                delete tr.dataset.abonado;
                 ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                     const inp = document.getElementById(`edit_${c}_${dia}`);
-                    if (inp) inp.value = '';
+                    if (inp) { inp.value = ''; inp.disabled = false; }
                 });
                 recalcularLinha(dia);
             }
@@ -3350,6 +3438,8 @@
             if (btnFalta.classList.contains('ativo-falta')) {
                 btnFalta.classList.remove('ativo-falta');
                 tr.classList.remove('linha-falta-atestado');
+                delete tr.dataset.abonado;
+                recalcularLinha(dia);
                 recalcularTotaisEditor();
                 return;
             }
@@ -3357,11 +3447,17 @@
             btnFolga.classList.remove('ativo-folga-bh');
             tr.classList.add('linha-falta-atestado');
             tr.classList.remove('linha-folga-bh');
+            tr.dataset.abonado = 'true';
             ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                 const inp = document.getElementById(`edit_${c}_${dia}`);
-                if (inp) inp.value = '';
+                if (inp) { inp.value = ''; inp.disabled = true; }
             });
-            recalcularLinha(dia);
+            const elTG = document.getElementById(`edit_total_geral_${dia}`);
+            if (elTG) { elTG.value = 'ABONADO'; elTG.classList.add('abonado'); }
+            ['edit_total1_', 'edit_total2_', 'edit_total_extra_'].forEach(prefix => {
+                const el = document.getElementById(`${prefix}${dia}`);
+                if (el) el.value = '—';
+            });
             recalcularTotaisEditor();
             const mes = document.getElementById('editorMes').value;
             const ano = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
@@ -3410,7 +3506,6 @@
             mostrarToast(`🎉 ${count} feriado(s) marcado(s)!`);
         }
 
-        // ✅✅✅ APLICAR EDITOR — CORRIGIDO ✅✅✅
         async function aplicarEditorPonto() {
             console.log('=== aplicarEditorPonto INICIADO ===');
             
@@ -3449,9 +3544,14 @@
                 const btnFalta = tr?.querySelector('button[title="Falta c/ Atestado"]');
                 const folga_bh = btnFolga?.classList.contains('ativo-folga-bh') || false;
                 const falta_atestado = btnFalta?.classList.contains('ativo-falta') || false;
+                const abonado = tr?.dataset.abonado === 'true' || falta_atestado;
                 
-                if (e1 || s1 || e2 || s2 || extra_e1 || extra_s1 || folga_bh || falta_atestado) {
-                    dadosParaSalvar[i] = { e1, s1, e2, s2, extra_e1, extra_s1, folga_bh, falta_atestado };
+                if (e1 || s1 || e2 || s2 || extra_e1 || extra_s1 || folga_bh || falta_atestado || abonado) {
+                    dadosParaSalvar[i] = { 
+                        e1, s1, e2, s2, extra_e1, extra_s1, 
+                        folga_bh, 
+                        falta_atestado: falta_atestado || abonado 
+                    };
                 }
             }
             
@@ -3495,7 +3595,6 @@
                 fecharModalEditor();
                 await carregarDiasSemAnotacaoParaTodos();
                 await carregarFuncionarios();
-                // ✅ Reabre a pasta no mês/ano correto
                 setTimeout(() => abrirModalFuncionario(func.id), 300);
             } catch (error) {
                 console.error('❌ Erro ao salvar:', error);
@@ -3581,6 +3680,7 @@
                 const btnFalta = tr?.querySelector('button[title="Falta c/ Atestado"]');
                 if (btnFolga?.classList.contains('ativo-folga-bh')) continue;
                 if (btnFalta?.classList.contains('ativo-falta')) continue;
+                if (tr?.dataset.abonado === 'true') continue;
                 if (!e1.value && !s1.value && !e2.value && !s2.value) {
                     e1.value = '08:00';
                     s1.value = '12:00';
@@ -3638,7 +3738,7 @@
                 if (feriado) btn.classList.add('feriado');
                 const tr = document.querySelector(`#editorTbody tr[data-dia="${i}"]`);
                 const btnFalta = tr?.querySelector('button[title="Falta c/ Atestado"]');
-                const jaTemFalta = btnFalta?.classList.contains('ativo-falta') || false;
+                const jaTemFalta = btnFalta?.classList.contains('ativo-falta') || tr?.dataset.abonado === 'true';
                 if (jaTemFalta) btn.classList.add('ja-marcado-falta');
                 const labelMarcado = jaTemFalta 
                     ? '<span class="mini-sem" style="color:#fff;">✓ AT</span>' 
@@ -3668,9 +3768,10 @@
                 btnFalta.classList.remove('ativo-falta');
                 tr.classList.add('linha-folga-bh');
                 tr.classList.remove('linha-falta-atestado');
+                delete tr.dataset.abonado;
                 ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                     const inp = document.getElementById(`edit_${c}_${dia}`);
-                    if (inp) inp.value = '';
+                    if (inp) { inp.value = ''; inp.disabled = false; }
                 });
                 recalcularLinha(dia);
                 mostrarToast(`✅ Dia ${String(dia).padStart(2,'0')} marcado como Folga BH`);
@@ -3687,11 +3788,17 @@
             btnFolga.classList.remove('ativo-folga-bh');
             tr.classList.add('linha-falta-atestado');
             tr.classList.remove('linha-folga-bh');
+            tr.dataset.abonado = 'true';
             ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                 const inp = document.getElementById(`edit_${c}_${dia}`);
-                if (inp) inp.value = '';
+                if (inp) { inp.value = ''; inp.disabled = true; }
             });
-            recalcularLinha(dia);
+            const elTG = document.getElementById(`edit_total_geral_${dia}`);
+            if (elTG) { elTG.value = 'ABONADO'; elTG.classList.add('abonado'); }
+            ['edit_total1_', 'edit_total2_', 'edit_total_extra_'].forEach(prefix => {
+                const el = document.getElementById(`${prefix}${dia}`);
+                if (el) el.value = '—';
+            });
             recalcularTotaisEditor();
             const mes = document.getElementById('editorMes').value;
             const ano = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
@@ -3874,19 +3981,20 @@
                 const todosErros = [];
                 const diasDoMes = obterDiasDoMes(mesFiltro, parseInt(anoFiltro));
                 const mesIndex = MESES.indexOf(mesFiltro);
-                (marcacoes || []).forEach(marc => {
+                for (const marc of (marcacoes || [])) {
                     const func = funcMap[marc.funcionario_id];
-                    if (!func) return;
+                    if (!func) continue;
                     let dados = {};
                     try { dados = typeof marc.dados === 'string' ? JSON.parse(marc.dados) : marc.dados; } catch(e) { dados = {}; }
-                    const analise = analisarDadosPonto(dados, diasDoMes, mesIndex, parseInt(anoFiltro));
+                    const diasAbonados = await carregarMapaDiasAbonados(func.id, mesFiltro, parseInt(anoFiltro));
+                    const analise = analisarDadosPonto(dados, diasDoMes, mesIndex, parseInt(anoFiltro), diasAbonados);
                     analise.erros.forEach(e => {
                         todosErros.push({
                             funcionarioId: func.id, funcionarioNome: func.nome,
                             funcionarioUnidade: func.unidade, dia: e.dia, msg: e.msg
                         });
                     });
-                });
+                }
                 const badge = document.getElementById('badgeErros');
                 if (todosErros.length > 0) { badge.textContent = todosErros.length; badge.style.display = 'inline-block'; }
                 else { badge.style.display = 'none'; }
