@@ -2931,7 +2931,8 @@
                 });
                 await recarregarAbaAtestados(funcId);
                 await recarregarAbaCalendario(funcId);
-                mostrarToast('✅ Atestado refletido no cronograma!', 'info');
+                await carregarPontoNoModal();
+                mostrarToast('✅ Atestado refletido no ponto e cronograma!', 'info');
             } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
 
@@ -2960,6 +2961,7 @@
                 mostrarToast('✅ Atestado excluído!');
                 await recarregarAbaAtestados(funcionarioAtual.id);
                 await recarregarAbaCalendario(funcionarioAtual.id);
+                await carregarPontoNoModal();
             } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
 
@@ -3346,6 +3348,7 @@
                 if (error) throw error;
                 mostrarToast('✅ Férias adicionadas!');
                 await recarregarAbaCalendario(id);
+                await carregarPontoNoModal();
                 setTimeout(() => abrirModalFuncionario(id), 400);
             } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
@@ -3357,6 +3360,7 @@
                 if (error) throw error;
                 mostrarToast('✅ Férias cancelada!');
                 await recarregarAbaCalendario(funcId);
+                await carregarPontoNoModal();
                 setTimeout(() => abrirModalFuncionario(funcId), 400);
             } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
@@ -3391,6 +3395,33 @@
             const mesIndex = MESES.indexOf(mes);
             const analise = analisarDadosPonto(dadosPonto, diasDoMes, mesIndex, parseInt(ano));
 
+            // Buscar atestados do mês para refletir na tabela
+            let atestadosDoMes = [];
+            try {
+                const inicioISO = `${ano}-${String(mesIndex + 1).padStart(2, '0')}-01`;
+                const ultimoDia = new Date(parseInt(ano), mesIndex + 1, 0).getDate();
+                const fimISO = `${ano}-${String(mesIndex + 1).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+                const { data: atestData } = await supabaseClient
+                    .from('atestados').select('*')
+                    .eq('funcionario_id', func.id)
+                    .lte('data_inicio', fimISO)
+                    .gte('data_fim', inicioISO);
+                atestadosDoMes = atestData || [];
+            } catch(e) { console.warn('Erro atestados ponto:', e); }
+
+            // Mapear atestados por dia
+            const atestadoPorDia = {};
+            atestadosDoMes.forEach(a => {
+                const dtIni = parseDataLocal(a.data_inicio);
+                const dtFim = parseDataLocal(a.data_fim);
+                if (!dtIni || !dtFim) return;
+                for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
+                    if (d.getMonth() === mesIndex && d.getFullYear() === parseInt(ano)) {
+                        atestadoPorDia[d.getDate()] = a;
+                    }
+                }
+            });
+
             let totalMin = 0, totalHE = 0, contMarc = 0, contErros = 0;
 
             for (let i = 1; i <= diasDoMes; i++) {
@@ -3407,7 +3438,9 @@
                 const msgErro = temErro ? temErro.join('; ') : '';
                 const feriado = isFeriado(i, mesIndex, parseInt(ano));
                 const folgaBH = d.folga_bh || false;
-                const faltaAtestado = d.falta_atestado || false;
+                const atestadoDia = atestadoPorDia[i];
+                const temAtestado = !!atestadoDia;
+                const faltaAtestado = d.falta_atestado || temAtestado;
 
                 totalMin += totalMinDia;
                 if (temHE) totalHE += totalMinDia - JORNADA_PADRAO_MINUTOS;
@@ -3433,7 +3466,10 @@
                 }
                 if (faltaAtestado) {
                     classeLinha = 'linha-falta-atestado';
-                    badgeDia += `<span class="badge-falta-atestado" title="Falta c/ Atestado"><i class="fas fa-notes-medical"></i></span>`;
+                    const tituloAtestado = atestadoDia 
+                        ? `Atestado: ${atestadoDia.tipo || 'Médico'}${atestadoDia.cid ? ' - CID ' + atestadoDia.cid : ''}${atestadoDia.medico ? ' - Dr(a). ' + atestadoDia.medico : ''}`
+                        : 'Falta c/ Atestado';
+                    badgeDia += `<span class="badge-falta-atestado" title="${tituloAtestado}"><i class="fas fa-notes-medical"></i></span>`;
                 }
 
                 const diaSemana = getDiaSemana(i, mesIndex, parseInt(ano));
@@ -3608,6 +3644,29 @@
                 }
             } catch(e) {}
             
+            // Buscar atestados do mês para marcar automaticamente no editor
+            let atestadoPorDia = {};
+            try {
+                const ultimoDia = new Date(ano, mesIndex + 1, 0).getDate();
+                const inicioISO = `${ano}-${String(mesIndex + 1).padStart(2, '0')}-01`;
+                const fimISO = `${ano}-${String(mesIndex + 1).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+                const { data: atestData } = await supabaseClient
+                    .from('atestados').select('*')
+                    .eq('funcionario_id', funcionarioAtual.id)
+                    .lte('data_inicio', fimISO)
+                    .gte('data_fim', inicioISO);
+                (atestData || []).forEach(a => {
+                    const dtIni = parseDataLocal(a.data_inicio);
+                    const dtFim = parseDataLocal(a.data_fim);
+                    if (!dtIni || !dtFim) return;
+                    for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
+                        if (d.getMonth() === mesIndex && d.getFullYear() === ano) {
+                            atestadoPorDia[d.getDate()] = a;
+                        }
+                    }
+                });
+            } catch(e) { console.warn('Erro atestados editor:', e); }
+            
             const tbody = document.getElementById('editorTbody');
             tbody.innerHTML = '';
             
@@ -3616,7 +3675,8 @@
                 const diaSemana = getDiaSemana(i, mesIndex, ano);
                 const feriado = isFeriado(i, mesIndex, ano);
                 const folgaBH = d.folga_bh || false;
-                const faltaAtestado = d.falta_atestado || false;
+                const temAtestado = !!atestadoPorDia[i];
+                const faltaAtestado = d.falta_atestado || temAtestado;
                 
                 let classesTr = '';
                 if (feriado) classesTr += ' linha-feriado';
@@ -3637,6 +3697,7 @@
                     <td class="dia-cell">
                         <span class="dia-num">${String(i).padStart(2, '0')}</span>
                         <span class="dia-sem">${diaSemana}</span>
+                        ${temAtestado ? `<span class="badge-falta-atestado" title="Atestado: ${atestadoPorDia[i].tipo || 'Médico'}${atestadoPorDia[i].cid ? ' - CID ' + atestadoPorDia[i].cid : ''}" style="margin-left:4px;"><i class="fas fa-notes-medical"></i></span>` : ''}
                     </td>
                     <td><input type="time" id="edit_e1_${i}" value="${d.e1 || ''}" ${!isUser ? 'disabled' : ''} oninput="recalcularLinha(${i})" onchange="recalcularLinha(${i})"></td>
                     <td><input type="time" id="edit_s1_${i}" value="${d.s1 || ''}" ${!isUser ? 'disabled' : ''} oninput="recalcularLinha(${i})" onchange="recalcularLinha(${i})"></td>
