@@ -438,7 +438,6 @@
             background: #1e1e1e;
         }
 
-        /* HEADER — BARRA PRETA */
         .rel-header {
             background: #202124;
             padding: 0 16px;
@@ -498,7 +497,6 @@
         .rel-btn-close { background: #3c4043; color: #e8eaed; }
         .rel-btn-close:hover { background: #dc3545; color: #fff; }
 
-        /* TOOLBAR — CINZA ESCURO */
         .rel-toolbar {
             background: #292a2d;
             padding: 8px 16px;
@@ -573,7 +571,6 @@
         }
         .rel-toolbar .search-box input::placeholder { color: #5f6368; }
 
-        /* ÁREA DO DOCUMENTO — FUNDO ESCURO */
         .rel-body {
             flex: 1;
             overflow-y: auto;
@@ -596,7 +593,6 @@
             color: #000;
         }
 
-        /* FILTROS NO DOCUMENTO */
         .rel-filtros {
             display: flex;
             gap: 10px;
@@ -650,7 +646,6 @@
             background: #333;
         }
 
-        /* CABEÇALHO DO RELATÓRIO (dentro da página) */
         .rel-doc-header {
             text-align: center;
             border-bottom: 2px solid #000;
@@ -682,7 +677,6 @@
             border-top: 1px solid #000;
         }
 
-        /* TABELAS DO RELATÓRIO — PRETO E BRANCO */
         .rel-tabela {
             width: 100%;
             border-collapse: collapse;
@@ -769,7 +763,6 @@
             color: #000;
         }
 
-        /* SEÇÃO DE RESUMO DO FUNCIONÁRIO */
         .rel-resumo-func {
             display: flex;
             flex-wrap: wrap;
@@ -803,7 +796,6 @@
             color: #000;
         }
 
-        /* SEÇÃO GERAL */
         .rel-secao-titulo {
             font-size: 12px;
             font-weight: 800;
@@ -840,7 +832,6 @@
             font-weight: 500;
         }
 
-        /* FOOTER — BARRA ESCURA */
         .rel-footer {
             background: #202124;
             padding: 6px 16px;
@@ -928,7 +919,6 @@
         <button class="sidebar-btn" onclick="abrirCronogramas()"><i class="fas fa-calendar-week"></i> Cronogramas</button>
         <button class="sidebar-btn" onclick="abrirRelatorioPonto()"><i class="fas fa-file-alt"></i> Relatório de Ponto</button>
         <button class="sidebar-btn" onclick="abrirErros()"><i class="fas fa-exclamation-triangle"></i> Erros de Marcação <span class="badge-sidebar" id="badgeErros" style="display:none;">0</span></button>
-        <button class="sidebar-btn" onclick="abrirConsultaCID()"><i class="fas fa-book-medical"></i> Consulta CID</button>
         <div class="sidebar-label"><i class="fas fa-users-cog"></i> Administração</div>
         <button class="sidebar-btn" onclick="abrirModalPerfis()"><i class="fas fa-user-shield"></i> Perfis de Usuário</button>
         <button class="sidebar-btn" onclick="fazerLogout()" style="color:#dc3545;"><i class="fas fa-sign-out-alt" style="color:#dc3545;"></i> Sair</button>
@@ -1424,24 +1414,6 @@
                     <button type="button" class="btn-action btn-secondary" onclick="fecharModalCalendarioStatus()"><i class="fas fa-times"></i> Cancelar</button>
                     <button type="button" class="btn-action btn-success" onclick="salvarStatusCalendario()"><i class="fas fa-save"></i> Salvar</button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL CONSULTA CID -->
-    <div class="modal" id="modalConsultaCID">
-        <div class="modal-content" style="max-width:900px;">
-            <div class="modal-header">
-                <h2><i class="fas fa-book-medical"></i> Consulta CID-10</h2>
-                <button class="modal-close" onclick="fecharConsultaCID()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group" style="margin-bottom:12px;">
-                    <label><i class="fas fa-search"></i> Buscar por código ou descrição</label>
-                    <input type="text" id="cidBuscaInput" placeholder="Ex: J11, gripe, diabetes..." oninput="renderizarListaCID(this.value)" autofocus>
-                </div>
-                <div id="cidContador" style="font-size:11px;color:#7a3a00;font-weight:600;margin-bottom:8px;"></div>
-                <div id="cidListaContainer" style="max-height:500px;overflow-y:auto;border:1px solid #eee;border-radius:10px;"></div>
             </div>
         </div>
     </div>
@@ -3868,59 +3840,6 @@
         });
 
         // ============================================================
-        // CONSULTA CID
-        // ============================================================
-        function abrirConsultaCID() {
-            document.getElementById('modalConsultaCID').classList.add('active');
-            document.getElementById('cidBuscaInput').value = '';
-            renderizarListaCID('');
-            setTimeout(() => document.getElementById('cidBuscaInput')?.focus(), 100);
-        }
-        function fecharConsultaCID() { document.getElementById('modalConsultaCID').classList.remove('active'); }
-
-        function renderizarListaCID(termo) {
-            const container = document.getElementById('cidListaContainer');
-            const contador = document.getElementById('cidContador');
-            if (!container) return;
-            const t = (termo || '').trim().toLowerCase();
-            let resultados = CID10_DB;
-            if (t) {
-                resultados = CID10_DB.filter(item =>
-                    item.cod.toLowerCase().includes(t) ||
-                    item.desc.toLowerCase().includes(t) ||
-                    item.cat.toLowerCase().includes(t)
-                );
-            }
-            if (contador) contador.textContent = `${resultados.length} CID(s) encontrado(s)`;
-            if (resultados.length === 0) {
-                container.innerHTML = `<div style="text-align:center;padding:40px;color:#999;"><i class="fas fa-search" style="font-size:32px;display:block;margin-bottom:10px;"></i>Nenhum CID encontrado para "${termo}"</div>`;
-                return;
-            }
-            container.innerHTML = resultados.map(item => `
-                <div class="erro-item" style="cursor:pointer;" onclick="copiarCID('${item.cod}')">
-                    <span class="erro-msg">
-                        <i class="fas fa-tag" style="color:#6f42c1;"></i>
-                        <strong style="color:#6f42c1;font-size:14px;">${item.cod}</strong>
-                        <span style="color:#1a0a00;">— ${item.desc}</span>
-                        <span class="cid-cat" style="display:inline-block;background:#e2d4f5;color:#4a2c91;font-size:9px;font-weight:700;padding:1px 8px;border-radius:8px;margin-left:6px;text-transform:uppercase;">${item.cat}</span>
-                    </span>
-                    <div class="erro-actions">
-                        <button type="button" class="btn-action btn-primary btn-sm" title="Copiar código"><i class="fas fa-copy"></i></button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function copiarCID(cod) {
-            try {
-                navigator.clipboard.writeText(cod);
-                mostrarToast(`📋 CID "${cod}" copiado!`, 'info');
-            } catch(e) {
-                mostrarToast(`CID: ${cod}`, 'info');
-            }
-        }
-
-        // ============================================================
         // CALENDÁRIO
         // ============================================================
         async function carregarCalendario(funcId, mes, ano) {
@@ -5305,7 +5224,6 @@
                     fecharAtestadoAnexoView();
                     fecharModalCalendarioStatus();
                     fecharModalDiaEscolha();
-                    fecharConsultaCID();
                     fecharRelatorioPonto();
                 }
             });
