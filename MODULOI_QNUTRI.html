@@ -4030,17 +4030,14 @@
                 const extra_s1 = extraS1El ? extraS1El.value : '';
                 
                 const tr = document.querySelector(`#editorTbody tr[data-dia="${i}"]`);
-                const btnFolga = tr?.querySelector('button[title="Folga BH"]');
-                const btnFalta = tr?.querySelector('button[title="Falta c/ Atestado"]');
-                const folga_bh = btnFolga?.classList.contains('ativo-folga-bh') || false;
-                const falta_atestado = btnFalta?.classList.contains('ativo-falta') || false;
-                const abonado = tr?.dataset.abonado === 'true' || falta_atestado;
+                const folga_bh = tr?.dataset.folgaBH === 'true' || false;
+                const falta_atestado = tr?.dataset.abonado === 'true' || false;
                 
-                if (e1 || s1 || e2 || s2 || extra_e1 || extra_s1 || folga_bh || falta_atestado || abonado) {
+                if (e1 || s1 || e2 || s2 || extra_e1 || extra_s1 || folga_bh || falta_atestado) {
                     dadosParaSalvar[i] = { 
                         e1, s1, e2, s2, extra_e1, extra_s1, 
                         folga_bh, 
-                        falta_atestado: falta_atestado || abonado 
+                        falta_atestado: falta_atestado 
                     };
                 }
             }
@@ -4168,13 +4165,18 @@
             if (elAbon) elAbon.textContent = formatarHoras(totalAbonado);
         }
 
+        // ============================================================
+        // FUNÇÕES TOGGLE (CORRIGIDAS E GLOBAIS)
+        // ============================================================
         function toggleFolgaBH(dia) {
             const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
             if (!tr) return;
             const btnFolga = tr.querySelector('button[title="Folga BH"]');
             const btnFalta = tr.querySelector('button[title="Falta c/ Atestado"]');
             const elTG = document.getElementById(`edit_total_geral_${dia}`);
+            
             if (btnFolga.classList.contains('ativo-folga-bh')) {
+                // Desativar
                 btnFolga.classList.remove('ativo-folga-bh');
                 tr.classList.remove('linha-folga-bh');
                 delete tr.dataset.folgaBH;
@@ -4185,7 +4187,9 @@
                     elTG.value = somarHoras(somarHoras(diff1, diff2), diffExtra);
                     elTG.className = 'total-geral';
                 }
+                mostrarToast(`📋 Dia ${String(dia).padStart(2,'0')} removido de Folga BH`, 'info');
             } else {
+                // Ativar
                 btnFolga.classList.add('ativo-folga-bh');
                 btnFalta.classList.remove('ativo-falta');
                 tr.classList.add('linha-folga-bh');
@@ -4198,6 +4202,7 @@
                 });
                 if (elTG) { elTG.value = 'HORAS BH'; elTG.className = 'total-geral horas-bh'; }
                 recalcularLinha(dia);
+                mostrarToast(`✅ Dia ${String(dia).padStart(2,'0')} marcado como Folga BH (-8h compensação)`);
             }
             recalcularTotaisEditor();
             agendarAutoSave();
@@ -4209,7 +4214,9 @@
             const btnFolga = tr.querySelector('button[title="Folga BH"]');
             const btnFalta = tr.querySelector('button[title="Falta c/ Atestado"]');
             const elTG = document.getElementById(`edit_total_geral_${dia}`);
+            
             if (btnFalta.classList.contains('ativo-falta')) {
+                // Desativar
                 btnFalta.classList.remove('ativo-falta');
                 tr.classList.remove('linha-falta-atestado');
                 delete tr.dataset.abonado;
@@ -4228,8 +4235,10 @@
                 recalcularLinha(dia);
                 recalcularTotaisEditor();
                 agendarAutoSave();
+                mostrarToast(`📋 Dia ${String(dia).padStart(2,'0')} removido de Falta c/ Atestado`, 'info');
                 return;
             }
+            // Ativar
             btnFalta.classList.add('ativo-falta');
             btnFolga.classList.remove('ativo-folga-bh');
             tr.classList.add('linha-falta-atestado');
