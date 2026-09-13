@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: linear-gradient(135deg, #ffe0b0 0%, #ffb84d 30%, #FF8C00 60%, #e07000 100%); font-family: 'Poppins', sans-serif; color: #1a0a00; min-height: 100vh; padding-bottom: 40px; }
@@ -414,7 +415,7 @@
         .cid-picker-empty { padding: 12px; text-align: center; color: #999; font-size: 11px; }
 
         /* ============================================================
-           RELATÓRIO POP-UP MODERNO
+           RELATÓRIO — VISUALIZADOR DE PDF MODERNO
            ============================================================ */
         .relatorio-paisagem {
             display: none;
@@ -422,135 +423,198 @@
             z-index: 9999;
             left: 0; top: 0;
             width: 100%; height: 100%;
-            background: rgba(10, 6, 2, 0.85);
-            backdrop-filter: blur(12px);
-            overflow-y: auto;
-            padding: 20px;
+            background: #1e1e1e;
+            overflow: hidden;
             justify-content: center;
-            align-items: flex-start;
+            align-items: stretch;
         }
         .relatorio-paisagem.active { display: flex; }
 
         .relatorio-paisagem .conteudo-relatorio {
-            background: #ffffff;
-            border-radius: 24px;
-            max-width: 1280px;
-            width: 100%;
-            max-height: 95vh;
-            overflow: hidden;
-            box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,140,0,0.15);
-            position: relative;
-            animation: relatorioFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
-        }
-        @keyframes relatorioFadeIn {
-            from { opacity: 0; transform: translateY(-30px) scale(0.96); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+            width: 100%;
+            height: 100%;
+            background: #1e1e1e;
         }
 
-        /* HEADER DO RELATÓRIO */
+        /* HEADER — BARRA PRETA */
         .rel-header {
-            background: linear-gradient(135deg, #1a0a00 0%, #2d1400 50%, #1a0a00 100%);
-            padding: 20px 28px;
+            background: #202124;
+            padding: 0 16px;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 16px;
-            flex-wrap: wrap;
-            border-bottom: 3px solid #FF8C00;
-            position: relative;
-            overflow: hidden;
-        }
-        .rel-header::before {
-            content: '';
-            position: absolute;
-            top: -50%; right: -10%;
-            width: 300px; height: 300px;
-            background: radial-gradient(circle, rgba(255,140,0,0.15) 0%, transparent 70%);
-            pointer-events: none;
+            gap: 12px;
+            border-bottom: 1px solid #3c4043;
+            flex-shrink: 0;
         }
         .rel-header .titulo-wrap {
             display: flex;
             align-items: center;
-            gap: 14px;
-            position: relative;
-            z-index: 1;
+            gap: 10px;
+            min-width: 0;
         }
         .rel-header .titulo-icon {
-            width: 52px; height: 52px;
-            border-radius: 14px;
-            background: linear-gradient(135deg, #FF8C00, #e07000);
+            width: 32px; height: 32px;
+            border-radius: 6px;
+            background: #FF8C00;
             display: flex; align-items: center; justify-content: center;
-            color: #fff; font-size: 24px;
-            box-shadow: 0 8px 24px rgba(255,140,0,0.4);
+            color: #fff; font-size: 16px;
             flex-shrink: 0;
         }
         .rel-header .titulo-texto h2 {
-            color: #fff; font-size: 19px; font-weight: 800; margin: 0; line-height: 1.2;
+            color: #e8eaed; font-size: 14px; font-weight: 600; margin: 0; line-height: 1.2;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .rel-header .titulo-texto p {
-            color: rgba(255,255,255,0.55); font-size: 11px; font-weight: 500; margin-top: 2px;
-        }
-        .rel-header .titulo-texto p strong {
-            color: #FF8C00; font-weight: 700;
+            color: #9aa0a6; font-size: 10px; margin-top: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .rel-header-actions {
             display: flex;
             gap: 8px;
-            flex-wrap: wrap;
-            position: relative;
-            z-index: 1;
+            align-items: center;
+            flex-shrink: 0;
         }
         .rel-btn {
             font-family: 'Poppins', sans-serif;
-            padding: 9px 18px;
-            border-radius: 10px;
+            padding: 8px 16px;
+            border-radius: 6px;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 7px;
-            transition: all 0.25s;
+            gap: 6px;
+            transition: all 0.2s;
             border: none;
             white-space: nowrap;
         }
-        .rel-btn:hover { transform: translateY(-2px); }
-        .rel-btn-print { background: linear-gradient(135deg, #FF8C00, #cc7000); color: #fff; box-shadow: 0 4px 14px rgba(255,140,0,0.4); }
-        .rel-btn-print:hover { box-shadow: 0 8px 22px rgba(255,140,0,0.55); }
-        .rel-btn-close { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); }
-        .rel-btn-close:hover { background: rgba(220,53,69,0.9); border-color: #dc3545; }
+        .rel-btn:hover { opacity: 0.9; }
+        .rel-btn-pdf { background: #28a745; color: #fff; }
+        .rel-btn-print { background: #FF8C00; color: #fff; }
+        .rel-btn-close { background: #3c4043; color: #e8eaed; }
+        .rel-btn-close:hover { background: #dc3545; color: #fff; }
 
-        /* BODY DO RELATÓRIO */
-        .rel-body {
-            padding: 24px 28px 30px;
-            overflow-y: auto;
+        /* TOOLBAR — CINZA ESCURO */
+        .rel-toolbar {
+            background: #292a2d;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #3c4043;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .rel-toolbar .grupo {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #1e1e1e;
+            border-radius: 6px;
+            padding: 2px;
+        }
+        .rel-toolbar .grupo button {
+            background: transparent;
+            border: none;
+            color: #9aa0a6;
+            width: 32px; height: 32px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .rel-toolbar .grupo button:hover {
+            background: #3c4043;
+            color: #fff;
+        }
+        .rel-toolbar .grupo button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .rel-toolbar .zoom-label {
+            color: #e8eaed;
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 45px;
+            text-align: center;
+        }
+        .rel-toolbar .pagina-label {
+            color: #e8eaed;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .rel-toolbar .search-box {
+            display: flex;
+            align-items: center;
+            background: #1e1e1e;
+            border-radius: 6px;
+            padding: 0 10px;
+            height: 32px;
+            gap: 6px;
             flex: 1;
-            background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+            max-width: 300px;
+        }
+        .rel-toolbar .search-box i { color: #9aa0a6; font-size: 12px; }
+        .rel-toolbar .search-box input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #e8eaed;
+            font-size: 12px;
+            font-family: 'Poppins', sans-serif;
+            width: 100%;
+        }
+        .rel-toolbar .search-box input::placeholder { color: #5f6368; }
+
+        /* ÁREA DO DOCUMENTO — FUNDO ESCURO */
+        .rel-body {
+            flex: 1;
+            overflow-y: auto;
+            background: #1e1e1e;
+            padding: 24px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .rel-pagina {
+            background: #ffffff;
+            width: 100%;
+            max-width: 1280px;
+            border-radius: 4px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            padding: 32px 36px;
+            margin: 0 auto;
+            position: relative;
         }
 
-        /* FILTROS */
+        /* FILTROS NO DOCUMENTO */
         .rel-filtros {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
             align-items: flex-end;
-            background: #fff;
-            padding: 16px 18px;
-            border-radius: 16px;
-            border: 1px solid #f0f0f0;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.04);
-            margin-bottom: 22px;
+            background: #fafafa;
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid #eee;
+            margin-bottom: 20px;
         }
         .rel-filtros .campo {
             display: flex;
             flex-direction: column;
             gap: 4px;
-            min-width: 130px;
+            min-width: 110px;
         }
         .rel-filtros .campo label {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             color: #7a3a00;
             text-transform: uppercase;
@@ -563,10 +627,10 @@
         .rel-filtros .campo select,
         .rel-filtros .campo input {
             font-family: 'Poppins', sans-serif;
-            padding: 8px 12px;
+            padding: 7px 10px;
             border: 1.5px solid #eee;
-            border-radius: 10px;
-            font-size: 13px;
+            border-radius: 8px;
+            font-size: 12px;
             color: #1a0a00;
             background: #fff;
             outline: none;
@@ -579,39 +643,38 @@
         }
         .rel-filtros .btn-gerar {
             font-family: 'Poppins', sans-serif;
-            padding: 10px 22px;
-            border-radius: 10px;
-            font-size: 13px;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 12px;
             font-weight: 700;
             cursor: pointer;
-            background: linear-gradient(135deg, #FF8C00, #cc7000);
+            background: #FF8C00;
             color: #fff;
             border: none;
             display: inline-flex;
             align-items: center;
-            gap: 7px;
+            gap: 6px;
             transition: all 0.25s;
-            box-shadow: 0 4px 14px rgba(255,140,0,0.3);
         }
         .rel-filtros .btn-gerar:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 22px rgba(255,140,0,0.45);
+            background: #e07000;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255,140,0,0.3);
         }
 
         /* CARDS DE RESUMO GERAL */
         .rel-resumo-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 12px;
-            margin-bottom: 24px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
         }
         .rel-resumo-card {
             background: #fff;
-            border-radius: 16px;
-            padding: 16px 18px;
+            border-radius: 10px;
+            padding: 12px 14px;
             border: 1px solid #f0f0f0;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.04);
-            transition: all 0.25s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             position: relative;
             overflow: hidden;
         }
@@ -619,30 +682,26 @@
             content: '';
             position: absolute;
             top: 0; left: 0;
-            width: 5px; height: 100%;
+            width: 4px; height: 100%;
             background: var(--cor-card, #FF8C00);
         }
-        .rel-resumo-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 28px rgba(0,0,0,0.1);
-        }
         .rel-resumo-card .rc-label {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             color: #7a3a00;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
             display: flex;
             align-items: center;
-            gap: 5px;
-            margin-bottom: 6px;
+            gap: 4px;
+            margin-bottom: 4px;
         }
         .rel-resumo-card .rc-label i {
             color: var(--cor-card, #FF8C00);
-            font-size: 13px;
+            font-size: 11px;
         }
         .rel-resumo-card .rc-value {
-            font-size: 26px;
+            font-size: 22px;
             font-weight: 800;
             color: var(--cor-card, #FF8C00);
             line-height: 1.1;
@@ -651,143 +710,132 @@
         /* CARD DE FUNCIONÁRIO */
         .rel-func-card {
             background: #fff;
-            border-radius: 20px;
+            border-radius: 12px;
             border: 1px solid #f0f0f0;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-            margin-bottom: 22px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            margin-bottom: 18px;
             overflow: hidden;
-            transition: all 0.25s;
         }
-        .rel-func-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); }
 
         .rel-func-head {
-            padding: 16px 20px;
-            background: linear-gradient(135deg, rgba(255,140,0,0.06), rgba(255,140,0,0.01));
-            border-bottom: 1px solid #f5f5f5;
+            padding: 14px 18px;
+            background: #fafafa;
+            border-bottom: 1px solid #f0f0f0;
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
             flex-wrap: wrap;
         }
         .rel-func-head .avatar {
-            width: 46px; height: 46px;
+            width: 40px; height: 40px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #FF8C00, #e07000);
+            background: #FF8C00;
             display: flex; align-items: center; justify-content: center;
-            color: #fff; font-size: 20px;
+            color: #fff; font-size: 18px;
             flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(255,140,0,0.3);
+            overflow: hidden;
         }
-        .rel-func-head .info { flex: 1; min-width: 200px; }
+        .rel-func-head .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .rel-func-head .info { flex: 1; min-width: 180px; }
         .rel-func-head .info .nome {
-            font-size: 15px; font-weight: 800; color: #1a0a00;
+            font-size: 14px; font-weight: 800; color: #1a0a00;
         }
         .rel-func-head .info .meta {
-            font-size: 11px; color: #7a3a00; margin-top: 2px;
-            display: flex; flex-wrap: wrap; gap: 10px;
+            font-size: 10px; color: #7a3a00; margin-top: 2px;
+            display: flex; flex-wrap: wrap; gap: 8px;
         }
         .rel-func-head .info .meta span i { color: #FF8C00; margin-right: 3px; }
         .rel-func-head .head-resumo {
-            display: flex; gap: 8px; flex-wrap: wrap;
+            display: flex; gap: 6px; flex-wrap: wrap;
         }
         .rel-func-head .mini-tag {
-            padding: 5px 12px; border-radius: 20px;
-            font-size: 10px; font-weight: 700;
-            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 10px; border-radius: 16px;
+            font-size: 9px; font-weight: 700;
+            display: inline-flex; align-items: center; gap: 3px;
             background: #fff; border: 1px solid #eee;
         }
-        .rel-func-head .mini-tag i { font-size: 11px; }
 
-        /* MINI CARDS DE TOTAIS DO FUNCIONÁRIO */
         .rel-func-totais {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 8px;
-            padding: 14px 20px;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 6px;
+            padding: 12px 18px;
             background: #fafafa;
             border-bottom: 1px solid #f0f0f0;
         }
         .rel-func-totais .mini-total {
             background: #fff;
-            border-radius: 10px;
-            padding: 8px 12px;
+            border-radius: 8px;
+            padding: 6px 10px;
             border-left: 3px solid var(--cor-mini, #FF8C00);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
         }
         .rel-func-totais .mini-total .mt-label {
-            font-size: 9px; font-weight: 700;
+            font-size: 8px; font-weight: 700;
             color: #7a3a00; text-transform: uppercase;
             letter-spacing: 0.3px;
-            display: block; margin-bottom: 2px;
+            display: block; margin-bottom: 1px;
         }
         .rel-func-totais .mini-total .mt-value {
-            font-size: 15px; font-weight: 800;
+            font-size: 13px; font-weight: 800;
             color: var(--cor-mini, #FF8C00);
         }
 
-        /* TABELA DO RELATÓRIO */
         .rel-tabela-wrap {
             overflow-x: auto;
-            padding: 0 20px 20px;
+            padding: 0 18px 18px;
         }
         .rel-tabela {
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            font-size: 11px;
-            min-width: 780px;
+            border-collapse: collapse;
+            font-size: 10px;
+            min-width: 720px;
         }
         .rel-tabela thead th {
-            background: linear-gradient(180deg, #fff8f0, #fff3e0);
+            background: #fff8f0;
             color: #7a3a00;
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 800;
-            padding: 9px 5px;
+            padding: 8px 4px;
             text-align: center;
             text-transform: uppercase;
             letter-spacing: 0.4px;
             border-bottom: 2px solid #FF8C00;
-            position: sticky; top: 0; z-index: 2;
         }
-        .rel-tabela thead th:first-child { border-top-left-radius: 10px; }
-        .rel-tabela thead th:last-child { border-top-right-radius: 10px; }
         .rel-tabela tbody td {
-            padding: 7px 5px;
+            padding: 5px 4px;
             text-align: center;
             border-bottom: 1px solid #f5f5f5;
-            font-size: 11px;
+            font-size: 10px;
             color: #333;
         }
-        .rel-tabela tbody tr { transition: background 0.15s; }
         .rel-tabela tbody tr:hover { background: #fffaf3; }
-        .rel-tabela tbody tr:last-child td { border-bottom: none; }
         .rel-tabela .dia-col {
             font-weight: 800; color: #1a0a00; text-align: left;
-            padding-left: 12px; white-space: nowrap;
+            padding-left: 10px; white-space: nowrap;
         }
         .rel-tabela .dia-col .dia-num {
-            display: inline-block; min-width: 24px;
-            font-size: 12px; color: #FF8C00;
+            display: inline-block; min-width: 20px;
+            font-size: 11px; color: #FF8C00;
         }
         .rel-tabela .dia-col .dia-sem {
-            font-size: 9px; color: #7a3a00; font-weight: 600;
+            font-size: 8px; color: #7a3a00; font-weight: 600;
         }
         .rel-tabela .total-col {
             font-weight: 800; color: #cc7000;
-            background: rgba(255,140,0,0.04);
+            background: #fff8f0;
         }
-        .rel-tabela .obs-col {
-            font-size: 9px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.3px;
-        }
-        .rel-tabela tr.linha-feriado { background: rgba(253,126,20,0.10); }
-        .rel-tabela tr.linha-folga-bh { background: rgba(108,117,125,0.10); }
-        .rel-tabela tr.linha-falta-atestado { background: rgba(111,66,193,0.08); }
-        .rel-tabela tr.linha-trabalho { background: rgba(40,167,69,0.03); }
+        .rel-tabela .total-col.abonado { color: #6f42c1; background: #f5f0ff; }
+        .rel-tabela .total-col.bh { color: #212529; background: #e8e9ea; }
+        .rel-tabela .obs-col { font-size: 8px; }
+
+        .rel-tabela tr.linha-feriado { background: #fff8e6; }
+        .rel-tabela tr.linha-folga-bh { background: #f0f1f2; }
+        .rel-tabela tr.linha-falta-atestado { background: #f5f0ff; }
+        .rel-tabela tr.linha-trabalho { background: #f8fff8; }
 
         .rel-tag {
-            display: inline-block; padding: 3px 9px;
-            border-radius: 8px; font-size: 9px;
+            display: inline-block; padding: 2px 8px;
+            border-radius: 6px; font-size: 8px;
             font-weight: 800; letter-spacing: 0.3px;
         }
         .rel-tag-abonado { background: #e2d4f5; color: #4a2c91; }
@@ -795,7 +843,6 @@
         .rel-tag-feriado { background: #ffe0b0; color: #7a3a00; }
         .rel-tag-ok { background: #d4edda; color: #155724; }
 
-        /* EMPTY */
         .rel-empty {
             text-align: center; padding: 60px 20px;
             color: #7a3a00;
@@ -807,40 +854,44 @@
         .rel-empty p { font-size: 15px; font-weight: 700; }
         .rel-empty small { font-size: 12px; color: #999; font-weight: 500; }
 
-        /* RESPONSIVO */
+        /* FOOTER — BARRA ESCURA */
+        .rel-footer {
+            background: #202124;
+            padding: 6px 16px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid #3c4043;
+            flex-shrink: 0;
+        }
+        .rel-footer span {
+            color: #9aa0a6;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .rel-footer span i { font-size: 10px; }
+
         @media (max-width: 768px) {
-            .rel-header { padding: 16px 18px; }
-            .rel-header .titulo-texto h2 { font-size: 15px; }
-            .rel-header .titulo-icon { width: 42px; height: 42px; font-size: 20px; }
-            .rel-body { padding: 18px 16px 24px; }
-            .rel-filtros { padding: 12px; gap: 8px; }
-            .rel-filtros .campo { min-width: 100%; }
-            .rel-func-head { padding: 12px 14px; }
-            .rel-tabela-wrap { padding: 0 12px 16px; }
+            .rel-pagina { padding: 20px 16px; border-radius: 0; }
+            .rel-header { padding: 0 12px; }
+            .rel-header .titulo-texto h2 { font-size: 12px; }
+            .rel-toolbar { padding: 6px 10px; gap: 6px; }
+            .rel-toolbar .search-box { max-width: 100%; }
         }
 
         @media print {
-            .relatorio-paisagem .rel-header-actions,
-            .relatorio-paisagem .rel-filtros { display: none; }
-            body * { visibility: hidden; }
-            .relatorio-paisagem, .relatorio-paisagem * { visibility: visible; }
-            .relatorio-paisagem { position: absolute; left: 0; top: 0; width: 100%; background: #fff; padding: 0; }
-            .relatorio-paisagem .conteudo-relatorio { box-shadow: none; max-height: none; overflow: visible; border-radius: 0; }
-            .rel-body { overflow: visible; }
+            .relatorio-paisagem .rel-header,
+            .relatorio-paisagem .rel-toolbar,
+            .relatorio-paisagem .rel-footer { display: none; }
+            .relatorio-paisagem { background: #fff; position: static; display: block; }
+            .rel-body { background: #fff; padding: 0; display: block; }
+            .rel-pagina { box-shadow: none; border-radius: 0; padding: 0; max-width: 100%; }
+            .rel-filtros { display: none; }
             @page { size: landscape; margin: 10mm; }
         }
-
-        .btn-salvar-cartao-destaque {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 20; padding: 14px 28px; font-size: 15px; font-weight: 800;
-            background: linear-gradient(135deg, #28a745, #1e7e34);
-            color: #fff; border: 3px solid #fff; border-radius: 14px;
-            cursor: pointer; box-shadow: 0 8px 30px rgba(0,0,0,0.45);
-            transition: all 0.3s; font-family: 'Poppins', sans-serif;
-            text-transform: uppercase; letter-spacing: 1px;
-        }
-        .btn-salvar-cartao-destaque:hover { transform: translate(-50%, -50%) scale(1.08); box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
-        .btn-salvar-cartao-destaque i { margin-right: 8px; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -1418,19 +1469,22 @@
         <div id="atestadoAnexoViewConteudo"></div>
     </div>
 
-    <!-- RELATÓRIO DE PONTO — POP-UP MODERNO -->
+    <!-- RELATÓRIO — VISUALIZADOR DE PDF -->
     <div class="relatorio-paisagem" id="relatorioPaisagem">
         <div class="conteudo-relatorio">
             <!-- HEADER -->
             <div class="rel-header">
                 <div class="titulo-wrap">
-                    <div class="titulo-icon"><i class="fas fa-file-invoice"></i></div>
+                    <div class="titulo-icon"><i class="fas fa-file-pdf"></i></div>
                     <div class="titulo-texto">
-                        <h2>Relatório de Ponto</h2>
+                        <h2 id="relTituloArquivo">Relatorio_Ponto_2026.pdf</h2>
                         <p id="relHeaderSubtitulo">Selecione os filtros e clique em <strong>Gerar</strong></p>
                     </div>
                 </div>
                 <div class="rel-header-actions">
+                    <button type="button" class="rel-btn rel-btn-pdf" onclick="baixarRelatorioPdf()">
+                        <i class="fas fa-download"></i> Baixar PDF
+                    </button>
                     <button type="button" class="rel-btn rel-btn-print" onclick="imprimirRelatorioPonto()">
                         <i class="fas fa-print"></i> Imprimir
                     </button>
@@ -1440,62 +1494,88 @@
                 </div>
             </div>
 
-            <!-- BODY -->
-            <div class="rel-body">
-                <!-- FILTROS -->
-                <div class="rel-filtros">
-                    <div class="campo">
-                        <label><i class="fas fa-calendar"></i> Mês</label>
-                        <select id="relMes">
-                            <option value="Janeiro">Janeiro</option>
-                            <option value="Fevereiro">Fevereiro</option>
-                            <option value="Março">Março</option>
-                            <option value="Abril">Abril</option>
-                            <option value="Maio">Maio</option>
-                            <option value="Junho">Junho</option>
-                            <option value="Julho">Julho</option>
-                            <option value="Agosto">Agosto</option>
-                            <option value="Setembro">Setembro</option>
-                            <option value="Outubro">Outubro</option>
-                            <option value="Novembro">Novembro</option>
-                            <option value="Dezembro">Dezembro</option>
-                        </select>
-                    </div>
-                    <div class="campo" style="min-width:100px;">
-                        <label><i class="fas fa-calendar-alt"></i> Ano</label>
-                        <input type="number" id="relAno" value="2026" min="2020" max="2030">
-                    </div>
-                    <div class="campo">
-                        <label><i class="fas fa-building"></i> Empresa</label>
-                        <select id="relEmpresa" onchange="carregarFuncionariosRelatorio()">
-                            <option value="">Todas</option>
-                            <option value="Spoleto">Spoleto</option>
-                            <option value="A2B">A2B</option>
-                            <option value="Acço">Acço</option>
-                            <option value="Copaenergia">Copaenergia</option>
-                            <option value="INSS">INSS</option>
-                            <option value="Qnutri">Qnutri</option>
-                        </select>
-                    </div>
-                    <div class="campo" style="flex:1;min-width:200px;">
-                        <label><i class="fas fa-user"></i> Funcionário</label>
-                        <select id="relFuncionario">
-                            <option value="">Todos</option>
-                        </select>
-                    </div>
-                    <button type="button" class="btn-gerar" onclick="gerarRelatorioPonto()">
-                        <i class="fas fa-bolt"></i> Gerar Relatório
-                    </button>
+            <!-- TOOLBAR -->
+            <div class="rel-toolbar">
+                <div class="grupo">
+                    <button type="button" onclick="relZoomOut()" title="Diminuir zoom"><i class="fas fa-search-minus"></i></button>
+                    <span class="zoom-label" id="relZoomLabel">100%</span>
+                    <button type="button" onclick="relZoomIn()" title="Aumentar zoom"><i class="fas fa-search-plus"></i></button>
                 </div>
+                <div class="grupo">
+                    <button type="button" id="relPagAnterior" onclick="relPaginaAnterior()" title="Página anterior"><i class="fas fa-chevron-up"></i></button>
+                    <span class="pagina-label" id="relPaginaLabel">1 / 1</span>
+                    <button type="button" id="relPagProxima" onclick="relPaginaProxima()" title="Próxima página"><i class="fas fa-chevron-down"></i></button>
+                </div>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="relBusca" placeholder="Pesquisar no relatório..." oninput="relBuscar()">
+                </div>
+            </div>
 
-                <!-- CONTEÚDO GERADO -->
-                <div id="relatorioConteudo">
-                    <div class="rel-empty">
-                        <i class="fas fa-chart-line"></i>
-                        <p>Configure os filtros acima</p>
-                        <small>O relatório exibirá apenas funcionários com marcações no período.</small>
+            <!-- BODY -->
+            <div class="rel-body" id="relBody">
+                <div class="rel-pagina" id="relPagina">
+                    <!-- FILTROS -->
+                    <div class="rel-filtros">
+                        <div class="campo">
+                            <label><i class="fas fa-calendar"></i> Mês</label>
+                            <select id="relMes">
+                                <option value="Janeiro">Janeiro</option>
+                                <option value="Fevereiro">Fevereiro</option>
+                                <option value="Março">Março</option>
+                                <option value="Abril">Abril</option>
+                                <option value="Maio">Maio</option>
+                                <option value="Junho">Junho</option>
+                                <option value="Julho">Julho</option>
+                                <option value="Agosto">Agosto</option>
+                                <option value="Setembro">Setembro</option>
+                                <option value="Outubro">Outubro</option>
+                                <option value="Novembro">Novembro</option>
+                                <option value="Dezembro">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="campo" style="min-width:80px;">
+                            <label><i class="fas fa-calendar-alt"></i> Ano</label>
+                            <input type="number" id="relAno" value="2026" min="2020" max="2030">
+                        </div>
+                        <div class="campo">
+                            <label><i class="fas fa-building"></i> Empresa</label>
+                            <select id="relEmpresa" onchange="carregarFuncionariosRelatorio()">
+                                <option value="">Todas</option>
+                                <option value="Spoleto">Spoleto</option>
+                                <option value="A2B">A2B</option>
+                                <option value="Acço">Acço</option>
+                                <option value="Copaenergia">Copaenergia</option>
+                                <option value="INSS">INSS</option>
+                                <option value="Qnutri">Qnutri</option>
+                            </select>
+                        </div>
+                        <div class="campo" style="flex:1;min-width:180px;">
+                            <label><i class="fas fa-user"></i> Funcionário</label>
+                            <select id="relFuncionario">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn-gerar" onclick="gerarRelatorioPonto()">
+                            <i class="fas fa-bolt"></i> Gerar Relatório
+                        </button>
+                    </div>
+
+                    <!-- CONTEÚDO GERADO -->
+                    <div id="relatorioConteudo">
+                        <div class="rel-empty">
+                            <i class="fas fa-chart-line"></i>
+                            <p>Configure os filtros acima</p>
+                            <small>O relatório exibirá apenas funcionários com marcações no período.</small>
+                        </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- FOOTER -->
+            <div class="rel-footer">
+                <span><i class="fas fa-file-pdf"></i> <span id="relFooterNome">Relatorio_Ponto_2026.pdf</span></span>
+                <span><i class="fas fa-calendar"></i> Gerado em <span id="relFooterData"></span></span>
             </div>
         </div>
     </div>
@@ -1552,6 +1632,13 @@
         let editorAnoAtual = null;
         let mapaDiasAbonados = {};
         let autoSaveTimers = {};
+
+        // ============================================================
+        // VARIÁVEIS DO RELATÓRIO PDF
+        // ============================================================
+        let relZoomAtual = 100;
+        let relPaginaAtual = 1;
+        let relTotalPaginas = 1;
 
         const CID10_DB = [
             { cod: 'A09', desc: 'Diarreia e gastroenterite de origem infecciosa presumível', cat: 'Infecciosas' },
@@ -1652,6 +1739,10 @@
             const mesIndex = meses[mes];
             if (mesIndex === undefined) return 30;
             return new Date(ano, mesIndex + 1, 0).getDate();
+        }
+        function formatarDataHoraAgora() {
+            const d = new Date();
+            return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         }
 
         // ============================================================
@@ -2553,7 +2644,7 @@
         }
 
         // ============================================================
-        // RELATÓRIO DE PONTO — POP-UP MODERNO
+        // RELATÓRIO DE PONTO — VISUALIZADOR PDF
         // ============================================================
         function abrirRelatorioPonto() {
             const hoje = new Date();
@@ -2561,7 +2652,16 @@
             document.getElementById('relAno').value = hoje.getFullYear();
             document.getElementById('relEmpresa').value = '';
             document.getElementById('relFuncionario').innerHTML = '<option value="">Todos</option>';
+            document.getElementById('relatorioConteudo').innerHTML = `
+                <div class="rel-empty">
+                    <i class="fas fa-chart-line"></i>
+                    <p>Configure os filtros acima</p>
+                    <small>O relatório exibirá apenas funcionários com marcações no período.</small>
+                </div>`;
             document.getElementById('relatorioPaisagem').classList.add('active');
+            document.getElementById('relFooterData').textContent = formatarDataHoraAgora();
+            document.getElementById('relTituloArquivo').textContent = `Relatorio_Ponto_${MESES[hoje.getMonth()]}_${hoje.getFullYear()}.pdf`;
+            document.getElementById('relFooterNome').textContent = `Relatorio_Ponto_${MESES[hoje.getMonth()]}_${hoje.getFullYear()}.pdf`;
             carregarFuncionariosRelatorio();
         }
 
@@ -2662,7 +2762,7 @@
         }
 
         // ============================================================
-        // GERAR RELATÓRIO — POP-UP MODERNO
+        // GERAR RELATÓRIO — VISUALIZADOR PDF
         // ============================================================
         async function gerarRelatorioPonto() {
             const mes = document.getElementById('relMes').value;
@@ -2670,6 +2770,12 @@
             const empresa = document.getElementById('relEmpresa').value;
             const funcId = document.getElementById('relFuncionario').value;
             const container = document.getElementById('relatorioConteudo');
+
+            // Atualizar título do arquivo
+            const nomeArquivo = `Relatorio_Ponto_${mes}_${ano}${empresa ? '_' + empresa : ''}.pdf`;
+            document.getElementById('relTituloArquivo').textContent = nomeArquivo;
+            document.getElementById('relFooterNome').textContent = nomeArquivo;
+            document.getElementById('relFooterData').textContent = formatarDataHoraAgora();
 
             container.innerHTML = `<div class="rel-empty"><i class="fas fa-spinner fa-spin"></i><p>Gerando relatório...</p></div>`;
 
@@ -2929,13 +3035,95 @@
 
                 container.innerHTML = html;
 
-                // Scroll para o topo do body
-                document.querySelector('.rel-body')?.scrollTo({ top: 0, behavior: 'smooth' });
+                // Atualizar paginação
+                relPaginaAtual = 1;
+                const totalPaginas = Math.ceil(container.scrollHeight / 800) || 1;
+                relTotalPaginas = totalPaginas;
+                document.getElementById('relPaginaLabel').textContent = `1 / ${relTotalPaginas}`;
+
+                // Scroll para o topo
+                document.getElementById('relBody')?.scrollTo({ top: 0, behavior: 'smooth' });
 
             } catch (error) {
                 console.error('Erro ao gerar relatório:', error);
                 container.innerHTML = `<div class="rel-empty"><i class="fas fa-exclamation-triangle" style="color:#dc3545;"></i><p>Erro ao gerar relatório</p><small>${error.message}</small></div>`;
             }
+        }
+
+        // ============================================================
+        // FUNÇÕES DO VISUALIZADOR PDF
+        // ============================================================
+        function relZoomIn() {
+            relZoomAtual = Math.min(relZoomAtual + 10, 200);
+            document.getElementById('relZoomLabel').textContent = relZoomAtual + '%';
+            document.getElementById('relPagina').style.transform = `scale(${relZoomAtual / 100})`;
+            document.getElementById('relPagina').style.transformOrigin = 'top center';
+        }
+
+        function relZoomOut() {
+            relZoomAtual = Math.max(relZoomAtual - 10, 50);
+            document.getElementById('relZoomLabel').textContent = relZoomAtual + '%';
+            document.getElementById('relPagina').style.transform = `scale(${relZoomAtual / 100})`;
+            document.getElementById('relPagina').style.transformOrigin = 'top center';
+        }
+
+        function relPaginaAnterior() {
+            if (relPaginaAtual > 1) {
+                relPaginaAtual--;
+                document.getElementById('relPaginaLabel').textContent = `${relPaginaAtual} / ${relTotalPaginas}`;
+                document.getElementById('relBody').scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function relPaginaProxima() {
+            if (relPaginaAtual < relTotalPaginas) {
+                relPaginaAtual++;
+                document.getElementById('relPaginaLabel').textContent = `${relPaginaAtual} / ${relTotalPaginas}`;
+                document.getElementById('relBody').scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function relBuscar() {
+            const termo = document.getElementById('relBusca')?.value.toLowerCase().trim() || '';
+            if (!termo) {
+                document.querySelectorAll('.rel-func-card').forEach(el => el.style.display = '');
+                return;
+            }
+            document.querySelectorAll('.rel-func-card').forEach(el => {
+                const texto = el.textContent.toLowerCase();
+                el.style.display = texto.includes(termo) ? '' : 'none';
+            });
+        }
+
+        function baixarRelatorioPdf() {
+            const elemento = document.getElementById('relPagina');
+            const nomeArquivo = document.getElementById('relFooterNome')?.textContent || 'relatorio_ponto.pdf';
+
+            const opt = {
+                margin: [5, 5, 5, 5],
+                filename: nomeArquivo,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                },
+                jsPDF: {
+                    unit: 'mm',
+                    format: 'a4',
+                    orientation: 'landscape'
+                },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            mostrarToast('📄 Gerando PDF, aguarde...', 'info');
+            html2pdf().set(opt).from(elemento).save().then(() => {
+                mostrarToast('✅ PDF gerado com sucesso!');
+            }).catch((err) => {
+                console.error('Erro ao gerar PDF:', err);
+                mostrarToast('❌ Erro ao gerar PDF: ' + err.message, 'error');
+            });
         }
 
         function imprimirRelatorioPonto() {
