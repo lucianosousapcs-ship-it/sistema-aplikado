@@ -398,6 +398,16 @@
         .grade-dias-escolha .btn-dia-escolha.ja-marcado-falta { background: #6f42c1; border-color: #4a2c91; color: #fff; }
         .grade-dias-escolha .btn-dia-escolha.ja-marcado-falta .mini-sem { color: #fff; opacity: 1; }
         .modal-dia-escolha .botoes { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+        /* ✅ Estilos para o seletor de CID */
+        .cid-picker-wrapper { position: relative; }
+        .cid-picker-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #FF8C00; border-radius: 8px; max-height: 260px; overflow-y: auto; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.15); margin-top: 4px; }
+        .cid-picker-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; font-size: 11px; transition: background 0.2s; }
+        .cid-picker-item:hover { background: #fff3e0; }
+        .cid-picker-item .cid-cod { font-weight: 800; color: #6f42c1; font-size: 12px; margin-right: 6px; }
+        .cid-picker-item .cid-desc { color: #1a0a00; }
+        .cid-picker-item .cid-cat { display: inline-block; background: #e2d4f5; color: #4a2c91; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-left: 6px; text-transform: uppercase; }
+        .cid-picker-empty { padding: 12px; text-align: center; color: #999; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -447,6 +457,7 @@
         <button class="sidebar-btn" onclick="abrirControleFerias()"><i class="fas fa-umbrella-beach"></i> Controle de Férias</button>
         <button class="sidebar-btn" onclick="abrirCronogramas()"><i class="fas fa-calendar-week"></i> Cronogramas</button>
         <button class="sidebar-btn" onclick="abrirErros()"><i class="fas fa-exclamation-triangle"></i> Erros de Marcação <span class="badge-sidebar" id="badgeErros" style="display:none;">0</span></button>
+        <button class="sidebar-btn" onclick="abrirConsultaCID()"><i class="fas fa-book-medical"></i> Consulta CID</button>
         <div class="sidebar-label"><i class="fas fa-users-cog"></i> Administração</div>
         <button class="sidebar-btn" onclick="abrirModalPerfis()"><i class="fas fa-user-shield"></i> Perfis de Usuário</button>
         <button class="sidebar-btn" onclick="fazerLogout()" style="color:#dc3545;"><i class="fas fa-sign-out-alt" style="color:#dc3545;"></i> Sair</button>
@@ -949,6 +960,24 @@
         </div>
     </div>
 
+    <!-- MODAL CONSULTA CID -->
+    <div class="modal" id="modalConsultaCID">
+        <div class="modal-content" style="max-width:900px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-book-medical"></i> Consulta CID-10</h2>
+                <button class="modal-close" onclick="fecharConsultaCID()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label><i class="fas fa-search"></i> Buscar por código ou descrição</label>
+                    <input type="text" id="cidBuscaInput" placeholder="Ex: J11, gripe, diabetes..." oninput="renderizarListaCID(this.value)" autofocus>
+                </div>
+                <div id="cidContador" style="font-size:11px;color:#7a3a00;font-weight:600;margin-bottom:8px;"></div>
+                <div id="cidListaContainer" style="max-height:500px;overflow-y:auto;border:1px solid #eee;border-radius:10px;"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL ANEXO ATESTADO -->
     <div class="modal-atestado-anexo" id="modalAtestadoAnexoView">
         <button class="fechar" onclick="fecharAtestadoAnexoView()"><i class="fas fa-times"></i></button>
@@ -990,39 +1019,238 @@
         let mapaDiasAbonados = {};
         let autoSaveTimers = {};
 
-        const SafeStorage = (() => {
-            let mem = {};
-            let disponivel = false;
-            try {
-                localStorage.setItem('__test__', '1');
-                localStorage.removeItem('__test__');
-                disponivel = true;
-            } catch(e) { console.warn('⚠️ localStorage bloqueado — usando memória'); }
-            return {
-                getItem: (k) => disponivel ? (() => { try { return localStorage.getItem(k); } catch(e) { return mem[k] || null; } })() : (mem[k] || null),
-                setItem: (k, v) => { if (disponivel) { try { localStorage.setItem(k, v); return; } catch(e) {} } mem[k] = String(v); },
-                removeItem: (k) => { if (disponivel) { try { localStorage.removeItem(k); } catch(e) {} } delete mem[k]; }
-            };
-        })();
-
-        const ROLE_LABELS = { 'viewer': 'Visualizador', 'user': 'Usuário', 'admin': 'Administrador' };
-        const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-        const JORNADA_PADRAO_MINUTOS = 480;
-        const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-        const STATUS_CALENDARIO_INFO = {
-            'trabalho': { label: 'Trabalho', cor: '#28a745' },
-            'folga': { label: 'Folga', cor: '#6c757d' },
-            'falta': { label: 'Falta', cor: '#dc3545' },
-            'dispensa': { label: 'Dispensa', cor: '#ffc107' },
-            'ferias': { label: 'Férias', cor: '#004085' },
-            'atestado': { label: 'Atestado', cor: '#6f42c1' },
-            'feriado': { label: 'Feriado', cor: '#fd7e14' },
-            'folga_bh': { label: 'Folga BH', cor: '#495057' }
-        };
-        const MODULO_VT_URL       = 'MODULO1_QVT.html';
-        const MODULO_MEDICINA_URL = 'MED_QNUTRI.html';
-        const MODULO_FERIAS_URL   = 'MODULO1_QFERIAS.html';
-        const STORAGE_KEY = 'aplikado_usuario_ponto';
+        // ============================================================
+        // BASE DE DADOS CID-10 (principais códigos)
+        // ============================================================
+        const CID10_DB = [
+            // Capítulo I - Algumas doenças infecciosas e parasitárias (A00-B99)
+            { cod: 'A09', desc: 'Diarreia e gastroenterite de origem infecciosa presumível', cat: 'Infecciosas' },
+            { cod: 'A15', desc: 'Tuberculose respiratória, com confirmação bacteriológica e histológica', cat: 'Infecciosas' },
+            { cod: 'A90', desc: 'Dengue clássico', cat: 'Infecciosas' },
+            { cod: 'A91', desc: 'Febre hemorrágica devida ao vírus do dengue', cat: 'Infecciosas' },
+            { cod: 'B01', desc: 'Varicela', cat: 'Infecciosas' },
+            { cod: 'B34', desc: 'Infecção viral de localização não especificada', cat: 'Infecciosas' },
+            { cod: 'B34.9', desc: 'Infecção viral não especificada', cat: 'Infecciosas' },
+            { cod: 'B35', desc: 'Dermatofitose', cat: 'Infecciosas' },
+            // Capítulo II - Neoplasias (C00-D48)
+            { cod: 'C50', desc: 'Neoplasia maligna da mama', cat: 'Neoplasias' },
+            { cod: 'C61', desc: 'Neoplasia maligna da próstata', cat: 'Neoplasias' },
+            { cod: 'D25', desc: 'Leiomioma do útero', cat: 'Neoplasias' },
+            // Capítulo III - Doenças do sangue (D50-D89)
+            { cod: 'D50', desc: 'Anemia por deficiência de ferro', cat: 'Sangue' },
+            { cod: 'D64', desc: 'Anemia não especificada', cat: 'Sangue' },
+            // Capítulo IV - Endócrinas, nutricionais e metabólicas (E00-E90)
+            { cod: 'E03', desc: 'Hipotireoidismo', cat: 'Endócrinas' },
+            { cod: 'E03.9', desc: 'Hipotireoidismo não especificado', cat: 'Endócrinas' },
+            { cod: 'E05', desc: 'Tireotoxicose (hipertireoidismo)', cat: 'Endócrinas' },
+            { cod: 'E10', desc: 'Diabetes mellitus tipo 1', cat: 'Endócrinas' },
+            { cod: 'E11', desc: 'Diabetes mellitus tipo 2', cat: 'Endócrinas' },
+            { cod: 'E11.9', desc: 'Diabetes mellitus tipo 2 sem complicações', cat: 'Endócrinas' },
+            { cod: 'E14', desc: 'Diabetes mellitus não especificado', cat: 'Endócrinas' },
+            { cod: 'E16', desc: 'Outros transtornos da secreção pancreática', cat: 'Endócrinas' },
+            { cod: 'E66', desc: 'Obesidade', cat: 'Endócrinas' },
+            { cod: 'E66.9', desc: 'Obesidade não especificada', cat: 'Endócrinas' },
+            { cod: 'E78', desc: 'Distúrbios do metabolismo de lipoproteínas', cat: 'Endócrinas' },
+            { cod: 'E78.5', desc: 'Hiperlipidemia não especificada', cat: 'Endócrinas' },
+            // Capítulo V - Transtornos mentais e comportamentais (F00-F99)
+            { cod: 'F10', desc: 'Transtornos mentais por uso de álcool', cat: 'Mentais' },
+            { cod: 'F17', desc: 'Transtornos mentais por uso de tabaco', cat: 'Mentais' },
+            { cod: 'F19', desc: 'Transtornos mentais por uso de múltiplas drogas', cat: 'Mentais' },
+            { cod: 'F31', desc: 'Transtorno afetivo bipolar', cat: 'Mentais' },
+            { cod: 'F32', desc: 'Episódios depressivos', cat: 'Mentais' },
+            { cod: 'F32.0', desc: 'Episódio depressivo leve', cat: 'Mentais' },
+            { cod: 'F32.1', desc: 'Episódio depressivo moderado', cat: 'Mentais' },
+            { cod: 'F32.2', desc: 'Episódio depressivo grave sem sintomas psicóticos', cat: 'Mentais' },
+            { cod: 'F33', desc: 'Transtorno depressivo recorrente', cat: 'Mentais' },
+            { cod: 'F40', desc: 'Transtornos fóbico-ansiosos', cat: 'Mentais' },
+            { cod: 'F41', desc: 'Outros transtornos ansiosos', cat: 'Mentais' },
+            { cod: 'F41.0', desc: 'Transtorno de pânico', cat: 'Mentais' },
+            { cod: 'F41.1', desc: 'Ansiedade generalizada', cat: 'Mentais' },
+            { cod: 'F41.9', desc: 'Transtorno ansioso não especificado', cat: 'Mentais' },
+            { cod: 'F43', desc: 'Reações ao stress grave e transtornos de adaptação', cat: 'Mentais' },
+            { cod: 'F43.2', desc: 'Transtornos de adaptação', cat: 'Mentais' },
+            { cod: 'F51', desc: 'Transtornos não-orgânicos do sono', cat: 'Mentais' },
+            { cod: 'F99', desc: 'Transtorno mental não especificado', cat: 'Mentais' },
+            // Capítulo VI - Doenças do sistema nervoso (G00-G99)
+            { cod: 'G40', desc: 'Epilepsia', cat: 'Nervoso' },
+            { cod: 'G43', desc: 'Enxaqueca', cat: 'Nervoso' },
+            { cod: 'G43.0', desc: 'Enxaqueca sem aura', cat: 'Nervoso' },
+            { cod: 'G43.1', desc: 'Enxaqueca com aura', cat: 'Nervoso' },
+            { cod: 'G44', desc: 'Outras síndromes de algias cefálicas', cat: 'Nervoso' },
+            { cod: 'G47', desc: 'Distúrbios do sono', cat: 'Nervoso' },
+            { cod: 'G54', desc: 'Transtornos das raízes e dos plexos nervosos', cat: 'Nervoso' },
+            { cod: 'G56', desc: 'Mononeuropatias dos membros superiores', cat: 'Nervoso' },
+            { cod: 'G56.0', desc: 'Síndrome do túnel do carpo', cat: 'Nervoso' },
+            // Capítulo VII - Doenças do olho (H00-H59)
+            { cod: 'H10', desc: 'Conjuntivite', cat: 'Olho' },
+            { cod: 'H25', desc: 'Catarata senil', cat: 'Olho' },
+            { cod: 'H40', desc: 'Glaucoma', cat: 'Olho' },
+            { cod: 'H52', desc: 'Transtornos da refração e da acomodação', cat: 'Olho' },
+            { cod: 'H52.1', desc: 'Miopia', cat: 'Olho' },
+            { cod: 'H53', desc: 'Distúrbios visuais', cat: 'Olho' },
+            { cod: 'H54', desc: 'Cegueira e visão subnormal', cat: 'Olho' },
+            // Capítulo VIII - Doenças do ouvido (H60-H95)
+            { cod: 'H60', desc: 'Otite externa', cat: 'Ouvido' },
+            { cod: 'H65', desc: 'Otite média não-supurativa', cat: 'Ouvido' },
+            { cod: 'H66', desc: 'Otite média supurativa e as não especificadas', cat: 'Ouvido' },
+            { cod: 'H81', desc: 'Transtornos da função vestibular', cat: 'Ouvido' },
+            { cod: 'H83', desc: 'Outras doenças do ouvido interno', cat: 'Ouvido' },
+            { cod: 'H90', desc: 'Perda de audição por transtorno de condução', cat: 'Ouvido' },
+            { cod: 'H91', desc: 'Outras perdas de audição', cat: 'Ouvido' },
+            { cod: 'H93', desc: 'Outros transtornos do ouvido', cat: 'Ouvido' },
+            // Capítulo IX - Doenças do aparelho circulatório (I00-I99)
+            { cod: 'I10', desc: 'Hipertensão essencial (primária)', cat: 'Circulatório' },
+            { cod: 'I11', desc: 'Doença cardíaca hipertensiva', cat: 'Circulatório' },
+            { cod: 'I20', desc: 'Angina pectoris', cat: 'Circulatório' },
+            { cod: 'I21', desc: 'Infarto agudo do miocárdio', cat: 'Circulatório' },
+            { cod: 'I25', desc: 'Doença isquêmica crônica do coração', cat: 'Circulatório' },
+            { cod: 'I48', desc: 'Flutter e fibrilação atrial', cat: 'Circulatório' },
+            { cod: 'I50', desc: 'Insuficiência cardíaca', cat: 'Circulatório' },
+            { cod: 'I64', desc: 'Acidente vascular cerebral (AVC)', cat: 'Circulatório' },
+            { cod: 'I80', desc: 'Flebite e tromboflebite', cat: 'Circulatório' },
+            { cod: 'I83', desc: 'Varizes dos membros inferiores', cat: 'Circulatório' },
+            { cod: 'I84', desc: 'Hemorroidas', cat: 'Circulatório' },
+            { cod: 'I87', desc: 'Outros transtornos venosos', cat: 'Circulatório' },
+            // Capítulo X - Doenças do aparelho respiratório (J00-J99)
+            { cod: 'J00', desc: 'Nasofaringite aguda (resfriado comum)', cat: 'Respiratório' },
+            { cod: 'J01', desc: 'Sinusite aguda', cat: 'Respiratório' },
+            { cod: 'J02', desc: 'Faringite aguda', cat: 'Respiratório' },
+            { cod: 'J02.9', desc: 'Faringite aguda não especificada', cat: 'Respiratório' },
+            { cod: 'J03', desc: 'Amigdalite aguda', cat: 'Respiratório' },
+            { cod: 'J04', desc: 'Laringite e traqueíte agudas', cat: 'Respiratório' },
+            { cod: 'J05', desc: 'Laringite obstrutiva aguda (crupe)', cat: 'Respiratório' },
+            { cod: 'J06', desc: 'Infecções agudas das vias aéreas superiores', cat: 'Respiratório' },
+            { cod: 'J06.9', desc: 'Infecção aguda das vias aéreas superiores não especificada', cat: 'Respiratório' },
+            { cod: 'J10', desc: 'Gripe (influenza) devido a vírus identificado', cat: 'Respiratório' },
+            { cod: 'J11', desc: 'Gripe (influenza) com vírus não identificado', cat: 'Respiratório' },
+            { cod: 'J11.0', desc: 'Gripe com manifestações respiratórias', cat: 'Respiratório' },
+            { cod: 'J18', desc: 'Pneumonia por microorganismo não especificado', cat: 'Respiratório' },
+            { cod: 'J20', desc: 'Bronquite aguda', cat: 'Respiratório' },
+            { cod: 'J30', desc: 'Rinite alérgica e vasomotora', cat: 'Respiratório' },
+            { cod: 'J31', desc: 'Rinite crônica', cat: 'Respiratório' },
+            { cod: 'J34', desc: 'Outros transtornos do nariz e seios paranasais', cat: 'Respiratório' },
+            { cod: 'J38', desc: 'Doenças das cordas vocais', cat: 'Respiratório' },
+            { cod: 'J40', desc: 'Bronquite não especificada', cat: 'Respiratório' },
+            { cod: 'J44', desc: 'Doença pulmonar obstrutiva crônica (DPOC)', cat: 'Respiratório' },
+            { cod: 'J45', desc: 'Asma', cat: 'Respiratório' },
+            { cod: 'J45.9', desc: 'Asma não especificada', cat: 'Respiratório' },
+            { cod: 'J98', desc: 'Outros transtornos respiratórios', cat: 'Respiratório' },
+            // Capítulo XI - Doenças do aparelho digestivo (K00-K93)
+            { cod: 'K02', desc: 'Cárie dentária', cat: 'Digestivo' },
+            { cod: 'K04', desc: 'Doenças da polpa e tecidos periapicais', cat: 'Digestivo' },
+            { cod: 'K05', desc: 'Gengivite e doenças periodontais', cat: 'Digestivo' },
+            { cod: 'K08', desc: 'Outros transtornos dos dentes e estruturas de suporte', cat: 'Digestivo' },
+            { cod: 'K12', desc: 'Estomatite e lesões correlatas', cat: 'Digestivo' },
+            { cod: 'K20', desc: 'Esofagite', cat: 'Digestivo' },
+            { cod: 'K21', desc: 'Doença de refluxo gastroesofágico', cat: 'Digestivo' },
+            { cod: 'K25', desc: 'Úlcera gástrica', cat: 'Digestivo' },
+            { cod: 'K26', desc: 'Úlcera duodenal', cat: 'Digestivo' },
+            { cod: 'K29', desc: 'Gastrite e duodenite', cat: 'Digestivo' },
+            { cod: 'K30', desc: 'Dispepsia', cat: 'Digestivo' },
+            { cod: 'K35', desc: 'Apendicite aguda', cat: 'Digestivo' },
+            { cod: 'K40', desc: 'Hérnia inguinal', cat: 'Digestivo' },
+            { cod: 'K42', desc: 'Hérnia umbilical', cat: 'Digestivo' },
+            { cod: 'K52', desc: 'Outras gastroenterites e colites não-infecciosas', cat: 'Digestivo' },
+            { cod: 'K57', desc: 'Doença diverticular do intestino', cat: 'Digestivo' },
+            { cod: 'K58', desc: 'Síndrome do intestino irritável', cat: 'Digestivo' },
+            { cod: 'K59', desc: 'Outros transtornos funcionais do intestino', cat: 'Digestivo' },
+            { cod: 'K76', desc: 'Outras doenças do fígado', cat: 'Digestivo' },
+            { cod: 'K80', desc: 'Colelitíase (pedra na vesícula)', cat: 'Digestivo' },
+            { cod: 'K81', desc: 'Colecistite', cat: 'Digestivo' },
+            // Capítulo XII - Doenças da pele (L00-L99)
+            { cod: 'L01', desc: 'Impetigo', cat: 'Pele' },
+            { cod: 'L02', desc: 'Abscesso cutâneo, furúnculo e carbúnculo', cat: 'Pele' },
+            { cod: 'L03', desc: 'Celulite (flegmão)', cat: 'Pele' },
+            { cod: 'L20', desc: 'Dermatite atópica', cat: 'Pele' },
+            { cod: 'L21', desc: 'Dermatite seborréica', cat: 'Pele' },
+            { cod: 'L23', desc: 'Dermatite alérgica de contato', cat: 'Pele' },
+            { cod: 'L24', desc: 'Dermatite de contato por irritantes', cat: 'Pele' },
+            { cod: 'L30', desc: 'Outras dermatites', cat: 'Pele' },
+            { cod: 'L40', desc: 'Psoríase', cat: 'Pele' },
+            { cod: 'L50', desc: 'Urticária', cat: 'Pele' },
+            { cod: 'L60', desc: 'Transtornos das unhas', cat: 'Pele' },
+            { cod: 'L70', desc: 'Acne', cat: 'Pele' },
+            { cod: 'L73', desc: 'Outros transtornos foliculares', cat: 'Pele' },
+            { cod: 'L80', desc: 'Vitiligo', cat: 'Pele' },
+            { cod: 'L98', desc: 'Outras doenças da pele e tecido subcutâneo', cat: 'Pele' },
+            // Capítulo XIII - Doenças do sistema osteomuscular (M00-M99)
+            { cod: 'M05', desc: 'Artrite reumatóide soropositiva', cat: 'Osteomuscular' },
+            { cod: 'M06', desc: 'Outras artrites reumatóides', cat: 'Osteomuscular' },
+            { cod: 'M10', desc: 'Gota', cat: 'Osteomuscular' },
+            { cod: 'M13', desc: 'Outras artrites', cat: 'Osteomuscular' },
+            { cod: 'M15', desc: 'Poliartrose', cat: 'Osteomuscular' },
+            { cod: 'M16', desc: 'Coxartrose (artrose do quadril)', cat: 'Osteomuscular' },
+            { cod: 'M17', desc: 'Gonartrose (artrose do joelho)', cat: 'Osteomuscular' },
+            { cod: 'M19', desc: 'Outras artroses', cat: 'Osteomuscular' },
+            { cod: 'M23', desc: 'Transtorno interno dos joelhos', cat: 'Osteomuscular' },
+            { cod: 'M25', desc: 'Outros transtornos articulares', cat: 'Osteomuscular' },
+            { cod: 'M40', desc: 'Cifose e lordose', cat: 'Osteomuscular' },
+            { cod: 'M41', desc: 'Escoliose', cat: 'Osteomuscular' },
+            { cod: 'M42', desc: 'Osteocondrose da coluna vertebral', cat: 'Osteomuscular' },
+            { cod: 'M43', desc: 'Outras dorsopatias deformantes', cat: 'Osteomuscular' },
+            { cod: 'M45', desc: 'Espondilite ancilosante', cat: 'Osteomuscular' },
+            { cod: 'M47', desc: 'Espondilose', cat: 'Osteomuscular' },
+            { cod: 'M50', desc: 'Transtornos dos discos cervicais', cat: 'Osteomuscular' },
+            { cod: 'M51', desc: 'Outros transtornos de discos intervertebrais', cat: 'Osteomuscular' },
+            { cod: 'M53', desc: 'Outras dorsopatias', cat: 'Osteomuscular' },
+            { cod: 'M54', desc: 'Dorsalgia', cat: 'Osteomuscular' },
+            { cod: 'M54.4', desc: 'Lumbago com sciatica', cat: 'Osteomuscular' },
+            { cod: 'M54.5', desc: 'Dor lombar baixa (lombalgia)', cat: 'Osteomuscular' },
+            { cod: 'M65', desc: 'Sinovite e tenossinovite', cat: 'Osteomuscular' },
+            { cod: 'M70', desc: 'Transtornos dos tecidos moles relacionados ao uso', cat: 'Osteomuscular' },
+            { cod: 'M75', desc: 'Lesões do ombro', cat: 'Osteomuscular' },
+            { cod: 'M75.1', desc: 'Síndrome do manguito rotador', cat: 'Osteomuscular' },
+            { cod: 'M77', desc: 'Outras entesopatias', cat: 'Osteomuscular' },
+            { cod: 'M79', desc: 'Outros transtornos dos tecidos moles', cat: 'Osteomuscular' },
+            // Capítulo XIV - Doenças do aparelho geniturinário (N00-N99)
+            { cod: 'N10', desc: 'Nefrite túbulo-intersticial aguda', cat: 'Geniturinário' },
+            { cod: 'N11', desc: 'Nefrite túbulo-intersticial crônica', cat: 'Geniturinário' },
+            { cod: 'N18', desc: 'Insuficiência renal crônica', cat: 'Geniturinário' },
+            { cod: 'N20', desc: 'Calculose do rim e do ureter', cat: 'Geniturinário' },
+            { cod: 'N30', desc: 'Cistite', cat: 'Geniturinário' },
+            { cod: 'N39', desc: 'Outros transtornos do aparelho urinário', cat: 'Geniturinário' },
+            { cod: 'N39.0', desc: 'Infecção do trato urinário', cat: 'Geniturinário' },
+            { cod: 'N40', desc: 'Hiperplasia da próstata', cat: 'Geniturinário' },
+            { cod: 'N80', desc: 'Endometriose', cat: 'Geniturinário' },
+            { cod: 'N83', desc: 'Transtornos não-inflamatórios do ovário', cat: 'Geniturinário' },
+            { cod: 'N92', desc: 'Menstruação excessiva, frequente e irregular', cat: 'Geniturinário' },
+            { cod: 'N94', desc: 'Dor e outras afecções dos órgãos genitais femininos', cat: 'Geniturinário' },
+            // Capítulo XV - Gravidez, parto e puerpério (O00-O99)
+            { cod: 'O20', desc: 'Hemorragia do início da gravidez', cat: 'Gravidez' },
+            { cod: 'O80', desc: 'Parto único espontâneo', cat: 'Gravidez' },
+            // Capítulo XVIII - Sintomas e sinais (R00-R99)
+            { cod: 'R05', desc: 'Tosse', cat: 'Sintomas' },
+            { cod: 'R06', desc: 'Anormalidades da respiração', cat: 'Sintomas' },
+            { cod: 'R07', desc: 'Dor de garganta', cat: 'Sintomas' },
+            { cod: 'R10', desc: 'Dor abdominal e pélvica', cat: 'Sintomas' },
+            { cod: 'R11', desc: 'Náusea e vômito', cat: 'Sintomas' },
+            { cod: 'R42', desc: 'Tontura e instabilidade', cat: 'Sintomas' },
+            { cod: 'R50', desc: 'Febre de origem desconhecida', cat: 'Sintomas' },
+            { cod: 'R51', desc: 'Cefaléia', cat: 'Sintomas' },
+            { cod: 'R53', desc: 'Mal-estar, fadiga', cat: 'Sintomas' },
+            { cod: 'R55', desc: 'Síncope e colapso', cat: 'Sintomas' },
+            { cod: 'R56', desc: 'Convulsões', cat: 'Sintomas' },
+            { cod: 'R80', desc: 'Proteinúria isolada', cat: 'Sintomas' },
+            // Capítulo XIX - Traumatismos (S00-T98)
+            { cod: 'S00', desc: 'Traumatismo superficial da cabeça', cat: 'Traumatismos' },
+            { cod: 'S06', desc: 'Traumatismo intracraniano', cat: 'Traumatismos' },
+            { cod: 'S20', desc: 'Traumatismo superficial do tórax', cat: 'Traumatismos' },
+            { cod: 'S30', desc: 'Traumatismo superficial do abdome', cat: 'Traumatismos' },
+            { cod: 'S40', desc: 'Traumatismo superficial do ombro e braço', cat: 'Traumatismos' },
+            { cod: 'S50', desc: 'Traumatismo superficial do antebraço', cat: 'Traumatismos' },
+            { cod: 'S52', desc: 'Fratura do antebraço', cat: 'Traumatismos' },
+            { cod: 'S60', desc: 'Traumatismo superficial do punho e mão', cat: 'Traumatismos' },
+            { cod: 'S62', desc: 'Fratura do punho e mão', cat: 'Traumatismos' },
+            { cod: 'S70', desc: 'Traumatismo superficial do quadril e coxa', cat: 'Traumatismos' },
+            { cod: 'S80', desc: 'Traumatismo superficial da perna', cat: 'Traumatismos' },
+            { cod: 'S82', desc: 'Fratura da perna, incluindo tornozelo', cat: 'Traumatismos' },
+            { cod: 'S83', desc: 'Luxação e entorse do joelho', cat: 'Traumatismos' },
+            { cod: 'S93', desc: 'Luxação e entorse do tornozelo e pé', cat: 'Traumatismos' },
+            { cod: 'T14', desc: 'Traumatismo de região não especificada', cat: 'Traumatismos' },
+            // Capítulo XXI - Fatores que influenciam o estado de saúde (Z00-Z99)
+            { cod: 'Z00', desc: 'Exame geral e investigação de pessoas sem queixas', cat: 'Fatores' },
+            { cod: 'Z76', desc: 'Pessoas em contato com serviços de saúde', cat: 'Fatores' }
+        ];
 
         // ============================================================
         // HELPERS
@@ -1567,7 +1795,7 @@
         }
 
         // ============================================================
-        // ANÁLISE DE PONTO (com suporte a dias abonados por atestado)
+        // ANÁLISE DE PONTO
         // ============================================================
         function analisarDadosPonto(dados, diasDoMes, mes, ano, diasAbonados = new Set()) {
             const erros = [];
@@ -1840,7 +2068,6 @@
                 const obs = [d.e1, d.s1, d.e2, d.s2, d.extra_e1, d.extra_s1].filter(Boolean).join(' ');
                 dados[dia] = { status: 'trabalho', observacao: obs, origem: 'marcacoes_ponto' };
             });
-            // ✅ Sinalizar feriados automaticamente no cronograma
             for (let dia = 1; dia <= totalDias; dia++) {
                 if (isFeriado(dia, mes, ano)) {
                     if (!dados[dia] || (dados[dia].status !== 'ferias' && dados[dia].status !== 'atestado')) {
@@ -2381,7 +2608,11 @@
                                 <div class="edit-field"><label>Tipo</label><input type="text" id="atTabTipo" placeholder="Ex: Atestado Médico"></div>
                                 <div class="edit-field"><label>Data Início *</label><input type="date" id="atTabDataInicio"></div>
                                 <div class="edit-field"><label>Data Fim *</label><input type="date" id="atTabDataFim"></div>
-                                <div class="edit-field"><label>CID</label><input type="text" id="atTabCID" placeholder="Ex: J11"></div>
+                                <div class="edit-field cid-picker-wrapper">
+                                    <label>CID (busque por código ou descrição)</label>
+                                    <input type="text" id="atTabCID" placeholder="Ex: J11, gripe..." autocomplete="off" oninput="buscarCIDNoAtestado(this.value)" onfocus="buscarCIDNoAtestado(this.value)">
+                                    <div id="cidDropdownAtestado" class="cid-picker-dropdown" style="display:none;"></div>
+                                </div>
                                 <div class="edit-field"><label>Médico</label><input type="text" id="atTabMedico"></div>
                                 <div class="edit-field"><label>CRM</label><input type="text" id="atTabCRM"></div>
                             </div>
@@ -2555,7 +2786,7 @@
         }
 
         // ============================================================
-        // ATESTADOS (com edição)
+        // ATESTADOS (com edição + CID picker)
         // ============================================================
         async function carregarAtestados(funcId) {
             try {
@@ -2720,6 +2951,109 @@
             atestados = await carregarAtestados(funcId);
             const container = document.getElementById('atTabListaAtestados');
             if (container) container.innerHTML = renderizarAtestadosTab();
+        }
+
+        // ============================================================
+        // CID PICKER (dentro do formulário de atestado)
+        // ============================================================
+        function buscarCIDNoAtestado(termo) {
+            const dropdown = document.getElementById('cidDropdownAtestado');
+            if (!dropdown) return;
+            const t = (termo || '').trim().toLowerCase();
+            if (t.length < 1) {
+                dropdown.style.display = 'none';
+                dropdown.innerHTML = '';
+                return;
+            }
+            const resultados = CID10_DB.filter(item =>
+                item.cod.toLowerCase().includes(t) ||
+                item.desc.toLowerCase().includes(t)
+            ).slice(0, 20);
+            if (resultados.length === 0) {
+                dropdown.innerHTML = `<div class="cid-picker-empty">Nenhum CID encontrado para "${termo}"</div>`;
+                dropdown.style.display = 'block';
+                return;
+            }
+            dropdown.innerHTML = resultados.map(item => `
+                <div class="cid-picker-item" onclick="selecionarCIDNoAtestado('${item.cod}', '${item.desc.replace(/'/g, "\\'")}')">
+                    <span class="cid-cod">${item.cod}</span>
+                    <span class="cid-desc">${item.desc}</span>
+                    <span class="cid-cat">${item.cat}</span>
+                </div>
+            `).join('');
+            dropdown.style.display = 'block';
+        }
+
+        function selecionarCIDNoAtestado(cod, desc) {
+            const input = document.getElementById('atTabCID');
+            if (input) input.value = cod;
+            const dropdown = document.getElementById('cidDropdownAtestado');
+            if (dropdown) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }
+            mostrarToast(`✅ CID ${cod} — ${desc.substring(0, 60)}${desc.length > 60 ? '...' : ''}`, 'info');
+        }
+
+        // Fecha dropdown ao clicar fora
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('cidDropdownAtestado');
+            const input = document.getElementById('atTabCID');
+            if (dropdown && dropdown.style.display !== 'none') {
+                if (!dropdown.contains(e.target) && e.target !== input) {
+                    dropdown.style.display = 'none';
+                }
+            }
+        });
+
+        // ============================================================
+        // CONSULTA CID (modal dedicado)
+        // ============================================================
+        function abrirConsultaCID() {
+            document.getElementById('modalConsultaCID').classList.add('active');
+            document.getElementById('cidBuscaInput').value = '';
+            renderizarListaCID('');
+            setTimeout(() => document.getElementById('cidBuscaInput')?.focus(), 100);
+        }
+        function fecharConsultaCID() { document.getElementById('modalConsultaCID').classList.remove('active'); }
+
+        function renderizarListaCID(termo) {
+            const container = document.getElementById('cidListaContainer');
+            const contador = document.getElementById('cidContador');
+            if (!container) return;
+            const t = (termo || '').trim().toLowerCase();
+            let resultados = CID10_DB;
+            if (t) {
+                resultados = CID10_DB.filter(item =>
+                    item.cod.toLowerCase().includes(t) ||
+                    item.desc.toLowerCase().includes(t) ||
+                    item.cat.toLowerCase().includes(t)
+                );
+            }
+            if (contador) contador.textContent = `${resultados.length} CID(s) encontrado(s)`;
+            if (resultados.length === 0) {
+                container.innerHTML = `<div style="text-align:center;padding:40px;color:#999;"><i class="fas fa-search" style="font-size:32px;display:block;margin-bottom:10px;"></i>Nenhum CID encontrado para "${termo}"</div>`;
+                return;
+            }
+            container.innerHTML = resultados.map(item => `
+                <div class="erro-item" style="cursor:pointer;" onclick="copiarCID('${item.cod}')">
+                    <span class="erro-msg">
+                        <i class="fas fa-tag" style="color:#6f42c1;"></i>
+                        <strong style="color:#6f42c1;font-size:14px;">${item.cod}</strong>
+                        <span style="color:#1a0a00;">— ${item.desc}</span>
+                        <span class="cid-cat" style="display:inline-block;background:#e2d4f5;color:#4a2c91;font-size:9px;font-weight:700;padding:1px 8px;border-radius:8px;margin-left:6px;text-transform:uppercase;">${item.cat}</span>
+                    </span>
+                    <div class="erro-actions">
+                        <button class="btn-action btn-primary btn-sm" title="Copiar código"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function copiarCID(cod) {
+            try {
+                navigator.clipboard.writeText(cod);
+                mostrarToast(`📋 CID "${cod}" copiado!`, 'info');
+            } catch(e) {
+                mostrarToast(`CID: ${cod}`, 'info');
+            }
         }
 
         // ============================================================
@@ -3406,7 +3740,6 @@
         }
 
         function agendarAutoSave() {
-            // Debounce: salva 1.5s após última digitação
             if (autoSaveTimers.editor) clearTimeout(autoSaveTimers.editor);
             autoSaveTimers.editor = setTimeout(() => {
                 salvarEditorAutomatico();
@@ -3479,7 +3812,6 @@
                 editorMesAtual = mes;
                 editorAnoAtual = ano;
                 
-                // ✅ Atualiza o card de "dias sem anotação" sem recarregar tudo
                 await carregarDiasSemAnotacaoParaTodos();
                 filtrarFuncionarios();
             } catch (error) {
@@ -3655,12 +3987,73 @@
         }
 
         function fecharModalEditor() {
-            // ✅ Força save antes de fechar
             if (autoSaveTimers.editor) {
                 clearTimeout(autoSaveTimers.editor);
                 salvarEditorAutomatico();
             }
             document.getElementById('modalEditor').classList.remove('active');
+        }
+
+        // ============================================================
+        // IMAGEM (Editor) — ✅ FUNÇÕES RESTAURADAS
+        // ============================================================
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) { mostrarToast('⚠️ Máx 5MB!', 'warning'); return; }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Data = e.target.result;
+                const imgDisplay = document.getElementById('imgDisplay');
+                imgDisplay.style.backgroundImage = `url(${base64Data})`;
+                imgDisplay.style.backgroundSize = 'contain';
+                imgDisplay.style.backgroundPosition = 'center';
+                imgDisplay.style.backgroundRepeat = 'no-repeat';
+                anexoAtualBase64 = base64Data;
+                nomeArquivoAnexo = file.name;
+                mostrarToast('✅ Imagem carregada! Clique em "Salvar Imagem no Cartão" para gravar.');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function limparImagem() {
+            document.getElementById('imgDisplay').style.backgroundImage = 'none';
+            document.getElementById('fileInput').value = '';
+            anexoAtualBase64 = null;
+            nomeArquivoAnexo = null;
+            mostrarToast('🧹 Imagem removida', 'info');
+        }
+
+        function zoomIn() {
+            const img = document.getElementById('imgDisplay');
+            const current = parseFloat(img.style.backgroundSize) || 100;
+            img.style.backgroundSize = Math.min(current + 20, 300) + '%';
+        }
+        function zoomOut() {
+            const img = document.getElementById('imgDisplay');
+            const current = parseFloat(img.style.backgroundSize) || 100;
+            img.style.backgroundSize = Math.max(current - 20, 40) + '%';
+        }
+        function resetZoom() {
+            document.getElementById('imgDisplay').style.backgroundSize = 'contain';
+        }
+
+        async function salvarImagemCartaoEditor() {
+            if (!funcionarioAtual) { mostrarToast('⚠️ Nenhum funcionário ativo', 'warning'); return; }
+            if (!anexoAtualBase64) { mostrarToast('⚠️ Nenhuma imagem carregada', 'warning'); return; }
+            const mes = document.getElementById('editorMes').value;
+            const ano = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
+            try {
+                const { error } = await supabaseClient.from('imagens_cartao').upsert({
+                    funcionario_id: funcionarioAtual.id, mes, ano,
+                    imagem_url: anexoAtualBase64, imagem_base64: anexoAtualBase64,
+                    nome_arquivo: nomeArquivoAnexo || 'cartao_ponto.jpg',
+                    uploaded_at: new Date().toISOString()
+                }, { onConflict: 'funcionario_id,mes,ano' });
+                if (error) throw error;
+                mostrarToast('✅ Imagem salva no cartão!');
+                await atualizarBadgeCartoes();
+            } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
 
         // ============================================================
@@ -4069,7 +4462,7 @@
         }
 
         // ============================================================
-        // INICIALIZAÇÃO — LOGIN SEMPRE APARECE
+        // INICIALIZAÇÃO
         // ============================================================
         window.onload = async function() {
             console.log('🚀 Iniciando Ponto...');
@@ -4108,6 +4501,7 @@
                     fecharAtestadoAnexoView();
                     fecharModalCalendarioStatus();
                     fecharModalDiaEscolha();
+                    fecharConsultaCID();
                 }
             });
             document.querySelectorAll('.modal:not(#modalLogin)').forEach(modal => {
