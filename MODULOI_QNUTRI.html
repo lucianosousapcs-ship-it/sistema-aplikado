@@ -995,6 +995,38 @@
         });
 
         // ============================================================
+        // CONSTANTES GLOBAIS (FALTAVAM NO CÓDIGO ORIGINAL)
+        // ============================================================
+        const MESES = [
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+        ];
+
+        const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+        const JORNADA_PADRAO_MINUTOS = 8 * 60; // 480 minutos = 8 horas
+
+        const ROLE_LABELS = {
+            'admin': 'Administrador',
+            'user': 'Usuário',
+            'viewer': 'Visualizador'
+        };
+
+        const STATUS_CALENDARIO_INFO = {
+            'trabalho': { label: 'Trabalho', cor: '#d4edda', icone: '✅' },
+            'folga': { label: 'Folga', cor: '#e2e3e5', icone: '💤' },
+            'falta': { label: 'Falta', cor: '#f8d7da', icone: '❌' },
+            'dispensa': { label: 'Dispensa', cor: '#fff3cd', icone: '📋' },
+            'ferias': { label: 'Férias', cor: '#cce5ff', icone: '🏖️' },
+            'atestado': { label: 'Atestado', cor: '#e2d4f5', icone: '🏥' },
+            'feriado': { label: 'Feriado', cor: '#ffe0b0', icone: '🎉' },
+            'folga_bh': { label: 'Folga BH', cor: '#d6d8db', icone: '⏰' },
+            'sem-status': { label: 'Não definido', cor: '#f5f5f5', icone: '⬜' }
+        };
+
+        const STORAGE_KEY = 'apliKado_ponto_session';
+
+        // ============================================================
         // GLOBAIS
         // ============================================================
         let usuarioAtual = null;
@@ -1023,7 +1055,6 @@
         // BASE DE DADOS CID-10 (principais códigos)
         // ============================================================
         const CID10_DB = [
-            // Capítulo I - Algumas doenças infecciosas e parasitárias (A00-B99)
             { cod: 'A09', desc: 'Diarreia e gastroenterite de origem infecciosa presumível', cat: 'Infecciosas' },
             { cod: 'A15', desc: 'Tuberculose respiratória, com confirmação bacteriológica e histológica', cat: 'Infecciosas' },
             { cod: 'A90', desc: 'Dengue clássico', cat: 'Infecciosas' },
@@ -1032,14 +1063,11 @@
             { cod: 'B34', desc: 'Infecção viral de localização não especificada', cat: 'Infecciosas' },
             { cod: 'B34.9', desc: 'Infecção viral não especificada', cat: 'Infecciosas' },
             { cod: 'B35', desc: 'Dermatofitose', cat: 'Infecciosas' },
-            // Capítulo II - Neoplasias (C00-D48)
             { cod: 'C50', desc: 'Neoplasia maligna da mama', cat: 'Neoplasias' },
             { cod: 'C61', desc: 'Neoplasia maligna da próstata', cat: 'Neoplasias' },
             { cod: 'D25', desc: 'Leiomioma do útero', cat: 'Neoplasias' },
-            // Capítulo III - Doenças do sangue (D50-D89)
             { cod: 'D50', desc: 'Anemia por deficiência de ferro', cat: 'Sangue' },
             { cod: 'D64', desc: 'Anemia não especificada', cat: 'Sangue' },
-            // Capítulo IV - Endócrinas, nutricionais e metabólicas (E00-E90)
             { cod: 'E03', desc: 'Hipotireoidismo', cat: 'Endócrinas' },
             { cod: 'E03.9', desc: 'Hipotireoidismo não especificado', cat: 'Endócrinas' },
             { cod: 'E05', desc: 'Tireotoxicose (hipertireoidismo)', cat: 'Endócrinas' },
@@ -1052,7 +1080,6 @@
             { cod: 'E66.9', desc: 'Obesidade não especificada', cat: 'Endócrinas' },
             { cod: 'E78', desc: 'Distúrbios do metabolismo de lipoproteínas', cat: 'Endócrinas' },
             { cod: 'E78.5', desc: 'Hiperlipidemia não especificada', cat: 'Endócrinas' },
-            // Capítulo V - Transtornos mentais e comportamentais (F00-F99)
             { cod: 'F10', desc: 'Transtornos mentais por uso de álcool', cat: 'Mentais' },
             { cod: 'F17', desc: 'Transtornos mentais por uso de tabaco', cat: 'Mentais' },
             { cod: 'F19', desc: 'Transtornos mentais por uso de múltiplas drogas', cat: 'Mentais' },
@@ -1071,7 +1098,6 @@
             { cod: 'F43.2', desc: 'Transtornos de adaptação', cat: 'Mentais' },
             { cod: 'F51', desc: 'Transtornos não-orgânicos do sono', cat: 'Mentais' },
             { cod: 'F99', desc: 'Transtorno mental não especificado', cat: 'Mentais' },
-            // Capítulo VI - Doenças do sistema nervoso (G00-G99)
             { cod: 'G40', desc: 'Epilepsia', cat: 'Nervoso' },
             { cod: 'G43', desc: 'Enxaqueca', cat: 'Nervoso' },
             { cod: 'G43.0', desc: 'Enxaqueca sem aura', cat: 'Nervoso' },
@@ -1081,7 +1107,6 @@
             { cod: 'G54', desc: 'Transtornos das raízes e dos plexos nervosos', cat: 'Nervoso' },
             { cod: 'G56', desc: 'Mononeuropatias dos membros superiores', cat: 'Nervoso' },
             { cod: 'G56.0', desc: 'Síndrome do túnel do carpo', cat: 'Nervoso' },
-            // Capítulo VII - Doenças do olho (H00-H59)
             { cod: 'H10', desc: 'Conjuntivite', cat: 'Olho' },
             { cod: 'H25', desc: 'Catarata senil', cat: 'Olho' },
             { cod: 'H40', desc: 'Glaucoma', cat: 'Olho' },
@@ -1089,7 +1114,6 @@
             { cod: 'H52.1', desc: 'Miopia', cat: 'Olho' },
             { cod: 'H53', desc: 'Distúrbios visuais', cat: 'Olho' },
             { cod: 'H54', desc: 'Cegueira e visão subnormal', cat: 'Olho' },
-            // Capítulo VIII - Doenças do ouvido (H60-H95)
             { cod: 'H60', desc: 'Otite externa', cat: 'Ouvido' },
             { cod: 'H65', desc: 'Otite média não-supurativa', cat: 'Ouvido' },
             { cod: 'H66', desc: 'Otite média supurativa e as não especificadas', cat: 'Ouvido' },
@@ -1098,7 +1122,6 @@
             { cod: 'H90', desc: 'Perda de audição por transtorno de condução', cat: 'Ouvido' },
             { cod: 'H91', desc: 'Outras perdas de audição', cat: 'Ouvido' },
             { cod: 'H93', desc: 'Outros transtornos do ouvido', cat: 'Ouvido' },
-            // Capítulo IX - Doenças do aparelho circulatório (I00-I99)
             { cod: 'I10', desc: 'Hipertensão essencial (primária)', cat: 'Circulatório' },
             { cod: 'I11', desc: 'Doença cardíaca hipertensiva', cat: 'Circulatório' },
             { cod: 'I20', desc: 'Angina pectoris', cat: 'Circulatório' },
@@ -1111,7 +1134,6 @@
             { cod: 'I83', desc: 'Varizes dos membros inferiores', cat: 'Circulatório' },
             { cod: 'I84', desc: 'Hemorroidas', cat: 'Circulatório' },
             { cod: 'I87', desc: 'Outros transtornos venosos', cat: 'Circulatório' },
-            // Capítulo X - Doenças do aparelho respiratório (J00-J99)
             { cod: 'J00', desc: 'Nasofaringite aguda (resfriado comum)', cat: 'Respiratório' },
             { cod: 'J01', desc: 'Sinusite aguda', cat: 'Respiratório' },
             { cod: 'J02', desc: 'Faringite aguda', cat: 'Respiratório' },
@@ -1135,7 +1157,6 @@
             { cod: 'J45', desc: 'Asma', cat: 'Respiratório' },
             { cod: 'J45.9', desc: 'Asma não especificada', cat: 'Respiratório' },
             { cod: 'J98', desc: 'Outros transtornos respiratórios', cat: 'Respiratório' },
-            // Capítulo XI - Doenças do aparelho digestivo (K00-K93)
             { cod: 'K02', desc: 'Cárie dentária', cat: 'Digestivo' },
             { cod: 'K04', desc: 'Doenças da polpa e tecidos periapicais', cat: 'Digestivo' },
             { cod: 'K05', desc: 'Gengivite e doenças periodontais', cat: 'Digestivo' },
@@ -1157,7 +1178,6 @@
             { cod: 'K76', desc: 'Outras doenças do fígado', cat: 'Digestivo' },
             { cod: 'K80', desc: 'Colelitíase (pedra na vesícula)', cat: 'Digestivo' },
             { cod: 'K81', desc: 'Colecistite', cat: 'Digestivo' },
-            // Capítulo XII - Doenças da pele (L00-L99)
             { cod: 'L01', desc: 'Impetigo', cat: 'Pele' },
             { cod: 'L02', desc: 'Abscesso cutâneo, furúnculo e carbúnculo', cat: 'Pele' },
             { cod: 'L03', desc: 'Celulite (flegmão)', cat: 'Pele' },
@@ -1173,7 +1193,6 @@
             { cod: 'L73', desc: 'Outros transtornos foliculares', cat: 'Pele' },
             { cod: 'L80', desc: 'Vitiligo', cat: 'Pele' },
             { cod: 'L98', desc: 'Outras doenças da pele e tecido subcutâneo', cat: 'Pele' },
-            // Capítulo XIII - Doenças do sistema osteomuscular (M00-M99)
             { cod: 'M05', desc: 'Artrite reumatóide soropositiva', cat: 'Osteomuscular' },
             { cod: 'M06', desc: 'Outras artrites reumatóides', cat: 'Osteomuscular' },
             { cod: 'M10', desc: 'Gota', cat: 'Osteomuscular' },
@@ -1202,7 +1221,6 @@
             { cod: 'M75.1', desc: 'Síndrome do manguito rotador', cat: 'Osteomuscular' },
             { cod: 'M77', desc: 'Outras entesopatias', cat: 'Osteomuscular' },
             { cod: 'M79', desc: 'Outros transtornos dos tecidos moles', cat: 'Osteomuscular' },
-            // Capítulo XIV - Doenças do aparelho geniturinário (N00-N99)
             { cod: 'N10', desc: 'Nefrite túbulo-intersticial aguda', cat: 'Geniturinário' },
             { cod: 'N11', desc: 'Nefrite túbulo-intersticial crônica', cat: 'Geniturinário' },
             { cod: 'N18', desc: 'Insuficiência renal crônica', cat: 'Geniturinário' },
@@ -1215,10 +1233,8 @@
             { cod: 'N83', desc: 'Transtornos não-inflamatórios do ovário', cat: 'Geniturinário' },
             { cod: 'N92', desc: 'Menstruação excessiva, frequente e irregular', cat: 'Geniturinário' },
             { cod: 'N94', desc: 'Dor e outras afecções dos órgãos genitais femininos', cat: 'Geniturinário' },
-            // Capítulo XV - Gravidez, parto e puerpério (O00-O99)
             { cod: 'O20', desc: 'Hemorragia do início da gravidez', cat: 'Gravidez' },
             { cod: 'O80', desc: 'Parto único espontâneo', cat: 'Gravidez' },
-            // Capítulo XVIII - Sintomas e sinais (R00-R99)
             { cod: 'R05', desc: 'Tosse', cat: 'Sintomas' },
             { cod: 'R06', desc: 'Anormalidades da respiração', cat: 'Sintomas' },
             { cod: 'R07', desc: 'Dor de garganta', cat: 'Sintomas' },
@@ -1231,7 +1247,6 @@
             { cod: 'R55', desc: 'Síncope e colapso', cat: 'Sintomas' },
             { cod: 'R56', desc: 'Convulsões', cat: 'Sintomas' },
             { cod: 'R80', desc: 'Proteinúria isolada', cat: 'Sintomas' },
-            // Capítulo XIX - Traumatismos (S00-T98)
             { cod: 'S00', desc: 'Traumatismo superficial da cabeça', cat: 'Traumatismos' },
             { cod: 'S06', desc: 'Traumatismo intracraniano', cat: 'Traumatismos' },
             { cod: 'S20', desc: 'Traumatismo superficial do tórax', cat: 'Traumatismos' },
@@ -1247,7 +1262,6 @@
             { cod: 'S83', desc: 'Luxação e entorse do joelho', cat: 'Traumatismos' },
             { cod: 'S93', desc: 'Luxação e entorse do tornozelo e pé', cat: 'Traumatismos' },
             { cod: 'T14', desc: 'Traumatismo de região não especificada', cat: 'Traumatismos' },
-            // Capítulo XXI - Fatores que influenciam o estado de saúde (Z00-Z99)
             { cod: 'Z00', desc: 'Exame geral e investigação de pessoas sem queixas', cat: 'Fatores' },
             { cod: 'Z76', desc: 'Pessoas em contato com serviços de saúde', cat: 'Fatores' }
         ];
@@ -2786,7 +2800,7 @@
         }
 
         // ============================================================
-        // ATESTADOS (com edição + CID picker)
+        // ATESTADOS
         // ============================================================
         async function carregarAtestados(funcId) {
             try {
@@ -2954,7 +2968,7 @@
         }
 
         // ============================================================
-        // CID PICKER (dentro do formulário de atestado)
+        // CID PICKER
         // ============================================================
         function buscarCIDNoAtestado(termo) {
             const dropdown = document.getElementById('cidDropdownAtestado');
@@ -2992,7 +3006,6 @@
             mostrarToast(`✅ CID ${cod} — ${desc.substring(0, 60)}${desc.length > 60 ? '...' : ''}`, 'info');
         }
 
-        // Fecha dropdown ao clicar fora
         document.addEventListener('click', function(e) {
             const dropdown = document.getElementById('cidDropdownAtestado');
             const input = document.getElementById('atTabCID');
@@ -3004,7 +3017,7 @@
         });
 
         // ============================================================
-        // CONSULTA CID (modal dedicado)
+        // CONSULTA CID
         // ============================================================
         function abrirConsultaCID() {
             document.getElementById('modalConsultaCID').classList.add('active');
@@ -3418,7 +3431,7 @@
         }
 
         // ============================================================
-        // PONTO (aba da pasta) — com abono de atestados
+        // PONTO (aba da pasta)
         // ============================================================
         async function carregarPontoNoModal() {
             if (!funcionarioAtual) return;
@@ -3578,7 +3591,7 @@
         }
 
         // ============================================================
-        // EDITOR DE PONTO — AUTO-SAVE + COMPENSAÇÃO BH
+        // EDITOR DE PONTO — AUTO-SAVE
         // ============================================================
         async function abrirEditorPontoFuncionario(id) {
             const func = funcionarios.find(f => String(f.id) === String(id)) || funcionarioAtual;
@@ -3712,7 +3725,6 @@
                 tbody.appendChild(tr);
             }
             
-            // ✅ Auto-save: escuta input em todos os campos de hora
             for (let i = 1; i <= dias; i++) {
                 ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(campo => {
                     const inp = document.getElementById(`edit_${campo}_${i}`);
@@ -3995,7 +4007,7 @@
         }
 
         // ============================================================
-        // IMAGEM (Editor) — ✅ FUNÇÕES RESTAURADAS
+        // IMAGEM (Editor)
         // ============================================================
         function handleFileUpload(event) {
             const file = event.target.files[0];
@@ -4057,7 +4069,7 @@
         }
 
         // ============================================================
-        // SELEÇÃO DE DIA (MODAL PEQUENO)
+        // SELEÇÃO DE DIA
         // ============================================================
         function abrirSelecaoFolgaBH() {
             const mes = document.getElementById('editorMes').value;
