@@ -98,6 +98,9 @@
         .grupo-header.sem-ponto { background: linear-gradient(135deg, rgba(108,117,125,0.18), rgba(108,117,125,0.05)); border-left-color: #6c757d; color: #383d41; }
         .grupo-header.sem-ponto i { color: #6c757d; }
         .grupo-header.sem-ponto .contagem { background: #6c757d; }
+        .grupo-header.cargo-header { background: linear-gradient(135deg, rgba(23,162,184,0.15), rgba(23,162,184,0.05)); border-left-color: #17a2b8; color: #0c5460; font-size: 11px; padding: 8px 16px; margin: 4px 0 2px 0; text-transform: none; letter-spacing: 0.3px; }
+        .grupo-header.cargo-header i { color: #17a2b8; font-size: 13px; }
+        .grupo-header.cargo-header .contagem { background: #17a2b8; font-size: 10px; }
         .funcionario-card { background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(8px); border-radius: 12px; padding: 16px; border: 1px solid rgba(255, 140, 0, 0.15); transition: all 0.3s; cursor: pointer; display: flex; align-items: center; gap: 14px; position: relative; }
         .funcionario-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); background: #fff; }
         .funcionario-card.sem-controle { border-left: 4px solid #6c757d; opacity: 0.92; }
@@ -281,6 +284,8 @@
         .calendario-dia.status-feriado .status-label { background: #fd7e14; }
         .calendario-dia.status-folga_bh { background: #d6d8db; }
         .calendario-dia.status-folga_bh .status-label { background: #495057; }
+        .calendario-dia.status-abono { background: #f5e0ff; }
+        .calendario-dia.status-abono .status-label { background: #a259c7; }
         .calendario-dia.sem-status { background: #f5f5f5; opacity: 0.6; }
         .calendario-dia.sem-status .status-label { background: #adb5bd; }
         .calendario-dia.dia-outro-mes { opacity: 0.25; pointer-events: none; }
@@ -374,12 +379,14 @@
         .editor-table tbody tr.linha-feriado { background: rgba(253,126,20,0.25); }
         .editor-table tbody tr.linha-folga-bh { background: rgba(108,117,125,0.15); }
         .editor-table tbody tr.linha-falta-atestado { background: rgba(111,66,193,0.14); }
+        .editor-table tbody tr.linha-abono { background: rgba(162,89,199,0.15); }
         .editor-table input[type="time"], .editor-table input[type="text"] { font-family: 'Poppins', sans-serif; width: 100%; min-width: 68px; padding: 4px 3px; border: 1px solid rgba(255, 140, 0, 0.2); border-radius: 5px; text-align: center; background: #fff; outline: none; font-size: 11px; color: #1a0a00; font-weight: 600; transition: border-color 0.2s; }
         .editor-table input[type="time"]:focus, .editor-table input[type="text"]:focus { border-color: #FF8C00; box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.15); }
         .editor-table input[readonly] { background: #f5f5f5; font-weight: 700; color: #7a3a00; }
         .editor-table input.total-geral { background: rgba(255,140,0,0.08); color: #cc7000; font-weight: 800; }
         .editor-table input.total-geral.abonado { background: rgba(111,66,193,0.15); color: #6f42c1; }
         .editor-table input.total-geral.horas-bh { background: rgba(73,80,87,0.25); color: #212529; font-weight: 800; font-size: 10px; letter-spacing: 0.3px; }
+        .editor-table input.total-geral.abono { background: rgba(162,89,199,0.2); color: #a259c7; font-weight: 800; font-size: 10px; letter-spacing: 0.3px; }
         .editor-table .dia-cell { font-weight: 700; font-size: 11px; padding: 4px 6px; white-space: nowrap; text-align: left; }
         .editor-table .dia-cell .dia-num { display: inline-block; min-width: 22px; font-size: 12px; }
         .editor-table .dia-cell .dia-sem { display: inline-block; font-size: 9px; color: #7a3a00; font-weight: 600; margin-left: 2px; }
@@ -387,6 +394,7 @@
         .editor-table .btn-dia-acao:hover { background: #FF8C00; color: #fff; border-color: #FF8C00; }
         .editor-table .btn-dia-acao.ativo-folga-bh { background: #495057; color: #fff; border-color: #495057; }
         .editor-table .btn-dia-acao.ativo-falta { background: #6f42c1; color: #fff; border-color: #6f42c1; }
+        .editor-table .btn-dia-acao.ativo-abono { background: #a259c7; color: #fff; border-color: #a259c7; }
         .editor-resumo { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding: 10px 12px; background: #f8f9fa; border-radius: 10px; border: 1px solid #eee; }
         .editor-resumo .item { padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; border: 1px solid #eee; }
         .modal-dia-escolha { display: none; position: fixed; z-index: 10200; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); justify-content: center; align-items: center; padding: 16px; }
@@ -415,7 +423,7 @@
         .cid-picker-empty { padding: 12px; text-align: center; color: #999; font-size: 11px; }
 
         /* ============================================================
-           RELATÓRIO — TABELA PRETO E BRANCO ESTILO FORMAL
+           RELATÓRIO — AGORA EM POPUP (não tela cheia)
            ============================================================ */
         .relatorio-paisagem {
             display: none;
@@ -423,10 +431,11 @@
             z-index: 9999;
             left: 0; top: 0;
             width: 100%; height: 100%;
-            background: #1e1e1e;
-            overflow: hidden;
+            background: rgba(15,15,15,0.85);
+            backdrop-filter: blur(8px);
             justify-content: center;
-            align-items: stretch;
+            align-items: center;
+            padding: 20px;
         }
         .relatorio-paisagem.active { display: flex; }
 
@@ -434,8 +443,13 @@
             display: flex;
             flex-direction: column;
             width: 100%;
+            max-width: 1400px;
             height: 100%;
+            max-height: 92vh;
             background: #1e1e1e;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.6);
         }
 
         .rel-header {
@@ -686,7 +700,7 @@
             border: 1px solid #000;
         }
         .rel-tabela thead th {
-            background: #000;
+            background: #7a7a7a; /* cinza */
             color: #fff;
             font-size: 9px;
             font-weight: 700;
@@ -705,10 +719,10 @@
             background: #fff;
         }
         .rel-tabela tbody tr.linha-header-func {
-            background: #e0e0e0;
+            background: #d0d0d0; /* cinza claro */
         }
         .rel-tabela tbody tr.linha-header-func td {
-            background: #e0e0e0;
+            background: #d0d0d0;
             font-weight: 800;
             text-align: left;
             padding: 6px 8px;
@@ -719,10 +733,10 @@
             border: 1px solid #000;
         }
         .rel-tabela tbody tr.linha-total {
-            background: #f0f0f0;
+            background: #e8e8e8;
         }
         .rel-tabela tbody tr.linha-total td {
-            background: #f0f0f0;
+            background: #e8e8e8;
             font-weight: 800;
             color: #000;
             border: 1px solid #000;
@@ -801,12 +815,11 @@
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #000;
-            background: #000;
             color: #fff;
+            background: #7a7a7a; /* cinza em vez de preto */
             padding: 6px 10px;
             margin: 18px 0 10px 0;
-            border: 1px solid #000;
+            border: 1px solid #7a7a7a;
         }
 
         .rel-empty {
@@ -863,12 +876,53 @@
             .relatorio-paisagem .rel-header,
             .relatorio-paisagem .rel-toolbar,
             .relatorio-paisagem .rel-footer { display: none; }
-            .relatorio-paisagem { background: #fff; position: static; display: block; }
+            .relatorio-paisagem { background: #fff; position: static; display: block; padding: 0; }
             .rel-body { background: #fff; padding: 0; display: block; }
             .rel-pagina { box-shadow: none; border-radius: 0; padding: 0; max-width: 100%; }
             .rel-filtros { display: none; }
+            .conteudo-relatorio { max-height: none !important; box-shadow: none !important; border-radius: 0 !important; }
             @page { size: landscape; margin: 10mm; }
         }
+
+        /* ============================================================
+           FICHA CADASTRAL
+           ============================================================ */
+        .modal-ficha-cadastral { display: none; position: fixed; z-index: 10050; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 20px; }
+        .modal-ficha-cadastral.active { display: flex; }
+        .modal-ficha-cadastral .conteudo-ficha { background: #fff; border-radius: 14px; max-width: 1300px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.5); }
+        .ficha-header { background: #1e1e1e; color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .ficha-header h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .ficha-header h2 i { color: #FF8C00; }
+        .ficha-header-actions { display: flex; gap: 8px; }
+        .ficha-toolbar { background: #f8f9fa; border-bottom: 1px solid #e0e0e0; padding: 10px 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+        .ficha-toolbar .campo { display: flex; flex-direction: column; gap: 3px; min-width: 160px; }
+        .ficha-toolbar .campo label { font-size: 9px; font-weight: 700; color: #7a3a00; text-transform: uppercase; }
+        .ficha-toolbar .campo select, .ficha-toolbar .campo input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; font-family: 'Poppins', sans-serif; font-size: 12px; }
+        .ficha-body { flex: 1; overflow-y: auto; padding: 24px 28px; background: #fff; color: #000; }
+        .ficha-unidade-titulo { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 8px 14px; background: #7a7a7a; color: #fff; border-radius: 6px; margin: 20px 0 12px 0; display: flex; align-items: center; gap: 10px; }
+        .ficha-unidade-titulo:first-child { margin-top: 0; }
+        .ficha-unidade-titulo .count { margin-left: auto; background: rgba(255,255,255,0.25); padding: 1px 10px; border-radius: 12px; font-size: 11px; }
+        .ficha-empresa-titulo { font-size: 12px; font-weight: 700; color: #333; margin: 14px 0 6px 0; padding: 6px 10px; background: #efefef; border-left: 4px solid #FF8C00; border-radius: 4px; }
+        .ficha-tabela { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; border: 1px solid #000; }
+        .ficha-tabela thead th { background: #7a7a7a; color: #fff; font-size: 9px; font-weight: 700; padding: 6px; text-align: center; text-transform: uppercase; border: 1px solid #000; }
+        .ficha-tabela tbody td { padding: 5px 6px; border: 1px solid #000; text-align: left; font-size: 11px; }
+        .ficha-tabela tbody tr:nth-child(even) { background: #f7f7f7; }
+        .ficha-tabela td.centro { text-align: center; }
+        .ficha-footer { background: #202124; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; color: #9aa0a6; font-size: 10px; }
+        .ficha-footer button { font-family: 'Poppins', sans-serif; }
+
+        /* Modal de Abono */
+        .modal-abono { display: none; position: fixed; z-index: 10300; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); justify-content: center; align-items: center; padding: 16px; }
+        .modal-abono.active { display: flex; }
+        .modal-abono .conteudo { background: #fff; border-radius: 16px; padding: 22px; max-width: 500px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .modal-abono h3 { font-size: 17px; color: #1a0a00; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid #a259c7; display: flex; align-items: center; gap: 8px; }
+        .modal-abono h3 i { color: #a259c7; }
+        .modal-abono .edit-field { margin-bottom: 10px; }
+        .modal-abono .botoes { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+        /* Botão destaque cartão */
+        .btn-salvar-cartao-destaque { position: absolute; bottom: 10px; right: 10px; background: #28a745; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 6px; transition: all 0.2s; z-index: 5; }
+        .btn-salvar-cartao-destaque:hover { background: #1e7e34; transform: translateY(-2px); }
     </style>
 </head>
 <body>
@@ -918,6 +972,7 @@
         <button class="sidebar-btn" onclick="abrirControleFerias()"><i class="fas fa-umbrella-beach"></i> Controle de Férias</button>
         <button class="sidebar-btn" onclick="abrirCronogramas()"><i class="fas fa-calendar-week"></i> Cronogramas</button>
         <button class="sidebar-btn" onclick="abrirRelatorioPonto()"><i class="fas fa-file-alt"></i> Relatório de Ponto</button>
+        <button class="sidebar-btn" onclick="abrirFichaCadastral()"><i class="fas fa-id-card-clip"></i> Ficha Cadastral</button>
         <button class="sidebar-btn" onclick="abrirErros()"><i class="fas fa-exclamation-triangle"></i> Erros de Marcação <span class="badge-sidebar" id="badgeErros" style="display:none;">0</span></button>
         <div class="sidebar-label"><i class="fas fa-users-cog"></i> Administração</div>
         <button class="sidebar-btn" onclick="abrirModalPerfis()"><i class="fas fa-user-shield"></i> Perfis de Usuário</button>
@@ -959,6 +1014,9 @@
                         <input type="text" id="searchInput" placeholder="🔍 Buscar..." style="padding:8px 14px;border:1px solid #ddd;border-radius:8px;font-size:12px;font-family:Poppins,sans-serif;min-width:200px;" oninput="filtrarFuncionarios()">
                         <select id="filtroUnidade" onchange="filtrarFuncionarios()" style="padding:8px 14px;border:1px solid #ddd;border-radius:8px;font-size:12px;font-family:Poppins,sans-serif;">
                             <option value="">Todas Unidades</option>
+                        </select>
+                        <select id="filtroEmpresa" onchange="filtrarFuncionarios()" style="padding:8px 14px;border:1px solid #ddd;border-radius:8px;font-size:12px;font-family:Poppins,sans-serif;">
+                            <option value="">Todas Empresas</option>
                         </select>
                     </div>
                 </div>
@@ -1002,57 +1060,162 @@
             </div>
         </div>
 
+        <!-- CADASTRO COMPLETO -->
         <div id="aba-cadastro" class="tab-content">
             <div class="table-section">
                 <div class="table-header">
                     <h3><i class="fas fa-user-plus"></i> <span id="tituloFormCadastro">Cadastrar Novo Funcionário</span></h3>
                 </div>
-                <div style="background:#f8f9fa;padding:20px;border-radius:12px;border:1px solid #eee;">
-                    <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;">
+
+                <!-- Dados Pessoais -->
+                <div style="background:#f8f9fa;padding:18px;border-radius:12px;border:1px solid #eee;margin-bottom:14px;">
+                    <div class="section-title" style="font-weight:700;font-size:13px;color:#1a0a00;margin-bottom:12px;border-bottom:1px solid rgba(255,140,0,0.2);padding-bottom:6px;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-user" style="color:#FF8C00;"></i> Dados Pessoais
+                    </div>
+                    <div style="display:grid;grid-template-columns:140px 1fr;gap:20px;">
                         <div style="text-align:center;">
                             <div class="foto-upload-cadastro" onclick="document.getElementById('inputFoto').click()">
                                 <img id="previewFoto" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e0e0'/%3E%3Ctext x='60' y='65' font-size='40' text-anchor='middle' fill='%23999' font-family='Arial'%3E?%3C/text%3E%3C/svg%3E" alt="Foto">
                             </div>
-                            <p style="font-size:12px;color:#7a3a00;"><i class="fas fa-camera"></i> Clique para anexar foto</p>
+                            <p style="font-size:11px;color:#7a3a00;"><i class="fas fa-camera"></i> Clique para anexar foto</p>
                             <input type="file" id="inputFoto" accept="image/*" style="display:none;" onchange="carregarFoto(event)">
                         </div>
                         <div>
-                            <div class="form-group" style="margin-bottom:10px;">
-                                <label>Nome Completo *</label>
-                                <input type="text" id="cadNome" placeholder="Nome do funcionário">
-                            </div>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                                <div class="form-group"><label>CPF</label><input type="text" id="cadCPF" placeholder="000.000.000-00"></div>
-                                <div class="form-group"><label>Unidade</label>
-                                    <select id="cadUnidade">
-                                        <option value="Spoleto">Spoleto</option>
-                                        <option value="A2B">A2B</option>
-                                        <option value="Acço">Acço</option>
-                                        <option value="Copaenergia">Copaenergia</option>
-                                        <option value="INSS">INSS</option>
-                                        <option value="Qnutri">Qnutri</option>
+                            <div class="edit-grid-3">
+                                <div class="edit-field" style="grid-column:span 2;"><label>Nome Completo *</label><input type="text" id="cadNome" placeholder="Nome do funcionário"></div>
+                                <div class="edit-field"><label>CPF</label><input type="text" id="cadCPF" placeholder="000.000.000-00"></div>
+                                <div class="edit-field"><label>RG</label><input type="text" id="cadRG" placeholder="00.000.000-0"></div>
+                                <div class="edit-field"><label>Data de Nascimento</label><input type="date" id="cadAniversario"></div>
+                                <div class="edit-field"><label>Estado Civil</label>
+                                    <select id="cadEstadoCivil">
+                                        <option value="">Selecione</option>
+                                        <option value="Solteiro(a)">Solteiro(a)</option>
+                                        <option value="Casado(a)">Casado(a)</option>
+                                        <option value="Divorciado(a)">Divorciado(a)</option>
+                                        <option value="Viúvo(a)">Viúvo(a)</option>
+                                        <option value="União Estável">União Estável</option>
                                     </select>
                                 </div>
-                                <div class="form-group"><label>Cargo</label><input type="text" id="cadCargo" placeholder="Ex: Analista"></div>
-                                <div class="form-group"><label>Data Admissão</label><input type="date" id="cadAdmissao"></div>
-                                <div class="form-group"><label>Validade ASO</label><input type="date" id="cadASO"></div>
-                                <div class="form-group"><label>Aniversário</label><input type="date" id="cadAniversario"></div>
-                            </div>
-                            <div style="margin-top:12px;">
-                                <label class="flag-toggle">
-                                    <input type="checkbox" id="cadSemControlePonto">
-                                    <span class="flag-texto">
-                                        <i class="fas fa-user-slash" style="color:#6c757d;"></i> Sem Controle de Ponto
-                                        <small>Fica em grupo separado e não aparece em Férias, VT, Cronogramas e Erros</small>
-                                    </span>
-                                </label>
+                                <div class="edit-field"><label>Gênero</label>
+                                    <select id="cadGenero">
+                                        <option value="">Selecione</option>
+                                        <option value="Masculino">Masculino</option>
+                                        <option value="Feminino">Feminino</option>
+                                        <option value="Outro">Outro</option>
+                                    </select>
+                                </div>
+                                <div class="edit-field"><label>Nacionalidade</label><input type="text" id="cadNacionalidade" placeholder="Brasileiro"></div>
+                                <div class="edit-field"><label>PCD</label>
+                                    <select id="cadPCD">
+                                        <option value="">Selecione</option>
+                                        <option value="Sim">Sim</option>
+                                        <option value="Não">Não</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
-                        <button class="btn-action btn-warning" onclick="limparFormCadastro()" style="display:none;" id="btnCancelarEdicao"><i class="fas fa-times"></i> Cancelar Edição</button>
-                        <button class="btn-action btn-success" onclick="salvarFuncionario()" id="btnSalvarFuncionario"><i class="fas fa-save"></i> Salvar Cadastro</button>
+                </div>
+
+                <!-- Dados Profissionais -->
+                <div style="background:#f8f9fa;padding:18px;border-radius:12px;border:1px solid #eee;margin-bottom:14px;">
+                    <div class="section-title" style="font-weight:700;font-size:13px;color:#1a0a00;margin-bottom:12px;border-bottom:1px solid rgba(255,140,0,0.2);padding-bottom:6px;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-briefcase" style="color:#FF8C00;"></i> Dados Profissionais
                     </div>
+                    <div class="edit-grid-3">
+                        <div class="edit-field"><label>Unidade *</label>
+                            <select id="cadUnidade">
+                                <option value="Spoleto">Spoleto</option>
+                                <option value="A2B">A2B</option>
+                                <option value="Acço">Acço</option>
+                                <option value="Copaenergia">Copaenergia</option>
+                                <option value="INSS">INSS</option>
+                                <option value="Qnutri">Qnutri</option>
+                            </select>
+                        </div>
+                        <div class="edit-field"><label>Empresa / Departamento</label><input type="text" id="cadDepartamento" placeholder="Ex: Vendas, Produção..."></div>
+                        <div class="edit-field"><label>Cargo</label><input type="text" id="cadCargo" placeholder="Ex: Analista"></div>
+                        <div class="edit-field"><label>Data Admissão</label><input type="date" id="cadAdmissao"></div>
+                        <div class="edit-field"><label>Validade ASO</label><input type="date" id="cadASO"></div>
+                        <div class="edit-field"><label>Salário Base (R$)</label><input type="number" step="0.01" id="cadSalario" placeholder="0,00"></div>
+                        <div class="edit-field"><label>Último Gozo de Férias</label><input type="date" id="cadUltimoGozo"></div>
+                    </div>
+                    <div style="margin-top:12px;">
+                        <label class="flag-toggle">
+                            <input type="checkbox" id="cadSemControlePonto">
+                            <span class="flag-texto">
+                                <i class="fas fa-user-slash" style="color:#6c757d;"></i> Sem Controle de Ponto
+                                <small>Fica em grupo separado e não aparece em Férias, VT, Cronogramas e Erros</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Documentos -->
+                <div style="background:#f8f9fa;padding:18px;border-radius:12px;border:1px solid #eee;margin-bottom:14px;">
+                    <div class="section-title" style="font-weight:700;font-size:13px;color:#1a0a00;margin-bottom:12px;border-bottom:1px solid rgba(255,140,0,0.2);padding-bottom:6px;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-file-alt" style="color:#FF8C00;"></i> Documentos
+                    </div>
+                    <div class="edit-grid-3">
+                        <div class="edit-field"><label>Órgão Emissor RG</label><input type="text" id="cadOrgaoEmissor" placeholder="SSP"></div>
+                        <div class="edit-field"><label>Data Emissão RG</label><input type="date" id="cadDataEmissaoRG"></div>
+                        <div class="edit-field"><label>CTPS</label><input type="text" id="cadCTPS"></div>
+                        <div class="edit-field"><label>Série CTPS</label><input type="text" id="cadSerieCTPS"></div>
+                        <div class="edit-field"><label>PIS/PASEP</label><input type="text" id="cadPIS"></div>
+                        <div class="edit-field"><label>Título de Eleitor</label><input type="text" id="cadTituloEleitor"></div>
+                        <div class="edit-field"><label>CNH</label><input type="text" id="cadCNH"></div>
+                        <div class="edit-field"><label>Categoria CNH</label><input type="text" id="cadCategoriaCNH"></div>
+                        <div class="edit-field"><label>Validade CNH</label><input type="date" id="cadValidadeCNH"></div>
+                    </div>
+                </div>
+
+                <!-- Contato -->
+                <div style="background:#f8f9fa;padding:18px;border-radius:12px;border:1px solid #eee;margin-bottom:14px;">
+                    <div class="section-title" style="font-weight:700;font-size:13px;color:#1a0a00;margin-bottom:12px;border-bottom:1px solid rgba(255,140,0,0.2);padding-bottom:6px;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-address-book" style="color:#FF8C00;"></i> Contato
+                    </div>
+                    <div class="edit-grid-3">
+                        <div class="edit-field"><label>Telefone Fixo</label><input type="text" id="cadTelefone"></div>
+                        <div class="edit-field"><label>Celular</label><input type="text" id="cadCelular"></div>
+                        <div class="edit-field"><label>Celular 2</label><input type="text" id="cadCelular2"></div>
+                        <div class="edit-field"><label>E-mail</label><input type="email" id="cadEmail"></div>
+                        <div class="edit-field"><label>E-mail Pessoal</label><input type="email" id="cadEmailPessoal"></div>
+                        <div class="edit-field"><label>Emergência - Nome</label><input type="text" id="cadEmergenciaNome"></div>
+                        <div class="edit-field"><label>Emergência - Parentesco</label><input type="text" id="cadEmergenciaParentesco"></div>
+                        <div class="edit-field"><label>Emergência - Telefone</label><input type="text" id="cadEmergenciaTelefone"></div>
+                    </div>
+                </div>
+
+                <!-- Benefícios -->
+                <div style="background:#f8f9fa;padding:18px;border-radius:12px;border:1px solid #eee;margin-bottom:14px;">
+                    <div class="section-title" style="font-weight:700;font-size:13px;color:#1a0a00;margin-bottom:12px;border-bottom:1px solid rgba(255,140,0,0.2);padding-bottom:6px;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-gift" style="color:#FF8C00;"></i> Benefícios e Dados Bancários
+                    </div>
+                    <div class="edit-grid-3">
+                        <div class="edit-field"><label>Vale Transporte</label>
+                            <select id="cadValeTransporte"><option value="">Selecione</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
+                        </div>
+                        <div class="edit-field"><label>Vale Alimentação</label>
+                            <select id="cadValeAlimentacao"><option value="">Selecione</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
+                        </div>
+                        <div class="edit-field"><label>Vale Refeição</label>
+                            <select id="cadValeRefeicao"><option value="">Selecione</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
+                        </div>
+                        <div class="edit-field"><label>Plano de Saúde</label><input type="text" id="cadPlanoSaude"></div>
+                        <div class="edit-field"><label>Plano Odontológico</label><input type="text" id="cadPlanoOdonto"></div>
+                        <div class="edit-field"><label>Seguro de Vida</label>
+                            <select id="cadSeguroVida"><option value="">Selecione</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
+                        </div>
+                        <div class="edit-field"><label>Banco</label><input type="text" id="cadBanco"></div>
+                        <div class="edit-field"><label>Agência</label><input type="text" id="cadAgencia"></div>
+                        <div class="edit-field"><label>Conta</label><input type="text" id="cadConta"></div>
+                        <div class="edit-field"><label>PIX</label><input type="text" id="cadPix"></div>
+                    </div>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                    <button class="btn-action btn-warning" onclick="limparFormCadastro()" style="display:none;" id="btnCancelarEdicao"><i class="fas fa-times"></i> Cancelar Edição</button>
+                    <button class="btn-action btn-success" onclick="salvarFuncionario()" id="btnSalvarFuncionario"><i class="fas fa-save"></i> Salvar Cadastro</button>
                 </div>
             </div>
         </div>
@@ -1093,6 +1256,7 @@
                     </div>
                     <button type="button" class="btn-action btn-secondary btn-sm" onclick="abrirSelecaoFolgaBH()"><i class="fas fa-clock"></i> Folga BH</button>
                     <button type="button" class="btn-action btn-purple btn-sm" onclick="abrirSelecaoFaltaAtestado()"><i class="fas fa-notes-medical"></i> Falta c/ Atestado</button>
+                    <button type="button" class="btn-action btn-sm" style="background:#a259c7;color:#fff;" onclick="abrirModalAbono()"><i class="fas fa-gift"></i> Abonar Período</button>
                     <span style="margin-left:auto;font-size:11px;font-weight:600;color:#1a0a00;" id="editorModoMsg"><i class="fas fa-info-circle"></i> Modo: Visualização</span>
                 </div>
                 <div class="editor-layout">
@@ -1166,8 +1330,8 @@
                             <div class="item" style="background:#e2d4f5;color:#4a2c91;border-color:#6f42c1;">
                                 <i class="fas fa-notes-medical"></i> Faltas c/ atestado: <strong id="editorQtdFaltaAtestado">0</strong>
                             </div>
-                            <div class="item" style="background:#cce5ff;color:#004085;border-color:#004085;">
-                                <i class="fas fa-umbrella-beach"></i> Férias: <strong id="editorQtdFerias">0</strong>
+                            <div class="item" style="background:#f5e0ff;color:#a259c7;border-color:#a259c7;">
+                                <i class="fas fa-gift"></i> Dias abonados: <strong id="editorQtdAbono">0</strong>
                             </div>
                             <div class="item" style="background:#fff0f0;color:#dc3545;border-color:#dc3545;">
                                 <i class="fas fa-hourglass-end"></i> Compensação BH: <strong id="editorCompensacaoBH">00:00</strong>
@@ -1177,10 +1341,41 @@
                             <span><span style="display:inline-block;width:12px;height:12px;background:#ffe0b0;border:1px solid #fd7e14;border-radius:3px;vertical-align:middle;"></span> Feriado</span>
                             <span><span style="display:inline-block;width:12px;height:12px;background:#d6d8db;border:1px solid #495057;border-radius:3px;vertical-align:middle;"></span> Folga BH</span>
                             <span><span style="display:inline-block;width:12px;height:12px;background:#e2d4f5;border:1px solid #6f42c1;border-radius:3px;vertical-align:middle;"></span> Falta c/ Atestado</span>
-                            <span><span style="display:inline-block;width:12px;height:12px;background:#cce5ff;border:1px solid #004085;border-radius:3px;vertical-align:middle;"></span> Férias</span>
+                            <span><span style="display:inline-block;width:12px;height:12px;background:#f5e0ff;border:1px solid #a259c7;border-radius:3px;vertical-align:middle;"></span> Abono</span>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ABONO -->
+    <div class="modal-abono" id="modalAbono">
+        <div class="conteudo">
+            <h3><i class="fas fa-gift"></i> Abonar Período</h3>
+            <div class="edit-field">
+                <label>Data Início *</label>
+                <input type="date" id="abonoDataInicio">
+            </div>
+            <div class="edit-field">
+                <label>Data Fim *</label>
+                <input type="date" id="abonoDataFim">
+            </div>
+            <div class="edit-field">
+                <label>Motivo / Justificativa</label>
+                <input type="text" id="abonoMotivo" placeholder="Ex: Doação de sangue, licença, etc.">
+            </div>
+            <div class="edit-field">
+                <label>Tipo</label>
+                <select id="abonoTipo">
+                    <option value="abono">Abono Simples (não afeta saldo)</option>
+                    <option value="compensacao">Compensação de Banco de Horas</option>
+                    <option value="licenca">Licença Remunerada</option>
+                </select>
+            </div>
+            <div class="botoes">
+                <button type="button" class="btn-action btn-secondary" onclick="fecharModalAbono()"><i class="fas fa-times"></i> Cancelar</button>
+                <button type="button" class="btn-action" style="background:#a259c7;color:#fff;" onclick="confirmarAbono()"><i class="fas fa-check"></i> Confirmar Abono</button>
             </div>
         </div>
     </div>
@@ -1403,6 +1598,7 @@
                         <option value="atestado">Atestado</option>
                         <option value="feriado"> Feriado</option>
                         <option value="folga_bh"> Folga BH</option>
+                        <option value="abono"> Abono</option>
                     </select>
                 </div>
                 <div class="form-group" style="margin-bottom:12px;">
@@ -1424,7 +1620,7 @@
         <div id="atestadoAnexoViewConteudo"></div>
     </div>
 
-    <!-- RELATÓRIO — VISUALIZADOR TIPO PDF (TABELA PRETO E BRANCO) -->
+    <!-- RELATÓRIO — VISUALIZADOR TIPO PDF (POPUP) -->
     <div class="relatorio-paisagem" id="relatorioPaisagem">
         <div class="conteudo-relatorio">
             <div class="rel-header">
@@ -1529,6 +1725,61 @@
         </div>
     </div>
 
+    <!-- MODAL FICHA CADASTRAL (POPUP) -->
+    <div class="modal-ficha-cadastral" id="modalFichaCadastral">
+        <div class="conteudo-ficha">
+            <div class="ficha-header">
+                <h2><i class="fas fa-id-card-clip"></i> Ficha Cadastral</h2>
+                <div class="ficha-header-actions">
+                    <button type="button" class="rel-btn rel-btn-pdf" onclick="baixarFichaCadastralPdf()">
+                        <i class="fas fa-download"></i> Baixar PDF
+                    </button>
+                    <button type="button" class="rel-btn rel-btn-print" onclick="imprimirFichaCadastral()">
+                        <i class="fas fa-print"></i> Imprimir
+                    </button>
+                    <button type="button" class="rel-btn rel-btn-close" onclick="fecharFichaCadastral()">
+                        <i class="fas fa-times"></i> Fechar
+                    </button>
+                </div>
+            </div>
+            <div class="ficha-toolbar">
+                <div class="campo">
+                    <label><i class="fas fa-building"></i> Unidade</label>
+                    <select id="fichaFiltroUnidade" onchange="gerarFichaCadastral()">
+                        <option value="">Todas</option>
+                        <option value="Spoleto">Spoleto</option>
+                        <option value="A2B">A2B</option>
+                        <option value="Acço">Acço</option>
+                        <option value="Copaenergia">Copaenergia</option>
+                        <option value="INSS">INSS</option>
+                        <option value="Qnutri">Qnutri</option>
+                    </select>
+                </div>
+                <div class="campo">
+                    <label><i class="fas fa-sitemap"></i> Empresa / Departamento</label>
+                    <select id="fichaFiltroEmpresa" onchange="gerarFichaCadastral()">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="campo" style="min-width:200px;">
+                    <label><i class="fas fa-search"></i> Buscar</label>
+                    <input type="text" id="fichaBusca" placeholder="Nome ou cargo..." oninput="gerarFichaCadastral()">
+                </div>
+                <button type="button" class="btn-action btn-primary" onclick="gerarFichaCadastral()"><i class="fas fa-sync"></i> Atualizar</button>
+            </div>
+            <div class="ficha-body" id="fichaBody">
+                <div style="text-align:center;padding:60px 20px;color:#7a3a00;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:32px;display:block;margin-bottom:12px;"></i>
+                    Carregando...
+                </div>
+            </div>
+            <div class="ficha-footer">
+                <span><i class="fas fa-calendar"></i> Gerado em <span id="fichaFooterData"></span></span>
+                <button type="button" class="btn-action btn-secondary btn-sm" onclick="fecharFichaCadastral()"><i class="fas fa-times"></i> Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ============================================================
         // SUPABASE
@@ -1555,6 +1806,7 @@
             'atestado': { label: 'Atestado', cor: '#e2d4f5', icone: '🏥' },
             'feriado': { label: 'Feriado', cor: '#ffe0b0', icone: '🎉' },
             'folga_bh': { label: 'Folga BH', cor: '#d6d8db', icone: '⏰' },
+            'abono': { label: 'Abono', cor: '#f5e0ff', icone: '🎁' },
             'sem-status': { label: 'Não definido', cor: '#f5f5f5', icone: '⬜' }
         };
         const STORAGE_KEY = 'apliKado_ponto_session';
@@ -1644,7 +1896,7 @@
             return feriadosFixos.some(f => f.mes === mesIndex && f.dia === dia);
         }
         function converterParaMinutos(horario) {
-            if (!horario || horario === '00:00' || horario === '—' || horario === 'ABONADO' || horario === 'HORAS BH') return 0;
+            if (!horario || horario === '00:00' || horario === '—' || horario === 'ABONADO' || horario === 'HORAS BH' || horario === 'ABONO') return 0;
             const [h, m] = horario.split(':').map(Number);
             return h * 60 + m;
         }
@@ -1692,7 +1944,7 @@
         }
 
         // ============================================================
-        // UPDATE TOLERANTE (corrigido para tratar 409 / CPF duplicado)
+        // UPDATE TOLERANTE
         // ============================================================
         async function updateTolerante(id, dados, opts = {}) {
             const tabela = opts.tabela || 'funcionarios';
@@ -1705,13 +1957,11 @@
                     const { error } = await supabaseClient.from(tabela).update(payload).eq('id', id);
                     if (!error) return { ok: true, ignoradas, erro: null };
                     const msg = (error.message || '').toLowerCase();
-                    // Coluna inexistente → remove e tenta de novo
                     const match = msg.match(/could not find the '([^']+)' column/);
                     if (match && match[1]) {
                         const coluna = match[1];
                         if (coluna in payload) { delete payload[coluna]; ignoradas.push(coluna); continue; }
                     }
-                    // CPF duplicado / violação de unicidade (409)
                     if (msg.includes('duplicate key') || msg.includes('unique constraint') || error.code === '23505') {
                         return { ok: false, ignoradas, erro: 'Já existe outro funcionário cadastrado com este CPF. Verifique se o CPF está correto ou edite o registro existente.' };
                     }
@@ -1874,7 +2124,9 @@
                 const { data, error } = await supabaseClient.from('funcionarios').select('*').order('nome');
                 if (error) throw error;
                 funcionarios = data || [];
-                const unidades = [...new Set(funcionarios.map(f => f.unidade).filter(Boolean))];
+
+                // Filtro de Unidades
+                const unidades = [...new Set(funcionarios.map(f => f.unidade).filter(Boolean))].sort();
                 const selectUnidade = document.getElementById('filtroUnidade');
                 selectUnidade.innerHTML = '<option value="">Todas Unidades</option>';
                 unidades.forEach(u => {
@@ -1882,6 +2134,17 @@
                     opt.value = u; opt.textContent = u;
                     selectUnidade.appendChild(opt);
                 });
+
+                // Filtro de Empresas (departamento)
+                const empresas = [...new Set(funcionarios.map(f => f.departamento).filter(Boolean))].sort();
+                const selectEmpresa = document.getElementById('filtroEmpresa');
+                selectEmpresa.innerHTML = '<option value="">Todas Empresas</option>';
+                empresas.forEach(e => {
+                    const opt = document.createElement('option');
+                    opt.value = e; opt.textContent = e;
+                    selectEmpresa.appendChild(opt);
+                });
+
                 document.getElementById('totalFuncionarios').textContent = funcionarios.length;
                 await carregarDiasSemAnotacaoParaTodos();
                 filtrarFuncionarios();
@@ -1899,7 +2162,7 @@
             const diasDoMes = hoje.getDate();
             for (let dia = 1; dia <= diasDoMes; dia++) {
                 const d = pontos[dia];
-                const temAlguma = d && (d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado);
+                const temAlguma = d && (d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado || d.abono);
                 if (!temAlguma) count++;
             }
             return count;
@@ -1909,7 +2172,7 @@
             if (!pontos) return false;
             for (const dia in pontos) {
                 const d = pontos[dia];
-                if (d && (d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado)) return true;
+                if (d && (d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado || d.abono)) return true;
             }
             return false;
         }
@@ -1952,13 +2215,16 @@
         function filtrarFuncionarios() {
             const search = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
             const unidade = document.getElementById('filtroUnidade')?.value || '';
+            const empresa = document.getElementById('filtroEmpresa')?.value || '';
             const filtrados = funcionarios.filter(f => {
                 const matchNome = f.nome?.toLowerCase().includes(search) || false;
                 const matchCPF = f.cpf?.includes(search) || false;
                 const matchUnidade = f.unidade?.toLowerCase().includes(search) || false;
-                const matchSearch = matchNome || matchCPF || matchUnidade;
+                const matchCargo = f.cargo?.toLowerCase().includes(search) || false;
+                const matchSearch = matchNome || matchCPF || matchUnidade || matchCargo;
                 const matchUnidadeFilter = !unidade || f.unidade === unidade;
-                return matchSearch && matchUnidadeFilter;
+                const matchEmpresaFilter = !empresa || f.departamento === empresa;
+                return matchSearch && matchUnidadeFilter && matchEmpresaFilter;
             });
             renderizarFuncionarios(filtrados);
         }
@@ -1969,16 +2235,39 @@
                 container.innerHTML = `<div class="empty-state"><i class="fas fa-search"></i><p>Nenhum funcionário encontrado</p></div>`;
                 return;
             }
-            const comControle = lista.filter(f => !f.sem_controle_ponto);
-            const semControle = lista.filter(f => f.sem_controle_ponto);
+            // Ordena por cargo
+            const cmpCargo = (a, b) => (a.cargo || 'ZZZ').localeCompare(b.cargo || 'ZZZ') || (a.nome || '').localeCompare(b.nome || '');
+
+            const comControle = lista.filter(f => !f.sem_controle_ponto).sort(cmpCargo);
+            const semControle = lista.filter(f => f.sem_controle_ponto).sort(cmpCargo);
             let html = '';
             if (comControle.length > 0) {
-                html += `<div class="grupo-header"><i class="fas fa-clock"></i> Com Controle de Ponto <span class="contagem">${comControle.length}</span></div>`;
-                comControle.forEach(f => { html += gerarCardFuncionarioHTML(f, false); });
+                // Título executivo
+                html += `<div class="grupo-header"><i class="fas fa-badge-check"></i> Colaboradores em Regime de Marcação <span class="contagem">${comControle.length}</span></div>`;
+                // Agrupar por cargo
+                let cargoAtual = '__INIT__';
+                comControle.forEach(f => {
+                    const cargo = (f.cargo || 'Sem cargo').trim();
+                    if (cargo !== cargoAtual) {
+                        cargoAtual = cargo;
+                        const qtd = comControle.filter(x => ((x.cargo || 'Sem cargo').trim()) === cargo).length;
+                        html += `<div class="grupo-header cargo-header"><i class="fas fa-briefcase"></i> ${cargo} <span class="contagem">${qtd}</span></div>`;
+                    }
+                    html += gerarCardFuncionarioHTML(f, false);
+                });
             }
             if (semControle.length > 0) {
-                html += `<div class="grupo-header sem-ponto"><i class="fas fa-user-slash"></i> Sem Controle de Ponto <span class="contagem">${semControle.length}</span></div>`;
-                semControle.forEach(f => { html += gerarCardFuncionarioHTML(f, true); });
+                html += `<div class="grupo-header sem-ponto"><i class="fas fa-user-shield"></i> Colaboradores Dispensados de Marcação <span class="contagem">${semControle.length}</span></div>`;
+                let cargoAtual = '__INIT__';
+                semControle.forEach(f => {
+                    const cargo = (f.cargo || 'Sem cargo').trim();
+                    if (cargo !== cargoAtual) {
+                        cargoAtual = cargo;
+                        const qtd = semControle.filter(x => ((x.cargo || 'Sem cargo').trim()) === cargo).length;
+                        html += `<div class="grupo-header cargo-header"><i class="fas fa-briefcase"></i> ${cargo} <span class="contagem">${qtd}</span></div>`;
+                    }
+                    html += gerarCardFuncionarioHTML(f, true);
+                });
             }
             container.innerHTML = html;
         }
@@ -2027,7 +2316,7 @@
                     <div class="info">
                         <div class="nome">${f.nome || 'Sem nome'}</div>
                         <div class="detalhes">
-                            <span><i class="fas fa-id-card"></i> ${f.cpf || '-'}</span>
+                            <span><i class="fas fa-sitemap"></i> ${f.departamento || 'Sem empresa'}</span>
                             <span><i class="fas fa-building"></i> ${f.unidade || '-'}</span>
                         </div>
                         <div class="detalhes" style="font-size:9px;color:#7a3a00;">
@@ -2126,10 +2415,11 @@
         }
 
         // ============================================================
-        // MAPA DE DIAS ABONADOS
+        // MAPA DE DIAS ABONADOS (atestados + marcacoes_ponto abono)
         // ============================================================
         async function carregarMapaDiasAbonados(funcId, mes, ano) {
             const diasAbonados = new Set();
+            const diasAbonoSimples = new Set();
             try {
                 const mesIndex = MESES.indexOf(mes);
                 if (mesIndex < 0) return diasAbonados;
@@ -2160,10 +2450,14 @@
                     let json = {};
                     try { json = typeof mp.dados === 'string' ? JSON.parse(mp.dados) : mp.dados; } catch(e) {}
                     Object.keys(json || {}).forEach(k => {
-                        if (json[k] && json[k].falta_atestado) diasAbonados.add(parseInt(k));
+                        const d = json[k] || {};
+                        if (d.falta_atestado) diasAbonados.add(parseInt(k));
+                        if (d.abono) diasAbonoSimples.add(parseInt(k));
                     });
                 }
             } catch(e) { console.warn('Erro ao carregar mapa de abonados:', e); }
+            // Retorna um Set com dias abonados (atestado + abono simples)
+            diasAbonados.forEach(d => diasAbonoSimples.add(d));
             return diasAbonados;
         }
 
@@ -2179,11 +2473,12 @@
             for (let dia = 1; dia <= diasDoMes; dia++) {
                 const abonado = diasAbonados.has(dia);
                 const d = dados[dia] || {};
+                const temAbono = d.abono;
                 const temE1 = !!d.e1, temS1 = !!d.s1, temE2 = !!d.e2, temS2 = !!d.s2;
                 const temExtraE1 = !!d.extra_e1, temExtraS1 = !!d.extra_s1;
-                const temAlguma = temE1 || temS1 || temE2 || temS2 || temExtraE1 || temExtraS1 || d.folga_bh || d.falta_atestado || abonado;
+                const temAlguma = temE1 || temS1 || temE2 || temS2 || temExtraE1 || temExtraS1 || d.folga_bh || d.falta_atestado || abonado || temAbono;
                 if (temAlguma) diasComMarcacao[dia] = true;
-                if (abonado) {
+                if (abonado || temAbono) {
                     totalHorasAbonadas += JORNADA_PADRAO_MINUTOS;
                     continue;
                 }
@@ -2422,7 +2717,7 @@
                 const dia = m.dia;
                 if (!dia || dia < 1 || dia > totalDias) return;
                 if (!(m.e1 || m.s1 || m.e2 || m.s2)) return;
-                if (dados[dia] && ['atestado','ferias','falta','folga','dispensa','feriado','folga_bh'].includes(dados[dia].status)) return;
+                if (dados[dia] && ['atestado','ferias','falta','folga','dispensa','feriado','folga_bh','abono'].includes(dados[dia].status)) return;
                 const obs = [m.e1, m.s1, m.e2, m.s2].map(h => h ? String(h).substring(0,5) : '').filter(Boolean).join(' ');
                 dados[dia] = { status: 'trabalho', observacao: obs, origem: 'marcacoes' };
             });
@@ -2434,8 +2729,9 @@
                 const dia = parseInt(k);
                 if (!dia || dia < 1 || dia > totalDias) return;
                 const d = jsonPonto[k] || {};
-                if (!(d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado)) return;
+                if (!(d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado || d.abono)) return;
                 if (dados[dia] && ['atestado','ferias','falta','folga','dispensa','feriado','folga_bh'].includes(dados[dia].status)) return;
+                if (d.abono) { dados[dia] = { status: 'abono', observacao: d.abono_motivo || 'Abono', origem: 'marcacoes_ponto' }; return; }
                 if (d.folga_bh) { dados[dia] = { status: 'folga_bh', observacao: 'Folga BH', origem: 'marcacoes_ponto' }; return; }
                 if (d.falta_atestado) { dados[dia] = { status: 'atestado', observacao: 'Falta c/ Atestado', origem: 'marcacoes_ponto' }; return; }
                 const obs = [d.e1, d.s1, d.e2, d.s2, d.extra_e1, d.extra_s1].filter(Boolean).join(' ');
@@ -2650,7 +2946,7 @@
                     let json = {};
                     try { json = typeof data.dados === 'string' ? JSON.parse(data.dados) : data.dados; } catch(e) {}
                     const tem = Object.values(json || {}).some(d =>
-                        d && (d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado)
+                        d && (d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado || d.abono)
                     );
                     if (tem) return true;
                 }
@@ -2699,7 +2995,7 @@
         }
 
         // ============================================================
-        // GERAR RELATÓRIO — TABELA PRETO E BRANCO
+        // GERAR RELATÓRIO — TABELA PRETO E BRANCO (TÍTULOS EM CINZA)
         // ============================================================
         async function gerarRelatorioPonto() {
             const mes = document.getElementById('relMes').value;
@@ -2745,7 +3041,6 @@
                 document.getElementById('relHeaderSubtitulo').innerHTML = 
                     `<strong>${empresa || 'Todas as Empresas'}</strong> • ${mes}/${ano} • ${comMarcacao.length} funcionário(s)`;
 
-                // TOTAIS GLOBAIS
                 let totalDiasTrabalhadosGlobal = 0;
                 let totalHoraExtraGlobal = 0;
                 let totalFolgasBHGlobal = 0;
@@ -2755,7 +3050,6 @@
 
                 let html = '';
 
-                // CABEÇALHO DO DOCUMENTO
                 html += `
                     <div class="rel-doc-header">
                         <h1>Relatório de Ponto</h1>
@@ -2768,7 +3062,6 @@
                     </div>
                 `;
 
-                // RESUMO GERAL (tabela)
                 html += `
                     <div class="rel-secao-titulo">Resumo Geral</div>
                     <table class="rel-tabela">
@@ -2785,7 +3078,6 @@
                         <tbody>
                 `;
 
-                const cardsFuncionarios = [];
                 const dadosFuncionarios = [];
 
                 for (const func of comMarcacao) {
@@ -2814,7 +3106,9 @@
                                 extra_e1: existente.extra_e1 || '',
                                 extra_s1: existente.extra_s1 || '',
                                 folga_bh: existente.folga_bh || false,
-                                falta_atestado: existente.falta_atestado || false
+                                falta_atestado: existente.falta_atestado || false,
+                                abono: existente.abono || false,
+                                abono_motivo: existente.abono_motivo || ''
                             };
                         });
                     } catch(e) {}
@@ -2833,6 +3127,7 @@
                         const d = dados[dia] || {};
                         const abonado = diasAbonados.has(dia) || d.falta_atestado;
                         const folgaBH = d.folga_bh;
+                        const temAbono = d.abono;
                         const feriado = isFeriado(dia, mesIndex, ano);
                         const diaSemana = getDiaSemana(dia, mesIndex, ano);
 
@@ -2845,7 +3140,11 @@
                         let obs = '';
                         let linhaClass = '';
 
-                        if (abonado) {
+                        if (temAbono) {
+                            obs = 'ABONO' + (d.abono_motivo ? ' - ' + d.abono_motivo : '');
+                            linhaClass = 'linha-abono';
+                            horasAbonadas += JORNADA_PADRAO_MINUTOS;
+                        } else if (abonado) {
                             obs = 'ATESTADO';
                             linhaClass = 'linha-falta-atestado';
                             faltasAtestado++;
@@ -2865,11 +3164,11 @@
                         }
 
                         if (totalMinDia > 0) diasTrabalhados++;
-                        if (totalMinDia > JORNADA_PADRAO_MINUTOS && !abonado && !folgaBH) {
+                        if (totalMinDia > JORNADA_PADRAO_MINUTOS && !abonado && !folgaBH && !temAbono) {
                             horaExtraTotal += totalMinDia - JORNADA_PADRAO_MINUTOS;
                         }
 
-                        const totalDisplay = abonado ? 'ABONADO' : (folgaBH ? 'HORAS BH' : totalDia);
+                        const totalDisplay = temAbono ? 'ABONO' : (abonado ? 'ABONADO' : (folgaBH ? 'HORAS BH' : totalDia));
 
                         linhasHTML += `<tr class="${linhaClass}">
                             <td class="dia-col"><span class="dia-num">${String(dia).padStart(2,'0')}</span> <span class="dia-sem">${diaSemana}</span></td>
@@ -2898,7 +3197,6 @@
                     totalHorasAbonadasGlobal += horasAbonadas;
                 }
 
-                // Linha de totais no resumo
                 html += `
                             <tr class="linha-total">
                                 <td>${totalDiasTrabalhadosGlobal}</td>
@@ -2912,7 +3210,6 @@
                     </table>
                 `;
 
-                // DETALHAMENTO POR FUNCIONÁRIO
                 html += `<div class="rel-secao-titulo">Detalhamento por Funcionário</div>`;
 
                 for (const df of dadosFuncionarios) {
@@ -2922,14 +3219,13 @@
                             <tbody>
                                 <tr class="linha-header-func">
                                     <td colspan="9">
-                                        ${func.nome} — CPF: ${func.cpf || '-'} — Empresa: ${func.unidade || '-'} — Cargo: ${func.cargo || '-'}
+                                        ${func.nome} — CPF: ${func.cpf || '-'} — Empresa: ${func.departamento || func.unidade || '-'} — Cargo: ${func.cargo || '-'}
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     `;
 
-                    // Resumo do funcionário
                     html += `
                         <div class="rel-resumo-func">
                             <div class="item"><span class="label">Dias Trab.</span><span class="value">${df.diasTrabalhados}</span></div>
@@ -2961,7 +3257,6 @@
                     `;
                 }
 
-                // Rodapé do documento
                 html += `
                     <div style="margin-top:24px;padding-top:12px;border-top:2px solid #000;font-size:10px;color:#000;display:flex;justify-content:space-between;">
                         <span>Relatório gerado automaticamente pelo sistema ApliKado</span>
@@ -2982,6 +3277,150 @@
                 console.error('Erro ao gerar relatório:', error);
                 container.innerHTML = `<div class="rel-empty"><i class="fas fa-exclamation-triangle" style="color:#dc3545;"></i><p>Erro ao gerar relatório</p><small>${error.message}</small></div>`;
             }
+        }
+
+        // ============================================================
+        // FICHA CADASTRAL
+        // ============================================================
+        function abrirFichaCadastral() {
+            document.getElementById('modalFichaCadastral').classList.add('active');
+            document.getElementById('fichaFooterData').textContent = formatarDataHoraAgora();
+            // popular empresas
+            popularFiltroEmpresasFicha();
+            gerarFichaCadastral();
+        }
+        function fecharFichaCadastral() {
+            document.getElementById('modalFichaCadastral').classList.remove('active');
+        }
+
+        function popularFiltroEmpresasFicha() {
+            const select = document.getElementById('fichaFiltroEmpresa');
+            const empresas = [...new Set(funcionarios.map(f => f.departamento).filter(Boolean))].sort();
+            select.innerHTML = '<option value="">Todas</option>';
+            empresas.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e; opt.textContent = e;
+                select.appendChild(opt);
+            });
+        }
+
+        function gerarFichaCadastral() {
+            const body = document.getElementById('fichaBody');
+            const unidadeFiltro = document.getElementById('fichaFiltroUnidade')?.value || '';
+            const empresaFiltro = document.getElementById('fichaFiltroEmpresa')?.value || '';
+            const busca = (document.getElementById('fichaBusca')?.value || '').toLowerCase().trim();
+
+            // Agrupar por unidade → empresa (departamento)
+            const grupos = {};
+            funcionarios
+                .filter(f => !unidadeFiltro || f.unidade === unidadeFiltro)
+                .filter(f => !empresaFiltro || f.departamento === empresaFiltro)
+                .filter(f => {
+                    if (!busca) return true;
+                    return (f.nome || '').toLowerCase().includes(busca) ||
+                           (f.cargo || '').toLowerCase().includes(busca);
+                })
+                .forEach(f => {
+                    const uni = f.unidade || 'Sem Unidade';
+                    const emp = f.departamento || 'Sem Empresa';
+                    if (!grupos[uni]) grupos[uni] = {};
+                    if (!grupos[uni][emp]) grupos[uni][emp] = [];
+                    grupos[uni][emp].push(f);
+                });
+
+            const unidades = Object.keys(grupos).sort();
+
+            if (unidades.length === 0) {
+                body.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#7a3a00;"><i class="fas fa-users" style="font-size:48px;display:block;margin-bottom:14px;opacity:0.4;"></i><p style="font-weight:700;">Nenhum funcionário encontrado</p></div>`;
+                return;
+            }
+
+            let html = '';
+            unidades.forEach(uni => {
+                const totalUni = Object.values(grupos[uni]).reduce((s, arr) => s + arr.length, 0);
+                html += `<div class="ficha-unidade-titulo"><i class="fas fa-building"></i> ${uni} <span class="count">${totalUni} colaborador(es)</span></div>`;
+                const empresas = Object.keys(grupos[uni]).sort();
+                empresas.forEach(emp => {
+                    const lista = grupos[uni][emp].sort((a, b) => (a.cargo || '').localeCompare(b.cargo || '') || (a.nome || '').localeCompare(b.nome || ''));
+                    html += `<div class="ficha-empresa-titulo"><i class="fas fa-sitemap"></i> Empresa: ${emp} <span style="float:right;color:#7a3a00;font-weight:600;">${lista.length} colaborador(es)</span></div>`;
+                    html += `<table class="ficha-tabela">
+                        <thead>
+                            <tr>
+                                <th style="width:32%;">Nome</th>
+                                <th style="width:20%;">Cargo</th>
+                                <th style="width:12%;">Admissão</th>
+                                <th style="width:12%;">Nascimento</th>
+                                <th style="width:12%;">Estado Civil</th>
+                                <th style="width:12%;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                    lista.forEach(f => {
+                        const sit = calcularSituacaoFerias(f.admissao, f.ultimo_gozo);
+                        let statusLabel = 'Ativo';
+                        if (sit.status === 'vencida') statusLabel = 'Férias Vencidas';
+                        else if (sit.status === 'a-vencer') statusLabel = 'Férias a Vencer';
+                        else if (sit.status === 'ferias-gozas') statusLabel = 'Férias Gozadas';
+                        else if (sit.status === 'sem-data') statusLabel = 'Sem Data';
+                        html += `<tr>
+                            <td><strong>${f.nome || '-'}</strong></td>
+                            <td>${f.cargo || '-'}</td>
+                            <td class="centro">${formatarData(f.admissao)}</td>
+                            <td class="centro">${formatarData(f.aniversario)}</td>
+                            <td class="centro">${f.estado_civil || '-'}</td>
+                            <td class="centro">${statusLabel}</td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table>`;
+                });
+            });
+
+            body.innerHTML = html;
+        }
+
+        function baixarFichaCadastralPdf() {
+            const elemento = document.getElementById('fichaBody');
+            const nomeArquivo = `Ficha_Cadastral_${new Date().toISOString().slice(0,10)}.pdf`;
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: nomeArquivo,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+            mostrarToast('📄 Gerando PDF, aguarde...', 'info');
+            html2pdf().set(opt).from(elemento).save().then(() => {
+                mostrarToast('✅ PDF gerado com sucesso!');
+            }).catch((err) => {
+                console.error('Erro ao gerar PDF:', err);
+                mostrarToast('❌ Erro: ' + err.message, 'error');
+            });
+        }
+
+        function imprimirFichaCadastral() {
+            const conteudo = document.getElementById('fichaBody').innerHTML;
+            const janela = window.open('', '_blank');
+            janela.document.write(`
+                <html><head><title>Ficha Cadastral</title>
+                <style>
+                    body { font-family: 'Poppins', sans-serif; color: #000; padding: 20px; }
+                    .ficha-unidade-titulo { font-size: 14px; font-weight: 800; text-transform: uppercase; padding: 8px 14px; background: #7a7a7a; color: #fff; border-radius: 6px; margin: 20px 0 12px 0; }
+                    .ficha-empresa-titulo { font-size: 12px; font-weight: 700; color: #333; margin: 14px 0 6px 0; padding: 6px 10px; background: #efefef; border-left: 4px solid #FF8C00; border-radius: 4px; }
+                    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; border: 1px solid #000; }
+                    thead th { background: #7a7a7a; color: #fff; font-size: 9px; font-weight: 700; padding: 6px; text-align: center; text-transform: uppercase; border: 1px solid #000; }
+                    tbody td { padding: 5px 6px; border: 1px solid #000; text-align: left; }
+                    tbody tr:nth-child(even) { background: #f7f7f7; }
+                    td.centro { text-align: center; }
+                    @media print { @page { size: landscape; margin: 10mm; } }
+                </style></head><body>
+                <h1 style="text-align:center;text-transform:uppercase;letter-spacing:2px;">Ficha Cadastral</h1>
+                <p style="text-align:center;font-size:11px;color:#666;margin-bottom:20px;">Gerado em ${formatarDataHoraAgora()}</p>
+                ${conteudo}
+                </body></html>
+            `);
+            janela.document.close();
+            setTimeout(() => janela.print(), 300);
         }
 
         // ============================================================
@@ -3175,6 +3614,7 @@
                             <div class="item"><span class="cor" style="background:#ffe0b0;border:1px solid #fd7e14;"></span> Feriado</div>
                             <div class="item"><span class="cor" style="background:#e2e3e5;border:1px solid #6c757d;"></span> Folga BH</div>
                             <div class="item"><span class="cor" style="background:#e2d4f5;border:1px solid #6f42c1;"></span> Atestado (abonado)</div>
+                            <div class="item"><span class="cor" style="background:#f5e0ff;border:1px solid #a259c7;"></span> Abono</div>
                             <div class="item"><span class="cor" style="background:#fafafa;border:1px solid #ddd;"></span> Sem marcação</div>
                         </div>
                         <div class="ponto-table-wrapper">
@@ -3218,6 +3658,7 @@
                                 <span><i class="fas fa-id-card"></i> ${func.cpf || '-'}</span>
                                 <span><i class="fas fa-building"></i> ${func.unidade || '-'}</span>
                                 <span><i class="fas fa-briefcase"></i> ${func.cargo || '-'}</span>
+                                <span><i class="fas fa-sitemap"></i> ${func.departamento || 'Sem empresa'}</span>
                             </div>
                         </div>
                         <div class="header-actions">
@@ -3277,7 +3718,7 @@
                             <div class="section-title"><i class="fas fa-briefcase"></i> Dados Profissionais</div>
                             <div class="edit-grid-2">
                                 <div class="edit-field"><label>Cargo</label><input type="text" id="editCargo" value="${func.cargo || ''}"></div>
-                                <div class="edit-field"><label>Departamento</label><input type="text" id="editDepartamento" value="${func.departamento || ''}"></div>
+                                <div class="edit-field"><label>Empresa / Departamento</label><input type="text" id="editDepartamento" value="${func.departamento || ''}"></div>
                                 <div class="edit-field"><label>Admissão</label><input type="date" id="editAdmissao" value="${formatarDataISO(func.admissao)}"></div>
                                 <div class="edit-field"><label>Unidade</label>
                                     <select id="editUnidade">
@@ -3915,7 +4356,7 @@
                     const dia = m.dia;
                     if (!dia || dia < 1 || dia > totalDias) return;
                     if (!(m.e1 || m.s1 || m.e2 || m.s2)) return;
-                    if (calendarioDados[dia] && ['atestado','ferias','falta','folga','dispensa','feriado','folga_bh'].includes(calendarioDados[dia].status)) return;
+                    if (calendarioDados[dia] && ['atestado','ferias','falta','folga','dispensa','feriado','folga_bh','abono'].includes(calendarioDados[dia].status)) return;
                     const obs = [m.e1, m.s1, m.e2, m.s2].map(h => h ? String(h).substring(0,5) : '').filter(Boolean).join(' ');
                     calendarioDados[dia] = { status: 'trabalho', observacao: obs, origem: 'marcacoes' };
                 });
@@ -3931,8 +4372,9 @@
                     const dia = parseInt(k);
                     if (!dia || dia < 1 || dia > totalDias) return;
                     const d = json[k] || {};
-                    if (!(d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado)) return;
+                    if (!(d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado || d.abono)) return;
                     if (calendarioDados[dia] && ['atestado','ferias','falta','folga','dispensa','feriado','folga_bh'].includes(calendarioDados[dia].status)) return;
+                    if (d.abono) { calendarioDados[dia] = { status: 'abono', observacao: d.abono_motivo || 'Abono', origem: 'marcacoes_ponto' }; return; }
                     if (d.folga_bh) { calendarioDados[dia] = { status: 'folga_bh', observacao: 'Folga BH', origem: 'marcacoes_ponto' }; return; }
                     if (d.falta_atestado) { calendarioDados[dia] = { status: 'atestado', observacao: 'Falta c/ Atestado', origem: 'marcacoes_ponto' }; return; }
                     const obs = [d.e1, d.s1, d.e2, d.s2, d.extra_e1, d.extra_s1].filter(Boolean).join(' ');
@@ -4237,13 +4679,14 @@
                 const d = dadosPonto[i] || {};
                 const abonado = diasAbonados.has(i) || d.falta_atestado || false;
                 const folgaBH = d.folga_bh || false;
+                const temAbono = d.abono || false;
                 const diff1 = calcularDiferenca(d.e1, d.s1);
                 const diff2 = calcularDiferenca(d.e2, d.s2);
                 const diffExtra = calcularDiferenca(d.extra_e1, d.extra_s1);
                 const total = somarHoras(somarHoras(diff1, diff2), diffExtra);
                 const totalMinDia = converterParaMinutos(total);
                 const he = totalMinDia > JORNADA_PADRAO_MINUTOS ? formatarHoras(totalMinDia - JORNADA_PADRAO_MINUTOS) : '00:00';
-                const temHE = totalMinDia > JORNADA_PADRAO_MINUTOS && !abonado && !folgaBH;
+                const temHE = totalMinDia > JORNADA_PADRAO_MINUTOS && !abonado && !folgaBH && !temAbono;
                 const temMarc = analise.diasComMarcacao[i];
                 const temErro = analise.diasComErro[i];
                 const msgErro = temErro ? temErro.join('; ') : '';
@@ -4258,7 +4701,13 @@
                 let badgeDia = '';
                 let totalGeralDisplay = total;
                 let totalGeralClass = '';
-                if (abonado) {
+                if (temAbono) {
+                    classeLinha = 'linha-abono';
+                    badgeDia = `<span class="badge-falta-atestado" style="background:#a259c7;" title="Abono: ${d.abono_motivo || ''}"><i class="fas fa-gift"></i></span>`;
+                    totalGeralDisplay = 'ABONO';
+                    totalGeralClass = 'abono';
+                    contAbonados++; totalAbonadoMin += JORNADA_PADRAO_MINUTOS;
+                } else if (abonado) {
                     classeLinha = 'linha-falta-atestado';
                     badgeDia = `<span class="badge-falta-atestado" title="Atestado (abonado)"><i class="fas fa-notes-medical"></i></span>`;
                     totalGeralDisplay = 'ABONADO';
@@ -4279,15 +4728,15 @@
                     <td class="dia-cell">${String(i).padStart(2, '0')} ${diaSemana} ${badgeDia}</td>
                     <td><input type="time" value="${d.e1 || ''}" readonly></td>
                     <td><input type="time" value="${d.s1 || ''}" readonly></td>
-                    <td><input type="text" value="${abonado ? '—' : diff1}" readonly></td>
+                    <td><input type="text" value="${abonado || temAbono ? '—' : diff1}" readonly></td>
                     <td><input type="time" value="${d.e2 || ''}" readonly></td>
                     <td><input type="time" value="${d.s2 || ''}" readonly></td>
-                    <td><input type="text" value="${abonado ? '—' : diff2}" readonly></td>
+                    <td><input type="text" value="${abonado || temAbono ? '—' : diff2}" readonly></td>
                     <td><input type="time" value="${d.extra_e1 || ''}" readonly></td>
                     <td><input type="time" value="${d.extra_s1 || ''}" readonly></td>
-                    <td><input type="text" value="${abonado ? '—' : diffExtra}" readonly></td>
+                    <td><input type="text" value="${abonado || temAbono ? '—' : diffExtra}" readonly></td>
                     <td><input type="text" value="${totalGeralDisplay}" readonly class="${totalGeralClass}" style="font-weight:700;background:rgba(255,140,0,0.05);"></td>
-                    <td><input type="text" value="${abonado ? '—' : he}" readonly class="hora-extra" style="font-weight:700;"></td>
+                    <td><input type="text" value="${abonado || temAbono ? '—' : he}" readonly class="hora-extra" style="font-weight:700;"></td>
                 `;
                 tbody.appendChild(tr);
             }
@@ -4465,10 +4914,12 @@
                 const feriado = isFeriado(i, mesIndex, ano);
                 const folgaBH = d.folga_bh || false;
                 const faltaAtestado = d.falta_atestado || false;
+                const temAbono = d.abono || false;
                 let classesTr = '';
                 if (feriado) classesTr += ' linha-feriado';
                 if (folgaBH) classesTr += ' linha-folga-bh';
                 if (faltaAtestado || abonado) classesTr += ' linha-falta-atestado';
+                if (temAbono) classesTr += ' linha-abono';
                 const diff1 = calcularDiferenca(d.e1, d.s1);
                 const diff2 = calcularDiferenca(d.e2, d.s2);
                 const diffExtra = calcularDiferenca(d.extra_e1, d.extra_s1);
@@ -4478,28 +4929,30 @@
                 tr.dataset.dia = i;
                 if (abonado) tr.dataset.abonado = 'true';
                 if (folgaBH) tr.dataset.folgaBH = 'true';
+                if (temAbono) tr.dataset.abono = 'true';
+                if (d.abono_motivo) tr.dataset.abonoMotivo = d.abono_motivo;
                 const valE1 = d.e1 || '';
                 const valS1 = d.s1 || '';
                 const valE2 = d.e2 || '';
                 const valS2 = d.s2 || '';
                 const valExtraE1 = d.extra_e1 || '';
                 const valExtraS1 = d.extra_s1 || '';
-                let totalGeralDisplay = abonado ? 'ABONADO' : (folgaBH ? 'HORAS BH' : total);
-                let totalGeralClass = abonado ? 'total-geral abonado' : (folgaBH ? 'total-geral horas-bh' : 'total-geral');
+                let totalGeralDisplay = temAbono ? 'ABONO' : (abonado ? 'ABONADO' : (folgaBH ? 'HORAS BH' : total));
+                let totalGeralClass = temAbono ? 'total-geral abono' : (abonado ? 'total-geral abonado' : (folgaBH ? 'total-geral horas-bh' : 'total-geral'));
                 tr.innerHTML = `
                     <td class="dia-cell">
                         <span class="dia-num">${String(i).padStart(2, '0')}</span>
-                        <span class="dia-sem">${diaSemana}${abonado ? ' ' : ''}${folgaBH ? ' BH' : ''}</span>
+                        <span class="dia-sem">${diaSemana}${temAbono ? ' 🎁' : ''}${abonado && !temAbono ? ' ' : ''}${folgaBH ? ' BH' : ''}</span>
                     </td>
-                    <td><input type="time" id="edit_e1_${i}" value="${valE1}" ${!isUser || abonado ? 'disabled' : ''}></td>
-                    <td><input type="time" id="edit_s1_${i}" value="${valS1}" ${!isUser || abonado ? 'disabled' : ''}></td>
-                    <td><input type="text" id="edit_total1_${i}" value="${abonado ? '—' : diff1}" readonly></td>
-                    <td><input type="time" id="edit_e2_${i}" value="${valE2}" ${!isUser || abonado ? 'disabled' : ''}></td>
-                    <td><input type="time" id="edit_s2_${i}" value="${valS2}" ${!isUser || abonado ? 'disabled' : ''}></td>
-                    <td><input type="text" id="edit_total2_${i}" value="${abonado ? '—' : diff2}" readonly></td>
-                    <td><input type="time" id="edit_extra_e1_${i}" value="${valExtraE1}" ${!isUser || abonado ? 'disabled' : ''}></td>
-                    <td><input type="time" id="edit_extra_s1_${i}" value="${valExtraS1}" ${!isUser || abonado ? 'disabled' : ''}></td>
-                    <td><input type="text" id="edit_total_extra_${i}" value="${abonado ? '—' : diffExtra}" readonly></td>
+                    <td><input type="time" id="edit_e1_${i}" value="${valE1}" ${!isUser || abonado || temAbono ? 'disabled' : ''}></td>
+                    <td><input type="time" id="edit_s1_${i}" value="${valS1}" ${!isUser || abonado || temAbono ? 'disabled' : ''}></td>
+                    <td><input type="text" id="edit_total1_${i}" value="${abonado || temAbono ? '—' : diff1}" readonly></td>
+                    <td><input type="time" id="edit_e2_${i}" value="${valE2}" ${!isUser || abonado || temAbono ? 'disabled' : ''}></td>
+                    <td><input type="time" id="edit_s2_${i}" value="${valS2}" ${!isUser || abonado || temAbono ? 'disabled' : ''}></td>
+                    <td><input type="text" id="edit_total2_${i}" value="${abonado || temAbono ? '—' : diff2}" readonly></td>
+                    <td><input type="time" id="edit_extra_e1_${i}" value="${valExtraE1}" ${!isUser || abonado || temAbono ? 'disabled' : ''}></td>
+                    <td><input type="time" id="edit_extra_s1_${i}" value="${valExtraS1}" ${!isUser || abonado || temAbono ? 'disabled' : ''}></td>
+                    <td><input type="text" id="edit_total_extra_${i}" value="${abonado || temAbono ? '—' : diffExtra}" readonly></td>
                     <td><input type="text" id="edit_total_geral_${i}" value="${totalGeralDisplay}" readonly class="${totalGeralClass}"></td>
                     <td>
                         <button type="button" class="btn-dia-acao ${folgaBH ? 'ativo-folga-bh' : ''}" data-action="folga-bh" data-dia="${i}" title="Folga BH"><i class="fas fa-clock"></i></button>
@@ -4562,8 +5015,10 @@
                 const tr = document.querySelector(`#editorTbody tr[data-dia="${i}"]`);
                 const folga_bh = tr?.dataset.folgaBH === 'true' || false;
                 const falta_atestado = tr?.dataset.abonado === 'true' || false;
-                if (e1 || s1 || e2 || s2 || extra_e1 || extra_s1 || folga_bh || falta_atestado) {
-                    dadosParaSalvar[i] = { e1, s1, e2, s2, extra_e1, extra_s1, folga_bh, falta_atestado };
+                const abono = tr?.dataset.abono === 'true' || false;
+                const abono_motivo = tr?.dataset.abonoMotivo || '';
+                if (e1 || s1 || e2 || s2 || extra_e1 || extra_s1 || folga_bh || falta_atestado || abono) {
+                    dadosParaSalvar[i] = { e1, s1, e2, s2, extra_e1, extra_s1, folga_bh, falta_atestado, abono, abono_motivo };
                 }
             }
             try {
@@ -4595,7 +5050,7 @@
 
         function recalcularLinha(dia) {
             const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
-            if (tr && tr.dataset.abonado === 'true') return;
+            if (tr && (tr.dataset.abonado === 'true' || tr.dataset.abono === 'true')) return;
             const e1 = document.getElementById(`edit_e1_${dia}`)?.value || '';
             const s1 = document.getElementById(`edit_s1_${dia}`)?.value || '';
             const e2 = document.getElementById(`edit_e2_${dia}`)?.value || '';
@@ -4621,7 +5076,7 @@
                     elTG.className = 'total-geral horas-bh';
                 } else {
                     elTG.value = total;
-                    elTG.classList.remove('abonado', 'horas-bh');
+                    elTG.classList.remove('abonado', 'horas-bh', 'abono');
                     elTG.className = 'total-geral';
                 }
             }
@@ -4634,10 +5089,11 @@
             if (!mes) return;
             const dias = obterDiasDoMes(mes, ano);
             let total1 = 0, total2 = 0, totalExtra = 0, totalGeral = 0, totalHE = 0, totalAbonado = 0, totalCompensacao = 0;
-            let qtdDias = 0, qtdFolgaBH = 0, qtdFaltaAtestado = 0, qtdAbonados = 0;
+            let qtdDias = 0, qtdFolgaBH = 0, qtdFaltaAtestado = 0, qtdAbonados = 0, qtdAbonoSimples = 0;
             for (let i = 1; i <= dias; i++) {
                 const tr = document.querySelector(`#editorTbody tr[data-dia="${i}"]`);
                 if (tr && tr.dataset.abonado === 'true') { qtdAbonados++; totalAbonado += JORNADA_PADRAO_MINUTOS; continue; }
+                if (tr && tr.dataset.abono === 'true') { qtdAbonoSimples++; totalAbonado += JORNADA_PADRAO_MINUTOS; continue; }
                 const t1 = document.getElementById(`edit_total1_${i}`)?.value || '00:00';
                 const t2 = document.getElementById(`edit_total2_${i}`)?.value || '00:00';
                 const tE = document.getElementById(`edit_total_extra_${i}`)?.value || '00:00';
@@ -4664,6 +5120,8 @@
             document.getElementById('editorHoraExtraTotal').textContent = formatarHoras(totalHE);
             document.getElementById('editorQtdFolgaBH').textContent = qtdFolgaBH;
             document.getElementById('editorQtdFaltaAtestado').textContent = qtdFaltaAtestado + qtdAbonados;
+            const elQtdAbono = document.getElementById('editorQtdAbono');
+            if (elQtdAbono) elQtdAbono.textContent = qtdAbonoSimples;
             document.getElementById('editorCompensacaoBH').textContent = formatarHoras(totalCompensacao);
             const resumo = document.getElementById('editorResumo');
             if (resumo && !document.getElementById('editorTotalAbonado')) {
@@ -4704,8 +5162,10 @@
                 btnFolga.classList.add('ativo-folga-bh');
                 if (btnFalta) btnFalta.classList.remove('ativo-falta');
                 tr.classList.add('linha-folga-bh');
-                tr.classList.remove('linha-falta-atestado');
+                tr.classList.remove('linha-falta-atestado', 'linha-abono');
                 delete tr.dataset.abonado;
+                delete tr.dataset.abono;
+                delete tr.dataset.abonoMotivo;
                 tr.dataset.folgaBH = 'true';
                 ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                     const inp = document.getElementById(`edit_${c}_${dia}`);
@@ -4758,9 +5218,11 @@
             btnFalta.classList.add('ativo-falta');
             if (btnFolga) btnFolga.classList.remove('ativo-folga-bh');
             tr.classList.add('linha-falta-atestado');
-            tr.classList.remove('linha-folga-bh');
+            tr.classList.remove('linha-folga-bh', 'linha-abono');
             tr.dataset.abonado = 'true';
             delete tr.dataset.folgaBH;
+            delete tr.dataset.abono;
+            delete tr.dataset.abonoMotivo;
             ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                 const inp = document.getElementById(`edit_${c}_${dia}`);
                 if (inp) { inp.value = ''; inp.disabled = true; }
@@ -4798,6 +5260,72 @@
                     }, 400);
                 }, 200);
             }
+        }
+
+        // ============================================================
+        // ABONO DE PERÍODO
+        // ============================================================
+        function abrirModalAbono() {
+            if (!funcionarioAtual) { mostrarToast('⚠️ Nenhum funcionário ativo', 'warning'); return; }
+            document.getElementById('abonoDataInicio').value = '';
+            document.getElementById('abonoDataFim').value = '';
+            document.getElementById('abonoMotivo').value = '';
+            document.getElementById('abonoTipo').value = 'abono';
+            document.getElementById('modalAbono').classList.add('active');
+        }
+        function fecharModalAbono() {
+            document.getElementById('modalAbono').classList.remove('active');
+        }
+        function confirmarAbono() {
+            const inicio = document.getElementById('abonoDataInicio').value;
+            const fim = document.getElementById('abonoDataFim').value;
+            const motivo = document.getElementById('abonoMotivo').value.trim() || 'Abono';
+            const tipo = document.getElementById('abonoTipo').value;
+            if (!inicio || !fim) { mostrarToast('⚠️ Preencha as datas!', 'warning'); return; }
+            const dtIni = parseDataLocal(inicio);
+            const dtFim = parseDataLocal(fim);
+            if (!dtIni || !dtFim) { mostrarToast('⚠️ Datas inválidas!', 'warning'); return; }
+            if (dtIni > dtFim) { mostrarToast('⚠️ Data início > fim!', 'warning'); return; }
+
+            const mesAtual = document.getElementById('editorMes').value;
+            const anoAtual = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
+            const mesIndex = MESES.indexOf(mesAtual);
+            let count = 0;
+
+            for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
+                if (d.getMonth() !== mesIndex || d.getFullYear() !== anoAtual) continue;
+                const dia = d.getDate();
+                const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
+                if (!tr) continue;
+                // Remove outros status
+                const btnFolga = tr.querySelector('button[data-action="folga-bh"]');
+                const btnFalta = tr.querySelector('button[data-action="falta-atestado"]');
+                if (btnFolga) btnFolga.classList.remove('ativo-folga-bh');
+                if (btnFalta) btnFalta.classList.remove('ativo-falta');
+                tr.classList.remove('linha-folga-bh', 'linha-falta-atestado');
+                delete tr.dataset.folgaBH;
+                delete tr.dataset.abonado;
+                tr.classList.add('linha-abono');
+                tr.dataset.abono = 'true';
+                tr.dataset.abonoMotivo = motivo;
+                ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
+                    const inp = document.getElementById(`edit_${c}_${dia}`);
+                    if (inp) { inp.value = ''; inp.disabled = true; }
+                });
+                const elTG = document.getElementById(`edit_total_geral_${dia}`);
+                if (elTG) { elTG.value = 'ABONO'; elTG.className = 'total-geral abono'; }
+                ['edit_total1_', 'edit_total2_', 'edit_total_extra_'].forEach(prefix => {
+                    const el = document.getElementById(`${prefix}${dia}`);
+                    if (el) el.value = '—';
+                });
+                count++;
+            }
+
+            if (count === 0) { mostrarToast('⚠️ Nenhum dia do período está no mês selecionado.', 'warning'); return; }
+            recalcularTotaisEditor();
+            agendarAutoSave();
+            fecharModalAbono();
+            mostrarToast(`✅ ${count} dia(s) abonado(s) — ${motivo}`);
         }
 
         function fecharModalEditor() {
@@ -4940,11 +5468,18 @@
         }
 
         function limparFormCadastro() {
-            ['cadNome', 'cadCPF', 'cadAdmissao', 'cadASO', 'cadAniversario', 'cadCargo'].forEach(id => {
+            ['cadNome','cadCPF','cadRG','cadAniversario','cadEstadoCivil','cadGenero','cadNacionalidade','cadPCD',
+             'cadDepartamento','cadCargo','cadAdmissao','cadASO','cadSalario','cadUltimoGozo',
+             'cadOrgaoEmissor','cadDataEmissaoRG','cadCTPS','cadSerieCTPS','cadPIS','cadTituloEleitor','cadCNH','cadCategoriaCNH','cadValidadeCNH',
+             'cadTelefone','cadCelular','cadCelular2','cadEmail','cadEmailPessoal','cadEmergenciaNome','cadEmergenciaParentesco','cadEmergenciaTelefone',
+             'cadPlanoSaude','cadPlanoOdonto','cadBanco','cadAgencia','cadConta','cadPix'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
             document.getElementById('cadUnidade').value = 'Spoleto';
+            ['cadValeTransporte','cadValeAlimentacao','cadValeRefeicao','cadSeguroVida'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.value = '';
+            });
             const chkSemControle = document.getElementById('cadSemControlePonto');
             if (chkSemControle) chkSemControle.checked = false;
             document.getElementById('previewFoto').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e0e0'/%3E%3Ctext x='60' y='65' font-size='40' text-anchor='middle' fill='%23999' font-family='Arial'%3E?%3C/text%3E%3C/svg%3E";
@@ -4959,14 +5494,54 @@
             const nome = document.getElementById('cadNome').value.trim();
             const editId = document.getElementById('btnSalvarFuncionario').dataset.editId;
             if (!nome) { mostrarToast('⚠️ Preencha o Nome!', 'warning'); return; }
+            const vt = document.getElementById('cadValeTransporte').value;
+            const va = document.getElementById('cadValeAlimentacao').value;
+            const vr = document.getElementById('cadValeRefeicao').value;
+            const sv = document.getElementById('cadSeguroVida').value;
+            const pcd = document.getElementById('cadPCD').value;
             const dados = {
-                nome, 
+                nome,
                 cpf: document.getElementById('cadCPF').value.trim() || null,
+                rg: document.getElementById('cadRG').value.trim() || null,
                 unidade: document.getElementById('cadUnidade').value || 'Spoleto',
+                departamento: document.getElementById('cadDepartamento').value.trim() || null,
+                cargo: document.getElementById('cadCargo').value.trim() || null,
                 admissao: document.getElementById('cadAdmissao').value || null,
                 aso: document.getElementById('cadASO').value || null,
                 aniversario: document.getElementById('cadAniversario').value || null,
-                cargo: document.getElementById('cadCargo').value || '',
+                estado_civil: document.getElementById('cadEstadoCivil').value || null,
+                genero: document.getElementById('cadGenero').value || null,
+                nacionalidade: document.getElementById('cadNacionalidade').value.trim() || null,
+                pcd: pcd === 'Sim' ? true : (pcd === 'Não' ? false : null),
+                salario: document.getElementById('cadSalario').value ? parseFloat(document.getElementById('cadSalario').value) : null,
+                ultimo_gozo: document.getElementById('cadUltimoGozo').value || null,
+                orgao_emissor: document.getElementById('cadOrgaoEmissor').value.trim() || null,
+                data_emissao_rg: document.getElementById('cadDataEmissaoRG').value || null,
+                ctps: document.getElementById('cadCTPS').value.trim() || null,
+                serie_ctps: document.getElementById('cadSerieCTPS').value.trim() || null,
+                pis: document.getElementById('cadPIS').value.trim() || null,
+                titulo_eleitor: document.getElementById('cadTituloEleitor').value.trim() || null,
+                cnh: document.getElementById('cadCNH').value.trim() || null,
+                categoria_cnh: document.getElementById('cadCategoriaCNH').value.trim() || null,
+                validade_cnh: document.getElementById('cadValidadeCNH').value || null,
+                telefone: document.getElementById('cadTelefone').value.trim() || null,
+                celular: document.getElementById('cadCelular').value.trim() || null,
+                celular2: document.getElementById('cadCelular2').value.trim() || null,
+                email: document.getElementById('cadEmail').value.trim() || null,
+                email_pessoal: document.getElementById('cadEmailPessoal').value.trim() || null,
+                emergencia_nome: document.getElementById('cadEmergenciaNome').value.trim() || null,
+                emergencia_parentesco: document.getElementById('cadEmergenciaParentesco').value.trim() || null,
+                emergencia_telefone: document.getElementById('cadEmergenciaTelefone').value.trim() || null,
+                vale_transporte: vt === 'Sim' ? true : (vt === 'Não' ? false : null),
+                vale_alimentacao: va === 'Sim' ? true : (va === 'Não' ? false : null),
+                vale_refeicao: vr === 'Sim' ? true : (vr === 'Não' ? false : null),
+                seguro_vida: sv === 'Sim' ? true : (sv === 'Não' ? false : null),
+                plano_saude: document.getElementById('cadPlanoSaude').value.trim() || null,
+                plano_odonto: document.getElementById('cadPlanoOdonto').value.trim() || null,
+                banco: document.getElementById('cadBanco').value.trim() || null,
+                agencia: document.getElementById('cadAgencia').value.trim() || null,
+                conta: document.getElementById('cadConta').value.trim() || null,
+                pix: document.getElementById('cadPix').value.trim() || null,
                 foto: fotoBase64Atual || null,
                 sem_controle_ponto: document.getElementById('cadSemControlePonto')?.checked || false
             };
@@ -5017,11 +5592,46 @@
                 fecharModalFuncionario();
                 document.getElementById('cadNome').value = data.nome || '';
                 document.getElementById('cadCPF').value = data.cpf || '';
+                document.getElementById('cadRG').value = data.rg || '';
                 document.getElementById('cadUnidade').value = data.unidade || 'Spoleto';
+                document.getElementById('cadDepartamento').value = data.departamento || '';
+                document.getElementById('cadCargo').value = data.cargo || '';
                 document.getElementById('cadAdmissao').value = formatarDataISO(data.admissao);
                 document.getElementById('cadASO').value = formatarDataISO(data.aso);
                 document.getElementById('cadAniversario').value = formatarDataISO(data.aniversario);
-                document.getElementById('cadCargo').value = data.cargo || '';
+                document.getElementById('cadEstadoCivil').value = data.estado_civil || '';
+                document.getElementById('cadGenero').value = data.genero || '';
+                document.getElementById('cadNacionalidade').value = data.nacionalidade || '';
+                document.getElementById('cadPCD').value = data.pcd === true ? 'Sim' : (data.pcd === false ? 'Não' : '');
+                document.getElementById('cadSalario').value = data.salario || '';
+                document.getElementById('cadUltimoGozo').value = formatarDataISO(data.ultimo_gozo);
+                document.getElementById('cadOrgaoEmissor').value = data.orgao_emissor || '';
+                document.getElementById('cadDataEmissaoRG').value = formatarDataISO(data.data_emissao_rg);
+                document.getElementById('cadCTPS').value = data.ctps || '';
+                document.getElementById('cadSerieCTPS').value = data.serie_ctps || '';
+                document.getElementById('cadPIS').value = data.pis || '';
+                document.getElementById('cadTituloEleitor').value = data.titulo_eleitor || '';
+                document.getElementById('cadCNH').value = data.cnh || '';
+                document.getElementById('cadCategoriaCNH').value = data.categoria_cnh || '';
+                document.getElementById('cadValidadeCNH').value = formatarDataISO(data.validade_cnh);
+                document.getElementById('cadTelefone').value = data.telefone || '';
+                document.getElementById('cadCelular').value = data.celular || '';
+                document.getElementById('cadCelular2').value = data.celular2 || '';
+                document.getElementById('cadEmail').value = data.email || '';
+                document.getElementById('cadEmailPessoal').value = data.email_pessoal || '';
+                document.getElementById('cadEmergenciaNome').value = data.emergencia_nome || '';
+                document.getElementById('cadEmergenciaParentesco').value = data.emergencia_parentesco || '';
+                document.getElementById('cadEmergenciaTelefone').value = data.emergencia_telefone || '';
+                document.getElementById('cadPlanoSaude').value = data.plano_saude || '';
+                document.getElementById('cadPlanoOdonto').value = data.plano_odonto || '';
+                document.getElementById('cadBanco').value = data.banco || '';
+                document.getElementById('cadAgencia').value = data.agencia || '';
+                document.getElementById('cadConta').value = data.conta || '';
+                document.getElementById('cadPix').value = data.pix || '';
+                document.getElementById('cadValeTransporte').value = data.vale_transporte === true ? 'Sim' : (data.vale_transporte === false ? 'Não' : '');
+                document.getElementById('cadValeAlimentacao').value = data.vale_alimentacao === true ? 'Sim' : (data.vale_alimentacao === false ? 'Não' : '');
+                document.getElementById('cadValeRefeicao').value = data.vale_refeicao === true ? 'Sim' : (data.vale_refeicao === false ? 'Não' : '');
+                document.getElementById('cadSeguroVida').value = data.seguro_vida === true ? 'Sim' : (data.seguro_vida === false ? 'Não' : '');
                 const chkSemControle = document.getElementById('cadSemControlePonto');
                 if (chkSemControle) chkSemControle.checked = !!data.sem_controle_ponto;
                 if (data.foto) {
@@ -5033,6 +5643,7 @@
                 document.getElementById('btnSalvarFuncionario').innerHTML = '<i class="fas fa-save"></i> Atualizar';
                 document.getElementById('btnSalvarFuncionario').dataset.editId = id;
                 mostrarAba('cadastro');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
 
@@ -5239,7 +5850,9 @@
                     fecharAtestadoAnexoView();
                     fecharModalCalendarioStatus();
                     fecharModalDiaEscolha();
+                    fecharModalAbono();
                     fecharRelatorioPonto();
+                    fecharFichaCadastral();
                 }
             });
             document.querySelectorAll('.modal:not(#modalLogin)').forEach(modal => {
