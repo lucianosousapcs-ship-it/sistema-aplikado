@@ -98,9 +98,9 @@
         .grupo-header.sem-ponto { background: linear-gradient(135deg, rgba(108,117,125,0.18), rgba(108,117,125,0.05)); border-left-color: #6c757d; color: #383d41; }
         .grupo-header.sem-ponto i { color: #6c757d; }
         .grupo-header.sem-ponto .contagem { background: #6c757d; }
-        .grupo-header.cargo-header { background: linear-gradient(135deg, rgba(23,162,184,0.15), rgba(23,162,184,0.05)); border-left-color: #17a2b8; color: #0c5460; font-size: 11px; padding: 8px 16px; margin: 4px 0 2px 0; text-transform: none; letter-spacing: 0.3px; }
-        .grupo-header.cargo-header i { color: #17a2b8; font-size: 13px; }
-        .grupo-header.cargo-header .contagem { background: #17a2b8; font-size: 10px; }
+        .grupo-header.socios { background: linear-gradient(135deg, rgba(111,66,193,0.18), rgba(111,66,193,0.05)); border-left-color: #6f42c1; color: #4a2c91; }
+        .grupo-header.socios i { color: #6f42c1; }
+        .grupo-header.socios .contagem { background: #6f42c1; }
         .funcionario-card { background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(8px); border-radius: 12px; padding: 16px; border: 1px solid rgba(255, 140, 0, 0.15); transition: all 0.3s; cursor: pointer; display: flex; align-items: center; gap: 14px; position: relative; }
         .funcionario-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); background: #fff; }
         .funcionario-card.sem-controle { border-left: 4px solid #6c757d; opacity: 0.92; }
@@ -198,6 +198,7 @@
         .ponto-table tr.linha-feriado { background: rgba(253,126,20,0.25); }
         .ponto-table tr.linha-folga-bh { background: rgba(108,117,125,0.15); }
         .ponto-table tr.linha-falta-atestado { background: rgba(111,66,193,0.08); }
+        .ponto-table tr.linha-abono { background: rgba(162,89,199,0.12); }
         .ponto-table .badge-erro { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #dc3545; color: #fff; font-size: 9px; margin-left: 4px; }
         .ponto-table .badge-ok { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #28a745; color: #fff; font-size: 9px; margin-left: 4px; }
         .ponto-table .badge-feriado { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #fd7e14; color: #fff; font-size: 9px; margin-left: 4px; }
@@ -422,471 +423,84 @@
         .cid-picker-item .cid-cat { display: inline-block; background: #e2d4f5; color: #4a2c91; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-left: 6px; text-transform: uppercase; }
         .cid-picker-empty { padding: 12px; text-align: center; color: #999; font-size: 11px; }
 
-        /* ============================================================
-           RELATÓRIO — AGORA EM POPUP (não tela cheia)
-           ============================================================ */
-        .relatorio-paisagem {
-            display: none;
-            position: fixed;
-            z-index: 9999;
-            left: 0; top: 0;
-            width: 100%; height: 100%;
-            background: rgba(15,15,15,0.85);
-            backdrop-filter: blur(8px);
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+        /* RELATÓRIO — POPUP NO ESTILO FICHA CADASTRAL */
+        .modal-relatorio-ponto { display: none; position: fixed; z-index: 10050; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 20px; }
+        .modal-relatorio-ponto.active { display: flex; }
+        .modal-relatorio-ponto .conteudo-relatorio {
+            background: #fff; border-radius: 14px; max-width: 1400px; width: 100%;
+            max-height: 92vh; display: flex; flex-direction: column;
+            overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.5);
         }
-        .relatorio-paisagem.active { display: flex; }
-
-        .relatorio-paisagem .conteudo-relatorio {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            max-width: 1400px;
-            height: 100%;
-            max-height: 92vh;
-            background: #1e1e1e;
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 24px 80px rgba(0,0,0,0.6);
-        }
-
-        .rel-header {
-            background: #202124;
-            padding: 0 16px;
-            height: 56px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            border-bottom: 1px solid #3c4043;
-            flex-shrink: 0;
-        }
-        .rel-header .titulo-wrap {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 0;
-        }
-        .rel-header .titulo-icon {
-            width: 32px; height: 32px;
-            border-radius: 6px;
-            background: #FF8C00;
-            display: flex; align-items: center; justify-content: center;
-            color: #fff; font-size: 16px;
-            flex-shrink: 0;
-        }
-        .rel-header .titulo-texto h2 {
-            color: #e8eaed; font-size: 14px; font-weight: 600; margin: 0; line-height: 1.2;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .rel-header .titulo-texto p {
-            color: #9aa0a6; font-size: 10px; margin-top: 1px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .rel-header-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        .rel-btn {
-            font-family: 'Poppins', sans-serif;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
-            border: none;
-            white-space: nowrap;
-        }
+        .rel-header { background: #1e1e1e; color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
+        .rel-header h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .rel-header h2 i { color: #FF8C00; }
+        .rel-header-actions { display: flex; gap: 8px; }
+        .rel-btn { font-family: 'Poppins', sans-serif; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; border: none; white-space: nowrap; }
         .rel-btn:hover { opacity: 0.9; }
         .rel-btn-pdf { background: #28a745; color: #fff; }
         .rel-btn-print { background: #FF8C00; color: #fff; }
         .rel-btn-close { background: #3c4043; color: #e8eaed; }
         .rel-btn-close:hover { background: #dc3545; color: #fff; }
 
-        .rel-toolbar {
-            background: #292a2d;
-            padding: 8px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 1px solid #3c4043;
-            flex-shrink: 0;
-            flex-wrap: wrap;
-        }
-        .rel-toolbar .grupo {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            background: #1e1e1e;
-            border-radius: 6px;
-            padding: 2px;
-        }
-        .rel-toolbar .grupo button {
-            background: transparent;
-            border: none;
-            color: #9aa0a6;
-            width: 32px; height: 32px;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-        .rel-toolbar .grupo button:hover {
-            background: #3c4043;
-            color: #fff;
-        }
-        .rel-toolbar .grupo button:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-        .rel-toolbar .zoom-label {
-            color: #e8eaed;
-            font-size: 12px;
-            font-weight: 600;
-            min-width: 45px;
-            text-align: center;
-        }
-        .rel-toolbar .pagina-label {
-            color: #e8eaed;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .rel-toolbar .search-box {
-            display: flex;
-            align-items: center;
-            background: #1e1e1e;
-            border-radius: 6px;
-            padding: 0 10px;
-            height: 32px;
-            gap: 6px;
-            flex: 1;
-            max-width: 300px;
-        }
-        .rel-toolbar .search-box i { color: #9aa0a6; font-size: 12px; }
-        .rel-toolbar .search-box input {
-            background: transparent;
-            border: none;
-            outline: none;
-            color: #e8eaed;
-            font-size: 12px;
-            font-family: 'Poppins', sans-serif;
-            width: 100%;
-        }
-        .rel-toolbar .search-box input::placeholder { color: #5f6368; }
+        .rel-toolbar { background: #f8f9fa; border-bottom: 1px solid #e0e0e0; padding: 10px 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; flex-shrink: 0; }
+        .rel-toolbar .campo { display: flex; flex-direction: column; gap: 3px; min-width: 140px; }
+        .rel-toolbar .campo label { font-size: 9px; font-weight: 700; color: #7a3a00; text-transform: uppercase; }
+        .rel-toolbar .campo select, .rel-toolbar .campo input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; font-family: 'Poppins', sans-serif; font-size: 12px; }
 
-        .rel-body {
-            flex: 1;
-            overflow-y: auto;
-            background: #1e1e1e;
-            padding: 24px 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 16px;
-        }
-        .rel-pagina {
-            background: #ffffff;
-            width: 100%;
-            max-width: 1280px;
-            border-radius: 4px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
-            padding: 32px 36px;
-            margin: 0 auto;
-            position: relative;
-            color: #000;
-        }
+        .rel-body { flex: 1; overflow-y: auto; padding: 24px 28px; background: #fff; color: #000; }
 
-        .rel-filtros {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: flex-end;
-            background: #ffffff;
-            padding: 12px 14px;
-            border: 1px solid #000;
-            margin-bottom: 20px;
-        }
-        .rel-filtros .campo {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            min-width: 110px;
-        }
-        .rel-filtros .campo label {
-            font-size: 9px;
-            font-weight: 700;
-            color: #000;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .rel-filtros .campo select,
-        .rel-filtros .campo input {
-            font-family: 'Poppins', sans-serif;
-            padding: 6px 8px;
-            border: 1px solid #000;
-            border-radius: 0;
-            font-size: 12px;
-            color: #000;
-            background: #fff;
-            outline: none;
-        }
-        .rel-filtros .btn-gerar {
-            font-family: 'Poppins', sans-serif;
-            padding: 7px 18px;
-            border-radius: 0;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            background: #000;
-            color: #fff;
-            border: 1px solid #000;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
-        }
-        .rel-filtros .btn-gerar:hover {
-            background: #333;
-        }
+        .rel-doc-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 18px; }
+        .rel-doc-header h1 { font-size: 18px; font-weight: 800; color: #000; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; }
+        .rel-doc-header .subtitulo { font-size: 11px; color: #000; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
+        .rel-doc-header .meta-info { display: flex; justify-content: space-between; font-size: 10px; color: #000; margin-top: 8px; padding-top: 8px; border-top: 1px solid #000; }
 
-        .rel-doc-header {
-            text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 12px;
-            margin-bottom: 18px;
-        }
-        .rel-doc-header h1 {
-            font-size: 18px;
-            font-weight: 800;
-            color: #000;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 4px;
-        }
-        .rel-doc-header .subtitulo {
-            font-size: 11px;
-            color: #000;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-        }
-        .rel-doc-header .meta-info {
-            display: flex;
-            justify-content: space-between;
-            font-size: 10px;
-            color: #000;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #000;
-        }
+        .rel-tabela { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 18px; color: #000; border: 1px solid #000; }
+        .rel-tabela thead th { background: #7a7a7a; color: #fff; font-size: 9px; font-weight: 700; padding: 6px 4px; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #000; }
+        .rel-tabela tbody td { padding: 4px 4px; text-align: center; border: 1px solid #000; font-size: 10px; color: #000; background: #fff; }
+        .rel-tabela tbody tr.linha-header-func { background: #d0d0d0; }
+        .rel-tabela tbody tr.linha-header-func td { background: #d0d0d0; font-weight: 800; text-align: left; padding: 6px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #000; border: 1px solid #000; }
+        .rel-tabela tbody tr.linha-total { background: #e8e8e8; }
+        .rel-tabela tbody tr.linha-total td { background: #e8e8e8; font-weight: 800; color: #000; border: 1px solid #000; }
+        .rel-tabela tbody tr.linha-vazia td { color: #999; }
+        .rel-tabela .dia-col { font-weight: 700; text-align: left; padding-left: 6px; white-space: nowrap; color: #000; }
+        .rel-tabela .dia-col .dia-num { display: inline-block; min-width: 20px; font-weight: 800; }
+        .rel-tabela .dia-col .dia-sem { font-size: 8px; font-weight: 600; margin-left: 2px; }
+        .rel-tabela .total-col { font-weight: 800; color: #000; }
+        .rel-tabela .obs-col { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #000; }
+        .rel-tabela .hora-extra-col { font-weight: 700; color: #000; }
 
-        .rel-tabela {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 10px;
-            margin-bottom: 18px;
-            color: #000;
-            border: 1px solid #000;
-        }
-        .rel-tabela thead th {
-            background: #7a7a7a; /* cinza */
-            color: #fff;
-            font-size: 9px;
-            font-weight: 700;
-            padding: 6px 4px;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border: 1px solid #000;
-        }
-        .rel-tabela tbody td {
-            padding: 4px 4px;
-            text-align: center;
-            border: 1px solid #000;
-            font-size: 10px;
-            color: #000;
-            background: #fff;
-        }
-        .rel-tabela tbody tr.linha-header-func {
-            background: #d0d0d0; /* cinza claro */
-        }
-        .rel-tabela tbody tr.linha-header-func td {
-            background: #d0d0d0;
-            font-weight: 800;
-            text-align: left;
-            padding: 6px 8px;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #000;
-            border: 1px solid #000;
-        }
-        .rel-tabela tbody tr.linha-total {
-            background: #e8e8e8;
-        }
-        .rel-tabela tbody tr.linha-total td {
-            background: #e8e8e8;
-            font-weight: 800;
-            color: #000;
-            border: 1px solid #000;
-        }
-        .rel-tabela tbody tr.linha-vazia td {
-            color: #999;
-        }
-        .rel-tabela .dia-col {
-            font-weight: 700;
-            text-align: left;
-            padding-left: 6px;
-            white-space: nowrap;
-            color: #000;
-        }
-        .rel-tabela .dia-col .dia-num {
-            display: inline-block;
-            min-width: 20px;
-            font-weight: 800;
-        }
-        .rel-tabela .dia-col .dia-sem {
-            font-size: 8px;
-            font-weight: 600;
-            margin-left: 2px;
-        }
-        .rel-tabela .total-col {
-            font-weight: 800;
-            color: #000;
-        }
-        .rel-tabela .obs-col {
-            font-size: 8px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            color: #000;
-        }
-        .rel-tabela .hora-extra-col {
-            font-weight: 700;
-            color: #000;
-        }
+        .rel-resumo-func { display: flex; flex-wrap: wrap; gap: 0; border: 1px solid #000; margin-bottom: 8px; background: #fff; }
+        .rel-resumo-func .item { flex: 1; min-width: 120px; padding: 6px 10px; border-right: 1px solid #000; text-align: center; }
+        .rel-resumo-func .item:last-child { border-right: none; }
+        .rel-resumo-func .item .label { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #000; display: block; margin-bottom: 2px; }
+        .rel-resumo-func .item .value { font-size: 13px; font-weight: 800; color: #000; }
 
-        .rel-resumo-func {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0;
-            border: 1px solid #000;
-            margin-bottom: 8px;
-            background: #fff;
-        }
-        .rel-resumo-func .item {
-            flex: 1;
-            min-width: 120px;
-            padding: 6px 10px;
-            border-right: 1px solid #000;
-            text-align: center;
-        }
-        .rel-resumo-func .item:last-child {
-            border-right: none;
-        }
-        .rel-resumo-func .item .label {
-            font-size: 8px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #000;
-            display: block;
-            margin-bottom: 2px;
-        }
-        .rel-resumo-func .item .value {
-            font-size: 13px;
-            font-weight: 800;
-            color: #000;
-        }
+        .rel-secao-titulo { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #fff; background: #7a7a7a; padding: 6px 10px; margin: 18px 0 10px 0; border: 1px solid #7a7a7a; }
 
-        .rel-secao-titulo {
-            font-size: 12px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #fff;
-            background: #7a7a7a; /* cinza em vez de preto */
-            padding: 6px 10px;
-            margin: 18px 0 10px 0;
-            border: 1px solid #7a7a7a;
-        }
+        .rel-empty { text-align: center; padding: 60px 20px; color: #000; border: 1px solid #000; }
+        .rel-empty i { font-size: 48px; color: #666; display: block; margin-bottom: 14px; }
+        .rel-empty p { font-size: 14px; font-weight: 700; color: #000; }
+        .rel-empty small { font-size: 11px; color: #666; font-weight: 500; }
 
-        .rel-empty {
-            text-align: center;
-            padding: 60px 20px;
-            color: #000;
-            border: 1px solid #000;
-        }
-        .rel-empty i {
-            font-size: 48px;
-            color: #666;
-            display: block;
-            margin-bottom: 14px;
-        }
-        .rel-empty p {
-            font-size: 14px;
-            font-weight: 700;
-            color: #000;
-        }
-        .rel-empty small {
-            font-size: 11px;
-            color: #666;
-            font-weight: 500;
-        }
-
-        .rel-footer {
-            background: #202124;
-            padding: 6px 16px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-top: 1px solid #3c4043;
-            flex-shrink: 0;
-        }
-        .rel-footer span {
-            color: #9aa0a6;
-            font-size: 10px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .rel-footer span i { font-size: 10px; }
+        .rel-footer { background: #202124; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; color: #9aa0a6; font-size: 10px; flex-shrink: 0; }
+        .rel-footer button { font-family: 'Poppins', sans-serif; }
 
         @media (max-width: 768px) {
-            .rel-pagina { padding: 20px 16px; border-radius: 0; }
-            .rel-header { padding: 0 12px; }
-            .rel-header .titulo-texto h2 { font-size: 12px; }
-            .rel-toolbar { padding: 6px 10px; gap: 6px; }
-            .rel-toolbar .search-box { max-width: 100%; }
+            .rel-body { padding: 16px; }
+            .rel-header { padding: 10px 12px; }
+            .rel-header h2 { font-size: 13px; }
+            .rel-toolbar { padding: 8px 12px; gap: 6px; }
         }
 
         @media print {
-            .relatorio-paisagem .rel-header,
-            .relatorio-paisagem .rel-toolbar,
-            .relatorio-paisagem .rel-footer { display: none; }
-            .relatorio-paisagem { background: #fff; position: static; display: block; padding: 0; }
-            .rel-body { background: #fff; padding: 0; display: block; }
-            .rel-pagina { box-shadow: none; border-radius: 0; padding: 0; max-width: 100%; }
-            .rel-filtros { display: none; }
+            .rel-header, .rel-toolbar, .rel-footer, .rel-btn { display: none !important; }
+            .modal-relatorio-ponto { background: #fff; position: static; display: block; padding: 0; }
+            .rel-body { padding: 0; display: block; }
             .conteudo-relatorio { max-height: none !important; box-shadow: none !important; border-radius: 0 !important; }
             @page { size: landscape; margin: 10mm; }
         }
 
-        /* ============================================================
-           FICHA CADASTRAL
-           ============================================================ */
+        /* FICHA CADASTRAL */
         .modal-ficha-cadastral { display: none; position: fixed; z-index: 10050; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 20px; }
         .modal-ficha-cadastral.active { display: flex; }
         .modal-ficha-cadastral .conteudo-ficha { background: #fff; border-radius: 14px; max-width: 1300px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.5); }
@@ -914,11 +528,17 @@
         /* Modal de Abono */
         .modal-abono { display: none; position: fixed; z-index: 10300; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); justify-content: center; align-items: center; padding: 16px; }
         .modal-abono.active { display: flex; }
-        .modal-abono .conteudo { background: #fff; border-radius: 16px; padding: 22px; max-width: 500px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .modal-abono .conteudo { background: #fff; border-radius: 16px; padding: 22px; max-width: 520px; width: 100%; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
         .modal-abono h3 { font-size: 17px; color: #1a0a00; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid #a259c7; display: flex; align-items: center; gap: 8px; }
         .modal-abono h3 i { color: #a259c7; }
         .modal-abono .edit-field { margin-bottom: 10px; }
         .modal-abono .botoes { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+        .modal-abono .radio-group { display: flex; gap: 8px; margin-top: 4px; }
+        .modal-abono .radio-group label { flex: 1; padding: 10px 12px; border: 2px solid #eee; border-radius: 8px; cursor: pointer; text-align: center; font-size: 12px; font-weight: 600; color: #7a3a00; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .modal-abono .radio-group label:hover { border-color: #a259c7; background: #faf5ff; }
+        .modal-abono .radio-group input[type="radio"] { display: none; }
+        .modal-abono .radio-group input[type="radio"]:checked + span { color: #a259c7; }
+        .modal-abono .radio-group label.sel-ativo { border-color: #a259c7; background: #f5e0ff; color: #a259c7; }
 
         /* Botão destaque cartão */
         .btn-salvar-cartao-destaque { position: absolute; bottom: 10px; right: 10px; background: #28a745; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 6px; transition: all 0.2s; z-index: 5; }
@@ -1362,6 +982,24 @@
                 <input type="date" id="abonoDataFim">
             </div>
             <div class="edit-field">
+                <label>Modo de Abono *</label>
+                <div class="radio-group">
+                    <label id="lblAbonoDiaInteiro" class="sel-ativo" onclick="setModoAbono('dia_inteiro')">
+                        <input type="radio" name="abonoModo" value="dia_inteiro" checked>
+                        <span><i class="fas fa-calendar-day"></i> Dia Inteiro (8h)</span>
+                    </label>
+                    <label id="lblAbonoHoras" onclick="setModoAbono('horas')">
+                        <input type="radio" name="abonoModo" value="horas">
+                        <span><i class="fas fa-clock"></i> Por Horas</span>
+                    </label>
+                </div>
+            </div>
+            <div class="edit-field" id="abonoHorasWrap" style="display:none;">
+                <label>Horas a Abonar (por dia) *</label>
+                <input type="time" id="abonoHoras" value="02:00" step="900">
+                <small style="font-size:10px;color:#7a3a00;margin-top:2px;">Ex: 02:00 = 2 horas abonadas por dia</small>
+            </div>
+            <div class="edit-field">
                 <label>Motivo / Justificativa</label>
                 <input type="text" id="abonoMotivo" placeholder="Ex: Doação de sangue, licença, etc.">
             </div>
@@ -1620,17 +1258,11 @@
         <div id="atestadoAnexoViewConteudo"></div>
     </div>
 
-    <!-- RELATÓRIO — VISUALIZADOR TIPO PDF (POPUP) -->
-    <div class="relatorio-paisagem" id="relatorioPaisagem">
+    <!-- RELATÓRIO DE PONTO — MESMO ESTILO DA FICHA CADASTRAL -->
+    <div class="modal-relatorio-ponto" id="relatorioPaisagem">
         <div class="conteudo-relatorio">
             <div class="rel-header">
-                <div class="titulo-wrap">
-                    <div class="titulo-icon"><i class="fas fa-file-pdf"></i></div>
-                    <div class="titulo-texto">
-                        <h2 id="relTituloArquivo">Relatorio_Ponto_2026.pdf</h2>
-                        <p id="relHeaderSubtitulo">Configure os filtros e clique em <strong>Gerar</strong></p>
-                    </div>
-                </div>
+                <h2><i class="fas fa-file-alt"></i> Relatório de Ponto</h2>
                 <div class="rel-header-actions">
                     <button type="button" class="rel-btn rel-btn-pdf" onclick="baixarRelatorioPdf()">
                         <i class="fas fa-download"></i> Baixar PDF
@@ -1645,69 +1277,52 @@
             </div>
 
             <div class="rel-toolbar">
-                <div class="grupo">
-                    <button type="button" onclick="relZoomOut()" title="Diminuir zoom"><i class="fas fa-search-minus"></i></button>
-                    <span class="zoom-label" id="relZoomLabel">100%</span>
-                    <button type="button" onclick="relZoomIn()" title="Aumentar zoom"><i class="fas fa-search-plus"></i></button>
+                <div class="campo">
+                    <label><i class="fas fa-calendar"></i> Mês</label>
+                    <select id="relMes">
+                        <option value="Janeiro">Janeiro</option>
+                        <option value="Fevereiro">Fevereiro</option>
+                        <option value="Março">Março</option>
+                        <option value="Abril">Abril</option>
+                        <option value="Maio">Maio</option>
+                        <option value="Junho">Junho</option>
+                        <option value="Julho">Julho</option>
+                        <option value="Agosto">Agosto</option>
+                        <option value="Setembro">Setembro</option>
+                        <option value="Outubro">Outubro</option>
+                        <option value="Novembro">Novembro</option>
+                        <option value="Dezembro">Dezembro</option>
+                    </select>
                 </div>
-                <div class="grupo">
-                    <button type="button" id="relPagAnterior" onclick="relPaginaAnterior()" title="Página anterior"><i class="fas fa-chevron-up"></i></button>
-                    <span class="pagina-label" id="relPaginaLabel">1 / 1</span>
-                    <button type="button" id="relPagProxima" onclick="relPaginaProxima()" title="Próxima página"><i class="fas fa-chevron-down"></i></button>
+                <div class="campo" style="min-width:80px;">
+                    <label><i class="fas fa-calendar-alt"></i> Ano</label>
+                    <input type="number" id="relAno" value="2026" min="2020" max="2030">
                 </div>
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="relBusca" placeholder="Pesquisar no relatório..." oninput="relBuscar()">
+                <div class="campo">
+                    <label><i class="fas fa-building"></i> Empresa</label>
+                    <select id="relEmpresa" onchange="carregarFuncionariosRelatorio()">
+                        <option value="">Todas</option>
+                        <option value="Spoleto">Spoleto</option>
+                        <option value="A2B">A2B</option>
+                        <option value="Acço">Acço</option>
+                        <option value="Copaenergia">Copaenergia</option>
+                        <option value="INSS">INSS</option>
+                        <option value="Qnutri">Qnutri</option>
+                    </select>
                 </div>
+                <div class="campo" style="flex:1;min-width:180px;">
+                    <label><i class="fas fa-user"></i> Funcionário</label>
+                    <select id="relFuncionario">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <button type="button" class="btn-action btn-primary" onclick="gerarRelatorioPonto()">
+                    <i class="fas fa-chart-line"></i> Gerar Relatório
+                </button>
             </div>
 
             <div class="rel-body" id="relBody">
-                <div class="rel-pagina" id="relPagina">
-                    <div class="rel-filtros">
-                        <div class="campo">
-                            <label><i class="fas fa-calendar"></i> Mês</label>
-                            <select id="relMes">
-                                <option value="Janeiro">Janeiro</option>
-                                <option value="Fevereiro">Fevereiro</option>
-                                <option value="Março">Março</option>
-                                <option value="Abril">Abril</option>
-                                <option value="Maio">Maio</option>
-                                <option value="Junho">Junho</option>
-                                <option value="Julho">Julho</option>
-                                <option value="Agosto">Agosto</option>
-                                <option value="Setembro">Setembro</option>
-                                <option value="Outubro">Outubro</option>
-                                <option value="Novembro">Novembro</option>
-                                <option value="Dezembro">Dezembro</option>
-                            </select>
-                        </div>
-                        <div class="campo" style="min-width:80px;">
-                            <label><i class="fas fa-calendar-alt"></i> Ano</label>
-                            <input type="number" id="relAno" value="2026" min="2020" max="2030">
-                        </div>
-                        <div class="campo">
-                            <label><i class="fas fa-building"></i> Empresa</label>
-                            <select id="relEmpresa" onchange="carregarFuncionariosRelatorio()">
-                                <option value="">Todas</option>
-                                <option value="Spoleto">Spoleto</option>
-                                <option value="A2B">A2B</option>
-                                <option value="Acço">Acço</option>
-                                <option value="Copaenergia">Copaenergia</option>
-                                <option value="INSS">INSS</option>
-                                <option value="Qnutri">Qnutri</option>
-                            </select>
-                        </div>
-                        <div class="campo" style="flex:1;min-width:180px;">
-                            <label><i class="fas fa-user"></i> Funcionário</label>
-                            <select id="relFuncionario">
-                                <option value="">Todos</option>
-                            </select>
-                        </div>
-                        <button type="button" class="btn-gerar" onclick="gerarRelatorioPonto()">
-                            Gerar Relatório
-                        </button>
-                    </div>
-
+                <div id="relPagina">
                     <div id="relatorioConteudo">
                         <div class="rel-empty">
                             <i class="fas fa-chart-line"></i>
@@ -1719,7 +1334,7 @@
             </div>
 
             <div class="rel-footer">
-                <span><i class="fas fa-file-pdf"></i> <span id="relFooterNome">Relatorio_Ponto_2026.pdf</span></span>
+                <span><i class="fas fa-file-pdf"></i> <span id="relFooterNome">Relatorio_Ponto.pdf</span></span>
                 <span><i class="fas fa-calendar"></i> Gerado em <span id="relFooterData"></span></span>
             </div>
         </div>
@@ -1834,10 +1449,6 @@
         let mapaDiasAbonados = {};
         let autoSaveTimers = {};
 
-        let relZoomAtual = 100;
-        let relPaginaAtual = 1;
-        let relTotalPaginas = 1;
-
         const CID10_DB = [
             { cod: 'A09', desc: 'Diarreia e gastroenterite de origem infecciosa presumível', cat: 'Infecciosas' },
             { cod: 'A90', desc: 'Dengue clássico', cat: 'Infecciosas' },
@@ -1941,6 +1552,17 @@
         function formatarDataHoraAgora() {
             const d = new Date();
             return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+        function isSocio(func) {
+            const cargo = (func.cargo || '').toLowerCase();
+            return cargo.includes('sócio') || cargo.includes('socio') || cargo.includes('sócia') || cargo.includes('socia');
+        }
+
+        // Retorna os minutos abonados de um dia, considerando abono_horas
+        function getMinutosAbonados(dia) {
+            if (!dia || !dia.abono) return 0;
+            if (dia.abono_horas) return converterParaMinutos(dia.abono_horas);
+            return JORNADA_PADRAO_MINUTOS;
         }
 
         // ============================================================
@@ -2125,7 +1747,6 @@
                 if (error) throw error;
                 funcionarios = data || [];
 
-                // Filtro de Unidades
                 const unidades = [...new Set(funcionarios.map(f => f.unidade).filter(Boolean))].sort();
                 const selectUnidade = document.getElementById('filtroUnidade');
                 selectUnidade.innerHTML = '<option value="">Todas Unidades</option>';
@@ -2135,7 +1756,6 @@
                     selectUnidade.appendChild(opt);
                 });
 
-                // Filtro de Empresas (departamento)
                 const empresas = [...new Set(funcionarios.map(f => f.departamento).filter(Boolean))].sort();
                 const selectEmpresa = document.getElementById('filtroEmpresa');
                 selectEmpresa.innerHTML = '<option value="">Todas Empresas</option>';
@@ -2235,40 +1855,44 @@
                 container.innerHTML = `<div class="empty-state"><i class="fas fa-search"></i><p>Nenhum funcionário encontrado</p></div>`;
                 return;
             }
-            // Ordena por cargo
-            const cmpCargo = (a, b) => (a.cargo || 'ZZZ').localeCompare(b.cargo || 'ZZZ') || (a.nome || '').localeCompare(b.nome || '');
 
-            const comControle = lista.filter(f => !f.sem_controle_ponto).sort(cmpCargo);
-            const semControle = lista.filter(f => f.sem_controle_ponto).sort(cmpCargo);
+            const ordenarAlfa = (a, b) => (a.nome || '').localeCompare(b.nome || '');
+
+            const comControle = lista.filter(f => !f.sem_controle_ponto);
+            const semControle = lista.filter(f => f.sem_controle_ponto);
+
+            // Sócios (único grupo separado)
+            const sociosComControle = comControle.filter(isSocio).sort(ordenarAlfa);
+            const outrosComControle = comControle.filter(f => !isSocio(f)).sort(ordenarAlfa);
+            const sociosSemControle = semControle.filter(isSocio).sort(ordenarAlfa);
+            const outrosSemControle = semControle.filter(f => !isSocio(f)).sort(ordenarAlfa);
+
             let html = '';
-            if (comControle.length > 0) {
-                // Título executivo
-                html += `<div class="grupo-header"><i class="fas fa-badge-check"></i> Colaboradores em Regime de Marcação <span class="contagem">${comControle.length}</span></div>`;
-                // Agrupar por cargo
-                let cargoAtual = '__INIT__';
-                comControle.forEach(f => {
-                    const cargo = (f.cargo || 'Sem cargo').trim();
-                    if (cargo !== cargoAtual) {
-                        cargoAtual = cargo;
-                        const qtd = comControle.filter(x => ((x.cargo || 'Sem cargo').trim()) === cargo).length;
-                        html += `<div class="grupo-header cargo-header"><i class="fas fa-briefcase"></i> ${cargo} <span class="contagem">${qtd}</span></div>`;
-                    }
-                    html += gerarCardFuncionarioHTML(f, false);
-                });
+
+            // Grupo dos Sócios (com controle)
+            if (sociosComControle.length > 0) {
+                html += `<div class="grupo-header socios"><i class="fas fa-crown"></i> Sócios <span class="contagem">${sociosComControle.length}</span></div>`;
+                sociosComControle.forEach(f => { html += gerarCardFuncionarioHTML(f, false); });
             }
-            if (semControle.length > 0) {
-                html += `<div class="grupo-header sem-ponto"><i class="fas fa-user-shield"></i> Colaboradores Dispensados de Marcação <span class="contagem">${semControle.length}</span></div>`;
-                let cargoAtual = '__INIT__';
-                semControle.forEach(f => {
-                    const cargo = (f.cargo || 'Sem cargo').trim();
-                    if (cargo !== cargoAtual) {
-                        cargoAtual = cargo;
-                        const qtd = semControle.filter(x => ((x.cargo || 'Sem cargo').trim()) === cargo).length;
-                        html += `<div class="grupo-header cargo-header"><i class="fas fa-briefcase"></i> ${cargo} <span class="contagem">${qtd}</span></div>`;
-                    }
-                    html += gerarCardFuncionarioHTML(f, true);
-                });
+
+            // Demais com controle — ordem alfabética pura
+            if (outrosComControle.length > 0) {
+                html += `<div class="grupo-header"><i class="fas fa-badge-check"></i> Colaboradores em Regime de Marcação <span class="contagem">${outrosComControle.length}</span></div>`;
+                outrosComControle.forEach(f => { html += gerarCardFuncionarioHTML(f, false); });
             }
+
+            // Sócios (sem controle)
+            if (sociosSemControle.length > 0) {
+                html += `<div class="grupo-header socios sem-ponto"><i class="fas fa-crown"></i> Sócios (Sem Controle de Ponto) <span class="contagem">${sociosSemControle.length}</span></div>`;
+                sociosSemControle.forEach(f => { html += gerarCardFuncionarioHTML(f, true); });
+            }
+
+            // Demais sem controle — ordem alfabética pura
+            if (outrosSemControle.length > 0) {
+                html += `<div class="grupo-header sem-ponto"><i class="fas fa-user-shield"></i> Colaboradores Dispensados de Marcação <span class="contagem">${outrosSemControle.length}</span></div>`;
+                outrosSemControle.forEach(f => { html += gerarCardFuncionarioHTML(f, true); });
+            }
+
             container.innerHTML = html;
         }
 
@@ -2415,11 +2039,10 @@
         }
 
         // ============================================================
-        // MAPA DE DIAS ABONADOS (atestados + marcacoes_ponto abono)
+        // MAPA DE DIAS ABONADOS
         // ============================================================
         async function carregarMapaDiasAbonados(funcId, mes, ano) {
             const diasAbonados = new Set();
-            const diasAbonoSimples = new Set();
             try {
                 const mesIndex = MESES.indexOf(mes);
                 if (mesIndex < 0) return diasAbonados;
@@ -2452,12 +2075,10 @@
                     Object.keys(json || {}).forEach(k => {
                         const d = json[k] || {};
                         if (d.falta_atestado) diasAbonados.add(parseInt(k));
-                        if (d.abono) diasAbonoSimples.add(parseInt(k));
+                        if (d.abono) diasAbonados.add(parseInt(k));
                     });
                 }
             } catch(e) { console.warn('Erro ao carregar mapa de abonados:', e); }
-            // Retorna um Set com dias abonados (atestado + abono simples)
-            diasAbonados.forEach(d => diasAbonoSimples.add(d));
             return diasAbonados;
         }
 
@@ -2479,7 +2100,7 @@
                 const temAlguma = temE1 || temS1 || temE2 || temS2 || temExtraE1 || temExtraS1 || d.folga_bh || d.falta_atestado || abonado || temAbono;
                 if (temAlguma) diasComMarcacao[dia] = true;
                 if (abonado || temAbono) {
-                    totalHorasAbonadas += JORNADA_PADRAO_MINUTOS;
+                    totalHorasAbonadas += getMinutosAbonados(d) || (abonado ? JORNADA_PADRAO_MINUTOS : 0);
                     continue;
                 }
                 const errosDia = [];
@@ -2885,7 +2506,7 @@
         }
 
         // ============================================================
-        // RELATÓRIO DE PONTO — VISUALIZADOR PDF
+        // RELATÓRIO DE PONTO
         // ============================================================
         function abrirRelatorioPonto() {
             const hoje = new Date();
@@ -2902,7 +2523,6 @@
             document.getElementById('relatorioPaisagem').classList.add('active');
             document.getElementById('relFooterData').textContent = formatarDataHoraAgora();
             const nomeArq = `Relatorio_Ponto_${MESES[hoje.getMonth()]}_${hoje.getFullYear()}.pdf`;
-            document.getElementById('relTituloArquivo').textContent = nomeArq;
             document.getElementById('relFooterNome').textContent = nomeArq;
             carregarFuncionariosRelatorio();
         }
@@ -2994,9 +2614,6 @@
             return false;
         }
 
-        // ============================================================
-        // GERAR RELATÓRIO — TABELA PRETO E BRANCO (TÍTULOS EM CINZA)
-        // ============================================================
         async function gerarRelatorioPonto() {
             const mes = document.getElementById('relMes').value;
             const ano = parseInt(document.getElementById('relAno').value);
@@ -3005,7 +2622,6 @@
             const container = document.getElementById('relatorioConteudo');
 
             const nomeArquivo = `Relatorio_Ponto_${mes}_${ano}${empresa ? '_' + empresa : ''}.pdf`;
-            document.getElementById('relTituloArquivo').textContent = nomeArquivo;
             document.getElementById('relFooterNome').textContent = nomeArquivo;
             document.getElementById('relFooterData').textContent = formatarDataHoraAgora();
 
@@ -3037,9 +2653,6 @@
                     container.innerHTML = `<div class="rel-empty"><i class="fas fa-calendar-times"></i><p>Nenhum funcionário com marcação no período</p><small>${mes}/${ano} — ${empresa || 'Todas as empresas'}</small></div>`;
                     return;
                 }
-
-                document.getElementById('relHeaderSubtitulo').innerHTML = 
-                    `<strong>${empresa || 'Todas as Empresas'}</strong> • ${mes}/${ano} • ${comMarcacao.length} funcionário(s)`;
 
                 let totalDiasTrabalhadosGlobal = 0;
                 let totalHoraExtraGlobal = 0;
@@ -3108,7 +2721,8 @@
                                 folga_bh: existente.folga_bh || false,
                                 falta_atestado: existente.falta_atestado || false,
                                 abono: existente.abono || false,
-                                abono_motivo: existente.abono_motivo || ''
+                                abono_motivo: existente.abono_motivo || '',
+                                abono_horas: existente.abono_horas || null
                             };
                         });
                     } catch(e) {}
@@ -3141,9 +2755,10 @@
                         let linhaClass = '';
 
                         if (temAbono) {
-                            obs = 'ABONO' + (d.abono_motivo ? ' - ' + d.abono_motivo : '');
+                            const hAbono = d.abono_horas ? ` ${d.abono_horas}` : '';
+                            obs = 'ABONO' + hAbono + (d.abono_motivo ? ' - ' + d.abono_motivo : '');
                             linhaClass = 'linha-abono';
-                            horasAbonadas += JORNADA_PADRAO_MINUTOS;
+                            horasAbonadas += getMinutosAbonados(d);
                         } else if (abonado) {
                             obs = 'ATESTADO';
                             linhaClass = 'linha-falta-atestado';
@@ -3168,7 +2783,14 @@
                             horaExtraTotal += totalMinDia - JORNADA_PADRAO_MINUTOS;
                         }
 
-                        const totalDisplay = temAbono ? 'ABONO' : (abonado ? 'ABONADO' : (folgaBH ? 'HORAS BH' : totalDia));
+                        let totalDisplay = totalDia;
+                        if (temAbono) {
+                            totalDisplay = d.abono_horas ? `ABONO ${d.abono_horas}` : 'ABONO';
+                        } else if (abonado) {
+                            totalDisplay = 'ABONADO';
+                        } else if (folgaBH) {
+                            totalDisplay = 'HORAS BH';
+                        }
 
                         linhasHTML += `<tr class="${linhaClass}">
                             <td class="dia-col"><span class="dia-num">${String(dia).padStart(2,'0')}</span> <span class="dia-sem">${diaSemana}</span></td>
@@ -3265,12 +2887,6 @@
                 `;
 
                 container.innerHTML = html;
-
-                relPaginaAtual = 1;
-                const totalPaginas = Math.ceil(container.scrollHeight / 800) || 1;
-                relTotalPaginas = totalPaginas;
-                document.getElementById('relPaginaLabel').textContent = `1 / ${relTotalPaginas}`;
-
                 document.getElementById('relBody')?.scrollTo({ top: 0, behavior: 'smooth' });
 
             } catch (error) {
@@ -3279,13 +2895,38 @@
             }
         }
 
+        function baixarRelatorioPdf() {
+            const elemento = document.getElementById('relPagina');
+            const nomeArquivo = document.getElementById('relFooterNome')?.textContent || 'relatorio_ponto.pdf';
+
+            const opt = {
+                margin: [8, 8, 8, 8],
+                filename: nomeArquivo,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            mostrarToast('📄 Gerando PDF, aguarde...', 'info');
+            html2pdf().set(opt).from(elemento).save().then(() => {
+                mostrarToast('✅ PDF gerado com sucesso!');
+            }).catch((err) => {
+                console.error('Erro ao gerar PDF:', err);
+                mostrarToast('❌ Erro ao gerar PDF: ' + err.message, 'error');
+            });
+        }
+
+        function imprimirRelatorioPonto() {
+            window.print();
+        }
+
         // ============================================================
         // FICHA CADASTRAL
         // ============================================================
         function abrirFichaCadastral() {
             document.getElementById('modalFichaCadastral').classList.add('active');
             document.getElementById('fichaFooterData').textContent = formatarDataHoraAgora();
-            // popular empresas
             popularFiltroEmpresasFicha();
             gerarFichaCadastral();
         }
@@ -3310,7 +2951,6 @@
             const empresaFiltro = document.getElementById('fichaFiltroEmpresa')?.value || '';
             const busca = (document.getElementById('fichaBusca')?.value || '').toLowerCase().trim();
 
-            // Agrupar por unidade → empresa (departamento)
             const grupos = {};
             funcionarios
                 .filter(f => !unidadeFiltro || f.unidade === unidadeFiltro)
@@ -3421,86 +3061,6 @@
             `);
             janela.document.close();
             setTimeout(() => janela.print(), 300);
-        }
-
-        // ============================================================
-        // FUNÇÕES DO VISUALIZADOR PDF
-        // ============================================================
-        function relZoomIn() {
-            relZoomAtual = Math.min(relZoomAtual + 10, 200);
-            document.getElementById('relZoomLabel').textContent = relZoomAtual + '%';
-            document.getElementById('relPagina').style.transform = `scale(${relZoomAtual / 100})`;
-            document.getElementById('relPagina').style.transformOrigin = 'top center';
-        }
-
-        function relZoomOut() {
-            relZoomAtual = Math.max(relZoomAtual - 10, 50);
-            document.getElementById('relZoomLabel').textContent = relZoomAtual + '%';
-            document.getElementById('relPagina').style.transform = `scale(${relZoomAtual / 100})`;
-            document.getElementById('relPagina').style.transformOrigin = 'top center';
-        }
-
-        function relPaginaAnterior() {
-            if (relPaginaAtual > 1) {
-                relPaginaAtual--;
-                document.getElementById('relPaginaLabel').textContent = `${relPaginaAtual} / ${relTotalPaginas}`;
-                document.getElementById('relBody').scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        }
-
-        function relPaginaProxima() {
-            if (relPaginaAtual < relTotalPaginas) {
-                relPaginaAtual++;
-                document.getElementById('relPaginaLabel').textContent = `${relPaginaAtual} / ${relTotalPaginas}`;
-                document.getElementById('relBody').scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        }
-
-        function relBuscar() {
-            const termo = document.getElementById('relBusca')?.value.toLowerCase().trim() || '';
-            if (!termo) {
-                document.querySelectorAll('.rel-tabela').forEach(el => el.style.display = '');
-                return;
-            }
-            document.querySelectorAll('.rel-tabela tbody tr').forEach(el => {
-                const texto = el.textContent.toLowerCase();
-                el.style.display = texto.includes(termo) ? '' : 'none';
-            });
-        }
-
-        function baixarRelatorioPdf() {
-            const elemento = document.getElementById('relPagina');
-            const nomeArquivo = document.getElementById('relFooterNome')?.textContent || 'relatorio_ponto.pdf';
-
-            const opt = {
-                margin: [8, 8, 8, 8],
-                filename: nomeArquivo,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff'
-                },
-                jsPDF: {
-                    unit: 'mm',
-                    format: 'a4',
-                    orientation: 'landscape'
-                },
-                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-            };
-
-            mostrarToast('📄 Gerando PDF, aguarde...', 'info');
-            html2pdf().set(opt).from(elemento).save().then(() => {
-                mostrarToast('✅ PDF gerado com sucesso!');
-            }).catch((err) => {
-                console.error('Erro ao gerar PDF:', err);
-                mostrarToast('❌ Erro ao gerar PDF: ' + err.message, 'error');
-            });
-        }
-
-        function imprimirRelatorioPonto() {
-            window.print();
         }
 
         // ============================================================
@@ -4703,10 +4263,11 @@
                 let totalGeralClass = '';
                 if (temAbono) {
                     classeLinha = 'linha-abono';
-                    badgeDia = `<span class="badge-falta-atestado" style="background:#a259c7;" title="Abono: ${d.abono_motivo || ''}"><i class="fas fa-gift"></i></span>`;
-                    totalGeralDisplay = 'ABONO';
+                    const hAbono = d.abono_horas ? ` ${d.abono_horas}` : '';
+                    badgeDia = `<span class="badge-falta-atestado" style="background:#a259c7;" title="Abono${hAbono}: ${d.abono_motivo || ''}"><i class="fas fa-gift"></i></span>`;
+                    totalGeralDisplay = d.abono_horas ? `ABONO ${d.abono_horas}` : 'ABONO';
                     totalGeralClass = 'abono';
-                    contAbonados++; totalAbonadoMin += JORNADA_PADRAO_MINUTOS;
+                    contAbonados++; totalAbonadoMin += getMinutosAbonados(d);
                 } else if (abonado) {
                     classeLinha = 'linha-falta-atestado';
                     badgeDia = `<span class="badge-falta-atestado" title="Atestado (abonado)"><i class="fas fa-notes-medical"></i></span>`;
@@ -4931,14 +4492,25 @@
                 if (folgaBH) tr.dataset.folgaBH = 'true';
                 if (temAbono) tr.dataset.abono = 'true';
                 if (d.abono_motivo) tr.dataset.abonoMotivo = d.abono_motivo;
+                if (d.abono_horas) tr.dataset.abonoHoras = d.abono_horas;
                 const valE1 = d.e1 || '';
                 const valS1 = d.s1 || '';
                 const valE2 = d.e2 || '';
                 const valS2 = d.s2 || '';
                 const valExtraE1 = d.extra_e1 || '';
                 const valExtraS1 = d.extra_s1 || '';
-                let totalGeralDisplay = temAbono ? 'ABONO' : (abonado ? 'ABONADO' : (folgaBH ? 'HORAS BH' : total));
-                let totalGeralClass = temAbono ? 'total-geral abono' : (abonado ? 'total-geral abonado' : (folgaBH ? 'total-geral horas-bh' : 'total-geral'));
+                let totalGeralDisplay = total;
+                let totalGeralClass = 'total-geral';
+                if (temAbono) {
+                    totalGeralDisplay = d.abono_horas ? `ABONO ${d.abono_horas}` : 'ABONO';
+                    totalGeralClass = 'total-geral abono';
+                } else if (abonado) {
+                    totalGeralDisplay = 'ABONADO';
+                    totalGeralClass = 'total-geral abonado';
+                } else if (folgaBH) {
+                    totalGeralDisplay = 'HORAS BH';
+                    totalGeralClass = 'total-geral horas-bh';
+                }
                 tr.innerHTML = `
                     <td class="dia-cell">
                         <span class="dia-num">${String(i).padStart(2, '0')}</span>
@@ -5017,8 +4589,9 @@
                 const falta_atestado = tr?.dataset.abonado === 'true' || false;
                 const abono = tr?.dataset.abono === 'true' || false;
                 const abono_motivo = tr?.dataset.abonoMotivo || '';
+                const abono_horas = tr?.dataset.abonoHoras || null;
                 if (e1 || s1 || e2 || s2 || extra_e1 || extra_s1 || folga_bh || falta_atestado || abono) {
-                    dadosParaSalvar[i] = { e1, s1, e2, s2, extra_e1, extra_s1, folga_bh, falta_atestado, abono, abono_motivo };
+                    dadosParaSalvar[i] = { e1, s1, e2, s2, extra_e1, extra_s1, folga_bh, falta_atestado, abono, abono_motivo, abono_horas };
                 }
             }
             try {
@@ -5093,7 +4666,11 @@
             for (let i = 1; i <= dias; i++) {
                 const tr = document.querySelector(`#editorTbody tr[data-dia="${i}"]`);
                 if (tr && tr.dataset.abonado === 'true') { qtdAbonados++; totalAbonado += JORNADA_PADRAO_MINUTOS; continue; }
-                if (tr && tr.dataset.abono === 'true') { qtdAbonoSimples++; totalAbonado += JORNADA_PADRAO_MINUTOS; continue; }
+                if (tr && tr.dataset.abono === 'true') {
+                    qtdAbonoSimples++;
+                    totalAbonado += tr.dataset.abonoHoras ? converterParaMinutos(tr.dataset.abonoHoras) : JORNADA_PADRAO_MINUTOS;
+                    continue;
+                }
                 const t1 = document.getElementById(`edit_total1_${i}`)?.value || '00:00';
                 const t2 = document.getElementById(`edit_total2_${i}`)?.value || '00:00';
                 const tE = document.getElementById(`edit_total_extra_${i}`)?.value || '00:00';
@@ -5166,6 +4743,7 @@
                 delete tr.dataset.abonado;
                 delete tr.dataset.abono;
                 delete tr.dataset.abonoMotivo;
+                delete tr.dataset.abonoHoras;
                 tr.dataset.folgaBH = 'true';
                 ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                     const inp = document.getElementById(`edit_${c}_${dia}`);
@@ -5223,6 +4801,7 @@
             delete tr.dataset.folgaBH;
             delete tr.dataset.abono;
             delete tr.dataset.abonoMotivo;
+            delete tr.dataset.abonoHoras;
             ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                 const inp = document.getElementById(`edit_${c}_${dia}`);
                 if (inp) { inp.value = ''; inp.disabled = true; }
@@ -5263,7 +4842,7 @@
         }
 
         // ============================================================
-        // ABONO DE PERÍODO
+        // ABONO DE PERÍODO (Dia Inteiro ou Por Horas)
         // ============================================================
         function abrirModalAbono() {
             if (!funcionarioAtual) { mostrarToast('⚠️ Nenhum funcionário ativo', 'warning'); return; }
@@ -5271,21 +4850,56 @@
             document.getElementById('abonoDataFim').value = '';
             document.getElementById('abonoMotivo').value = '';
             document.getElementById('abonoTipo').value = 'abono';
+            document.getElementById('abonoHoras').value = '02:00';
+            setModoAbono('dia_inteiro');
             document.getElementById('modalAbono').classList.add('active');
         }
+
+        function setModoAbono(modo) {
+            const lblDia = document.getElementById('lblAbonoDiaInteiro');
+            const lblHoras = document.getElementById('lblAbonoHoras');
+            const wrap = document.getElementById('abonoHorasWrap');
+            const radios = document.querySelectorAll('input[name="abonoModo"]');
+            radios.forEach(r => { r.checked = (r.value === modo); });
+            if (modo === 'horas') {
+                lblHoras.classList.add('sel-ativo');
+                lblDia.classList.remove('sel-ativo');
+                wrap.style.display = 'block';
+            } else {
+                lblDia.classList.add('sel-ativo');
+                lblHoras.classList.remove('sel-ativo');
+                wrap.style.display = 'none';
+            }
+        }
+
         function fecharModalAbono() {
             document.getElementById('modalAbono').classList.remove('active');
         }
+
         function confirmarAbono() {
             const inicio = document.getElementById('abonoDataInicio').value;
             const fim = document.getElementById('abonoDataFim').value;
             const motivo = document.getElementById('abonoMotivo').value.trim() || 'Abono';
             const tipo = document.getElementById('abonoTipo').value;
+            const modoAbono = document.querySelector('input[name="abonoModo"]:checked')?.value || 'dia_inteiro';
+            const horasAbono = document.getElementById('abonoHoras').value;
+
             if (!inicio || !fim) { mostrarToast('⚠️ Preencha as datas!', 'warning'); return; }
             const dtIni = parseDataLocal(inicio);
             const dtFim = parseDataLocal(fim);
             if (!dtIni || !dtFim) { mostrarToast('⚠️ Datas inválidas!', 'warning'); return; }
             if (dtIni > dtFim) { mostrarToast('⚠️ Data início > fim!', 'warning'); return; }
+
+            if (modoAbono === 'horas') {
+                if (!horasAbono || converterParaMinutos(horasAbono) <= 0) {
+                    mostrarToast('⚠️ Informe as horas a abonar!', 'warning');
+                    return;
+                }
+                if (converterParaMinutos(horasAbono) > JORNADA_PADRAO_MINUTOS) {
+                    mostrarToast('⚠️ Horas abonadas não podem exceder 8h!', 'warning');
+                    return;
+                }
+            }
 
             const mesAtual = document.getElementById('editorMes').value;
             const anoAtual = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
@@ -5297,7 +4911,7 @@
                 const dia = d.getDate();
                 const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
                 if (!tr) continue;
-                // Remove outros status
+
                 const btnFolga = tr.querySelector('button[data-action="folga-bh"]');
                 const btnFalta = tr.querySelector('button[data-action="falta-atestado"]');
                 if (btnFolga) btnFolga.classList.remove('ativo-folga-bh');
@@ -5305,15 +4919,26 @@
                 tr.classList.remove('linha-folga-bh', 'linha-falta-atestado');
                 delete tr.dataset.folgaBH;
                 delete tr.dataset.abonado;
+
                 tr.classList.add('linha-abono');
                 tr.dataset.abono = 'true';
                 tr.dataset.abonoMotivo = motivo;
+
+                if (modoAbono === 'horas') {
+                    tr.dataset.abonoHoras = horasAbono;
+                } else {
+                    delete tr.dataset.abonoHoras;
+                }
+
                 ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                     const inp = document.getElementById(`edit_${c}_${dia}`);
                     if (inp) { inp.value = ''; inp.disabled = true; }
                 });
                 const elTG = document.getElementById(`edit_total_geral_${dia}`);
-                if (elTG) { elTG.value = 'ABONO'; elTG.className = 'total-geral abono'; }
+                if (elTG) {
+                    elTG.value = modoAbono === 'horas' ? `ABONO ${horasAbono}` : 'ABONO';
+                    elTG.className = 'total-geral abono';
+                }
                 ['edit_total1_', 'edit_total2_', 'edit_total_extra_'].forEach(prefix => {
                     const el = document.getElementById(`${prefix}${dia}`);
                     if (el) el.value = '—';
@@ -5325,7 +4950,8 @@
             recalcularTotaisEditor();
             agendarAutoSave();
             fecharModalAbono();
-            mostrarToast(`✅ ${count} dia(s) abonado(s) — ${motivo}`);
+            const descricao = modoAbono === 'horas' ? `${count} dia(s) com ${horasAbono} abonada(s) — ${motivo}` : `${count} dia(s) abonado(s) integralmente — ${motivo}`;
+            mostrarToast(`✅ ${descricao}`);
         }
 
         function fecharModalEditor() {
@@ -5442,7 +5068,7 @@
                 const labelMarcado = jaTemFalta
                     ? '<span class="mini-sem" style="color:#fff;">✓ AT</span>'
                     : `<span class="mini-sem">${getDiaSemana(i, mesIndex, ano)}</span>`;
-                btn.innerHTML = `${String(i).padStart(2, '0')}${labelMarcado}`;
+                btn.innerHTML = `${String(i).padStart(2,'0')}${labelMarcado}`;
                 btn.onclick = () => { fecharModalDiaEscolha(); toggleFaltaAtestado(i); };
                 grade.appendChild(btn);
             }
