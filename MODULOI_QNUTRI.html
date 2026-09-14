@@ -11,18 +11,19 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: linear-gradient(135deg, #ffe0b0 0%, #ffb84d 30%, #FF8C00 60%, #e07000 100%); font-family: 'Poppins', sans-serif; color: #1a0a00; min-height: 100vh; padding-bottom: 40px; }
-        .main-header { position: fixed; top: 0; left: 0; width: 100%; background: rgba(10, 6, 2, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 140, 0, 0.15); z-index: 1000; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; height: 56px; }
-        .logo { font-size: 20px; font-weight: 700; color: #fff; }
+        .main-header { position: fixed; top: 0; left: 0; width: 100%; background: rgba(10, 6, 2, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 140, 0, 0.15); z-index: 1000; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; height: 56px; flex-wrap: nowrap; overflow: hidden; }
+        .logo { font-size: 20px; font-weight: 700; color: #fff; flex-shrink: 0; }
         .logo span { color: #FF8C00; }
-        .nav-menu { display: flex; align-items: center; gap: 6px; }
-        .nav-menu a { color: rgba(255, 255, 255, 0.7); text-decoration: none; font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 8px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.3s; }
+        .nav-menu { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; min-width: 0; }
+        .nav-menu a { color: rgba(255, 255, 255, 0.7); text-decoration: none; font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 8px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.3s; white-space: nowrap; flex-shrink: 0; }
         .nav-menu a:hover { color: #fff; background: rgba(255, 140, 0, 0.15); }
         .nav-menu a.btn-recarga { color: #28a745; background: rgba(40,167,69,0.1); }
         .nav-menu a.btn-sair { color: #dc3545; background: rgba(220,53,69,0.1); }
         .nav-menu a.btn-sair:hover { color: #fff; background: rgba(220,53,69,0.3); }
-        .user-info { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 12px; background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
-        .user-info #headerUserName { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
-        .user-info .user-role { background: #FF8C00; padding: 1px 8px; border-radius: 10px; font-size: 9px; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+        .user-info { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 12px; background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; white-space: nowrap !important; flex-wrap: nowrap !important; flex-shrink: 0; min-width: 0; }
+        .user-info * { white-space: nowrap !important; }
+        .user-info #headerUserName { white-space: nowrap !important; word-break: keep-all; overflow-wrap: normal; max-width: 220px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
+        .user-info .user-role { background: #FF8C00; padding: 1px 8px; border-radius: 10px; font-size: 9px; font-weight: 700; text-transform: uppercase; white-space: nowrap !important; flex-shrink: 0; }
         .sidebar-toggle { position: fixed; left: 0; top: 56px; z-index: 999; background: rgba(10, 6, 2, 0.9); backdrop-filter: blur(10px); border: none; border-right: 1px solid rgba(255, 140, 0, 0.2); color: #fff; padding: 12px 10px; cursor: pointer; font-size: 18px; border-radius: 0 12px 12px 0; transition: all 0.3s; width: 40px; height: 48px; display: flex; align-items: center; justify-content: center; }
         .sidebar-toggle:hover { background: rgba(255, 140, 0, 0.3); }
         .sidebar-toggle i { transition: transform 0.3s; }
@@ -517,6 +518,21 @@
         .ficha-footer { background: #202124; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; color: #9aa0a6; font-size: 10px; }
         .ficha-footer button { font-family: 'Poppins', sans-serif; }
 
+        /* ============ CONTROLE DE HORAS (novo) ============ */
+        .modal-controle-horas { display: none; position: fixed; z-index: 10050; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 20px; }
+        .modal-controle-horas.active { display: flex; }
+        .modal-controle-horas .conteudo-controle-horas { background: #fff; border-radius: 14px; max-width: 1300px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.5); }
+        .ch-header { background: #1e1e1e; color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
+        .ch-header h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .ch-header h2 i { color: #FF8C00; }
+        .ch-header-actions { display: flex; gap: 8px; }
+        .ch-toolbar { background: #f8f9fa; border-bottom: 1px solid #e0e0e0; padding: 10px 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; flex-shrink: 0; }
+        .ch-toolbar .campo { display: flex; flex-direction: column; gap: 3px; min-width: 140px; }
+        .ch-toolbar .campo label { font-size: 9px; font-weight: 700; color: #7a3a00; text-transform: uppercase; }
+        .ch-toolbar .campo select, .ch-toolbar .campo input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; font-family: 'Poppins', sans-serif; font-size: 12px; }
+        .ch-body { flex: 1; overflow-y: auto; padding: 24px 28px; background: #fff; color: #000; }
+        .ch-footer { background: #202124; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; color: #9aa0a6; font-size: 10px; flex-shrink: 0; }
+
         /* Modal de Abono */
         .modal-abono { display: none; position: fixed; z-index: 10300; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); justify-content: center; align-items: center; padding: 16px; }
         .modal-abono.active { display: flex; }
@@ -541,7 +557,8 @@
            ============================================================ */
         @media print {
             body.printing-relatorio > *:not(#relatorioPaisagem),
-            body.printing-ficha > *:not(#modalFichaCadastral) { display: none !important; }
+            body.printing-ficha > *:not(#modalFichaCadastral),
+            body.printing-controle-horas > *:not(#modalControleHoras) { display: none !important; }
 
             /* Relatório de Ponto */
             body.printing-relatorio #relatorioPaisagem {
@@ -595,6 +612,31 @@
             body.printing-ficha .ficha-tabela thead { display: table-header-group; }
             body.printing-ficha .ficha-tabela tbody tr { page-break-inside: avoid; break-inside: avoid; }
 
+            /* Controle de Horas */
+            body.printing-controle-horas #modalControleHoras {
+                display: block !important; position: static !important;
+                background: #fff !important; backdrop-filter: none !important;
+                padding: 0 !important; width: 100% !important;
+                height: auto !important; max-height: none !important; overflow: visible !important;
+            }
+            body.printing-controle-horas #modalControleHoras .conteudo-controle-horas {
+                max-height: none !important; box-shadow: none !important;
+                border-radius: 0 !important; overflow: visible !important; width: 100% !important;
+                display: block !important;
+            }
+            body.printing-controle-horas .ch-header,
+            body.printing-controle-horas .ch-toolbar,
+            body.printing-controle-horas .ch-footer { display: none !important; }
+            body.printing-controle-horas .ch-body {
+                padding: 0 !important; overflow: visible !important;
+                display: block !important; flex: none !important; background: #fff !important;
+            }
+            body.printing-controle-horas .ficha-unidade-titulo { page-break-after: avoid; break-after: avoid; page-break-inside: avoid; break-inside: avoid; }
+            body.printing-controle-horas .ficha-empresa-titulo { page-break-after: avoid; break-after: avoid; page-break-inside: avoid; break-inside: avoid; }
+            body.printing-controle-horas .ficha-tabela { page-break-inside: auto; }
+            body.printing-controle-horas .ficha-tabela thead { display: table-header-group; }
+            body.printing-controle-horas .ficha-tabela tbody tr { page-break-inside: avoid; break-inside: avoid; }
+
             @page { size: landscape; margin: 10mm; }
         }
     </style>
@@ -646,6 +688,7 @@
         <button class="sidebar-btn" onclick="abrirControleFerias()"><i class="fas fa-umbrella-beach"></i> Controle de Férias</button>
         <button class="sidebar-btn" onclick="abrirCronogramas()"><i class="fas fa-calendar-week"></i> Calendários</button>
         <button class="sidebar-btn" onclick="abrirRelatorioPonto()"><i class="fas fa-file-alt"></i> Relatório de Ponto</button>
+        <button class="sidebar-btn" onclick="abrirControleHoras()"><i class="fas fa-hourglass-half"></i> Controle de Horas</button>
         <button class="sidebar-btn" onclick="abrirFichaCadastral()"><i class="fas fa-id-card-clip"></i> Relação de Colaboradores</button>
         <button class="sidebar-btn" onclick="abrirErros()"><i class="fas fa-exclamation-triangle"></i> Erros de Marcação <span class="badge-sidebar" id="badgeErros" style="display:none;">0</span></button>
         <div class="sidebar-label"><i class="fas fa-users-cog"></i> Administração</div>
@@ -1445,6 +1488,69 @@
             <div class="ficha-footer">
                 <span><i class="fas fa-calendar"></i> Gerado em <span id="fichaFooterData"></span></span>
                 <button type="button" class="btn-action btn-secondary btn-sm" onclick="fecharFichaCadastral()"><i class="fas fa-times"></i> Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONTROLE DE HORAS (NOVO) -->
+    <div class="modal-controle-horas" id="modalControleHoras">
+        <div class="conteudo-controle-horas">
+            <div class="ch-header">
+                <h2><i class="fas fa-hourglass-half"></i> Controle de Horas</h2>
+                <div class="ch-header-actions">
+                    <button type="button" class="rel-btn rel-btn-pdf" onclick="baixarControleHorasPdf()">
+                        <i class="fas fa-download"></i> Baixar PDF
+                    </button>
+                    <button type="button" class="rel-btn rel-btn-print" onclick="imprimirControleHoras()">
+                        <i class="fas fa-print"></i> Imprimir
+                    </button>
+                    <button type="button" class="rel-btn rel-btn-close" onclick="fecharControleHoras()">
+                        <i class="fas fa-times"></i> Fechar
+                    </button>
+                </div>
+            </div>
+            <div class="ch-toolbar">
+                <div class="campo" style="min-width:130px;">
+                    <label><i class="fas fa-calendar"></i> Mês</label>
+                    <select id="chMes" onchange="gerarControleHoras()"></select>
+                </div>
+                <div class="campo" style="min-width:80px;">
+                    <label><i class="fas fa-calendar-alt"></i> Ano</label>
+                    <input type="number" id="chAno" value="2026" min="2020" max="2030" onchange="gerarControleHoras()">
+                </div>
+                <div class="campo">
+                    <label><i class="fas fa-building"></i> Unidade</label>
+                    <select id="chFiltroUnidade" onchange="gerarControleHoras()">
+                        <option value="">Todas</option>
+                        <option value="Spoleto">Spoleto</option>
+                        <option value="A2B">A2B</option>
+                        <option value="Acço">Acço</option>
+                        <option value="Copaenergia">Copaenergia</option>
+                        <option value="INSS">INSS</option>
+                        <option value="Qnutri">Qnutri</option>
+                    </select>
+                </div>
+                <div class="campo">
+                    <label><i class="fas fa-sitemap"></i> Empresa / Departamento</label>
+                    <select id="chFiltroEmpresa" onchange="gerarControleHoras()">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="campo" style="min-width:200px;">
+                    <label><i class="fas fa-search"></i> Buscar</label>
+                    <input type="text" id="chBusca" placeholder="Nome ou cargo..." oninput="gerarControleHoras()">
+                </div>
+                <button type="button" class="btn-action btn-primary" onclick="gerarControleHoras()"><i class="fas fa-sync"></i> Atualizar</button>
+            </div>
+            <div class="ch-body" id="chBody">
+                <div style="text-align:center;padding:60px 20px;color:#7a3a00;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:32px;display:block;margin-bottom:12px;"></i>
+                    Carregando...
+                </div>
+            </div>
+            <div class="ch-footer">
+                <span><i class="fas fa-calendar"></i> Gerado em <span id="chFooterData"></span></span>
+                <button type="button" class="btn-action btn-secondary btn-sm" onclick="fecharControleHoras()"><i class="fas fa-times"></i> Fechar</button>
             </div>
         </div>
     </div>
@@ -3104,6 +3210,258 @@
             setTimeout(() => {
                 window.print();
                 setTimeout(() => document.body.classList.remove('printing-ficha'), 500);
+            }, 80);
+        }
+
+        // ============================================================
+        // CONTROLE DE HORAS (NOVO)
+        // ============================================================
+        function abrirControleHoras() {
+            const hoje = new Date();
+            const selMes = document.getElementById('chMes');
+            selMes.innerHTML = MESES.map(m => `<option value="${m}" ${m === MESES[hoje.getMonth()] ? 'selected' : ''}>${m}</option>`).join('');
+            document.getElementById('chAno').value = hoje.getFullYear();
+            document.getElementById('chFiltroUnidade').value = '';
+            document.getElementById('chFiltroEmpresa').value = '';
+            document.getElementById('chBusca').value = '';
+            popularFiltroEmpresasControleHoras();
+            document.getElementById('chFooterData').textContent = formatarDataHoraAgora();
+            document.getElementById('modalControleHoras').classList.add('active');
+            gerarControleHoras();
+        }
+
+        function fecharControleHoras() {
+            document.getElementById('modalControleHoras').classList.remove('active');
+        }
+
+        function popularFiltroEmpresasControleHoras() {
+            const select = document.getElementById('chFiltroEmpresa');
+            if (!select) return;
+            const empresas = [...new Set(funcionarios.map(f => f.departamento).filter(Boolean))].sort();
+            select.innerHTML = '<option value="">Todas</option>';
+            empresas.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e; opt.textContent = e;
+                select.appendChild(opt);
+            });
+        }
+
+        async function calcularHorasFuncionario(funcId, mes, ano) {
+            const mesIndex = MESES.indexOf(mes);
+            const totalDias = new Date(ano, mesIndex + 1, 0).getDate();
+            let dados = {};
+            try {
+                const { data } = await supabaseClient.from('marcacoes_ponto').select('*')
+                    .eq('funcionario_id', funcId).eq('mes', mes).eq('ano', ano).maybeSingle();
+                if (data && data.dados) {
+                    try { dados = typeof data.dados === 'string' ? JSON.parse(data.dados) : data.dados; } catch(e) {}
+                }
+            } catch(e) {}
+            const diasAbonados = await carregarMapaDiasAbonados(funcId, mes, ano);
+
+            let totalTrabalhadoMin = 0;
+            let totalExtraMin = 0;
+            let totalAbonadoMin = 0;
+            let diasTrabalhados = 0;
+
+            for (let dia = 1; dia <= totalDias; dia++) {
+                const d = dados[dia] || {};
+                const abonado = diasAbonados.has(dia) || d.falta_atestado;
+                const temAbono = d.abono;
+                const folgaBH = d.folga_bh;
+
+                if (temAbono) {
+                    totalAbonadoMin += getMinutosAbonados(d);
+                    continue;
+                }
+                if (abonado) {
+                    totalAbonadoMin += JORNADA_PADRAO_MINUTOS;
+                    continue;
+                }
+                if (folgaBH) continue;
+
+                const diff1 = calcularDiferenca(d.e1, d.s1);
+                const diff2 = calcularDiferenca(d.e2, d.s2);
+                const diffExtra = calcularDiferenca(d.extra_e1, d.extra_s1);
+                const totalDia = converterParaMinutos(diff1) + converterParaMinutos(diff2) + converterParaMinutos(diffExtra);
+
+                if (totalDia > 0) {
+                    diasTrabalhados++;
+                    totalTrabalhadoMin += totalDia;
+                    if (totalDia > JORNADA_PADRAO_MINUTOS) {
+                        totalExtraMin += totalDia - JORNADA_PADRAO_MINUTOS;
+                    }
+                }
+            }
+
+            return { totalTrabalhadoMin, totalExtraMin, totalAbonadoMin, diasTrabalhados };
+        }
+
+        function formatarDiasDecimais(minutos) {
+            const dias = minutos / JORNADA_PADRAO_MINUTOS;
+            return dias.toFixed(2).replace('.', ',');
+        }
+
+        async function gerarControleHoras() {
+            const body = document.getElementById('chBody');
+            body.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#7a3a00;"><i class="fas fa-spinner fa-spin" style="font-size:32px;display:block;margin-bottom:12px;"></i>Gerando relatório...</div>`;
+
+            const mes = document.getElementById('chMes').value;
+            const ano = parseInt(document.getElementById('chAno').value) || new Date().getFullYear();
+            const unidadeFiltro = document.getElementById('chFiltroUnidade').value;
+            const empresaFiltro = document.getElementById('chFiltroEmpresa').value;
+            const busca = (document.getElementById('chBusca').value || '').toLowerCase().trim();
+
+            document.getElementById('chFooterData').textContent = formatarDataHoraAgora();
+
+            try {
+                let query = supabaseClient.from('funcionarios').select('*');
+                if (unidadeFiltro) query = query.eq('unidade', unidadeFiltro);
+                if (empresaFiltro) query = query.eq('departamento', empresaFiltro);
+                const { data: funcs, error } = await query.order('nome');
+                if (error) throw error;
+
+                let lista = (funcs || []).filter(f => !f.sem_controle_ponto);
+                if (busca) {
+                    lista = lista.filter(f =>
+                        (f.nome || '').toLowerCase().includes(busca) ||
+                        (f.cargo || '').toLowerCase().includes(busca)
+                    );
+                }
+
+                if (lista.length === 0) {
+                    body.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#7a3a00;"><i class="fas fa-users" style="font-size:48px;display:block;margin-bottom:14px;opacity:0.4;"></i><p style="font-weight:700;">Nenhum funcionário encontrado</p></div>`;
+                    return;
+                }
+
+                const dadosFunc = {};
+                for (const f of lista) {
+                    dadosFunc[f.id] = await calcularHorasFuncionario(f.id, mes, ano);
+                }
+
+                const grupos = {};
+                lista.forEach(f => {
+                    const uni = f.unidade || 'Sem Unidade';
+                    const emp = f.departamento || 'Sem Empresa';
+                    if (!grupos[uni]) grupos[uni] = {};
+                    if (!grupos[uni][emp]) grupos[uni][emp] = [];
+                    grupos[uni][emp].push(f);
+                });
+
+                const unidades = Object.keys(grupos).sort();
+
+                let html = '';
+                let totalGeralTrab = 0, totalGeralAbon = 0, totalGeralExtra = 0;
+
+                html += `<div class="ficha-unidade-titulo" style="background:#FF8C00;"><i class="fas fa-hourglass-half"></i> Controle de Horas — ${mes}/${ano} <span class="count">${lista.length} colaborador(es)</span></div>`;
+
+                unidades.forEach(uni => {
+                    const totalUni = Object.values(grupos[uni]).reduce((s, arr) => s + arr.length, 0);
+                    html += `<div class="ficha-unidade-titulo"><i class="fas fa-building"></i> ${uni} <span class="count">${totalUni} colaborador(es)</span></div>`;
+                    const empresas = Object.keys(grupos[uni]).sort();
+                    empresas.forEach(emp => {
+                        const listaEmp = grupos[uni][emp].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+                        html += `<div class="ficha-empresa-titulo"><i class="fas fa-sitemap"></i> Empresa: ${emp} <span style="float:right;color:#7a3a00;font-weight:600;">${listaEmp.length} colaborador(es)</span></div>`;
+                        html += `<table class="ficha-tabela">
+                            <thead>
+                                <tr>
+                                    <th style="width:28%;">Nome</th>
+                                    <th style="width:20%;">Cargo</th>
+                                    <th style="width:13%;">Horas Trabalhadas</th>
+                                    <th style="width:13%;">Horas Abonadas</th>
+                                    <th style="width:13%;">Horas Extras</th>
+                                    <th style="width:13%;">Conversão em Dias</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                        let subtotalTrab = 0, subtotalAbon = 0, subtotalExtra = 0;
+                        listaEmp.forEach(f => {
+                            const d = dadosFunc[f.id];
+                            subtotalTrab += d.totalTrabalhadoMin;
+                            subtotalAbon += d.totalAbonadoMin;
+                            subtotalExtra += d.totalExtraMin;
+                            html += `<tr>
+                                <td><strong>${f.nome || '-'}</strong></td>
+                                <td>${f.cargo || '-'}</td>
+                                <td class="centro">${formatarHoras(d.totalTrabalhadoMin)}</td>
+                                <td class="centro">${formatarHoras(d.totalAbonadoMin)}</td>
+                                <td class="centro">${formatarHoras(d.totalExtraMin)}</td>
+                                <td class="centro"><strong>${formatarDiasDecimais(d.totalTrabalhadoMin)}</strong></td>
+                            </tr>`;
+                        });
+                        html += `<tr style="background:#f0f0f0;font-weight:700;">
+                            <td colspan="2" style="text-align:right;">Subtotal:</td>
+                            <td class="centro">${formatarHoras(subtotalTrab)}</td>
+                            <td class="centro">${formatarHoras(subtotalAbon)}</td>
+                            <td class="centro">${formatarHoras(subtotalExtra)}</td>
+                            <td class="centro">${formatarDiasDecimais(subtotalTrab)}</td>
+                        </tr>`;
+                        html += `</tbody></table>`;
+                        totalGeralTrab += subtotalTrab;
+                        totalGeralAbon += subtotalAbon;
+                        totalGeralExtra += subtotalExtra;
+                    });
+                });
+
+                html += `<div class="ficha-unidade-titulo" style="background:#1e1e1e;margin-top:24px;"><i class="fas fa-calculator"></i> Total Geral <span class="count">${lista.length} colaborador(es)</span></div>`;
+                html += `<table class="ficha-tabela">
+                    <thead>
+                        <tr>
+                            <th colspan="2">Resumo Consolidado</th>
+                            <th>Horas Trabalhadas</th>
+                            <th>Horas Abonadas</th>
+                            <th>Horas Extras</th>
+                            <th>Conversão em Dias</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background:#fff8f0;font-weight:800;font-size:12px;">
+                            <td colspan="2" style="text-align:right;">TOTAL GERAL:</td>
+                            <td class="centro">${formatarHoras(totalGeralTrab)}</td>
+                            <td class="centro">${formatarHoras(totalGeralAbon)}</td>
+                            <td class="centro">${formatarHoras(totalGeralExtra)}</td>
+                            <td class="centro">${formatarDiasDecimais(totalGeralTrab)}</td>
+                        </tr>
+                    </tbody>
+                </table>`;
+
+                html += `<div style="margin-top:24px;padding-top:12px;border-top:2px solid #000;font-size:10px;color:#000;display:flex;justify-content:space-between;">
+                    <span>Relatório de Controle de Horas — gerado pelo sistema ApliKado</span>
+                    <span>${formatarDataHoraAgora()}</span>
+                </div>`;
+
+                body.innerHTML = html;
+            } catch (error) {
+                console.error('Erro controle horas:', error);
+                body.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#dc3545;"><i class="fas fa-exclamation-triangle" style="font-size:48px;display:block;margin-bottom:14px;"></i><p>Erro: ${error.message}</p></div>`;
+            }
+        }
+
+        function baixarControleHorasPdf() {
+            const elemento = document.getElementById('chBody');
+            const nomeArquivo = `Controle_Horas_${new Date().toISOString().slice(0,10)}.pdf`;
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: nomeArquivo,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak: { mode: ['css', 'legacy'], avoid: ['.ficha-unidade-titulo', '.ficha-empresa-titulo', 'tr', '.ficha-tabela tbody tr'] }
+            };
+            mostrarToast('📄 Gerando PDF, aguarde...', 'info');
+            html2pdf().set(opt).from(elemento).save().then(() => {
+                mostrarToast('✅ PDF gerado com sucesso!');
+            }).catch((err) => {
+                console.error('Erro ao gerar PDF:', err);
+                mostrarToast('❌ Erro: ' + err.message, 'error');
+            });
+        }
+
+        function imprimirControleHoras() {
+            document.body.classList.add('printing-controle-horas');
+            setTimeout(() => {
+                window.print();
+                setTimeout(() => document.body.classList.remove('printing-controle-horas'), 500);
             }, 80);
         }
 
@@ -5523,6 +5881,7 @@
                     fecharModalAbono();
                     fecharRelatorioPonto();
                     fecharFichaCadastral();
+                    fecharControleHoras();
                 }
             });
             document.querySelectorAll('.modal:not(#modalLogin)').forEach(modal => {
