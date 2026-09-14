@@ -1692,7 +1692,7 @@
         }
 
         // ============================================================
-        // UPDATE TOLERANTE
+        // UPDATE TOLERANTE (corrigido para tratar 409 / CPF duplicado)
         // ============================================================
         async function updateTolerante(id, dados, opts = {}) {
             const tabela = opts.tabela || 'funcionarios';
@@ -1705,10 +1705,15 @@
                     const { error } = await supabaseClient.from(tabela).update(payload).eq('id', id);
                     if (!error) return { ok: true, ignoradas, erro: null };
                     const msg = (error.message || '').toLowerCase();
+                    // Coluna inexistente → remove e tenta de novo
                     const match = msg.match(/could not find the '([^']+)' column/);
                     if (match && match[1]) {
                         const coluna = match[1];
                         if (coluna in payload) { delete payload[coluna]; ignoradas.push(coluna); continue; }
+                    }
+                    // CPF duplicado / violação de unicidade (409)
+                    if (msg.includes('duplicate key') || msg.includes('unique constraint') || error.code === '23505') {
+                        return { ok: false, ignoradas, erro: 'Já existe outro funcionário cadastrado com este CPF. Verifique se o CPF está correto ou edite o registro existente.' };
                     }
                     return { ok: false, ignoradas, erro: error.message };
                 } catch (e) {
@@ -2780,7 +2785,6 @@
                         <tbody>
                 `;
 
-                // Precisamos calcular antes de montar a tabela de resumo, então faremos duas passagens
                 const cardsFuncionarios = [];
                 const dadosFuncionarios = [];
 
@@ -4078,7 +4082,7 @@
         async function salvarAbaDados(id) {
             const dados = {
                 nome: document.getElementById('editNome').value.trim(),
-                cpf: document.getElementById('editCPF').value.trim(),
+                cpf: document.getElementById('editCPF').value.trim() || null,
                 rg: document.getElementById('editRG').value.trim(),
                 aniversario: document.getElementById('editAniversario').value || null,
                 estado_civil: document.getElementById('editEstadoCivil').value || null,
@@ -4096,7 +4100,7 @@
             };
             if (!dados.nome) { mostrarToast('⚠️ Nome é obrigatório!', 'warning'); return; }
             const res = await updateTolerante(id, dados);
-            if (!res.ok) { mostrarToast('❌ Erro: ' + res.erro, 'error'); return; }
+            if (!res.ok) { mostrarToast('❌ ' + res.erro, 'error'); return; }
             if (res.ignoradas.length > 0) mostrarToast(`✅ Dados salvos (ignorados: ${res.ignoradas.join(', ')})`, 'warning');
             else mostrarToast('✅ Dados salvos!');
             await carregarFuncionarios();
@@ -4117,7 +4121,7 @@
                 validade_cnh: document.getElementById('editDocValidadeCNH').value || null
             };
             const res = await updateTolerante(id, dados);
-            if (!res.ok) { mostrarToast('❌ Erro: ' + res.erro, 'error'); return; }
+            if (!res.ok) { mostrarToast('❌ ' + res.erro, 'error'); return; }
             if (res.ignoradas.length > 0) mostrarToast(`✅ Documentos salvos (ignorados: ${res.ignoradas.join(', ')})`, 'warning');
             else mostrarToast('✅ Documentos salvos!');
             await carregarFuncionarios();
@@ -4135,7 +4139,7 @@
                 emergencia_telefone: document.getElementById('editEmergenciaTelefone').value.trim() || null
             };
             const res = await updateTolerante(id, dados);
-            if (!res.ok) { mostrarToast('❌ Erro: ' + res.erro, 'error'); return; }
+            if (!res.ok) { mostrarToast('❌ ' + res.erro, 'error'); return; }
             if (res.ignoradas.length > 0) mostrarToast(`✅ Contato salvo (ignorados: ${res.ignoradas.join(', ')})`, 'warning');
             else mostrarToast('✅ Contato salvo!');
             await carregarFuncionarios();
@@ -4159,7 +4163,7 @@
                 pix: document.getElementById('editPix').value.trim() || null
             };
             const res = await updateTolerante(id, dados);
-            if (!res.ok) { mostrarToast('❌ Erro: ' + res.erro, 'error'); return; }
+            if (!res.ok) { mostrarToast('❌ ' + res.erro, 'error'); return; }
             if (res.ignoradas.length > 0) mostrarToast(`✅ Benefícios salvos (ignorados: ${res.ignoradas.join(', ')})`, 'warning');
             else mostrarToast('✅ Benefícios salvos!');
             await carregarFuncionarios();
@@ -4168,7 +4172,7 @@
         async function salvarAbaFerias(id) {
             const ultimoGozo = document.getElementById('editFeriasUltimoGozo').value || null;
             const res = await updateTolerante(id, { ultimo_gozo: ultimoGozo });
-            if (!res.ok) { mostrarToast('❌ Erro: ' + res.erro, 'error'); return; }
+            if (!res.ok) { mostrarToast('❌ ' + res.erro, 'error'); return; }
             mostrarToast('✅ Último gozo salvo!');
             await carregarFuncionarios();
             setTimeout(() => abrirModalFuncionario(id), 300);
@@ -4956,7 +4960,8 @@
             const editId = document.getElementById('btnSalvarFuncionario').dataset.editId;
             if (!nome) { mostrarToast('⚠️ Preencha o Nome!', 'warning'); return; }
             const dados = {
-                nome, cpf: document.getElementById('cadCPF').value || '',
+                nome, 
+                cpf: document.getElementById('cadCPF').value.trim() || null,
                 unidade: document.getElementById('cadUnidade').value || 'Spoleto',
                 admissao: document.getElementById('cadAdmissao').value || null,
                 aso: document.getElementById('cadASO').value || null,
@@ -4968,23 +4973,31 @@
             try {
                 if (editId) {
                     const res = await updateTolerante(editId, dados);
-                    if (!res.ok) throw new Error(res.erro);
+                    if (!res.ok) {
+                        mostrarToast('❌ ' + res.erro, 'error');
+                        return;
+                    }
                     if (res.ignoradas.length > 0) mostrarToast(`✅ Atualizado (ignorados: ${res.ignoradas.join(', ')})`, 'warning');
                     else mostrarToast('✅ Atualizado!');
                 } else {
                     let payload = { ...dados };
                     const ignoradas = [];
+                    let inserido = false;
                     for (let t = 0; t < 25; t++) {
                         if (Object.keys(payload).length === 0) break;
                         const { error } = await supabaseClient.from('funcionarios').insert(payload).select();
-                        if (!error) break;
+                        if (!error) { inserido = true; break; }
                         const msg = (error.message || '').toLowerCase();
                         const match = msg.match(/could not find the '([^']+)' column/);
                         if (match && match[1] && (match[1] in payload)) {
                             delete payload[match[1]]; ignoradas.push(match[1]); continue;
                         }
+                        if (msg.includes('duplicate key') || msg.includes('unique constraint') || error.code === '23505') {
+                            throw new Error('Já existe um funcionário cadastrado com este CPF. Verifique se o CPF está correto ou edite o registro existente.');
+                        }
                         throw error;
                     }
+                    if (!inserido) throw new Error('Não foi possível inserir o funcionário.');
                     if (ignoradas.length > 0) mostrarToast(`✅ Cadastrado (ignorados: ${ignoradas.join(', ')})`, 'warning');
                     else mostrarToast('✅ Cadastrado!');
                 }
@@ -4992,7 +5005,9 @@
                 await carregarFuncionarios();
                 await atualizarBadgeCartoes();
                 mostrarAba('funcionarios');
-            } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
+            } catch (error) { 
+                mostrarToast('❌ Erro: ' + error.message, 'error'); 
+            }
         }
 
         async function abrirEdicaoFuncionario(id) {
