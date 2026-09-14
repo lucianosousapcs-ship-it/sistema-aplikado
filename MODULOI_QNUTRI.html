@@ -518,10 +518,10 @@
         .ficha-footer { background: #202124; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; color: #9aa0a6; font-size: 10px; }
         .ficha-footer button { font-family: 'Poppins', sans-serif; }
 
-        /* ============ CONTROLE DE HORAS (novo) ============ */
+        /* ============ CONTROLE DE HORAS ============ */
         .modal-controle-horas { display: none; position: fixed; z-index: 10050; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 20px; }
         .modal-controle-horas.active { display: flex; }
-        .modal-controle-horas .conteudo-controle-horas { background: #fff; border-radius: 14px; max-width: 1300px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.5); }
+        .modal-controle-horas .conteudo-controle-horas { background: #fff; border-radius: 14px; max-width: 1400px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.5); }
         .ch-header { background: #1e1e1e; color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
         .ch-header h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
         .ch-header h2 i { color: #FF8C00; }
@@ -1492,7 +1492,7 @@
         </div>
     </div>
 
-    <!-- MODAL CONTROLE DE HORAS (NOVO) -->
+    <!-- MODAL CONTROLE DE HORAS -->
     <div class="modal-controle-horas" id="modalControleHoras">
         <div class="conteudo-controle-horas">
             <div class="ch-header">
@@ -1585,6 +1585,10 @@
             'sem-status': { label: 'Não definido', cor: '#f5f5f5', icone: '⬜' }
         };
         const STORAGE_KEY = 'apliKado_ponto_session';
+
+        // Período noturno (hora urbana): 22h às 5h
+        const NOTURNO_INICIO_MIN = 22 * 60;   // 1320 (22:00)
+        const NOTURNO_FIM_MANHA_MIN = 5 * 60; // 300  (05:00)
 
         let usuarioAtual = null;
         let usuariosSupabase = [];
@@ -1726,6 +1730,50 @@
         }
 
         // ============================================================
+        // CÁLCULO DE HORAS NOTURNAS
+        // Período noturno (urbano): 22h às 5h do dia seguinte.
+        // Retorna a quantidade de MINUTOS trabalhados dentro do período noturno.
+        // ============================================================
+        function calcularMinutosNoturnos(start, end) {
+            if (!start || !end) return 0;
+            if (start === '—' || end === '—') return 0;
+            if (start === 'ABONADO' || end === 'ABONADO') return 0;
+            if (start === 'HORAS BH' || end === 'HORAS BH') return 0;
+            if (start === 'ABONO' || end === 'ABONO') return 0;
+            const parts1 = String(start).split(':');
+            const parts2 = String(end).split(':');
+            if (parts1.length < 2 || parts2.length < 2) return 0;
+            const h1 = parseInt(parts1[0], 10), m1 = parseInt(parts1[1], 10);
+            const h2 = parseInt(parts2[0], 10), m2 = parseInt(parts2[1], 10);
+            if (isNaN(h1) || isNaN(m1) || isNaN(h2) || isNaN(m2)) return 0;
+            const s = h1 * 60 + m1;
+            const e = h2 * 60 + m2;
+
+            // Janelas noturnas dentro de um dia: [00:00-05:00] e [22:00-24:00]
+            const nightWindows = [[0, NOTURNO_FIM_MANHA_MIN], [NOTURNO_INICIO_MIN, 1440]];
+
+            const intervals = [];
+            if (e > s) {
+                intervals.push([s, e]);
+            } else if (e < s) {
+                // Vira o dia
+                intervals.push([s, 1440]);
+                intervals.push([0, e]);
+            } else {
+                return 0;
+            }
+
+            let total = 0;
+            for (const [is_, ie] of intervals) {
+                for (const [ns, ne] of nightWindows) {
+                    const overlap = Math.max(0, Math.min(ie, ne) - Math.max(is_, ns));
+                    total += overlap;
+                }
+            }
+            return total;
+        }
+
+        // ============================================================
         // UPDATE TOLERANTE
         // ============================================================
         async function updateTolerante(id, dados, opts = {}) {
@@ -1851,7 +1899,6 @@
                     document.getElementById('loginSenha').value = '';
                     await carregarFuncionarios();
                     await atualizarBadgeCartoes();
-                    // Badge de erros permanece oculto até o usuário clicar em "Erros de Marcação"
                     const badgeErros = document.getElementById('badgeErros');
                     if (badgeErros) badgeErros.style.display = 'none';
                 } else {
@@ -2024,7 +2071,6 @@
             const comControle = lista.filter(f => !f.sem_controle_ponto);
             const semControle = lista.filter(f => f.sem_controle_ponto);
 
-            // Sócios são sempre o último grupo (sem ícone)
             const sociosComControle = comControle.filter(isSocio).sort(ordenarAlfa);
             const outrosComControle = comControle.filter(f => !isSocio(f)).sort(ordenarAlfa);
             const sociosSemControle = semControle.filter(isSocio).sort(ordenarAlfa);
@@ -2032,25 +2078,21 @@
 
             let html = '';
 
-            // Demais com controle — ordem alfabética pura
             if (outrosComControle.length > 0) {
                 html += `<div class="grupo-header"><i class="fas fa-badge-check"></i> Colaboradores em Regime de Marcação <span class="contagem">${outrosComControle.length}</span></div>`;
                 outrosComControle.forEach(f => { html += gerarCardFuncionarioHTML(f, false); });
             }
 
-            // Demais sem controle — ordem alfabética pura
             if (outrosSemControle.length > 0) {
                 html += `<div class="grupo-header sem-ponto"><i class="fas fa-user-shield"></i> Colaboradores Dispensados de Marcação <span class="contagem">${outrosSemControle.length}</span></div>`;
                 outrosSemControle.forEach(f => { html += gerarCardFuncionarioHTML(f, true); });
             }
 
-            // Sócios (com controle) — último, sem ícone
             if (sociosComControle.length > 0) {
                 html += `<div class="grupo-header socios">Sócios <span class="contagem">${sociosComControle.length}</span></div>`;
                 sociosComControle.forEach(f => { html += gerarCardFuncionarioHTML(f, false); });
             }
 
-            // Sócios (sem controle) — último, sem ícone
             if (sociosSemControle.length > 0) {
                 html += `<div class="grupo-header socios sem-ponto">Sócios (Sem Controle de Ponto) <span class="contagem">${sociosSemControle.length}</span></div>`;
                 sociosSemControle.forEach(f => { html += gerarCardFuncionarioHTML(f, true); });
@@ -3214,7 +3256,7 @@
         }
 
         // ============================================================
-        // CONTROLE DE HORAS (NOVO)
+        // CONTROLE DE HORAS
         // ============================================================
         function abrirControleHoras() {
             const hoje = new Date();
@@ -3262,6 +3304,7 @@
             let totalTrabalhadoMin = 0;
             let totalExtraMin = 0;
             let totalAbonadoMin = 0;
+            let totalNoturnoMin = 0;
             let diasTrabalhados = 0;
 
             for (let dia = 1; dia <= totalDias; dia++) {
@@ -3285,6 +3328,12 @@
                 const diffExtra = calcularDiferenca(d.extra_e1, d.extra_s1);
                 const totalDia = converterParaMinutos(diff1) + converterParaMinutos(diff2) + converterParaMinutos(diffExtra);
 
+                // Calcula minutos noturnos de cada turno
+                const noturno1 = calcularMinutosNoturnos(d.e1, d.s1);
+                const noturno2 = calcularMinutosNoturnos(d.e2, d.s2);
+                const noturnoExtra = calcularMinutosNoturnos(d.extra_e1, d.extra_s1);
+                totalNoturnoMin += noturno1 + noturno2 + noturnoExtra;
+
                 if (totalDia > 0) {
                     diasTrabalhados++;
                     totalTrabalhadoMin += totalDia;
@@ -3294,7 +3343,7 @@
                 }
             }
 
-            return { totalTrabalhadoMin, totalExtraMin, totalAbonadoMin, diasTrabalhados };
+            return { totalTrabalhadoMin, totalExtraMin, totalAbonadoMin, totalNoturnoMin, diasTrabalhados };
         }
 
         function formatarDiasDecimais(minutos) {
@@ -3351,9 +3400,13 @@
                 const unidades = Object.keys(grupos).sort();
 
                 let html = '';
-                let totalGeralTrab = 0, totalGeralAbon = 0, totalGeralExtra = 0;
+                let totalGeralTrab = 0, totalGeralAbon = 0, totalGeralExtra = 0, totalGeralNoturno = 0;
 
                 html += `<div class="ficha-unidade-titulo" style="background:#FF8C00;"><i class="fas fa-hourglass-half"></i> Controle de Horas — ${mes}/${ano} <span class="count">${lista.length} colaborador(es)</span></div>`;
+                html += `<div style="background:#fff8f0;border-left:4px solid #6f42c1;padding:8px 14px;border-radius:6px;margin-bottom:14px;font-size:11px;color:#4a2c91;font-weight:600;">
+                    <i class="fas fa-moon" style="color:#6f42c1;margin-right:6px;"></i>
+                    <strong>Período Noturno considerado:</strong> 22h00 às 05h00 (hora urbana).
+                </div>`;
 
                 unidades.forEach(uni => {
                     const totalUni = Object.values(grupos[uni]).reduce((s, arr) => s + arr.length, 0);
@@ -3365,27 +3418,30 @@
                         html += `<table class="ficha-tabela">
                             <thead>
                                 <tr>
-                                    <th style="width:28%;">Nome</th>
-                                    <th style="width:20%;">Cargo</th>
-                                    <th style="width:13%;">Horas Trabalhadas</th>
-                                    <th style="width:13%;">Horas Abonadas</th>
-                                    <th style="width:13%;">Horas Extras</th>
+                                    <th style="width:24%;">Nome</th>
+                                    <th style="width:16%;">Cargo</th>
+                                    <th style="width:12%;">Horas Trabalhadas</th>
+                                    <th style="width:12%;">Horas Abonadas</th>
+                                    <th style="width:11%;">Horas Extras</th>
+                                    <th style="width:12%;">Horas Noturnas</th>
                                     <th style="width:13%;">Conversão em Dias</th>
                                 </tr>
                             </thead>
                             <tbody>`;
-                        let subtotalTrab = 0, subtotalAbon = 0, subtotalExtra = 0;
+                        let subtotalTrab = 0, subtotalAbon = 0, subtotalExtra = 0, subtotalNoturno = 0;
                         listaEmp.forEach(f => {
                             const d = dadosFunc[f.id];
                             subtotalTrab += d.totalTrabalhadoMin;
                             subtotalAbon += d.totalAbonadoMin;
                             subtotalExtra += d.totalExtraMin;
+                            subtotalNoturno += d.totalNoturnoMin;
                             html += `<tr>
                                 <td><strong>${f.nome || '-'}</strong></td>
                                 <td>${f.cargo || '-'}</td>
                                 <td class="centro">${formatarHoras(d.totalTrabalhadoMin)}</td>
                                 <td class="centro">${formatarHoras(d.totalAbonadoMin)}</td>
                                 <td class="centro">${formatarHoras(d.totalExtraMin)}</td>
+                                <td class="centro" style="background:#f0e6ff;color:#4a2c91;font-weight:700;">${formatarHoras(d.totalNoturnoMin)}</td>
                                 <td class="centro"><strong>${formatarDiasDecimais(d.totalTrabalhadoMin)}</strong></td>
                             </tr>`;
                         });
@@ -3394,12 +3450,14 @@
                             <td class="centro">${formatarHoras(subtotalTrab)}</td>
                             <td class="centro">${formatarHoras(subtotalAbon)}</td>
                             <td class="centro">${formatarHoras(subtotalExtra)}</td>
+                            <td class="centro" style="background:#e6d5ff;color:#4a2c91;">${formatarHoras(subtotalNoturno)}</td>
                             <td class="centro">${formatarDiasDecimais(subtotalTrab)}</td>
                         </tr>`;
                         html += `</tbody></table>`;
                         totalGeralTrab += subtotalTrab;
                         totalGeralAbon += subtotalAbon;
                         totalGeralExtra += subtotalExtra;
+                        totalGeralNoturno += subtotalNoturno;
                     });
                 });
 
@@ -3411,6 +3469,7 @@
                             <th>Horas Trabalhadas</th>
                             <th>Horas Abonadas</th>
                             <th>Horas Extras</th>
+                            <th>Horas Noturnas</th>
                             <th>Conversão em Dias</th>
                         </tr>
                     </thead>
@@ -3420,6 +3479,7 @@
                             <td class="centro">${formatarHoras(totalGeralTrab)}</td>
                             <td class="centro">${formatarHoras(totalGeralAbon)}</td>
                             <td class="centro">${formatarHoras(totalGeralExtra)}</td>
+                            <td class="centro" style="background:#e6d5ff;color:#4a2c91;">${formatarHoras(totalGeralNoturno)}</td>
                             <td class="centro">${formatarDiasDecimais(totalGeralTrab)}</td>
                         </tr>
                     </tbody>
@@ -4942,7 +5002,7 @@
                     e.preventDefault();
                     e.stopPropagation();
                     const dia = parseInt(this.dataset.dia);
-                    const action = this.dataset.action;
+                      const action = this.dataset.action;
                     if (action === 'folga-bh') toggleFolgaBH(dia);
                     else if (action === 'falta-atestado') toggleFaltaAtestado(dia);
                 });
@@ -5894,3 +5954,5 @@
     </script>
 </body>
 </html>
+
+           
