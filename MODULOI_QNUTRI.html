@@ -1791,7 +1791,7 @@
                         <input type="time" id="abonoHoraFim" value="14:00" step="60">
                     </div>
                 </div>
-                <small style="font-size:10px;color:#7a3a00;margin-top:4px;display:block;">Ex: 12:00 às 14:00 = intervalo abonado (2h)</small>
+                <small style="font-size:10px;color:#7a3a00;margin-top:4px;display:block;">O horário do abono será automaticamente preenchido nos campos: <b>1ª Saída</b> (início) e <b>2ª Entrada</b> (fim).</small>
             </div>
 
             <div id="abonoMarcacoesWrap" style="display:none;">
@@ -1815,7 +1815,7 @@
                             <input type="time" id="abonoS2" step="60">
                         </div>
                     </div>
-                    <small style="font-size:10px;color:#7a3a00;margin-top:4px;display:block;">Preencha os horários fora do período abonado.</small>
+                    <small style="font-size:10px;color:#7a3a00;margin-top:4px;display:block;">Se deixar em branco, a <b>1ª Saída</b> e a <b>2ª Entrada</b> serão preenchidas com o início e o fim do abono.</small>
                 </div>
             </div>
 
@@ -2875,10 +2875,6 @@
             }, 500);
         }
 
-        // ============================================================
-        // ✅ CORREÇÃO 1: carregarMapaDiasAbonados
-        // Remove abonos (parciais ou integrais) do Set — apenas falta_atestado.
-        // ============================================================
         async function carregarMapaDiasAbonados(funcId, mes, ano) {
             const diasAbonados = new Set();
             try {
@@ -2912,20 +2908,13 @@
                     try { json = typeof mp.dados === 'string' ? JSON.parse(mp.dados) : mp.dados; } catch(e) {}
                     Object.keys(json || {}).forEach(k => {
                         const d = json[k] || {};
-                        // ✅ APENAS falta_atestado entra em diasAbonados.
-                        // O abono (parcial ou integral) é tratado pela flag d.abono.
                         if (d.falta_atestado) diasAbonados.add(parseInt(k));
-                        // ❌ LINHA REMOVIDA: if (d.abono) diasAbonados.add(parseInt(k));
                     });
                 }
             } catch(e) { console.warn('Erro ao carregar mapa de abonados:', e); }
             return diasAbonados;
         }
 
-        // ============================================================
-        // ✅ CORREÇÃO 2: analisarDadosPonto
-        // Abono parcial NÃO pula a validação das marcações.
-        // ============================================================
         function analisarDadosPonto(dados, diasDoMes, mes, ano, diasAbonados = new Set()) {
             const erros = [];
             const diasComErro = {};
@@ -2944,17 +2933,14 @@
                                   || d.folga_bh || d.falta_atestado || abonado || temAbono;
                 if (temAlguma) diasComMarcacao[dia] = true;
 
-                // Abono INTEGRAL: conta horas abonadas e pula validação
                 if (temAbono && !abonoParcial) {
                     totalHorasAbonadas += getMinutosAbonados(d);
                     continue;
                 }
-                // Falta c/ Atestado (diasAbonados): pula validação
                 if (abonado && !temAbono) {
                     totalHorasAbonadas += JORNADA_PADRAO_MINUTOS;
                     continue;
                 }
-                // Abono PARCIAL: soma horas abonadas mas continua validando marcações
                 if (temAbono && abonoParcial) {
                     totalHorasAbonadas += getMinutosAbonados(d);
                 }
@@ -3125,9 +3111,6 @@
         }
         function fecharCronogramas() { document.getElementById('modalCronogramas').classList.remove('active'); }
 
-        // ============================================================
-        // ✅ CORREÇÃO: label de abono com intervalo horário no cronograma
-        // ============================================================
         async function buscarDadosCronogramaFuncionario(funcId, mes, ano) {
             const dados = {};
             const totalDias = new Date(ano, mes + 1, 0).getDate();
@@ -3206,12 +3189,18 @@
                 if (!(d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado || d.abono)) return;
                 if (dados[dia] && ['atestado','ferias','falta','folga','dispensa','feriado','folga_bh'].includes(dados[dia].status)) return;
                 if (d.abono) {
+                    const abonoParcial = d.abono_inicio && d.abono_fim;
                     let labelAbono = '';
-                    if (d.abono_inicio && d.abono_fim) labelAbono = `ABONO ${d.abono_inicio}-${d.abono_fim}`;
+                    if (abonoParcial) labelAbono = `ABONO ${d.abono_inicio}-${d.abono_fim}`;
                     else if (d.abono_horas) labelAbono = `ABONO ${d.abono_horas}`;
                     else labelAbono = 'ABONO';
                     if (d.abono_motivo) labelAbono += ' - ' + d.abono_motivo;
-                    dados[dia] = { status: 'abono', observacao: labelAbono, origem: 'marcacoes_ponto' };
+                    if (abonoParcial) {
+                        const obs = [d.e1, d.s1, d.e2, d.s2, d.extra_e1, d.extra_s1].filter(Boolean).join(' ');
+                        dados[dia] = { status: 'trabalho', observacao: labelAbono + (obs ? ' | ' + obs : ''), origem: 'marcacoes_ponto' };
+                    } else {
+                        dados[dia] = { status: 'abono', observacao: labelAbono, origem: 'marcacoes_ponto' };
+                    }
                     return;
                 }
                 if (d.folga_bh) { dados[dia] = { status: 'folga_bh', observacao: 'Folga BH', origem: 'marcacoes_ponto' }; return; }
@@ -3489,10 +3478,6 @@
             return false;
         }
 
-        // ============================================================
-        // ✅ CORREÇÃO 5: gerarRelatorioPonto (loop interno)
-        // Abono parcial preserva as marcações e mostra total no relatório.
-        // ============================================================
         async function gerarRelatorioPonto() {
             const mes = document.getElementById('relMes').value;
             const ano = parseInt(document.getElementById('relAno').value);
@@ -3787,10 +3772,6 @@
             empresas.forEach(e => { const opt = document.createElement('option'); opt.value = e; opt.textContent = e; select.appendChild(opt); });
         }
 
-        // ============================================================
-        // ✅ CORREÇÃO 6: calcularHorasFuncionario
-        // Abono parcial soma horas trabalhadas + horas abonadas.
-        // ============================================================
         async function calcularHorasFuncionario(funcId, mes, ano) {
             const mesIndex = MESES.indexOf(mes);
             const totalDias = new Date(ano, mesIndex + 1, 0).getDate();
@@ -3813,7 +3794,6 @@
                 if (temAbono) {
                     totalAbonadoMin += getMinutosAbonados(d);
                     if (!abonoParcial) continue;
-                    // ✅ Abono parcial: continua para somar as horas trabalhadas
                 }
                 if (abonado && !temAbono) {
                     totalAbonadoMin += JORNADA_PADRAO_MINUTOS;
@@ -5079,9 +5059,6 @@
             }
         });
 
-        // ============================================================
-        // ✅ CORREÇÃO: carregarCalendario com label de abono aprimorado
-        // ============================================================
         async function carregarCalendario(funcId, mes, ano) {
             calendarioDados = {};
             const totalDias = new Date(ano, mes + 1, 0).getDate();
@@ -5168,12 +5145,18 @@
                     if (!(d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado || d.abono)) return;
                     if (calendarioDados[dia] && ['atestado','ferias','falta','folga','dispensa','feriado','folga_bh'].includes(calendarioDados[dia].status)) return;
                     if (d.abono) {
+                        const abonoParcial = d.abono_inicio && d.abono_fim;
                         let labelAbono = '';
-                        if (d.abono_inicio && d.abono_fim) labelAbono = `ABONO ${d.abono_inicio}-${d.abono_fim}`;
+                        if (abonoParcial) labelAbono = `ABONO ${d.abono_inicio}-${d.abono_fim}`;
                         else if (d.abono_horas) labelAbono = `ABONO ${d.abono_horas}`;
                         else labelAbono = 'ABONO';
                         if (d.abono_motivo) labelAbono += ' - ' + d.abono_motivo;
-                        calendarioDados[dia] = { status: 'abono', observacao: labelAbono, origem: 'marcacoes_ponto' };
+                        if (abonoParcial) {
+                            const obs = [d.e1, d.s1, d.e2, d.s2, d.extra_e1, d.extra_s1].filter(Boolean).join(' ');
+                            calendarioDados[dia] = { status: 'trabalho', observacao: labelAbono + (obs ? ' | ' + obs : ''), origem: 'marcacoes_ponto' };
+                        } else {
+                            calendarioDados[dia] = { status: 'abono', observacao: labelAbono, origem: 'marcacoes_ponto' };
+                        }
                         return;
                     }
                     if (d.folga_bh) { calendarioDados[dia] = { status: 'folga_bh', observacao: 'Folga BH', origem: 'marcacoes_ponto' }; return; }
@@ -5449,10 +5432,6 @@
             } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
 
-        // ============================================================
-        // ✅ CORREÇÃO 4: carregarPontoNoModal
-        // Abono parcial soma horas trabalhadas + mostra total correto.
-        // ============================================================
         async function carregarPontoNoModal() {
             if (!funcionarioAtual) return;
             const func = funcionarioAtual;
@@ -5513,7 +5492,6 @@
                     if (d.abono_inicio && d.abono_fim) labelAbono = `${d.abono_inicio}-${d.abono_fim}`;
                     else if (d.abono_horas) labelAbono = d.abono_horas;
                     badgeDia = `<span class="badge-falta-atestado" style="background:#a259c7;" title="Abono${labelAbono ? ' ' + labelAbono : ''}: ${d.abono_motivo || ''}"><i class="fas fa-gift"></i></span>`;
-                    // ✅ Abono PARCIAL com marcações: mostra total trabalhado
                     if (abonoParcial && total !== '00:00') {
                         totalGeralDisplay = total;
                     } else if (d.abono_inicio && d.abono_fim) {
@@ -5671,10 +5649,6 @@
             await inicializarEditorPonto();
         }
 
-        // ============================================================
-        // ✅ CORREÇÃO 3: inicializarEditorPonto
-        // Abono PARCIAL mantém campos habilitados.
-        // ============================================================
         async function inicializarEditorPonto() {
             if (!funcionarioAtual) return;
             const mes = document.getElementById('editorMes').value;
@@ -5724,7 +5698,6 @@
                 const folgaBH = d.folga_bh || false;
                 const faltaAtestado = d.falta_atestado || false;
                 const temAbono = d.abono || false;
-                // ✅ Abono parcial (com horário) mantém campos habilitados
                 const abonoParcial = temAbono && (d.abono_inicio || d.abono_fim || d.abono_horas);
                 let classesTr = '';
                 if (feriado) classesTr += ' linha-feriado';
@@ -5766,7 +5739,6 @@
                 }
                 else if (abonado) { totalGeralDisplay = 'ABONADO'; totalGeralClass = 'total-geral abonado'; }
                 else if (folgaBH) { totalGeralDisplay = 'HORAS BH'; totalGeralClass = 'total-geral horas-bh'; }
-                // ✅ REGRA FINAL: abono PARCIAL NUNCA desabilita campos
                 const desabilitarCampos = !isUser || (abonado && !abonoParcial) || (temAbono && !abonoParcial);
                 tr.innerHTML = `
                     <td class="dia-cell">
@@ -5811,7 +5783,6 @@
                     }
                 });
             }
-            // ✅ GARANTIA EXTRA: reabilita campos de abono parcial (defesa em profundidade)
             for (let i = 1; i <= dias; i++) {
                 const trEl = document.querySelector(`#editorTbody tr[data-dia="${i}"]`);
                 if (trEl && trEl.dataset.abono === 'true') {
@@ -5897,7 +5868,6 @@
         function recalcularLinha(dia) {
             const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
             if (!tr) return;
-            // Falta c/ atestado puro (sem abono): não recalcula
             if (tr.dataset.abonado === 'true' && tr.dataset.abono !== 'true') return;
 
             const e1 = document.getElementById(`edit_e1_${dia}`)?.value || '';
@@ -6170,10 +6140,6 @@
             document.getElementById('modalAbono').classList.remove('active');
         }
 
-        // ============================================================
-        // ✅ CORREÇÃO 3 (parte 2): confirmarAbono
-        // Modo "horas" REABILITA campos e mantém valores.
-        // ============================================================
         function confirmarAbono() {
             const inicio = document.getElementById('abonoDataInicio').value;
             const fim = document.getElementById('abonoDataFim').value;
@@ -6231,8 +6197,8 @@
                     delete tr.dataset.abonoInicio;
                     delete tr.dataset.abonoFim;
                 }
-                // ✅ CORREÇÃO: modo "Por Horário" mantém TODOS os campos habilitados
                 if (modoAbono === 'horas') {
+                    // ✅ Abono parcial: HABILITA campos e PREENCHE automaticamente
                     ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                         const inp = document.getElementById(`edit_${c}_${dia}`);
                         if (inp) inp.disabled = false;
@@ -6241,13 +6207,13 @@
                     const s1Inp = document.getElementById(`edit_s1_${dia}`);
                     const e2Inp = document.getElementById(`edit_e2_${dia}`);
                     const s2Inp = document.getElementById(`edit_s2_${dia}`);
+                    // ✅ PREENCHE os campos correspondentes com o horário abonado
                     if (e1Inp && abonoE1) e1Inp.value = abonoE1;
-                    if (s1Inp && abonoS1) s1Inp.value = abonoS1;
-                    if (e2Inp && abonoE2) e2Inp.value = abonoE2;
+                    if (s1Inp) s1Inp.value = abonoS1 || abonoInicio;   // 1ª Saída = início do abono
+                    if (e2Inp) e2Inp.value = abonoE2 || abonoFim;      // 2ª Entrada = fim do abono
                     if (s2Inp && abonoS2) s2Inp.value = abonoS2;
                     recalcularLinha(dia);
                 } else {
-                    // Abono dia inteiro: desabilita e limpa
                     ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                         const inp = document.getElementById(`edit_${c}_${dia}`);
                         if (inp) { inp.value = ''; inp.disabled = true; }
