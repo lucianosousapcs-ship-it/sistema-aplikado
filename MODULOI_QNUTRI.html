@@ -924,6 +924,41 @@
         .abono-time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
         .abono-time-grid > div > small { font-size: 9px; color: #7a3a00; display: block; margin-bottom: 2px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
 
+        /* ✅ CORRIGIDO: estilos do upload de anexo do abono */
+        .abono-anexo-dropzone {
+            border: 2px dashed rgba(162,89,199,0.45);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+            background: linear-gradient(135deg, #faf5ff, #f5e0ff);
+            cursor: pointer;
+            transition: all 0.24s;
+        }
+        .abono-anexo-dropzone:hover { border-color: #a259c7; background: #f5e0ff; }
+        .abono-anexo-dropzone i { font-size: 22px; color: #a259c7; }
+        .abono-anexo-dropzone .titulo-anexo { font-size: 11px; font-weight: 700; color: #4a2c91; margin-top: 4px; }
+        .abono-anexo-dropzone .sub-anexo { font-size: 9px; color: #7a3a00; }
+        .abono-anexo-preview {
+            display: none;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #f5e0ff;
+            border-radius: 8px;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #4a2c91;
+            border: 1px solid rgba(162,89,199,0.35);
+        }
+        .abono-anexo-preview.show { display: flex; }
+        .abono-anexo-preview button {
+            margin-left: auto; background: none; border: none;
+            color: #dc3545; cursor: pointer; font-size: 14px;
+            padding: 2px 6px; border-radius: 4px;
+        }
+        .abono-anexo-preview button:hover { background: rgba(220,53,69,0.1); }
+
         .modal-relatorio-ponto { display: none; position: fixed; z-index: 10050; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 20px; }
         .modal-relatorio-ponto.active { display: flex; }
         .modal-relatorio-ponto .conteudo-relatorio { background: #fff; border-radius: 14px; max-width: 1400px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.5); }
@@ -1661,7 +1696,7 @@
                         <input type="number" id="editorAno" value="2026" min="2020" max="2030" onchange="mudarMesEditor()">
                     </div>
                     <button type="button" class="btn-action btn-secondary btn-sm" onclick="abrirSelecaoFolgaBH()"><i class="fas fa-clock"></i> Folga BH</button>
-                    <button type="button" class="btn-action btn-purple btn-sm" onclick="abrirSelecaoFaltaAtestado()"><i class="fas fa-notes-medical"></i> Falta c/ Atestado</button>
+                    <button type="button" class="btn-action btn-purple btn-sm" onclick="abrirSelecaoFaltaAtestado()" title="Abona o dia inteiro (8h) sem preencher horários"><i class="fas fa-notes-medical"></i> Abonar Dia Inteiro</button>
                     <button type="button" class="btn-action btn-sm" style="background:#a259c7;color:#fff;" onclick="abrirModalAbono()"><i class="fas fa-gift"></i> Abonar Período</button>
                     <span style="margin-left:auto;font-size:11px;font-weight:600;color:#1a0a00;" id="editorModoMsg"><i class="fas fa-info-circle"></i> Modo: Visualização</span>
                 </div>
@@ -1754,6 +1789,7 @@
         </div>
     </div>
 
+    <!-- ✅ CORRIGIDO: Modal Abonar Período com upload de anexo -->
     <div class="modal-abono" id="modalAbono">
         <div class="conteudo">
             <h3><i class="fas fa-gift"></i> Abonar Período</h3>
@@ -1837,9 +1873,26 @@
                     <option value="licenca">Licença Remunerada</option>
                 </select>
             </div>
+
+            <!-- ✅ CORRIGIDO: Campo de upload obrigatório do comprovante -->
+            <div class="edit-field">
+                <label><i class="fas fa-paperclip"></i> Comprovante (atestado, declaração, autorização) *</label>
+                <input type="file" id="abonoAnexo" accept="image/*,application/pdf" style="display:none;" onchange="previewAbonoAnexo(event)">
+                <div id="abonoAnexoDropzone" class="abono-anexo-dropzone" onclick="document.getElementById('abonoAnexo').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <div class="titulo-anexo">Clique para anexar o comprovante</div>
+                    <div class="sub-anexo">Imagem ou PDF (máx 5MB)</div>
+                </div>
+                <div id="abonoAnexoPreview" class="abono-anexo-preview">
+                    <i class="fas fa-file-alt"></i>
+                    <span id="abonoAnexoNome"></span>
+                    <button type="button" onclick="limparAbonoAnexo()" title="Remover anexo"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+
             <div class="botoes">
                 <button type="button" class="btn-action btn-secondary" onclick="fecharModalAbono()"><i class="fas fa-times"></i> Cancelar</button>
-                <button type="button" class="btn-action" style="background:#a259c7;color:#fff;" onclick="confirmarAbono()"><i class="fas fa-check"></i> Confirmar Abono</button>
+                <button type="button" class="btn-action" style="background:#a259c7;color:#fff;" onclick="confirmarAbono()" id="btnConfirmarAbono"><i class="fas fa-check"></i> Confirmar Abono</button>
             </div>
         </div>
     </div>
@@ -2247,15 +2300,12 @@
         const NOTURNO_INICIO_MIN = 22 * 60;
         const NOTURNO_FIM_MANHA_MIN = 5 * 60;
 
-        // ✅ LIMITES DE TURNO (regra do abono e da marcação)
-        // 1º turno: 08:00 até 12:59
-        // 2º turno: 13:00 até 17:59
-        // 3º turno (extra): 18:00 em diante
-        const INICIO_1TURNO_MIN = 8 * 60;          // 08:00
-        const LIMITE_1TURNO_MIN = 12 * 60 + 59;    // 12:59
-        const INICIO_2TURNO_MIN = 13 * 60;         // 13:00
-        const LIMITE_2TURNO_MIN = 17 * 60 + 59;    // 17:59
-        const INICIO_3TURNO_MIN = 18 * 60;         // 18:00
+        // ✅ LIMITES DE TURNO
+        const INICIO_1TURNO_MIN = 8 * 60;
+        const LIMITE_1TURNO_MIN = 12 * 60 + 59;
+        const INICIO_2TURNO_MIN = 13 * 60;
+        const LIMITE_2TURNO_MIN = 17 * 60 + 59;
+        const INICIO_3TURNO_MIN = 18 * 60;
 
         let usuarioAtual = null;
         let usuariosSupabase = [];
@@ -2268,6 +2318,11 @@
         let nomeArquivoAnexo = null;
         let atestados = [];
         let atestadoEditandoId = null;
+        // ✅ CORRIGIDO: flag global para impedir reentrada em salvarAtestadoTab
+        let _salvandoAtestado = false;
+        // ✅ CORRIGIDO: anexo do modal de abono
+        let abonoAnexoBase64 = null;
+        let abonoAnexoNome = null;
         let calendarioDados = {};
         let calendarioMesAtual = new Date().getMonth();
         let calendarioAnoAtual = new Date().getFullYear();
@@ -2320,13 +2375,8 @@
             if (!d) return '';
             return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         }
-        function addDia(d) {
-            return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0);
-        }
-        function getDiaSemana(dia, mesIndex, ano) {
-            const d = new Date(ano, mesIndex, dia);
-            return DIAS_SEMANA[d.getDay()];
-        }
+        function addDia(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0); }
+        function getDiaSemana(dia, mesIndex, ano) { return DIAS_SEMANA[new Date(ano, mesIndex, dia).getDay()]; }
         function isFeriado(dia, mesIndex, ano) {
             const feriadosFixos = [
                 { mes: 0, dia: 1 }, { mes: 3, dia: 21 }, { mes: 4, dia: 1 },
@@ -2346,13 +2396,9 @@
         function formatarHoras(minutos) {
             if (minutos < 0) {
                 const abs = Math.abs(minutos);
-                const h = Math.floor(abs / 60);
-                const m = abs % 60;
-                return `-${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                return `-${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`;
             }
-            const h = Math.floor(minutos / 60);
-            const m = minutos % 60;
-            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
         }
         function calcularDiferenca(inicio, fim) {
             if (!inicio || !fim) return '00:00';
@@ -2399,19 +2445,14 @@
             return String(str).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
         }
         function calcularMinutosNoturnos(start, end) {
-            if (!start || !end) return 0;
-            if (start === '—' || end === '—') return 0;
-            if (start === 'ABONADO' || end === 'ABONADO') return 0;
-            if (start === 'HORAS BH' || end === 'HORAS BH') return 0;
-            if (start === 'ABONO' || end === 'ABONO') return 0;
+            if (!start || !end || start === '—' || end === '—' || start === 'ABONADO' || end === 'ABONADO' || start === 'HORAS BH' || end === 'HORAS BH' || start === 'ABONO' || end === 'ABONO') return 0;
             const parts1 = String(start).split(':');
             const parts2 = String(end).split(':');
             if (parts1.length < 2 || parts2.length < 2) return 0;
             const h1 = parseInt(parts1[0], 10), m1 = parseInt(parts1[1], 10);
             const h2 = parseInt(parts2[0], 10), m2 = parseInt(parts2[1], 10);
             if (isNaN(h1) || isNaN(m1) || isNaN(h2) || isNaN(m2)) return 0;
-            const s = h1 * 60 + m1;
-            const e = h2 * 60 + m2;
+            const s = h1 * 60 + m1, e = h2 * 60 + m2;
             const nightWindows = [[0, NOTURNO_FIM_MANHA_MIN], [NOTURNO_INICIO_MIN, 1440]];
             const intervals = [];
             if (e > s) intervals.push([s, e]);
@@ -2420,8 +2461,7 @@
             let total = 0;
             for (const [is_, ie] of intervals) {
                 for (const [ns, ne] of nightWindows) {
-                    const overlap = Math.max(0, Math.min(ie, ne) - Math.max(is_, ns));
-                    total += overlap;
+                    total += Math.max(0, Math.min(ie, ne) - Math.max(is_, ns));
                 }
             }
             return total;
@@ -2649,8 +2689,7 @@
             const hoje = new Date();
             if (!pontos) return hoje.getDate();
             let count = 0;
-            const diasDoMes = hoje.getDate();
-            for (let dia = 1; dia <= diasDoMes; dia++) {
+            for (let dia = 1; dia <= hoje.getDate(); dia++) {
                 const d = pontos[dia];
                 const temAlguma = d && (d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado || d.abono);
                 if (!temAlguma) count++;
@@ -2758,16 +2797,13 @@
             let statusFeriasHTML = '';
             if (!semControle) {
                 const sit = calcularSituacaoFerias(f.admissao, f.ultimo_gozo);
-                let statusLabel = 'Ativo';
-                let statusClass = 'status-ativo';
-                let statusIcon = 'fa-user-check';
+                let statusLabel = 'Ativo', statusClass = 'status-ativo', statusIcon = 'fa-user-check';
                 if (sit.status === 'ferias-gozas') { statusLabel = 'Férias Gozadas'; statusClass = 'status-ferias'; statusIcon = 'fa-umbrella-beach'; }
                 else if (sit.status === 'vencida') { statusLabel = 'Férias Vencidas'; statusClass = 'status-ferias-vencidas'; statusIcon = 'fa-exclamation-triangle'; }
                 else if (sit.status === 'a-vencer') { statusLabel = 'Férias a Vencer'; statusClass = 'status-ferias-a-vencer'; statusIcon = 'fa-hourglass-half'; }
                 statusFeriasHTML = `<span class="status-badge-card ${statusClass}"><i class="fas ${statusIcon}"></i> ${statusLabel}</span>`;
             }
-            let aniversarianteHTML = '';
-            let aniversarianteAvatarHTML = '';
+            let aniversarianteHTML = '', aniversarianteAvatarHTML = '';
             if (f.aniversario) {
                 const hoje = new Date();
                 const dtAniv = parseDataLocal(f.aniversario);
@@ -2910,15 +2946,12 @@
                         const dtFim = parseDataLocal(a.data_fim);
                         if (!dtIni || !dtFim) return;
                         for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
-                            if (d.getMonth() === mesIndex && d.getFullYear() === ano) {
-                                diasAbonados.add(d.getDate());
-                            }
+                            if (d.getMonth() === mesIndex && d.getFullYear() === ano) diasAbonados.add(d.getDate());
                         }
                     });
                 }
                 const { data: mp } = await supabaseClient.from('marcacoes_ponto')
-                    .select('dados')
-                    .eq('funcionario_id', funcId).eq('mes', mes).eq('ano', ano).maybeSingle();
+                    .select('dados').eq('funcionario_id', funcId).eq('mes', mes).eq('ano', ano).maybeSingle();
                 if (mp && mp.dados) {
                     let json = {};
                     try { json = typeof mp.dados === 'string' ? JSON.parse(mp.dados) : mp.dados; } catch(e) {}
@@ -2932,34 +2965,21 @@
         }
 
         function analisarDadosPonto(dados, diasDoMes, mes, ano, diasAbonados = new Set()) {
-            const erros = [];
-            const diasComErro = {};
-            const diasComMarcacao = {};
-            const diasComHoraExtra = {};
+            const erros = [], diasComErro = {}, diasComMarcacao = {}, diasComHoraExtra = {};
             let totalHorasAbonadas = 0;
             for (let dia = 1; dia <= diasDoMes; dia++) {
                 const d = dados[dia] || {};
                 const abonado = diasAbonados.has(dia) || d.falta_atestado || false;
                 const temAbono = d.abono || false;
                 const abonoParcial = temAbono && (d.abono_inicio || d.abono_fim || d.abono_horas);
-
                 const temE1 = !!d.e1, temS1 = !!d.s1, temE2 = !!d.e2, temS2 = !!d.s2;
                 const temExtraE1 = !!d.extra_e1, temExtraS1 = !!d.extra_s1;
-                const temAlguma = temE1 || temS1 || temE2 || temS2 || temExtraE1 || temExtraS1
-                                  || d.folga_bh || d.falta_atestado || abonado || temAbono;
+                const temAlguma = temE1 || temS1 || temE2 || temS2 || temExtraE1 || temExtraS1 || d.folga_bh || d.falta_atestado || abonado || temAbono;
                 if (temAlguma) diasComMarcacao[dia] = true;
 
-                if (temAbono && !abonoParcial) {
-                    totalHorasAbonadas += getMinutosAbonados(d);
-                    continue;
-                }
-                if (abonado && !temAbono) {
-                    totalHorasAbonadas += JORNADA_PADRAO_MINUTOS;
-                    continue;
-                }
-                if (temAbono && abonoParcial) {
-                    totalHorasAbonadas += getMinutosAbonados(d);
-                }
+                if (temAbono && !abonoParcial) { totalHorasAbonadas += getMinutosAbonados(d); continue; }
+                if (abonado && !temAbono) { totalHorasAbonadas += JORNADA_PADRAO_MINUTOS; continue; }
+                if (temAbono && abonoParcial) totalHorasAbonadas += getMinutosAbonados(d);
 
                 const errosDia = [];
                 if (temE1 && !temS1) errosDia.push(`Entrada (${d.e1}) sem saída no 1º turno`);
@@ -3145,33 +3165,24 @@
             ]);
             (rStatus.data || []).forEach(item => {
                 const dt = parseDataLocal(item.data);
-                if (dt && dt.getMonth() === mes && dt.getFullYear() === ano) {
-                    dados[dt.getDate()] = { status: item.status, observacao: item.observacao || '', origem: 'manual' };
-                }
+                if (dt && dt.getMonth() === mes && dt.getFullYear() === ano) dados[dt.getDate()] = { status: item.status, observacao: item.observacao || '', origem: 'manual' };
             });
             (rAtest.data || []).forEach(a => {
-                const dtIni = parseDataLocal(a.data_inicio);
-                const dtFim = parseDataLocal(a.data_fim);
+                const dtIni = parseDataLocal(a.data_inicio), dtFim = parseDataLocal(a.data_fim);
                 if (!dtIni || !dtFim) return;
                 for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
-                    if (d.getMonth() === mes && d.getFullYear() === ano) {
-                        dados[d.getDate()] = { status: 'atestado', observacao: a.tipo || 'Atestado', origem: 'atestado' };
-                    }
+                    if (d.getMonth() === mes && d.getFullYear() === ano) dados[d.getDate()] = { status: 'atestado', observacao: a.tipo || 'Atestado', origem: 'atestado' };
                 }
             });
             (rFerias.data || []).forEach(f => {
-                const dtIni = parseDataLocal(f.data_inicio);
-                const dtFim = parseDataLocal(f.data_fim);
+                const dtIni = parseDataLocal(f.data_inicio), dtFim = parseDataLocal(f.data_fim);
                 if (!dtIni || !dtFim) return;
                 for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
-                    if (d.getMonth() === mes && d.getFullYear() === ano) {
-                        dados[d.getDate()] = { status: 'ferias', observacao: 'Férias', origem: 'ferias' };
-                    }
+                    if (d.getMonth() === mes && d.getFullYear() === ano) dados[d.getDate()] = { status: 'ferias', observacao: 'Férias', origem: 'ferias' };
                 }
             });
             (rFaltas.data || []).forEach(ft => {
-                const dtIni = parseDataLocal(ft.data_inicio);
-                const dtFim = parseDataLocal(ft.data_fim);
+                const dtIni = parseDataLocal(ft.data_inicio), dtFim = parseDataLocal(ft.data_fim);
                 if (!dtIni || !dtFim) return;
                 const tipo = (ft.tipo || '').toLowerCase();
                 let statusCalc = 'falta';
@@ -3227,9 +3238,7 @@
             for (let dia = 1; dia <= totalDias; dia++) {
                 if (isFeriado(dia, mes, ano)) {
                     if (!dados[dia] || (dados[dia].status !== 'ferias' && dados[dia].status !== 'atestado')) {
-                        if (!dados[dia]) {
-                            dados[dia] = { status: 'feriado', observacao: 'Feriado', origem: 'automatico' };
-                        }
+                        if (!dados[dia]) dados[dia] = { status: 'feriado', observacao: 'Feriado', origem: 'automatico' };
                     }
                 }
             }
@@ -3242,22 +3251,16 @@
             const diasMesAnterior = new Date(ano, mes, 0).getDate();
             let html = '';
             DIAS_SEMANA.forEach(d => { html += `<div class="crono-mini-header">${d}</div>`; });
-            for (let i = primeiroDia - 1; i >= 0; i--) {
-                html += `<div class="crono-mini-dia dia-outro-mes">${diasMesAnterior - i}</div>`;
-            }
+            for (let i = primeiroDia - 1; i >= 0; i--) html += `<div class="crono-mini-dia dia-outro-mes">${diasMesAnterior - i}</div>`;
             for (let dia = 1; dia <= totalDias; dia++) {
                 const info = dadosFunc[dia];
                 const status = info ? info.status : 'sem-status';
                 const feriado = isFeriado(dia, mes, ano);
                 let classes = `crono-mini-dia status-${status}`;
-                if (feriado && status !== 'feriado' && status !== 'ferias' && status !== 'atestado') {
-                    classes += ' feriado-mini';
-                }
+                if (feriado && status !== 'feriado' && status !== 'ferias' && status !== 'atestado') classes += ' feriado-mini';
                 const tooltip = info ? `${String(dia).padStart(2,'0')} - ${STATUS_CALENDARIO_INFO[status]?.label || status}` : `${String(dia).padStart(2,'0')} - Sem status`;
                 let conteudo = dia;
-                if (feriado && status !== 'ferias' && status !== 'atestado') {
-                    conteudo = `<span style="font-size:8px;">🎉</span>${dia}`;
-                }
+                if (feriado && status !== 'ferias' && status !== 'atestado') conteudo = `<span style="font-size:8px;">🎉</span>${dia}`;
                 html += `<div class="${classes}" title="${tooltip}" style="${feriado && status !== 'feriado' ? 'outline: 2px solid #fd7e14; outline-offset: -2px;' : ''}">${conteudo}</div>`;
             }
             return html;
@@ -3292,9 +3295,7 @@
                     return { func: f, dados };
                 }));
                 let resultadosFiltrados = resultados;
-                if (filtroStatus) {
-                    resultadosFiltrados = resultados.filter(r => Object.values(r.dados).some(d => d.status === filtroStatus));
-                }
+                if (filtroStatus) resultadosFiltrados = resultados.filter(r => Object.values(r.dados).some(d => d.status === filtroStatus));
                 let totalFunc = resultadosFiltrados.length;
                 let comAtestado = 0, comFerias = 0, comFalta = 0, comPresenca = 0, semNada = 0, comFeriado = 0, comFolgaBH = 0;
                 resultadosFiltrados.forEach(r => {
@@ -3378,12 +3379,7 @@
             document.getElementById('relUnidade').value = '';
             document.getElementById('relEmpresa').value = '';
             document.getElementById('relFuncionario').innerHTML = '<option value="">Todos</option>';
-            document.getElementById('relatorioConteudo').innerHTML = `
-                <div class="rel-empty">
-                    <i class="fas fa-chart-line"></i>
-                    <p>Configure os filtros acima</p>
-                    <small>O relatório exibirá apenas funcionários com marcações no período.</small>
-                </div>`;
+            document.getElementById('relatorioConteudo').innerHTML = `<div class="rel-empty"><i class="fas fa-chart-line"></i><p>Configure os filtros acima</p><small>O relatório exibirá apenas funcionários com marcações no período.</small></div>`;
             document.getElementById('relatorioPaisagem').classList.add('active');
             document.getElementById('relFooterData').textContent = formatarDataHoraAgora();
             atualizarNomeArquivoRelatorio();
@@ -3407,13 +3403,10 @@
             if (empresa) partes.push(sanitizarNomeArquivo(empresa));
             partes.push(mes);
             partes.push(ano);
-            const nomeArquivo = partes.join('_') + '.pdf';
-            document.getElementById('relFooterNome').textContent = nomeArquivo;
+            document.getElementById('relFooterNome').textContent = partes.join('_') + '.pdf';
         }
 
-        function fecharRelatorioPonto() {
-            document.getElementById('relatorioPaisagem').classList.remove('active');
-        }
+        function fecharRelatorioPonto() { document.getElementById('relatorioPaisagem').classList.remove('active'); }
 
         async function carregarFuncionariosRelatorio() {
             const selectFunc = document.getElementById('relFuncionario');
@@ -3445,50 +3438,32 @@
             const inicioISO = `${anoNum}-${String(mesIndex+1).padStart(2,'0')}-01`;
             const fimISO = `${anoNum}-${String(mesIndex+1).padStart(2,'0')}-${String(totalDias).padStart(2,'0')}`;
             try {
-                const { data } = await supabaseClient
-                    .from('marcacoes_ponto').select('dados')
-                    .eq('funcionario_id', funcId).eq('mes', mesNome).eq('ano', anoNum).maybeSingle();
+                const { data } = await supabaseClient.from('marcacoes_ponto').select('dados').eq('funcionario_id', funcId).eq('mes', mesNome).eq('ano', anoNum).maybeSingle();
                 if (data && data.dados) {
                     let json = {};
                     try { json = typeof data.dados === 'string' ? JSON.parse(data.dados) : data.dados; } catch(e) {}
-                    const tem = Object.values(json || {}).some(d =>
-                        d && (d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado || d.abono)
-                    );
+                    const tem = Object.values(json || {}).some(d => d && (d.e1 || d.s1 || d.e2 || d.s2 || d.extra_e1 || d.extra_s1 || d.folga_bh || d.falta_atestado || d.abono));
                     if (tem) return true;
                 }
             } catch(e) {}
             try {
-                const { data } = await supabaseClient
-                    .from('marcacoes').select('dia, e1, s1, e2, s2')
-                    .eq('funcionario_id', funcId).eq('mes', mesNome).eq('ano', anoNum);
+                const { data } = await supabaseClient.from('marcacoes').select('dia, e1, s1, e2, s2').eq('funcionario_id', funcId).eq('mes', mesNome).eq('ano', anoNum);
                 if (data && data.some(m => m.e1 || m.s1 || m.e2 || m.s2)) return true;
             } catch(e) {}
             try {
-                const { data } = await supabaseClient
-                    .from('atestados').select('id')
-                    .eq('funcionario_id', funcId)
-                    .lte('data_inicio', fimISO).gte('data_fim', inicioISO);
+                const { data } = await supabaseClient.from('atestados').select('id').eq('funcionario_id', funcId).lte('data_inicio', fimISO).gte('data_fim', inicioISO);
                 if (data && data.length > 0) return true;
             } catch(e) {}
             try {
-                const { data } = await supabaseClient
-                    .from('ferias').select('id')
-                    .eq('funcionario_id', funcId).neq('status', 'cancelada')
-                    .lte('data_inicio', fimISO).gte('data_fim', inicioISO);
+                const { data } = await supabaseClient.from('ferias').select('id').eq('funcionario_id', funcId).neq('status', 'cancelada').lte('data_inicio', fimISO).gte('data_fim', inicioISO);
                 if (data && data.length > 0) return true;
             } catch(e) {}
             try {
-                const { data } = await supabaseClient
-                    .from('faltas_vt').select('id')
-                    .eq('funcionario_id', funcId)
-                    .lte('data_inicio', fimISO).gte('data_fim', inicioISO);
+                const { data } = await supabaseClient.from('faltas_vt').select('id').eq('funcionario_id', funcId).lte('data_inicio', fimISO).gte('data_fim', inicioISO);
                 if (data && data.length > 0) return true;
             } catch(e) {}
             try {
-                const { data } = await supabaseClient
-                    .from('calendario_status').select('id')
-                    .eq('funcionario_id', funcId)
-                    .gte('data', inicioISO).lte('data', fimISO);
+                const { data } = await supabaseClient.from('calendario_status').select('id').eq('funcionario_id', funcId).gte('data', inicioISO).lte('data', fimISO);
                 if (data && data.length > 0) return true;
             } catch(e) {}
             return false;
@@ -3592,8 +3567,7 @@
                             const diffExtra = calcularDiferenca(d.extra_e1, d.extra_s1);
                             const totalDia = somarHoras(somarHoras(diff1, diff2), diffExtra);
                             const totalMinDia = converterParaMinutos(totalDia);
-                            let obs = '';
-                            let linhaClass = '';
+                            let obs = '', linhaClass = '';
                             if (temAbono) {
                                 let labelAbono = 'ABONO';
                                 if (d.abono_inicio && d.abono_fim) labelAbono = `ABONO ${d.abono_inicio}-${d.abono_fim}`;
@@ -3615,9 +3589,7 @@
                                 linhaClass = 'linha-vazia';
                             }
                             if (totalMinDia > 0) diasTrabalhados++;
-                            if (totalMinDia > JORNADA_PADRAO_MINUTOS && !abonado && !folgaBH && !temAbono) {
-                                horaExtraTotal += totalMinDia - JORNADA_PADRAO_MINUTOS;
-                            }
+                            if (totalMinDia > JORNADA_PADRAO_MINUTOS && !abonado && !folgaBH && !temAbono) horaExtraTotal += totalMinDia - JORNADA_PADRAO_MINUTOS;
                             let totalDisplay = totalDia;
                             if (temAbono) {
                                 if (abonoParcial && totalDia !== '00:00') totalDisplay = totalDia;
@@ -3806,17 +3778,12 @@
                 const temAbono = d.abono;
                 const abonoParcial = temAbono && (d.abono_inicio || d.abono_fim || d.abono_horas);
                 const folgaBH = d.folga_bh;
-
                 if (temAbono) {
                     totalAbonadoMin += getMinutosAbonados(d);
                     if (!abonoParcial) continue;
                 }
-                if (abonado && !temAbono) {
-                    totalAbonadoMin += JORNADA_PADRAO_MINUTOS;
-                    continue;
-                }
+                if (abonado && !temAbono) { totalAbonadoMin += JORNADA_PADRAO_MINUTOS; continue; }
                 if (folgaBH) continue;
-
                 const diff1 = calcularDiferenca(d.e1, d.s1);
                 const diff2 = calcularDiferenca(d.e2, d.s2);
                 const diffExtra = calcularDiferenca(d.extra_e1, d.extra_s1);
@@ -3831,10 +3798,7 @@
             return { totalTrabalhadoMin, totalExtraMin, totalAbonadoMin, totalNoturnoMin, diasTrabalhados };
         }
 
-        function formatarDiasDecimais(minutos) {
-            const dias = minutos / JORNADA_PADRAO_MINUTOS;
-            return dias.toFixed(2).replace('.', ',');
-        }
+        function formatarDiasDecimais(minutos) { return (minutos / JORNADA_PADRAO_MINUTOS).toFixed(2).replace('.', ','); }
 
         async function gerarControleHoras() {
             const body = document.getElementById('chBody');
@@ -3945,10 +3909,7 @@
                     const handler = () => {
                         const key = abaId + '_' + funcId;
                         if (autoSaveAbasTimers[key]) clearTimeout(autoSaveAbasTimers[key]);
-                        autoSaveAbasTimers[key] = setTimeout(async () => {
-                            mostrarAutoSave('Salvando...');
-                            await saveFn();
-                        }, 700);
+                        autoSaveAbasTimers[key] = setTimeout(async () => { mostrarAutoSave('Salvando...'); await saveFn(); }, 700);
                     };
                     el.addEventListener('change', handler);
                     el.addEventListener('blur', handler);
@@ -3959,11 +3920,7 @@
         async function abrirModalFuncionario(id) {
             funcionarioModalAtual = id;
             document.getElementById('modalFuncionario').classList.add('active');
-            document.getElementById('modalFuncionarioConteudo').innerHTML = `
-                <div style="text-align:center;padding:40px;color:#7a3a00;">
-                    <i class="fas fa-spinner fa-spin" style="font-size:28px;display:block;margin-bottom:12px;"></i>
-                    Carregando...
-                </div>`;
+            document.getElementById('modalFuncionarioConteudo').innerHTML = `<div style="text-align:center;padding:40px;color:#7a3a00;"><i class="fas fa-spinner fa-spin" style="font-size:28px;display:block;margin-bottom:12px;"></i>Carregando...</div>`;
             try {
                 const { data: func, error: funcError } = await supabaseClient.from('funcionarios').select('*').eq('id', id).single();
                 if (funcError) throw funcError;
@@ -4008,49 +3965,21 @@
 
                 let alertaSemControleHTML = '';
                 if (semControle) {
-                    alertaSemControleHTML = `
-                        <div class="func-alerta warning">
-                            <i class="fas fa-user-slash"></i>
-                            <div><strong>Funcionário SEM CONTROLE DE PONTO.</strong> Está fora dos módulos de <b>Vale Transporte</b>, <b>Férias</b>, <b>Calendários</b>, <b>Erros de Marcação</b> e <b>Cartões Não Anexados</b>.</div>
-                        </div>
-                    `;
+                    alertaSemControleHTML = `<div class="func-alerta warning"><i class="fas fa-user-slash"></i><div><strong>Funcionário SEM CONTROLE DE PONTO.</strong> Está fora dos módulos de <b>Vale Transporte</b>, <b>Férias</b>, <b>Calendários</b>, <b>Erros de Marcação</b> e <b>Cartões Não Anexados</b>.</div></div>`;
                 }
                 let alertaErrosHTML = '';
                 if (!semControle && erros.length > 0) {
-                    alertaErrosHTML = `
-                        <div class="func-alerta danger">
-                            <div style="flex:1;">
-                                <div class="titulo">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    ${erros.length} erro(s) de marcação detectado(s) em ${MESES[calendarioMesAtual]}/${calendarioAnoAtual}
-                                </div>
-                                <ul>
-                                    ${erros.map(e => `<li>Dia ${String(e.dia).padStart(2,'0')}: ${e.msg}</li>`).join('')}
-                                </ul>
-                                <button type="button" class="btn-action btn-danger btn-sm" onclick="abrirEditorPontoFuncionario('${id}')"><i class="fas fa-edit"></i> Corrigir no Editor</button>
-                            </div>
-                        </div>
-                    `;
+                    alertaErrosHTML = `<div class="func-alerta danger"><div style="flex:1;"><div class="titulo"><i class="fas fa-exclamation-triangle"></i> ${erros.length} erro(s) de marcação detectado(s) em ${MESES[calendarioMesAtual]}/${calendarioAnoAtual}</div><ul>${erros.map(e => `<li>Dia ${String(e.dia).padStart(2,'0')}: ${e.msg}</li>`).join('')}</ul><button type="button" class="btn-action btn-danger btn-sm" onclick="abrirEditorPontoFuncionario('${id}')"><i class="fas fa-edit"></i> Corrigir no Editor</button></div></div>`;
                 }
 
                 let atalhosHTML = '';
                 if (!semControle) {
                     atalhosHTML = `
                         <div class="func-atalhos">
-                            <button type="button" class="func-atalho-btn vt" onclick="abrirModuloVT('${id}')">
-                                <div class="icone"><i class="fas fa-bus"></i></div>
-                                <div class="texto"><div class="titulo">Vale Transporte</div><div class="sub">Gestão de VT e descontos</div></div>
-                            </button>
-                            <button type="button" class="func-atalho-btn medicina" onclick="abrirModuloMedicina('${id}')">
-                                <div class="icone"><i class="fas fa-stethoscope"></i></div>
-                                <div class="texto"><div class="titulo">Medicina do Trabalho</div><div class="sub">ASO e exames ocupacionais</div></div>
-                            </button>
-                            <button type="button" class="func-atalho-btn ferias" onclick="abrirModuloFerias('${id}')">
-                                <div class="icone"><i class="fas fa-umbrella-beach"></i></div>
-                                <div class="texto"><div class="titulo">Férias</div><div class="sub">Histórico e agendamentos</div></div>
-                            </button>
-                        </div>
-                    `;
+                            <button type="button" class="func-atalho-btn vt" onclick="abrirModuloVT('${id}')"><div class="icone"><i class="fas fa-bus"></i></div><div class="texto"><div class="titulo">Vale Transporte</div><div class="sub">Gestão de VT e descontos</div></div></button>
+                            <button type="button" class="func-atalho-btn medicina" onclick="abrirModuloMedicina('${id}')"><div class="icone"><i class="fas fa-stethoscope"></i></div><div class="texto"><div class="titulo">Medicina do Trabalho</div><div class="sub">ASO e exames ocupacionais</div></div></button>
+                            <button type="button" class="func-atalho-btn ferias" onclick="abrirModuloFerias('${id}')"><div class="icone"><i class="fas fa-umbrella-beach"></i></div><div class="texto"><div class="titulo">Férias</div><div class="sub">Histórico e agendamentos</div></div></button>
+                        </div>`;
                 }
 
                 const btnFeriasAdd = semControle ? '<div class="func-alerta warning" style="margin:0;"><i class="fas fa-info-circle"></i> Este funcionário não participa do controle de férias.</div>' : `<div style="margin-top:14px;"><button type="button" class="btn-action btn-success" onclick="adicionarFeriasModal('${id}')"><i class="fas fa-plus"></i> Adicionar Férias</button></div>`;
@@ -4062,27 +3991,15 @@
                     <div class="func-stats-grid">
                         <div class="func-stat-card">
                             <div class="stat-icon" style="background:linear-gradient(135deg, ${statusFeriasInfo.cor}, ${statusFeriasInfo.cor}dd);"><i class="fas fa-umbrella-beach"></i></div>
-                            <div class="stat-info">
-                                <div class="stat-label">Status Férias</div>
-                                <div class="stat-value" style="font-size:14px;color:${statusFeriasInfo.cor};">${statusFeriasInfo.label}</div>
-                            </div>
+                            <div class="stat-info"><div class="stat-label">Status Férias</div><div class="stat-value" style="font-size:14px;color:${statusFeriasInfo.cor};">${statusFeriasInfo.label}</div></div>
                         </div>
                         <div class="func-stat-card">
                             <div class="stat-icon ${semControle ? 'gray' : (erros.length > 0 ? 'red' : 'green')}"><i class="fas fa-${semControle ? 'user-slash' : (erros.length > 0 ? 'exclamation-triangle' : 'check-circle')}"></i></div>
-                            <div class="stat-info">
-                                <div class="stat-label">Situação Ponto</div>
-                                <div class="stat-value" style="font-size:14px;color:${semControle ? '#6c757d' : (erros.length > 0 ? '#dc3545' : '#28a745')};">
-                                    ${semControle ? 'Dispensado' : (erros.length > 0 ? `${erros.length} erro(s)` : 'Em conformidade')}
-                                </div>
-                            </div>
+                            <div class="stat-info"><div class="stat-label">Situação Ponto</div><div class="stat-value" style="font-size:14px;color:${semControle ? '#6c757d' : (erros.length > 0 ? '#dc3545' : '#28a745')};">${semControle ? 'Dispensado' : (erros.length > 0 ? `${erros.length} erro(s)` : 'Em conformidade')}</div></div>
                         </div>
                         <div class="func-stat-card">
                             <div class="stat-icon orange"><i class="fas fa-briefcase"></i></div>
-                            <div class="stat-info">
-                                <div class="stat-label">Admissão</div>
-                                <div class="stat-value" style="font-size:14px;">${formatarData(func.admissao)}</div>
-                                <div class="stat-sub">${func.departamento || 'Sem empresa'}</div>
-                            </div>
+                            <div class="stat-info"><div class="stat-label">Admissão</div><div class="stat-value" style="font-size:14px;">${formatarData(func.admissao)}</div><div class="stat-sub">${func.departamento || 'Sem empresa'}</div></div>
                         </div>
                     </div>
                 `;
@@ -4134,9 +4051,7 @@
                                     <button type="button" class="btn-action btn-secondary btn-sm" id="btnBaixarCartao" onclick="baixarCartaoModal()" style="display:none;"><i class="fas fa-download"></i> Baixar</button>
                                 </div>
                             </div>
-                            <div class="cartao-imagem-wrapper" id="modalCartaoWrapper">
-                                <div class="sem-imagem"><i class="fas fa-file-image"></i><p>Nenhuma imagem anexada para este período</p></div>
-                            </div>
+                            <div class="cartao-imagem-wrapper" id="modalCartaoWrapper"><div class="sem-imagem"><i class="fas fa-file-image"></i><p>Nenhuma imagem anexada para este período</p></div></div>
                         </div>
 
                         <div class="atestados-inline-section">
@@ -4144,11 +4059,7 @@
                                 <div class="titulo"><i class="fas fa-notes-medical"></i> Atestados Anexados do Funcionário</div>
                                 <button type="button" class="btn-action btn-purple btn-sm" onclick="trocarAbaPasta('atestados', document.querySelector('.func-pasta-btn[data-aba-pasta=atestados]'))"><i class="fas fa-plus"></i> Gerenciar Atestados</button>
                             </div>
-                            <div class="atestados-inline-grid" id="modalAtestadosInline">
-                                <div style="grid-column:1/-1;text-align:center;padding:20px;color:#7a3a00;font-size:11px;">
-                                    <i class="fas fa-spinner fa-spin"></i> Carregando atestados...
-                                </div>
-                            </div>
+                            <div class="atestados-inline-grid" id="modalAtestadosInline"><div style="grid-column:1/-1;text-align:center;padding:20px;color:#7a3a00;font-size:11px;"><i class="fas fa-spinner fa-spin"></i> Carregando atestados...</div></div>
                         </div>
                     </div>`;
 
@@ -4162,10 +4073,7 @@
                             </div>
                             <div class="func-cover-info">
                                 <div class="cargo-tag"><i class="fas fa-briefcase"></i> ${func.cargo || 'Sem cargo'}</div>
-                                <h2>
-                                    ${func.nome || 'Sem nome'}
-                                    ${isAniversariante ? '<span class="hero-badge aniversariante"><i class="fas fa-birthday-cake"></i> Aniversariante</span>' : ''}
-                                </h2>
+                                <h2>${func.nome || 'Sem nome'}${isAniversariante ? '<span class="hero-badge aniversariante"><i class="fas fa-birthday-cake"></i> Aniversariante</span>' : ''}</h2>
                                 <div class="func-cover-meta">
                                     <div class="meta-item"><i class="fas fa-id-card"></i> <strong>CPF:</strong> ${func.cpf || '—'}</div>
                                     <div class="meta-item"><i class="fas fa-building"></i> <strong>Unidade:</strong> ${func.unidade || '—'}</div>
@@ -4174,55 +4082,29 @@
                             </div>
                             <div class="func-cover-actions">
                                 ${btnEditorPonto}
-                                <button type="button" class="btn-action btn-editar-cadastro" onclick="fecharModalFuncionario();abrirEdicaoFuncionario('${id}')">
-                                    <i class="fas fa-user-edit"></i> Editar Cadastro
-                                </button>
+                                <button type="button" class="btn-action btn-editar-cadastro" onclick="fecharModalFuncionario();abrirEdicaoFuncionario('${id}')"><i class="fas fa-user-edit"></i> Editar Cadastro</button>
                             </div>
                         </div>
                     </div>
 
                     ${alertaSemControleHTML || alertaErrosHTML ? `<div class="func-alertas">${alertaSemControleHTML}${alertaErrosHTML}</div>` : ''}
-
                     ${statsRowHTML}
-
                     ${atalhosHTML}
 
                     <div class="func-pasta-layout">
                         <nav class="func-pasta-sidebar">
-                            ${!semControle ? `
-                                <div class="grupo-titulo"><i class="fas fa-star"></i> Principal</div>
-                                <button class="func-pasta-btn destaque active" onclick="trocarAbaPasta('ponto', this)" data-aba-pasta="ponto">
-                                    <i class="fas fa-clock"></i> Ponto
-                                </button>
-                            ` : ''}
+                            ${!semControle ? `<div class="grupo-titulo"><i class="fas fa-star"></i> Principal</div>
+                            <button class="func-pasta-btn destaque active" onclick="trocarAbaPasta('ponto', this)" data-aba-pasta="ponto"><i class="fas fa-clock"></i> Ponto</button>` : ''}
                             <div class="grupo-titulo"><i class="fas fa-user"></i> Cadastro</div>
-                            <button class="func-pasta-btn ${semControle ? 'active' : ''}" onclick="trocarAbaPasta('dados', this)" data-aba-pasta="dados">
-                                <i class="fas fa-user"></i> Dados
-                            </button>
-                            <button class="func-pasta-btn" onclick="trocarAbaPasta('documentos', this)" data-aba-pasta="documentos">
-                                <i class="fas fa-file-alt"></i> Documentos
-                            </button>
-                            <button class="func-pasta-btn" onclick="trocarAbaPasta('contato', this)" data-aba-pasta="contato">
-                                <i class="fas fa-address-book"></i> Contato
-                            </button>
-                            <button class="func-pasta-btn" onclick="trocarAbaPasta('beneficios', this)" data-aba-pasta="beneficios">
-                                <i class="fas fa-gift"></i> Benefícios
-                            </button>
+                            <button class="func-pasta-btn ${semControle ? 'active' : ''}" onclick="trocarAbaPasta('dados', this)" data-aba-pasta="dados"><i class="fas fa-user"></i> Dados</button>
+                            <button class="func-pasta-btn" onclick="trocarAbaPasta('documentos', this)" data-aba-pasta="documentos"><i class="fas fa-file-alt"></i> Documentos</button>
+                            <button class="func-pasta-btn" onclick="trocarAbaPasta('contato', this)" data-aba-pasta="contato"><i class="fas fa-address-book"></i> Contato</button>
+                            <button class="func-pasta-btn" onclick="trocarAbaPasta('beneficios', this)" data-aba-pasta="beneficios"><i class="fas fa-gift"></i> Benefícios</button>
                             <div class="grupo-titulo"><i class="fas fa-calendar"></i> Registros</div>
-                            ${!semControle ? `
-                                <button class="func-pasta-btn" onclick="trocarAbaPasta('ferias', this)" data-aba-pasta="ferias">
-                                    <i class="fas fa-umbrella-beach"></i> Férias
-                                </button>
-                            ` : ''}
-                            <button class="func-pasta-btn" onclick="trocarAbaPasta('calendario', this)" data-aba-pasta="calendario">
-                                <i class="fas fa-calendar-alt"></i> Calendário
-                            </button>
-                            <button class="func-pasta-btn" onclick="trocarAbaPasta('atestados', this)" data-aba-pasta="atestados">
-                                <i class="fas fa-notes-medical"></i> Atestados
-                            </button>
-                            <button class="func-pasta-btn" onclick="trocarAbaPasta('medicina', this)" data-aba-pasta="medicina">
-                                <i class="fas fa-stethoscope"></i> Medicina
-                            </button>
+                            ${!semControle ? `<button class="func-pasta-btn" onclick="trocarAbaPasta('ferias', this)" data-aba-pasta="ferias"><i class="fas fa-umbrella-beach"></i> Férias</button>` : ''}
+                            <button class="func-pasta-btn" onclick="trocarAbaPasta('calendario', this)" data-aba-pasta="calendario"><i class="fas fa-calendar-alt"></i> Calendário</button>
+                            <button class="func-pasta-btn" onclick="trocarAbaPasta('atestados', this)" data-aba-pasta="atestados"><i class="fas fa-notes-medical"></i> Atestados</button>
+                            <button class="func-pasta-btn" onclick="trocarAbaPasta('medicina', this)" data-aba-pasta="medicina"><i class="fas fa-stethoscope"></i> Medicina</button>
                         </nav>
                         <div class="func-pasta-content" id="funcPastaContent">
                             ${abaPontoContent}
@@ -4231,122 +4113,43 @@
                                 <div class="doc-form">
                                     <div class="doc-header">
                                         <div class="doc-icon"><i class="fas fa-id-card"></i></div>
-                                        <div class="doc-title">
-                                            <h3>Ficha Cadastral</h3>
-                                            <p>Dados pessoais &amp; profissionais · salvamento automático</p>
-                                        </div>
+                                        <div class="doc-title"><h3>Ficha Cadastral</h3><p>Dados pessoais &amp; profissionais · salvamento automático</p></div>
                                         <div class="doc-stamp"> · ${func.unidade || 'N/A'}</div>
                                     </div>
                                     <div class="doc-body">
                                         <div class="doc-section">
                                             <div class="doc-section-title"><i class="fas fa-user"></i> Identificação Pessoal</div>
                                             <div style="display:grid;grid-template-columns:140px 1fr;gap:22px;align-items:start;">
-                                                <div class="doc-photo-block">
-                                                    <div class="doc-photo">${fotoHTML}</div>
-                                                    <div class="doc-photo-label">Foto 3x4</div>
-                                                </div>
+                                                <div class="doc-photo-block"><div class="doc-photo">${fotoHTML}</div><div class="doc-photo-label">Foto 3x4</div></div>
                                                 <div class="doc-grid">
-                                                    <div class="doc-field span-2">
-                                                        <label><i class="fas fa-user"></i> Nome Completo</label>
-                                                        <input type="text" id="editNome" value="${func.nome || ''}">
-                                                    </div>
-                                                    <div class="doc-field">
-                                                        <label><i class="fas fa-id-card"></i> CPF</label>
-                                                        <input type="text" id="editCPF" value="${func.cpf || ''}">
-                                                    </div>
-                                                    <div class="doc-field">
-                                                        <label><i class="fas fa-id-badge"></i> RG</label>
-                                                        <input type="text" id="editRG" value="${func.rg || ''}">
-                                                    </div>
-                                                    <div class="doc-field">
-                                                        <label><i class="fas fa-birthday-cake"></i> Nascimento</label>
-                                                        <input type="date" id="editAniversario" value="${formatarDataISO(func.aniversario)}">
-                                                    </div>
-                                                    <div class="doc-field">
-                                                        <label><i class="fas fa-ring"></i> Estado Civil</label>
-                                                        <select id="editEstadoCivil">
-                                                            <option value="">Selecione</option>
-                                                            <option value="Solteiro(a)" ${func.estado_civil === 'Solteiro(a)' ? 'selected' : ''}>Solteiro(a)</option>
-                                                            <option value="Casado(a)" ${func.estado_civil === 'Casado(a)' ? 'selected' : ''}>Casado(a)</option>
-                                                            <option value="Divorciado(a)" ${func.estado_civil === 'Divorciado(a)' ? 'selected' : ''}>Divorciado(a)</option>
-                                                            <option value="Viúvo(a)" ${func.estado_civil === 'Viúvo(a)' ? 'selected' : ''}>Viúvo(a)</option>
-                                                            <option value="União Estável" ${func.estado_civil === 'União Estável' ? 'selected' : ''}>União Estável</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="doc-field">
-                                                        <label><i class="fas fa-venus-mars"></i> Gênero</label>
-                                                        <select id="editGenero">
-                                                            <option value="">Selecione</option>
-                                                            <option value="Masculino" ${func.genero === 'Masculino' ? 'selected' : ''}>Masculino</option>
-                                                            <option value="Feminino" ${func.genero === 'Feminino' ? 'selected' : ''}>Feminino</option>
-                                                            <option value="Outro" ${func.genero === 'Outro' ? 'selected' : ''}>Outro</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="doc-field">
-                                                        <label><i class="fas fa-globe-americas"></i> Nacionalidade</label>
-                                                        <input type="text" id="editNacionalidade" value="${func.nacionalidade || 'Brasileiro'}">
-                                                    </div>
-                                                    <div class="doc-field">
-                                                        <label><i class="fas fa-wheelchair"></i> PCD</label>
-                                                        <select id="editPCD">
-                                                            <option value="">Selecione</option>
-                                                            <option value="Sim" ${func.pcd === true || func.pcd === 'Sim' ? 'selected' : ''}>Sim</option>
-                                                            <option value="Não" ${func.pcd === false || func.pcd === 'Não' ? 'selected' : ''}>Não</option>
-                                                        </select>
-                                                    </div>
+                                                    <div class="doc-field span-2"><label><i class="fas fa-user"></i> Nome Completo</label><input type="text" id="editNome" value="${func.nome || ''}"></div>
+                                                    <div class="doc-field"><label><i class="fas fa-id-card"></i> CPF</label><input type="text" id="editCPF" value="${func.cpf || ''}"></div>
+                                                    <div class="doc-field"><label><i class="fas fa-id-badge"></i> RG</label><input type="text" id="editRG" value="${func.rg || ''}"></div>
+                                                    <div class="doc-field"><label><i class="fas fa-birthday-cake"></i> Nascimento</label><input type="date" id="editAniversario" value="${formatarDataISO(func.aniversario)}"></div>
+                                                    <div class="doc-field"><label><i class="fas fa-ring"></i> Estado Civil</label><select id="editEstadoCivil"><option value="">Selecione</option><option value="Solteiro(a)" ${func.estado_civil === 'Solteiro(a)' ? 'selected' : ''}>Solteiro(a)</option><option value="Casado(a)" ${func.estado_civil === 'Casado(a)' ? 'selected' : ''}>Casado(a)</option><option value="Divorciado(a)" ${func.estado_civil === 'Divorciado(a)' ? 'selected' : ''}>Divorciado(a)</option><option value="Viúvo(a)" ${func.estado_civil === 'Viúvo(a)' ? 'selected' : ''}>Viúvo(a)</option><option value="União Estável" ${func.estado_civil === 'União Estável' ? 'selected' : ''}>União Estável</option></select></div>
+                                                    <div class="doc-field"><label><i class="fas fa-venus-mars"></i> Gênero</label><select id="editGenero"><option value="">Selecione</option><option value="Masculino" ${func.genero === 'Masculino' ? 'selected' : ''}>Masculino</option><option value="Feminino" ${func.genero === 'Feminino' ? 'selected' : ''}>Feminino</option><option value="Outro" ${func.genero === 'Outro' ? 'selected' : ''}>Outro</option></select></div>
+                                                    <div class="doc-field"><label><i class="fas fa-globe-americas"></i> Nacionalidade</label><input type="text" id="editNacionalidade" value="${func.nacionalidade || 'Brasileiro'}"></div>
+                                                    <div class="doc-field"><label><i class="fas fa-wheelchair"></i> PCD</label><select id="editPCD"><option value="">Selecione</option><option value="Sim" ${func.pcd === true || func.pcd === 'Sim' ? 'selected' : ''}>Sim</option><option value="Não" ${func.pcd === false || func.pcd === 'Não' ? 'selected' : ''}>Não</option></select></div>
                                                 </div>
                                             </div>
                                         </div>
-
                                         <div class="doc-section">
                                             <div class="doc-section-title"><i class="fas fa-briefcase"></i> Vínculo Profissional</div>
                                             <div class="doc-grid">
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-user-tie"></i> Cargo</label>
-                                                    <input type="text" id="editCargo" value="${func.cargo || ''}">
-                                                </div>
-                                                <div class="doc-field span-2">
-                                                    <label><i class="fas fa-sitemap"></i> Empresa / Departamento</label>
-                                                    <input type="text" id="editDepartamento" value="${func.departamento || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-calendar-check"></i> Admissão</label>
-                                                    <input type="date" id="editAdmissao" value="${formatarDataISO(func.admissao)}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-building"></i> Unidade</label>
-                                                    <select id="editUnidade">
-                                                        <option value="Spoleto" ${func.unidade === 'Spoleto' ? 'selected' : ''}>Spoleto</option>
-                                                        <option value="A2B" ${func.unidade === 'A2B' ? 'selected' : ''}>A2B</option>
-                                                        <option value="Acço" ${func.unidade === 'Acço' ? 'selected' : ''}>Acço</option>
-                                                        <option value="Copaenergia" ${func.unidade === 'Copaenergia' ? 'selected' : ''}>Copaenergia</option>
-                                                        <option value="INSS" ${func.unidade === 'INSS' ? 'selected' : ''}>INSS</option>
-                                                        <option value="Qnutri" ${func.unidade === 'Qnutri' ? 'selected' : ''}>Qnutri</option>
-                                                    </select>
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-stethoscope"></i> Validade ASO</label>
-                                                    <input type="date" id="editASO" value="${formatarDataISO(func.aso)}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-money-bill-wave"></i> Salário Base (R$)</label>
-                                                    <input type="number" step="0.01" id="editSalarioBase" value="${func.salario || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-umbrella-beach"></i> Último Gozo de Férias</label>
-                                                    <input type="date" id="editUltimoGozo" value="${formatarDataISO(func.ultimo_gozo)}">
-                                                </div>
+                                                <div class="doc-field"><label><i class="fas fa-user-tie"></i> Cargo</label><input type="text" id="editCargo" value="${func.cargo || ''}"></div>
+                                                <div class="doc-field span-2"><label><i class="fas fa-sitemap"></i> Empresa / Departamento</label><input type="text" id="editDepartamento" value="${func.departamento || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-calendar-check"></i> Admissão</label><input type="date" id="editAdmissao" value="${formatarDataISO(func.admissao)}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-building"></i> Unidade</label><select id="editUnidade"><option value="Spoleto" ${func.unidade === 'Spoleto' ? 'selected' : ''}>Spoleto</option><option value="A2B" ${func.unidade === 'A2B' ? 'selected' : ''}>A2B</option><option value="Acço" ${func.unidade === 'Acço' ? 'selected' : ''}>Acço</option><option value="Copaenergia" ${func.unidade === 'Copaenergia' ? 'selected' : ''}>Copaenergia</option><option value="INSS" ${func.unidade === 'INSS' ? 'selected' : ''}>INSS</option><option value="Qnutri" ${func.unidade === 'Qnutri' ? 'selected' : ''}>Qnutri</option></select></div>
+                                                <div class="doc-field"><label><i class="fas fa-stethoscope"></i> Validade ASO</label><input type="date" id="editASO" value="${formatarDataISO(func.aso)}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-money-bill-wave"></i> Salário Base (R$)</label><input type="number" step="0.01" id="editSalarioBase" value="${func.salario || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-umbrella-beach"></i> Último Gozo de Férias</label><input type="date" id="editUltimoGozo" value="${formatarDataISO(func.ultimo_gozo)}"></div>
                                             </div>
                                         </div>
-
                                         <div class="doc-section">
                                             <div class="doc-section-title"><i class="fas fa-user-slash"></i> Regime de Marcação</div>
                                             <label class="doc-flag">
                                                 <input type="checkbox" id="editSemControlePonto" ${semControle ? 'checked' : ''}>
-                                                <span class="txt">
-                                                    <i class="fas fa-user-slash" style="color:#6c757d;"></i> Sem Controle de Ponto
-                                                    <small>Fica em grupo separado e não aparece em Férias, VT, Calendários e Erros.</small>
-                                                </span>
+                                                <span class="txt"><i class="fas fa-user-slash" style="color:#6c757d;"></i> Sem Controle de Ponto<small>Fica em grupo separado e não aparece em Férias, VT, Calendários e Erros.</small></span>
                                             </label>
                                         </div>
                                     </div>
@@ -4357,70 +4160,34 @@
                                 <div class="doc-form">
                                     <div class="doc-header">
                                         <div class="doc-icon blue"><i class="fas fa-folder-open"></i></div>
-                                        <div class="doc-title">
-                                            <h3>Documentos Pessoais</h3>
-                                            <p>Identidade · Trabalhista · Habilitação · salvamento automático</p>
-                                        </div>
+                                        <div class="doc-title"><h3>Documentos Pessoais</h3><p>Identidade · Trabalhista · Habilitação · salvamento automático</p></div>
                                         <div class="doc-stamp green">Documento Oficial</div>
                                     </div>
                                     <div class="doc-body">
                                         <div class="doc-section">
                                             <div class="doc-section-title"><i class="fas fa-id-card"></i> Registro Geral</div>
                                             <div class="doc-grid">
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-id-badge"></i> RG</label>
-                                                    <input type="text" id="editDocRG" value="${func.rg || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-landmark"></i> Órgão Emissor</label>
-                                                    <input type="text" id="editDocOrgaoEmissor" value="${func.orgao_emissor || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-calendar-day"></i> Data de Emissão</label>
-                                                    <input type="date" id="editDocDataEmissaoRG" value="${formatarDataISO(func.data_emissao_rg)}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-id-card"></i> CPF</label>
-                                                    <input type="text" id="editDocCPF" value="${func.cpf || ''}">
-                                                </div>
+                                                <div class="doc-field"><label><i class="fas fa-id-badge"></i> RG</label><input type="text" id="editDocRG" value="${func.rg || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-landmark"></i> Órgão Emissor</label><input type="text" id="editDocOrgaoEmissor" value="${func.orgao_emissor || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-calendar-day"></i> Data de Emissão</label><input type="date" id="editDocDataEmissaoRG" value="${formatarDataISO(func.data_emissao_rg)}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-id-card"></i> CPF</label><input type="text" id="editDocCPF" value="${func.cpf || ''}"></div>
                                             </div>
                                         </div>
                                         <div class="doc-section">
                                             <div class="doc-section-title purple"><i class="fas fa-briefcase"></i> Documentos Trabalhistas</div>
                                             <div class="doc-grid">
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-book"></i> CTPS</label>
-                                                    <input type="text" id="editDocCTPS" value="${func.ctps || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-hashtag"></i> Série</label>
-                                                    <input type="text" id="editDocSerieCTPS" value="${func.serie_ctps || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-fingerprint"></i> PIS / PASEP</label>
-                                                    <input type="text" id="editDocPIS" value="${func.pis || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-vote-yea"></i> Título de Eleitor</label>
-                                                    <input type="text" id="editDocTituloEleitor" value="${func.titulo_eleitor || ''}">
-                                                </div>
+                                                <div class="doc-field"><label><i class="fas fa-book"></i> CTPS</label><input type="text" id="editDocCTPS" value="${func.ctps || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-hashtag"></i> Série</label><input type="text" id="editDocSerieCTPS" value="${func.serie_ctps || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-fingerprint"></i> PIS / PASEP</label><input type="text" id="editDocPIS" value="${func.pis || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-vote-yea"></i> Título de Eleitor</label><input type="text" id="editDocTituloEleitor" value="${func.titulo_eleitor || ''}"></div>
                                             </div>
                                         </div>
                                         <div class="doc-section">
                                             <div class="doc-section-title green"><i class="fas fa-car"></i> Carteira de Habilitação</div>
                                             <div class="doc-grid">
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-id-card"></i> Número CNH</label>
-                                                    <input type="text" id="editDocCNH" value="${func.cnh || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-tag"></i> Categoria</label>
-                                                    <input type="text" id="editDocCategoriaCNH" value="${func.categoria_cnh || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-calendar-times"></i> Validade</label>
-                                                    <input type="date" id="editDocValidadeCNH" value="${formatarDataISO(func.validade_cnh)}">
-                                                </div>
+                                                <div class="doc-field"><label><i class="fas fa-id-card"></i> Número CNH</label><input type="text" id="editDocCNH" value="${func.cnh || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-tag"></i> Categoria</label><input type="text" id="editDocCategoriaCNH" value="${func.categoria_cnh || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-calendar-times"></i> Validade</label><input type="date" id="editDocValidadeCNH" value="${formatarDataISO(func.validade_cnh)}"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -4431,53 +4198,26 @@
                                 <div class="doc-form">
                                     <div class="doc-header">
                                         <div class="doc-icon blue"><i class="fas fa-address-book"></i></div>
-                                        <div class="doc-title">
-                                            <h3>Ficha de Contato</h3>
-                                            <p>Canais de comunicação &amp; emergência · salvamento automático</p>
-                                        </div>
+                                        <div class="doc-title"><h3>Ficha de Contato</h3><p>Canais de comunicação &amp; emergência · salvamento automático</p></div>
                                         <div class="doc-stamp">Atualizado</div>
                                     </div>
                                     <div class="doc-body">
                                         <div class="doc-section">
                                             <div class="doc-section-title"><i class="fas fa-phone-alt"></i> Contatos Diretos</div>
                                             <div class="doc-grid">
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-phone"></i> Telefone Fixo</label>
-                                                    <input type="text" id="editTelefone" value="${func.telefone || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-mobile-alt"></i> Celular Principal</label>
-                                                    <input type="text" id="editCelular" value="${func.celular || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-mobile"></i> Celular 2</label>
-                                                    <input type="text" id="editCelular2" value="${func.celular2 || ''}">
-                                                </div>
-                                                <div class="doc-field span-2">
-                                                    <label><i class="fas fa-envelope"></i> E-mail Corporativo</label>
-                                                    <input type="email" id="editEmail" value="${func.email || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-envelope-open-text"></i> E-mail Pessoal</label>
-                                                    <input type="email" id="editEmailPessoal" value="${func.email_pessoal || ''}">
-                                                </div>
+                                                <div class="doc-field"><label><i class="fas fa-phone"></i> Telefone Fixo</label><input type="text" id="editTelefone" value="${func.telefone || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-mobile-alt"></i> Celular Principal</label><input type="text" id="editCelular" value="${func.celular || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-mobile"></i> Celular 2</label><input type="text" id="editCelular2" value="${func.celular2 || ''}"></div>
+                                                <div class="doc-field span-2"><label><i class="fas fa-envelope"></i> E-mail Corporativo</label><input type="email" id="editEmail" value="${func.email || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-envelope-open-text"></i> E-mail Pessoal</label><input type="email" id="editEmailPessoal" value="${func.email_pessoal || ''}"></div>
                                             </div>
                                         </div>
                                         <div class="doc-section">
                                             <div class="doc-section-title purple"><i class="fas fa-user-friends"></i> Contato de Emergência</div>
                                             <div class="doc-grid">
-                                                <div class="doc-field span-2">
-                                                    <label><i class="fas fa-user"></i> Nome do Contato</label>
-                                                    <input type="text" id="editEmergenciaNome" value="${func.emergencia_nome || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-users"></i> Parentesco</label>
-                                                    <input type="text" id="editEmergenciaParentesco" value="${func.emergencia_parentesco || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-phone-volume"></i> Telefone de Emergência</label>
-                                                    <input type="text" id="editEmergenciaTelefone" value="${func.emergencia_telefone || ''}">
-                                                </div>
+                                                <div class="doc-field span-2"><label><i class="fas fa-user"></i> Nome do Contato</label><input type="text" id="editEmergenciaNome" value="${func.emergencia_nome || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-users"></i> Parentesco</label><input type="text" id="editEmergenciaParentesco" value="${func.emergencia_parentesco || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-phone-volume"></i> Telefone de Emergência</label><input type="text" id="editEmergenciaTelefone" value="${func.emergencia_telefone || ''}"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -4488,77 +4228,28 @@
                                 <div class="doc-form">
                                     <div class="doc-header">
                                         <div class="doc-icon green"><i class="fas fa-gift"></i></div>
-                                        <div class="doc-title">
-                                            <h3>Benefícios &amp; Pagamento</h3>
-                                            <p>Vantagens · Dados bancários · salvamento automático</p>
-                                        </div>
+                                        <div class="doc-title"><h3>Benefícios &amp; Pagamento</h3><p>Vantagens · Dados bancários · salvamento automático</p></div>
                                         <div class="doc-stamp green">Confidencial</div>
                                     </div>
                                     <div class="doc-body">
                                         <div class="doc-section">
                                             <div class="doc-section-title green"><i class="fas fa-hand-holding-heart"></i> Benefícios Ativos</div>
                                             <div class="doc-grid">
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-bus"></i> Vale Transporte</label>
-                                                    <select id="editValeTransporte">
-                                                        <option value="">Selecione</option>
-                                                        <option value="Sim" ${func.vale_transporte === true || func.vale_transporte === 'Sim' ? 'selected' : ''}>Sim</option>
-                                                        <option value="Não" ${func.vale_transporte === false || func.vale_transporte === 'Não' ? 'selected' : ''}>Não</option>
-                                                    </select>
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-utensils"></i> Vale Alimentação</label>
-                                                    <select id="editValeAlimentacao">
-                                                        <option value="">Selecione</option>
-                                                        <option value="Sim" ${func.vale_alimentacao === true || func.vale_alimentacao === 'Sim' ? 'selected' : ''}>Sim</option>
-                                                        <option value="Não" ${func.vale_alimentacao === false || func.vale_alimentacao === 'Não' ? 'selected' : ''}>Não</option>
-                                                    </select>
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-coffee"></i> Vale Refeição</label>
-                                                    <select id="editValeRefeicao">
-                                                        <option value="">Selecione</option>
-                                                        <option value="Sim" ${func.vale_refeicao === true || func.vale_refeicao === 'Sim' ? 'selected' : ''}>Sim</option>
-                                                        <option value="Não" ${func.vale_refeicao === false || func.vale_refeicao === 'Não' ? 'selected' : ''}>Não</option>
-                                                    </select>
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-heartbeat"></i> Plano de Saúde</label>
-                                                    <input type="text" id="editBenPlanoSaude" value="${func.plano_saude || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-tooth"></i> Plano Odontológico</label>
-                                                    <input type="text" id="editBenPlanoOdonto" value="${func.plano_odonto || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-shield-alt"></i> Seguro de Vida</label>
-                                                    <select id="editSeguroVida">
-                                                        <option value="">Selecione</option>
-                                                        <option value="Sim" ${func.seguro_vida === true || func.seguro_vida === 'Sim' ? 'selected' : ''}>Sim</option>
-                                                        <option value="Não" ${func.seguro_vida === false || func.seguro_vida === 'Não' ? 'selected' : ''}>Não</option>
-                                                    </select>
-                                                </div>
+                                                <div class="doc-field"><label><i class="fas fa-bus"></i> Vale Transporte</label><select id="editValeTransporte"><option value="">Selecione</option><option value="Sim" ${func.vale_transporte === true || func.vale_transporte === 'Sim' ? 'selected' : ''}>Sim</option><option value="Não" ${func.vale_transporte === false || func.vale_transporte === 'Não' ? 'selected' : ''}>Não</option></select></div>
+                                                <div class="doc-field"><label><i class="fas fa-utensils"></i> Vale Alimentação</label><select id="editValeAlimentacao"><option value="">Selecione</option><option value="Sim" ${func.vale_alimentacao === true || func.vale_alimentacao === 'Sim' ? 'selected' : ''}>Sim</option><option value="Não" ${func.vale_alimentacao === false || func.vale_alimentacao === 'Não' ? 'selected' : ''}>Não</option></select></div>
+                                                <div class="doc-field"><label><i class="fas fa-coffee"></i> Vale Refeição</label><select id="editValeRefeicao"><option value="">Selecione</option><option value="Sim" ${func.vale_refeicao === true || func.vale_refeicao === 'Sim' ? 'selected' : ''}>Sim</option><option value="Não" ${func.vale_refeicao === false || func.vale_refeicao === 'Não' ? 'selected' : ''}>Não</option></select></div>
+                                                <div class="doc-field"><label><i class="fas fa-heartbeat"></i> Plano de Saúde</label><input type="text" id="editBenPlanoSaude" value="${func.plano_saude || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-tooth"></i> Plano Odontológico</label><input type="text" id="editBenPlanoOdonto" value="${func.plano_odonto || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-shield-alt"></i> Seguro de Vida</label><select id="editSeguroVida"><option value="">Selecione</option><option value="Sim" ${func.seguro_vida === true || func.seguro_vida === 'Sim' ? 'selected' : ''}>Sim</option><option value="Não" ${func.seguro_vida === false || func.seguro_vida === 'Não' ? 'selected' : ''}>Não</option></select></div>
                                             </div>
                                         </div>
                                         <div class="doc-section">
                                             <div class="doc-section-title"><i class="fas fa-university"></i> Dados Bancários</div>
                                             <div class="doc-grid">
-                                                <div class="doc-field span-2">
-                                                    <label><i class="fas fa-landmark"></i> Banco</label>
-                                                    <input type="text" id="editBanco" value="${func.banco || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-code-branch"></i> Agência</label>
-                                                    <input type="text" id="editAgencia" value="${func.agencia || ''}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-hashtag"></i> Conta</label>
-                                                    <input type="text" id="editConta" value="${func.conta || ''}">
-                                                </div>
-                                                <div class="doc-field span-2">
-                                                    <label><i class="fas fa-bolt"></i> Chave PIX</label>
-                                                    <input type="text" id="editPix" value="${func.pix || ''}">
-                                                </div>
+                                                <div class="doc-field span-2"><label><i class="fas fa-landmark"></i> Banco</label><input type="text" id="editBanco" value="${func.banco || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-code-branch"></i> Agência</label><input type="text" id="editAgencia" value="${func.agencia || ''}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-hashtag"></i> Conta</label><input type="text" id="editConta" value="${func.conta || ''}"></div>
+                                                <div class="doc-field span-2"><label><i class="fas fa-bolt"></i> Chave PIX</label><input type="text" id="editPix" value="${func.pix || ''}"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -4570,10 +4261,7 @@
                                 <div class="doc-form">
                                     <div class="doc-header">
                                         <div class="doc-icon purple"><i class="fas fa-umbrella-beach"></i></div>
-                                        <div class="doc-title">
-                                            <h3>Férias &amp; Aquisição</h3>
-                                            <p>Períodos · Histórico · Agendamentos</p>
-                                        </div>
+                                        <div class="doc-title"><h3>Férias &amp; Aquisição</h3><p>Períodos · Histórico · Agendamentos</p></div>
                                         <div class="doc-stamp purple">CLT · Art. 130</div>
                                     </div>
                                     <div class="doc-body">
@@ -4586,54 +4274,21 @@
                                         <div class="doc-section" style="margin-top:6px;">
                                             <div class="doc-section-title purple"><i class="fas fa-clipboard-check"></i> Situação Atual</div>
                                             <div class="doc-grid">
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-calendar-check"></i> Admissão</label>
-                                                    <input type="text" value="${formatarData(func.admissao)}" readonly>
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-history"></i> Último Gozo</label>
-                                                    <input type="date" id="editFeriasUltimoGozo" value="${formatarDataISO(func.ultimo_gozo)}">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-info-circle"></i> Status Atual</label>
-                                                    <input type="text" value="${statusFeriasInfo.label}" readonly>
-                                                </div>
+                                                <div class="doc-field"><label><i class="fas fa-calendar-check"></i> Admissão</label><input type="text" value="${formatarData(func.admissao)}" readonly></div>
+                                                <div class="doc-field"><label><i class="fas fa-history"></i> Último Gozo</label><input type="date" id="editFeriasUltimoGozo" value="${formatarDataISO(func.ultimo_gozo)}"></div>
+                                                <div class="doc-field"><label><i class="fas fa-info-circle"></i> Status Atual</label><input type="text" value="${statusFeriasInfo.label}" readonly></div>
                                             </div>
                                         </div>
                                         <div class="doc-section">
                                             <div class="doc-section-title purple"><i class="fas fa-list-ul"></i> Histórico de Férias</div>
-                                            <div class="doc-table-wrap">
-                                                <table class="doc-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Início</th><th>Fim</th><th style="text-align:center;">Dias</th>
-                                                            <th style="text-align:center;">Status</th><th style="text-align:center;">Ações</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>${feriasHistoricoHTML}</tbody>
-                                                </table>
-                                            </div>
+                                            <div class="doc-table-wrap"><table class="doc-table"><thead><tr><th>Início</th><th>Fim</th><th style="text-align:center;">Dias</th><th style="text-align:center;">Status</th><th style="text-align:center;">Ações</th></tr></thead><tbody>${feriasHistoricoHTML}</tbody></table></div>
                                         </div>
                                         <div class="doc-section">
                                             <div class="doc-section-title"><i class="fas fa-plus-circle"></i> Novo Agendamento</div>
                                             <div class="doc-grid">
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-calendar-day"></i> Data Início</label>
-                                                    <input type="date" id="novaFeriasInicioModal">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-calendar-day"></i> Data Fim</label>
-                                                    <input type="date" id="novaFeriasFimModal">
-                                                </div>
-                                                <div class="doc-field">
-                                                    <label><i class="fas fa-tag"></i> Status</label>
-                                                    <select id="novaFeriasStatusModal">
-                                                        <option value="agendada">Agendada</option>
-                                                        <option value="aprovada">Aprovada</option>
-                                                        <option value="em_andamento">Em Andamento</option>
-                                                        <option value="concluida">Concluída</option>
-                                                    </select>
-                                                </div>
+                                                <div class="doc-field"><label><i class="fas fa-calendar-day"></i> Data Início</label><input type="date" id="novaFeriasInicioModal"></div>
+                                                <div class="doc-field"><label><i class="fas fa-calendar-day"></i> Data Fim</label><input type="date" id="novaFeriasFimModal"></div>
+                                                <div class="doc-field"><label><i class="fas fa-tag"></i> Status</label><select id="novaFeriasStatusModal"><option value="agendada">Agendada</option><option value="aprovada">Aprovada</option><option value="em_andamento">Em Andamento</option><option value="concluida">Concluída</option></select></div>
                                             </div>
                                             ${btnFeriasAdd}
                                         </div>
@@ -4685,24 +4340,10 @@
                                         <i class="fas fa-plus-circle" style="color:#6f42c1;"></i> Registrar Novo Exame
                                     </div>
                                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-                                        <div class="edit-field"><label>Tipo</label>
-                                            <select id="medTabTipo">
-                                                <option value="admissional">Admissional</option>
-                                                <option value="periodico" selected>Periódico</option>
-                                                <option value="demissional">Demissional</option>
-                                                <option value="retorno">Retorno ao Trabalho</option>
-                                                <option value="mudanca">Mudança de Função</option>
-                                            </select>
-                                        </div>
+                                        <div class="edit-field"><label>Tipo</label><select id="medTabTipo"><option value="admissional">Admissional</option><option value="periodico" selected>Periódico</option><option value="demissional">Demissional</option><option value="retorno">Retorno ao Trabalho</option><option value="mudanca">Mudança de Função</option></select></div>
                                         <div class="edit-field"><label>Data do Exame *</label><input type="date" id="medTabDataExame"></div>
                                         <div class="edit-field"><label>Próximo Exame</label><input type="date" id="medTabProximoExame"></div>
-                                        <div class="edit-field"><label>Resultado</label>
-                                            <select id="medTabResultado">
-                                                <option value="apto">Apto</option>
-                                                <option value="inapto">Inapto</option>
-                                                <option value="pendente">Pendente</option>
-                                            </select>
-                                        </div>
+                                        <div class="edit-field"><label>Resultado</label><select id="medTabResultado"><option value="apto">Apto</option><option value="inapto">Inapto</option><option value="pendente">Pendente</option></select></div>
                                         <div class="edit-field"><label>Médico</label><input type="text" id="medTabMedico"></div>
                                         <div class="edit-field"><label>CRM</label><input type="text" id="medTabCRM"></div>
                                     </div>
@@ -4727,11 +4368,7 @@
                 configurarAutoSaveAbas(id);
             } catch (error) {
                 console.error('Erro:', error);
-                document.getElementById('modalFuncionarioConteudo').innerHTML = `
-                    <div style="text-align:center;padding:40px;color:#dc3545;">
-                        <i class="fas fa-exclamation-triangle" style="font-size:32px;display:block;margin-bottom:12px;"></i>
-                        Erro: ${error.message}
-                    </div>`;
+                document.getElementById('modalFuncionarioConteudo').innerHTML = `<div style="text-align:center;padding:40px;color:#dc3545;"><i class="fas fa-exclamation-triangle" style="font-size:32px;display:block;margin-bottom:12px;"></i>Erro: ${error.message}</div>`;
             }
         }
 
@@ -4767,26 +4404,11 @@
             if (!exames || exames.length === 0) {
                 return `<div style="text-align:center;padding:40px;color:#7a3a00;"><i class="fas fa-stethoscope" style="font-size:36px;display:block;margin-bottom:12px;opacity:0.5;"></i><p style="font-weight:600;">Nenhum exame registrado</p></div>`;
             }
-            let html = `<div style="overflow-x:auto;border-radius:10px;border:1px solid #eee;"><table style="width:100%;border-collapse:collapse;font-size:11.5px;">
-                <thead><tr style="background:linear-gradient(180deg, #f8f9fa, #f0f0f0);border-bottom:2px solid #FF8C00;">
-                    <th style="padding:10px;text-align:left;font-weight:800;color:#7a3a00;font-size:10px;text-transform:uppercase;">Tipo</th>
-                    <th style="padding:10px;text-align:center;font-weight:800;color:#7a3a00;font-size:10px;text-transform:uppercase;">Data</th>
-                    <th style="padding:10px;text-align:center;font-weight:800;color:#7a3a00;font-size:10px;text-transform:uppercase;">Próximo</th>
-                    <th style="padding:10px;text-align:center;font-weight:800;color:#7a3a00;font-size:10px;text-transform:uppercase;">Resultado</th>
-                    <th style="padding:10px;text-align:center;font-weight:800;color:#7a3a00;font-size:10px;text-transform:uppercase;">Médico</th>
-                    <th style="padding:10px;text-align:center;font-weight:800;color:#7a3a00;font-size:10px;text-transform:uppercase;">Ações</th>
-                </tr></thead><tbody>`;
+            let html = `<div style="overflow-x:auto;border-radius:10px;border:1px solid #eee;"><table style="width:100%;border-collapse:collapse;font-size:11.5px;"><thead><tr style="background:linear-gradient(180deg, #f8f9fa, #f0f0f0);border-bottom:2px solid #FF8C00;"><th style="padding:10px;text-align:left;font-weight:800;color:#7a3a00;font-size:10px;text-transform:uppercase;">Tipo</th><th style="padding:10px;text-align:center;font-weight:800;color:#7a3a00;font-size:10px;text-transform:uppercase;">Data</th><th style="padding:10px;text-align:center;font-weight:800;color:#7a3a00;font-size:10px;text-transform:uppercase;">Próximo</th><th style="padding:10px;text-align:center;font-weight:800;color:#7a3a00;font-size:10px;text-transform:uppercase;">Resultado</th><th style="padding:10px;text-align:center;font-weight:800;color:#7a3a00;font-size:10px;text-transform:uppercase;">Médico</th><th style="padding:10px;text-align:center;font-weight:800;color:#7a3a00;font-size:10px;text-transform:uppercase;">Ações</th></tr></thead><tbody>`;
             exames.forEach(e => {
                 const tipoLabel = { 'admissional':'Admissional','periodico':'Periódico','demissional':'Demissional','retorno':'Retorno','mudanca':'Mudança' }[e.tipo] || e.tipo;
                 const resultClass = e.resultado === 'apto' ? 'badge-ativo' : (e.resultado === 'inapto' ? 'badge-inativo' : 'badge-ferias');
-                html += `<tr style="border-bottom:1px solid #f0f0f0;">
-                    <td style="padding:8px;font-weight:600;">${tipoLabel}</td>
-                    <td style="padding:8px;text-align:center;">${formatarData(e.data_exame)}</td>
-                    <td style="padding:8px;text-align:center;">${e.data_proximo ? formatarData(e.data_proximo) : '-'}</td>
-                    <td style="padding:8px;text-align:center;"><span class="status-badge ${resultClass}">${e.resultado || '-'}</span></td>
-                    <td style="padding:8px;text-align:center;font-size:11px;">${e.medico_responsavel || '-'}${e.crm ? ' ('+e.crm+')' : ''}</td>
-                    <td style="padding:8px;text-align:center;"><button type="button" class="btn-action btn-danger btn-sm" onclick="excluirExameMedicina('${e.id}', '${funcionarioAtual.id}')"><i class="fas fa-trash"></i></button></td>
-                </tr>`;
+                html += `<tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:8px;font-weight:600;">${tipoLabel}</td><td style="padding:8px;text-align:center;">${formatarData(e.data_exame)}</td><td style="padding:8px;text-align:center;">${e.data_proximo ? formatarData(e.data_proximo) : '-'}</td><td style="padding:8px;text-align:center;"><span class="status-badge ${resultClass}">${e.resultado || '-'}</span></td><td style="padding:8px;text-align:center;font-size:11px;">${e.medico_responsavel || '-'}${e.crm ? ' ('+e.crm+')' : ''}</td><td style="padding:8px;text-align:center;"><button type="button" class="btn-action btn-danger btn-sm" onclick="excluirExameMedicina('${e.id}', '${funcionarioAtual.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
             html += `</tbody></table></div>`;
             return html;
@@ -4802,15 +4424,10 @@
             const obs = document.getElementById('medTabObs').value.trim();
             if (!dataExame) { mostrarToast('⚠️ Informe a data do exame!', 'warning'); return; }
             try {
-                const { error } = await supabaseClient.from('exames_medicos').insert({
-                    funcionario_id: funcId, tipo, data_exame: dataExame, data_proximo: proximoExame,
-                    resultado, medico_responsavel: medico || null, crm: crm || null, observacoes: obs || null
-                });
+                const { error } = await supabaseClient.from('exames_medicos').insert({ funcionario_id: funcId, tipo, data_exame: dataExame, data_proximo: proximoExame, resultado, medico_responsavel: medico || null, crm: crm || null, observacoes: obs || null });
                 if (error) throw error;
                 mostrarToast('✅ Exame registrado!');
-                ['medTabDataExame','medTabProximoExame','medTabMedico','medTabCRM','medTabObs'].forEach(id => {
-                    const el = document.getElementById(id); if (el) el.value = '';
-                });
+                ['medTabDataExame','medTabProximoExame','medTabMedico','medTabCRM','medTabObs'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
                 await recarregarAbaMedicina(funcId);
             } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
         }
@@ -4858,9 +4475,7 @@
                                 ${a.observacoes ? `<div><i class="fas fa-comment"></i> ${a.observacoes}</div>` : ''}
                             </div>
                         </div>
-                        <div class="atestado-anexo" onclick="${temAnexo ? `visualizarAtestadoAnexo('${a.id}')` : `document.getElementById('anexoAtestadoInput_${a.id}').click()`}">
-                            ${anexoHTML}
-                        </div>
+                        <div class="atestado-anexo" onclick="${temAnexo ? `visualizarAtestadoAnexo('${a.id}')` : `document.getElementById('anexoAtestadoInput_${a.id}').click()`}">${anexoHTML}</div>
                         <input type="file" id="anexoAtestadoInput_${a.id}" accept="image/*,application/pdf" style="display:none;" onchange="uploadAnexoAtestado(event, '${a.id}')">
                         <div class="atestado-actions">
                             <button type="button" class="btn-action btn-warning btn-sm" onclick="editarAtestado('${a.id}')" title="Editar"><i class="fas fa-edit"></i></button>
@@ -4877,9 +4492,7 @@
             const container = document.getElementById('modalAtestadosInline');
             if (!container) return;
             try {
-                const { data, error } = await supabaseClient.from('atestados')
-                    .select('*').eq('funcionario_id', funcId)
-                    .order('data_inicio', { ascending: false });
+                const { data, error } = await supabaseClient.from('atestados').select('*').eq('funcionario_id', funcId).order('data_inicio', { ascending: false });
                 if (error) throw error;
                 if (!data || data.length === 0) {
                     container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:#7a3a00;font-size:11px;"><i class="fas fa-notes-medical" style="font-size:28px;opacity:0.4;display:block;margin-bottom:8px;"></i>Nenhum atestado registrado para este funcionário</div>';
@@ -4936,25 +4549,29 @@
 
         function cancelarEdicaoAtestado(funcId) {
             atestadoEditandoId = null;
-            ['atTabTipo','atTabDataInicio','atTabDataFim','atTabCID','atTabMedico','atTabCRM','atTabObs'].forEach(id => {
-                const el = document.getElementById(id); if (el) el.value = '';
-            });
+            ['atTabTipo','atTabDataInicio','atTabDataFim','atTabCID','atTabMedico','atTabCRM','atTabObs'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             document.getElementById('atestadoFormTitulo').textContent = 'Registrar Novo Atestado';
             document.getElementById('btnSalvarAtestado').innerHTML = '<i class="fas fa-save"></i> Salvar Atestado';
             document.getElementById('btnCancelarEdicaoAtestado').style.display = 'none';
         }
 
+        // ✅ CORRIGIDO: salvarAtestadoTab com flag global e botão travado
         async function salvarAtestadoTab(funcId) {
-            const tipo = document.getElementById('atTabTipo').value.trim() || 'Atestado Médico';
-            const dataInicio = document.getElementById('atTabDataInicio').value;
-            const dataFim = document.getElementById('atTabDataFim').value;
-            const cid = document.getElementById('atTabCID').value.trim();
-            const medico = document.getElementById('atTabMedico').value.trim();
-            const crm = document.getElementById('atTabCRM').value.trim();
-            const obs = document.getElementById('atTabObs').value.trim();
-            if (!dataInicio || !dataFim) { mostrarToast('⚠️ Informe as datas!', 'warning'); return; }
-            if (parseDataLocal(dataInicio) > parseDataLocal(dataFim)) { mostrarToast('⚠️ Data início > fim!', 'warning'); return; }
+            if (_salvandoAtestado) return;
+            const btn = document.getElementById('btnSalvarAtestado');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; }
+            _salvandoAtestado = true;
             try {
+                const tipo = document.getElementById('atTabTipo').value.trim() || 'Atestado Médico';
+                const dataInicio = document.getElementById('atTabDataInicio').value;
+                const dataFim = document.getElementById('atTabDataFim').value;
+                const cid = document.getElementById('atTabCID').value.trim();
+                const medico = document.getElementById('atTabMedico').value.trim();
+                const crm = document.getElementById('atTabCRM').value.trim();
+                const obs = document.getElementById('atTabObs').value.trim();
+                if (!dataInicio || !dataFim) { mostrarToast('⚠️ Informe as datas!', 'warning'); return; }
+                if (parseDataLocal(dataInicio) > parseDataLocal(dataFim)) { mostrarToast('⚠️ Data início > fim!', 'warning'); return; }
+
                 if (atestadoEditandoId) {
                     const { error } = await supabaseClient.from('atestados').update({
                         tipo, data_inicio: dataInicio, data_fim: dataFim,
@@ -4971,20 +4588,31 @@
                     });
                     if (error) throw error;
                     mostrarToast('✅ Atestado registrado!');
-                    ['atTabTipo','atTabDataInicio','atTabDataFim','atTabCID','atTabMedico','atTabCRM','atTabObs'].forEach(id => {
-                        const el = document.getElementById(id); if (el) el.value = '';
-                    });
+                    ['atTabTipo','atTabDataInicio','atTabDataFim','atTabCID','atTabMedico','atTabCRM','atTabObs'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
                 }
                 await recarregarAbaAtestados(funcId);
                 await recarregarAbaCalendario(funcId);
                 await carregarAtestadosInlineNoModal(funcId);
-            } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
+            } catch (error) {
+                mostrarToast('❌ Erro: ' + error.message, 'error');
+            } finally {
+                _salvandoAtestado = false;
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Salvar Atestado'; }
+            }
         }
 
+        // ✅ CORRIGIDO: uploadAnexoAtestado sem duplicar
         async function uploadAnexoAtestado(event, atestadoId) {
             const file = event.target.files[0];
             if (!file) return;
-            if (file.size > 5 * 1024 * 1024) { mostrarToast('⚠️ Máx 5MB!', 'warning'); return; }
+            if (file.size > 5 * 1024 * 1024) { mostrarToast('⚠️ Máx 5MB!', 'warning'); event.target.value = ''; return; }
+            if (!atestadoId) { mostrarToast('⚠️ Atestado inválido', 'warning'); event.target.value = ''; return; }
+            try {
+                const { data: existe, error: checkErr } = await supabaseClient.from('atestados').select('id').eq('id', atestadoId).maybeSingle();
+                if (checkErr) throw checkErr;
+                if (!existe) { mostrarToast('⚠️ Atestado não encontrado', 'warning'); event.target.value = ''; return; }
+            } catch(e) { console.warn(e); }
+
             const reader = new FileReader();
             reader.onload = async function(e) {
                 const base64Data = e.target.result;
@@ -4992,9 +4620,12 @@
                     const { error } = await supabaseClient.from('atestados').update({ anexo_url: base64Data, anexo_nome: file.name }).eq('id', atestadoId);
                     if (error) throw error;
                     mostrarToast('✅ Anexo enviado!');
-                    await recarregarAbaAtestados(funcionarioAtual.id);
-                    await carregarAtestadosInlineNoModal(funcionarioAtual.id);
+                    if (funcionarioAtual && funcionarioAtual.id) {
+                        await recarregarAbaAtestados(funcionarioAtual.id);
+                        await carregarAtestadosInlineNoModal(funcionarioAtual.id);
+                    }
                 } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
+                finally { event.target.value = ''; }
             };
             reader.readAsDataURL(file);
         }
@@ -5024,9 +4655,7 @@
             modal.classList.add('active');
         }
 
-        function fecharAtestadoAnexoView() {
-            document.getElementById('modalAtestadoAnexoView').classList.remove('active');
-        }
+        function fecharAtestadoAnexoView() { document.getElementById('modalAtestadoAnexoView').classList.remove('active'); }
 
         async function recarregarAbaAtestados(funcId) {
             atestados = await carregarAtestados(funcId);
@@ -5039,9 +4668,7 @@
             if (!dropdown) return;
             const t = (termo || '').trim().toLowerCase();
             if (t.length < 1) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
-            const resultados = CID10_DB.filter(item =>
-                item.cod.toLowerCase().includes(t) || item.desc.toLowerCase().includes(t)
-            ).slice(0, 20);
+            const resultados = CID10_DB.filter(item => item.cod.toLowerCase().includes(t) || item.desc.toLowerCase().includes(t)).slice(0, 20);
             if (resultados.length === 0) {
                 dropdown.innerHTML = `<div class="cid-picker-empty">Nenhum CID encontrado para "${termo}"</div>`;
                 dropdown.style.display = 'block';
@@ -5069,9 +4696,7 @@
             const dropdown = document.getElementById('cidDropdownAtestado');
             const input = document.getElementById('atTabCID');
             if (dropdown && dropdown.style.display !== 'none') {
-                if (!dropdown.contains(e.target) && e.target !== input) {
-                    dropdown.style.display = 'none';
-                }
+                if (!dropdown.contains(e.target) && e.target !== input) dropdown.style.display = 'none';
             }
         });
 
@@ -5086,42 +4711,33 @@
                 const { data } = await supabaseClient.from('calendario_status').select('*').eq('funcionario_id', funcId).gte('data', inicioISO).lte('data', fimISO);
                 (data || []).forEach(item => {
                     const dt = parseDataLocal(item.data);
-                    if (dt && dt.getMonth() === mes && dt.getFullYear() === ano) {
-                        calendarioDados[dt.getDate()] = { status: item.status, observacao: item.observacao, origem: 'manual' };
-                    }
+                    if (dt && dt.getMonth() === mes && dt.getFullYear() === ano) calendarioDados[dt.getDate()] = { status: item.status, observacao: item.observacao, origem: 'manual' };
                 });
             } catch(e) {}
             try {
                 const { data } = await supabaseClient.from('atestados').select('*').eq('funcionario_id', funcId).lte('data_inicio', fimISO).gte('data_fim', inicioISO);
                 (data || []).forEach(a => {
-                    const dtIni = parseDataLocal(a.data_inicio);
-                    const dtFim = parseDataLocal(a.data_fim);
+                    const dtIni = parseDataLocal(a.data_inicio), dtFim = parseDataLocal(a.data_fim);
                     if (!dtIni || !dtFim) return;
                     for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
-                        if (d.getMonth() === mes && d.getFullYear() === ano) {
-                            calendarioDados[d.getDate()] = { status: 'atestado', observacao: a.tipo || 'Atestado', origem: 'atestado', detalhe: `${a.cid ? 'CID: ' + a.cid + ' ' : ''}${a.medico ? 'Dr(a). ' + a.medico : ''}`.trim() };
-                        }
+                        if (d.getMonth() === mes && d.getFullYear() === ano) calendarioDados[d.getDate()] = { status: 'atestado', observacao: a.tipo || 'Atestado', origem: 'atestado', detalhe: `${a.cid ? 'CID: ' + a.cid + ' ' : ''}${a.medico ? 'Dr(a). ' + a.medico : ''}`.trim() };
                     }
                 });
             } catch(e) {}
             try {
                 const { data } = await supabaseClient.from('ferias').select('*').eq('funcionario_id', funcId).neq('status', 'cancelada').lte('data_inicio', fimISO).gte('data_fim', inicioISO);
                 (data || []).forEach(f => {
-                    const dtIni = parseDataLocal(f.data_inicio);
-                    const dtFim = parseDataLocal(f.data_fim);
+                    const dtIni = parseDataLocal(f.data_inicio), dtFim = parseDataLocal(f.data_fim);
                     if (!dtIni || !dtFim) return;
                     for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
-                        if (d.getMonth() === mes && d.getFullYear() === ano) {
-                            calendarioDados[d.getDate()] = { status: 'ferias', observacao: 'Férias', origem: 'ferias', detalhe: f.status || 'agendada' };
-                        }
+                        if (d.getMonth() === mes && d.getFullYear() === ano) calendarioDados[d.getDate()] = { status: 'ferias', observacao: 'Férias', origem: 'ferias', detalhe: f.status || 'agendada' };
                     }
                 });
             } catch(e) {}
             try {
                 const { data } = await supabaseClient.from('faltas_vt').select('*').eq('funcionario_id', funcId).lte('data_inicio', fimISO).gte('data_fim', inicioISO);
                 (data || []).forEach(ft => {
-                    const dtIni = parseDataLocal(ft.data_inicio);
-                    const dtFim = parseDataLocal(ft.data_fim);
+                    const dtIni = parseDataLocal(ft.data_inicio), dtFim = parseDataLocal(ft.data_fim);
                     if (!dtIni || !dtFim) return;
                     const tipo = (ft.tipo || '').toLowerCase();
                     let statusCalc = 'falta';
@@ -5191,19 +4807,13 @@
             const totalDias = new Date(ano, mes + 1, 0).getDate();
             const diasMesAnterior = new Date(ano, mes, 0).getDate();
             let html = `<div class="calendario-toolbar">
-                <div class="form-group" style="min-width:150px;"><label>Mês</label>
-                    <select id="calMes" onchange="mudarMesCalendario()">${MESES.map((m, i) => `<option value="${i}" ${i === mes ? 'selected' : ''}>${m}</option>`).join('')}</select>
-                </div>
-                <div class="form-group" style="min-width:90px;"><label>Ano</label>
-                    <input type="number" id="calAno" value="${ano}" min="2020" max="2030" onchange="mudarMesCalendario()">
-                </div>
+                <div class="form-group" style="min-width:150px;"><label>Mês</label><select id="calMes" onchange="mudarMesCalendario()">${MESES.map((m, i) => `<option value="${i}" ${i === mes ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+                <div class="form-group" style="min-width:90px;"><label>Ano</label><input type="number" id="calAno" value="${ano}" min="2020" max="2030" onchange="mudarMesCalendario()"></div>
                 <button type="button" class="btn-action btn-primary btn-sm" onclick="recarregarAbaCalendario('${funcionarioAtual?.id}')"><i class="fas fa-sync"></i> Recarregar</button>
             </div>
             <div class="calendario-grid">`;
             DIAS_SEMANA.forEach(d => { html += `<div class="calendario-header-dia">${d}</div>`; });
-            for (let i = primeiroDia - 1; i >= 0; i--) {
-                html += `<div class="calendario-dia dia-outro-mes"><span class="num-dia">${diasMesAnterior - i}</span></div>`;
-            }
+            for (let i = primeiroDia - 1; i >= 0; i--) html += `<div class="calendario-dia dia-outro-mes"><span class="num-dia">${diasMesAnterior - i}</span></div>`;
             for (let dia = 1; dia <= totalDias; dia++) {
                 const info = calendarioDados[dia] || null;
                 const status = info ? info.status : 'sem-status';
@@ -5219,9 +4829,7 @@
             }
             html += `</div>`;
             html += `<div class="calendario-legenda">`;
-            Object.entries(STATUS_CALENDARIO_INFO).forEach(([key, val]) => {
-                html += `<div class="item"><span class="cor" style="background:${val.cor};"></span><span>${val.label}</span></div>`;
-            });
+            Object.entries(STATUS_CALENDARIO_INFO).forEach(([key, val]) => { html += `<div class="item"><span class="cor" style="background:${val.cor};"></span><span>${val.label}</span></div>`; });
             html += `</div>`;
             let resumo = {};
             Object.keys(STATUS_CALENDARIO_INFO).forEach(k => resumo[k] = 0);
@@ -5270,9 +4878,7 @@
                 };
                 origemInfo.style.display = 'block';
                 origemInfo.innerHTML = origemLabels[info.origem] || `Origem: ${info.origem}`;
-            } else {
-                origemInfo.style.display = 'none';
-            }
+            } else { origemInfo.style.display = 'none'; }
             document.getElementById('btnRemoverStatusCal').style.display = (info && info.origem === 'manual') ? 'inline-flex' : 'none';
             document.getElementById('modalCalendarioStatus').classList.add('active');
         }
@@ -5291,11 +4897,8 @@
             try {
                 const { data: existente } = await supabaseClient.from('calendario_status').select('id').eq('funcionario_id', funcionarioAtual.id).eq('data', dataISO).maybeSingle();
                 let result;
-                if (existente && existente.id) {
-                    result = await supabaseClient.from('calendario_status').update({ status, observacao: obs || null }).eq('id', existente.id);
-                } else {
-                    result = await supabaseClient.from('calendario_status').insert({ funcionario_id: funcionarioAtual.id, data: dataISO, status, observacao: obs || null });
-                }
+                if (existente && existente.id) result = await supabaseClient.from('calendario_status').update({ status, observacao: obs || null }).eq('id', existente.id);
+                else result = await supabaseClient.from('calendario_status').insert({ funcionario_id: funcionarioAtual.id, data: dataISO, status, observacao: obs || null });
                 if (result.error) throw result.error;
                 mostrarToast('✅ Status salvo!');
                 fecharModalCalendarioStatus();
@@ -5341,9 +4944,7 @@
             if (!silent) {
                 if (res.ignoradas.length > 0) mostrarToast(`✅ Dados salvos (ignorados: ${res.ignoradas.join(', ')})`, 'warning');
                 else mostrarToast('✅ Dados salvos!');
-            } else {
-                mostrarAutoSave('💾 Dados salvos');
-            }
+            } else { mostrarAutoSave('💾 Dados salvos'); }
             await carregarFuncionarios();
         }
 
@@ -5366,9 +4967,7 @@
             if (!silent) {
                 if (res.ignoradas.length > 0) mostrarToast(`✅ Documentos salvos (ignorados: ${res.ignoradas.join(', ')})`, 'warning');
                 else mostrarToast('✅ Documentos salvos!');
-            } else {
-                mostrarAutoSave('💾 Documentos salvos');
-            }
+            } else { mostrarAutoSave('💾 Documentos salvos'); }
             await carregarFuncionarios();
         }
 
@@ -5388,9 +4987,7 @@
             if (!silent) {
                 if (res.ignoradas.length > 0) mostrarToast(`✅ Contato salvo (ignorados: ${res.ignoradas.join(', ')})`, 'warning');
                 else mostrarToast('✅ Contato salvo!');
-            } else {
-                mostrarAutoSave('💾 Contato salvo');
-            }
+            } else { mostrarAutoSave('💾 Contato salvo'); }
             await carregarFuncionarios();
         }
 
@@ -5416,9 +5013,7 @@
             if (!silent) {
                 if (res.ignoradas.length > 0) mostrarToast(`✅ Benefícios salvos (ignorados: ${res.ignoradas.join(', ')})`, 'warning');
                 else mostrarToast('✅ Benefícios salvos!');
-            } else {
-                mostrarAutoSave('💾 Benefícios salvos');
-            }
+            } else { mostrarAutoSave('💾 Benefícios salvos'); }
             await carregarFuncionarios();
         }
 
@@ -5460,9 +5055,7 @@
             tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:20px;color:#7a3a00;"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr>`;
             let dadosPonto = {};
             try {
-                const { data, error } = await supabaseClient
-                    .from('marcacoes_ponto').select('*')
-                    .eq('funcionario_id', func.id).eq('mes', mes).eq('ano', parseInt(ano)).maybeSingle();
+                const { data, error } = await supabaseClient.from('marcacoes_ponto').select('*').eq('funcionario_id', func.id).eq('mes', mes).eq('ano', parseInt(ano)).maybeSingle();
                 if (!error && data && data.dados) {
                     try { dadosPonto = typeof data.dados === 'string' ? JSON.parse(data.dados) : data.dados; } catch(e) { dadosPonto = {}; }
                 }
@@ -5480,7 +5073,6 @@
                 const folgaBH = d.folga_bh || false;
                 const temAbono = d.abono || false;
                 const abonoParcial = temAbono && (d.abono_inicio || d.abono_fim || d.abono_horas);
-
                 const diff1 = calcularDiferenca(d.e1, d.s1);
                 const diff2 = calcularDiferenca(d.e2, d.s2);
                 const diffExtra = calcularDiferenca(d.extra_e1, d.extra_s1);
@@ -5508,13 +5100,9 @@
                     if (d.abono_inicio && d.abono_fim) labelAbono = `${d.abono_inicio}-${d.abono_fim}`;
                     else if (d.abono_horas) labelAbono = d.abono_horas;
                     badgeDia = `<span class="badge-falta-atestado" style="background:#a259c7;" title="Abono${labelAbono ? ' ' + labelAbono : ''}: ${d.abono_motivo || ''}"><i class="fas fa-gift"></i></span>`;
-                    if (abonoParcial && total !== '00:00') {
-                        totalGeralDisplay = total;
-                    } else if (d.abono_inicio && d.abono_fim) {
-                        totalGeralDisplay = `ABONO ${d.abono_inicio}-${d.abono_fim}`;
-                    } else {
-                        totalGeralDisplay = d.abono_horas ? `ABONO ${d.abono_horas}` : 'ABONO';
-                    }
+                    if (abonoParcial && total !== '00:00') totalGeralDisplay = total;
+                    else if (d.abono_inicio && d.abono_fim) totalGeralDisplay = `ABONO ${d.abono_inicio}-${d.abono_fim}`;
+                    else totalGeralDisplay = d.abono_horas ? `ABONO ${d.abono_horas}` : 'ABONO';
                     totalGeralClass = 'abono';
                     contAbonados++;
                     totalAbonadoMin += getMinutosAbonados(d);
@@ -5539,10 +5127,7 @@
                 const tr = document.createElement('tr');
                 tr.className = classeLinha;
                 if (temErro) tr.title = `⚠️ ${msgErro}`;
-                if (folgaBH) {
-                    totalGeralDisplay = 'HORAS BH';
-                    totalGeralClass = 'horas-bh';
-                }
+                if (folgaBH) { totalGeralDisplay = 'HORAS BH'; totalGeralClass = 'horas-bh'; }
                 tr.innerHTML = `
                     <td class="dia-cell">${String(i).padStart(2, '0')} ${diaSemana} ${badgeDia}</td>
                     <td><input type="time" value="${d.e1 || ''}" readonly></td>
@@ -5581,14 +5166,11 @@
             const btnBaixar = document.getElementById('btnBaixarCartao');
             if (!wrapper) return;
             try {
-                const { data, error } = await supabaseClient.from('imagens_cartao').select('*')
-                    .eq('funcionario_id', funcionarioId).eq('mes', mes).eq('ano', parseInt(ano)).maybeSingle();
+                const { data, error } = await supabaseClient.from('imagens_cartao').select('*').eq('funcionario_id', funcionarioId).eq('mes', mes).eq('ano', parseInt(ano)).maybeSingle();
                 if (error && error.code !== 'PGRST116') throw error;
                 if (data && (data.imagem_url || data.imagem_base64)) {
                     const imgUrl = data.imagem_url || data.imagem_base64;
-                    wrapper.innerHTML = `
-                        <img src="${imgUrl}" alt="Cartão" onclick="this.classList.toggle('zoomed')" style="cursor:zoom-in;">
-                    `;
+                    wrapper.innerHTML = `<img src="${imgUrl}" alt="Cartão" onclick="this.classList.toggle('zoomed')" style="cursor:zoom-in;">`;
                     if (statusAnexo) { statusAnexo.className = 'status-anexado sim'; statusAnexo.innerHTML = '<i class="fas fa-check-circle"></i> Cartão anexado'; }
                     if (btnBaixar) btnBaixar.style.display = 'inline-flex';
                     anexoAtualBase64 = imgUrl;
@@ -5641,10 +5223,7 @@
         async function abrirEditorPontoFuncionario(id) {
             const func = funcionarios.find(f => String(f.id) === String(id)) || funcionarioAtual;
             if (!func) { mostrarToast('⚠️ Não encontrado!', 'warning'); return; }
-            if (func.sem_controle_ponto) {
-                mostrarToast('⚠️ Este funcionário não possui controle de ponto.', 'warning');
-                return;
-            }
+            if (func.sem_controle_ponto) { mostrarToast('⚠️ Este funcionário não possui controle de ponto.', 'warning'); return; }
             funcionarioAtual = func;
             const selMes = document.getElementById('editorMes');
             selMes.innerHTML = MESES.map(m => `<option value="${m}">${m}</option>`).join('');
@@ -5676,21 +5255,15 @@
             editorAnoAtual = ano;
             let dadosExistentes = {};
             try {
-                const { data, error } = await supabaseClient
-                    .from('marcacoes_ponto').select('*')
-                    .eq('funcionario_id', funcionarioAtual.id).eq('mes', mes).eq('ano', ano).maybeSingle();
+                const { data, error } = await supabaseClient.from('marcacoes_ponto').select('*').eq('funcionario_id', funcionarioAtual.id).eq('mes', mes).eq('ano', ano).maybeSingle();
                 if (error && error.code !== 'PGRST116') console.warn('Erro:', error);
-                if (data && data.dados) {
-                    try { dadosExistentes = typeof data.dados === 'string' ? JSON.parse(data.dados) : data.dados; } catch(e) { dadosExistentes = {}; }
-                }
+                if (data && data.dados) { try { dadosExistentes = typeof data.dados === 'string' ? JSON.parse(data.dados) : data.dados; } catch(e) { dadosExistentes = {}; } }
             } catch(e) { console.warn(e); }
             pontosPorFuncionario[funcionarioAtual.nome] = dadosExistentes;
             const diasAbonados = await carregarMapaDiasAbonados(funcionarioAtual.id, mes, ano);
             mapaDiasAbonados[`${funcionarioAtual.id}_${mes}_${ano}`] = diasAbonados;
             try {
-                const { data: cartao, error: cartaoError } = await supabaseClient
-                    .from('imagens_cartao').select('*')
-                    .eq('funcionario_id', funcionarioAtual.id).eq('mes', mes).eq('ano', ano).maybeSingle();
+                const { data: cartao, error: cartaoError } = await supabaseClient.from('imagens_cartao').select('*').eq('funcionario_id', funcionarioAtual.id).eq('mes', mes).eq('ano', ano).maybeSingle();
                 if (!cartaoError && cartao && (cartao.imagem_url || cartao.imagem_base64)) {
                     const imgUrl = cartao.imagem_url || cartao.imagem_base64;
                     const imgDisplay = document.getElementById('imgDisplay');
@@ -5700,9 +5273,7 @@
                     imgDisplay.style.backgroundRepeat = 'no-repeat';
                     anexoAtualBase64 = imgUrl;
                     nomeArquivoAnexo = cartao.nome_arquivo || 'cartao_ponto.jpg';
-                } else {
-                    document.getElementById('imgDisplay').style.backgroundImage = 'none';
-                }
+                } else { document.getElementById('imgDisplay').style.backgroundImage = 'none'; }
             } catch(e) {}
             const tbody = document.getElementById('editorTbody');
             tbody.innerHTML = '';
@@ -5746,11 +5317,8 @@
                     if (abonoParcial && total !== '00:00') {
                         totalGeralDisplay = total;
                         tr.title = `Abono: ${d.abono_inicio || ''}${d.abono_fim ? '-' + d.abono_fim : ''} ${d.abono_horas || ''}`.trim();
-                    } else if (d.abono_inicio && d.abono_fim) {
-                        totalGeralDisplay = `ABONO ${d.abono_inicio}-${d.abono_fim}`;
-                    } else {
-                        totalGeralDisplay = d.abono_horas ? `ABONO ${d.abono_horas}` : 'ABONO';
-                    }
+                    } else if (d.abono_inicio && d.abono_fim) totalGeralDisplay = `ABONO ${d.abono_inicio}-${d.abono_fim}`;
+                    else totalGeralDisplay = d.abono_horas ? `ABONO ${d.abono_horas}` : 'ABONO';
                     totalGeralClass = 'total-geral abono';
                 }
                 else if (abonado) { totalGeralDisplay = 'ABONADO'; totalGeralClass = 'total-geral abonado'; }
@@ -5813,11 +5381,7 @@
             }
             recalcularTotaisEditor();
             const modoMsg = document.getElementById('editorModoMsg');
-            if (modoMsg) {
-                modoMsg.innerHTML = isUser 
-                    ? '<i class="fas fa-edit" style="color:#28a745;"></i> Modo: Edição (salvamento automático)' 
-                    : '<i class="fas fa-eye" style="color:#FF8C00;"></i> Modo: Visualização';
-            }
+            if (modoMsg) modoMsg.innerHTML = isUser ? '<i class="fas fa-edit" style="color:#28a745;"></i> Modo: Edição (salvamento automático)' : '<i class="fas fa-eye" style="color:#FF8C00;"></i> Modo: Visualização';
         }
 
         function agendarAutoSave() {
@@ -5855,19 +5419,11 @@
             }
             try {
                 const dadosJSON = JSON.stringify(dadosParaSalvar);
-                const { data: existente, error: errSel } = await supabaseClient
-                    .from('marcacoes_ponto').select('id')
-                    .eq('funcionario_id', func.id).eq('mes', mes).eq('ano', ano).maybeSingle();
+                const { data: existente, error: errSel } = await supabaseClient.from('marcacoes_ponto').select('id').eq('funcionario_id', func.id).eq('mes', mes).eq('ano', ano).maybeSingle();
                 if (errSel) console.warn('Erro select:', errSel);
                 let result;
-                if (existente && existente.id) {
-                    result = await supabaseClient.from('marcacoes_ponto')
-                        .update({ dados: dadosJSON, updated_at: new Date().toISOString() })
-                        .eq('id', existente.id).select();
-                } else {
-                    result = await supabaseClient.from('marcacoes_ponto')
-                        .insert({ funcionario_id: func.id, mes, ano, dados: dadosJSON }).select();
-                }
+                if (existente && existente.id) result = await supabaseClient.from('marcacoes_ponto').update({ dados: dadosJSON, updated_at: new Date().toISOString() }).eq('id', existente.id).select();
+                else result = await supabaseClient.from('marcacoes_ponto').insert({ funcionario_id: func.id, mes, ano, dados: dadosJSON }).select();
                 if (result.error) throw result.error;
                 pontosPorFuncionario[func.nome] = dadosParaSalvar;
                 editorMesAtual = mes;
@@ -5885,7 +5441,6 @@
             const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
             if (!tr) return;
             if (tr.dataset.abonado === 'true' && tr.dataset.abono !== 'true') return;
-
             const e1 = document.getElementById(`edit_e1_${dia}`)?.value || '';
             const s1 = document.getElementById(`edit_s1_${dia}`)?.value || '';
             const e2 = document.getElementById(`edit_e2_${dia}`)?.value || '';
@@ -5910,11 +5465,8 @@
                     if (abonoParcial && total !== '00:00') {
                         elTG.value = total;
                         elTG.title = `Abono: ${tr.dataset.abonoInicio || ''}${tr.dataset.abonoFim ? '-' + tr.dataset.abonoFim : ''} ${tr.dataset.abonoHoras || ''}`.trim();
-                    } else if (tr.dataset.abonoInicio && tr.dataset.abonoFim) {
-                        elTG.value = `ABONO ${tr.dataset.abonoInicio}-${tr.dataset.abonoFim}`;
-                    } else {
-                        elTG.value = tr.dataset.abonoHoras ? `ABONO ${tr.dataset.abonoHoras}` : 'ABONO';
-                    }
+                    } else if (tr.dataset.abonoInicio && tr.dataset.abonoFim) elTG.value = `ABONO ${tr.dataset.abonoInicio}-${tr.dataset.abonoFim}`;
+                    else elTG.value = tr.dataset.abonoHoras ? `ABONO ${tr.dataset.abonoHoras}` : 'ABONO';
                     elTG.className = 'total-geral abono';
                 } else if (btnFolga && btnFolga.classList.contains('ativo-folga-bh')) {
                     elTG.value = 'HORAS BH';
@@ -6002,10 +5554,7 @@
                     elTG.value = somarHoras(somarHoras(diff1, diff2), diffExtra);
                     elTG.className = 'total-geral';
                 }
-                ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
-                    const inp = document.getElementById(`edit_${c}_${dia}`);
-                    if (inp) inp.disabled = false;
-                });
+                ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => { const inp = document.getElementById(`edit_${c}_${dia}`); if (inp) inp.disabled = false; });
                 mostrarToast(`📋 Dia ${String(dia).padStart(2,'0')} removido de Folga BH`, 'info');
             } else {
                 btnFolga.classList.add('ativo-folga-bh');
@@ -6019,21 +5568,16 @@
                 delete tr.dataset.abonoInicio;
                 delete tr.dataset.abonoFim;
                 tr.dataset.folgaBH = 'true';
-                ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
-                    const inp = document.getElementById(`edit_${c}_${dia}`);
-                    if (inp) { inp.value = ''; inp.disabled = false; }
-                });
+                ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => { const inp = document.getElementById(`edit_${c}_${dia}`); if (inp) { inp.value = ''; inp.disabled = false; } });
                 if (elTG) { elTG.value = 'HORAS BH'; elTG.className = 'total-geral horas-bh'; }
-                ['edit_total1_', 'edit_total2_', 'edit_total_extra_'].forEach(prefix => {
-                    const el = document.getElementById(`${prefix}${dia}`);
-                    if (el) el.value = '—';
-                });
+                ['edit_total1_', 'edit_total2_', 'edit_total_extra_'].forEach(prefix => { const el = document.getElementById(`${prefix}${dia}`); if (el) el.value = '—'; });
                 mostrarToast(`✅ Dia ${String(dia).padStart(2,'0')} marcado como Folga BH (-8h compensação)`);
             }
             recalcularTotaisEditor();
             salvarEditorAutomatico();
         }
 
+        // ✅ CORRIGIDO: toggleFaltaAtestado — dia inteiro sem preencher horários
         async function toggleFaltaAtestado(dia) {
             const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
             if (!tr) return;
@@ -6053,14 +5597,8 @@
                     elTG.classList.remove('abonado');
                     elTG.className = 'total-geral';
                 }
-                ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
-                    const inp = document.getElementById(`edit_${c}_${dia}`);
-                    if (inp) { inp.disabled = false; }
-                });
-                ['edit_total1_', 'edit_total2_', 'edit_total_extra_'].forEach(prefix => {
-                    const el = document.getElementById(`${prefix}${dia}`);
-                    if (el) el.value = '00:00';
-                });
+                ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => { const inp = document.getElementById(`edit_${c}_${dia}`); if (inp) { inp.disabled = false; } });
+                ['edit_total1_', 'edit_total2_', 'edit_total_extra_'].forEach(prefix => { const el = document.getElementById(`${prefix}${dia}`); if (el) el.value = '00:00'; });
                 recalcularLinha(dia);
                 recalcularTotaisEditor();
                 salvarEditorAutomatico();
@@ -6078,15 +5616,9 @@
             delete tr.dataset.abonoHoras;
             delete tr.dataset.abonoInicio;
             delete tr.dataset.abonoFim;
-            ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
-                const inp = document.getElementById(`edit_${c}_${dia}`);
-                if (inp) { inp.value = ''; inp.disabled = true; }
-            });
+            ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => { const inp = document.getElementById(`edit_${c}_${dia}`); if (inp) { inp.value = ''; inp.disabled = true; } });
             if (elTG) { elTG.value = 'ABONADO'; elTG.className = 'total-geral abonado'; }
-            ['edit_total1_', 'edit_total2_', 'edit_total_extra_'].forEach(prefix => {
-                const el = document.getElementById(`${prefix}${dia}`);
-                if (el) el.value = '—';
-            });
+            ['edit_total1_', 'edit_total2_', 'edit_total_extra_'].forEach(prefix => { const el = document.getElementById(`${prefix}${dia}`); if (el) el.value = '—'; });
             recalcularTotaisEditor();
             salvarEditorAutomatico();
             const mes = document.getElementById('editorMes').value;
@@ -6117,6 +5649,36 @@
             }
         }
 
+        // ✅ CORRIGIDO: funções do anexo do modal de abono
+        function previewAbonoAnexo(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) { mostrarToast('⚠️ Máx 5MB!', 'warning'); event.target.value = ''; abonoAnexoBase64 = null; abonoAnexoNome = null; return; }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                abonoAnexoBase64 = e.target.result;
+                abonoAnexoNome = file.name;
+                const preview = document.getElementById('abonoAnexoPreview');
+                const nomeEl = document.getElementById('abonoAnexoNome');
+                const dropzone = document.getElementById('abonoAnexoDropzone');
+                if (preview) preview.classList.add('show');
+                if (nomeEl) nomeEl.textContent = file.name;
+                if (dropzone) dropzone.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function limparAbonoAnexo() {
+            abonoAnexoBase64 = null;
+            abonoAnexoNome = null;
+            const input = document.getElementById('abonoAnexo');
+            if (input) input.value = '';
+            const preview = document.getElementById('abonoAnexoPreview');
+            if (preview) preview.classList.remove('show');
+            const dropzone = document.getElementById('abonoAnexoDropzone');
+            if (dropzone) dropzone.style.display = 'block';
+        }
+
         function abrirModalAbono() {
             if (!funcionarioAtual) { mostrarToast('⚠️ Nenhum funcionário ativo', 'warning'); return; }
             document.getElementById('abonoDataInicio').value = '';
@@ -6125,9 +5687,8 @@
             document.getElementById('abonoTipo').value = 'abono';
             document.getElementById('abonoHoraInicio').value = '12:00';
             document.getElementById('abonoHoraFim').value = '14:00';
-            ['abonoE1','abonoS1','abonoE2','abonoS2'].forEach(id => {
-                const el = document.getElementById(id); if (el) el.value = '';
-            });
+            ['abonoE1','abonoS1','abonoE2','abonoS2'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            limparAbonoAnexo();
             setModoAbono('dia_inteiro');
             document.getElementById('modalAbono').classList.add('active');
         }
@@ -6152,21 +5713,10 @@
             }
         }
 
-        function fecharModalAbono() {
-            document.getElementById('modalAbono').classList.remove('active');
-        }
+        function fecharModalAbono() { document.getElementById('modalAbono').classList.remove('active'); }
 
-        // ============================================================================
-        // ✅ CONFIRMAR ABONO — CORRIGIDO PARA 3 TURNOS:
-        //   1º turno: 08:00 → 12:59  (campos e1 / s1)
-        //   2º turno: 13:00 → 17:59  (campos e2 / s2)
-        //   3º turno: 18:00 → última (campos extra_e1 / extra_s1)
-        //
-        // REGRA DE APLICAÇÃO:
-        //   • O INÍCIO do abono vai para a SAÍDA do turno onde ele cai.
-        //   • O FIM do abono vai para a ENTRADA do turno onde ele cai.
-        // ============================================================================
-        function confirmarAbono() {
+        // ✅ CORRIGIDO: confirmarAbono — async, salva atestado com anexo, aplica horários e salva automaticamente
+        async function confirmarAbono() {
             const inicio = document.getElementById('abonoDataInicio').value;
             const fim = document.getElementById('abonoDataFim').value;
             const motivo = document.getElementById('abonoMotivo').value.trim() || 'Abono';
@@ -6201,18 +5751,31 @@
             const mesIndex = MESES.indexOf(mesAtual);
             let count = 0;
 
-            // Converte horários em minutos
+            // ✅ CORRIGIDO: Aplica horários nos turnos corretos
             const inicioMin = modoAbono === 'horas' ? converterParaMinutos(abonoInicio) : 0;
             const fimMin    = modoAbono === 'horas' ? converterParaMinutos(abonoFim)    : 0;
 
-            // Identifica em qual turno cai um determinado horário
             function identificarTurno(min) {
-                if (min >= INICIO_1TURNO_MIN && min <= LIMITE_1TURNO_MIN) return 1;  // 08:00–12:59
-                if (min >= INICIO_2TURNO_MIN && min <= LIMITE_2TURNO_MIN) return 2;  // 13:00–17:59
-                if (min >= INICIO_3TURNO_MIN) return 3;                              // 18:00+
-                if (min < INICIO_1TURNO_MIN) return 1;                               // antes das 08:00 → trata como 1º
-                return 2;                                                            // fallback
+                if (min >= INICIO_1TURNO_MIN && min <= LIMITE_1TURNO_MIN) return 1;
+                if (min >= INICIO_2TURNO_MIN && min <= LIMITE_2TURNO_MIN) return 2;
+                if (min >= INICIO_3TURNO_MIN) return 3;
+                if (min < INICIO_1TURNO_MIN) return 1;
+                return 2;
             }
+
+            // ✅ CORRIGIDO: Insere registro em atestados com anexo
+            try {
+                const { error: errAtest } = await supabaseClient.from('atestados').insert({
+                    funcionario_id: funcionarioAtual.id,
+                    tipo: 'Abono',
+                    data_inicio: inicio,
+                    data_fim: fim,
+                    observacoes: motivo,
+                    anexo_url: abonoAnexoBase64 || null,
+                    anexo_nome: abonoAnexoNome || null
+                });
+                if (errAtest) console.warn('Erro ao salvar atestado do abono:', errAtest.message);
+            } catch(e) { console.warn('Exceção ao salvar atestado do abono:', e); }
 
             for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
                 if (d.getMonth() !== mesIndex || d.getFullYear() !== anoAtual) continue;
@@ -6244,11 +5807,7 @@
                 }
 
                 if (modoAbono === 'horas') {
-                    // Habilita os campos
-                    ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
-                        const inp = document.getElementById(`edit_${c}_${dia}`);
-                        if (inp) inp.disabled = false;
-                    });
+                    ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => { const inp = document.getElementById(`edit_${c}_${dia}`); if (inp) inp.disabled = false; });
 
                     const e1Inp = document.getElementById(`edit_e1_${dia}`);
                     const s1Inp = document.getElementById(`edit_s1_${dia}`);
@@ -6257,55 +5816,32 @@
                     const exE1Inp = document.getElementById(`edit_extra_e1_${dia}`);
                     const exS1Inp = document.getElementById(`edit_extra_s1_${dia}`);
 
-                    // Entradas manuais do usuário têm prioridade absoluta
                     if (abonoE1 && e1Inp) e1Inp.value = abonoE1;
 
                     const turnoInicio = identificarTurno(inicioMin);
                     const turnoFim    = identificarTurno(fimMin);
 
-                    // ------------------------------------------------------------------
-                    // 1) INÍCIO do abono → vai para a SAÍDA do turno onde ele cai
-                    // ------------------------------------------------------------------
+                    // 1) INÍCIO → SAÍDA do turno onde cai
                     if (abonoS1 || abonoS2) {
-                        // Usuário já informou saídas manualmente — respeita
                         if (abonoS1 && s1Inp) s1Inp.value = abonoS1;
                         if (abonoS2 && s2Inp) s2Inp.value = abonoS2;
                     } else {
-                        if (turnoInicio === 1) {
-                            if (s1Inp) s1Inp.value = abonoInicio;
-                        } else if (turnoInicio === 2) {
-                            if (s2Inp) s2Inp.value = abonoInicio;
-                        } else { // turno 3 (extra)
-                            if (exS1Inp) exS1Inp.value = abonoInicio;
-                        }
+                        if (turnoInicio === 1) { if (s1Inp) s1Inp.value = abonoInicio; }
+                        else if (turnoInicio === 2) { if (s2Inp) s2Inp.value = abonoInicio; }
+                        else { if (exS1Inp) exS1Inp.value = abonoInicio; }
                     }
 
-                    // ------------------------------------------------------------------
-                    // 2) FIM do abono → vai para a ENTRADA do turno onde ele cai
-                    // ------------------------------------------------------------------
+                    // 2) FIM → ENTRADA do turno onde cai
                     if (abonoE2) {
-                        // Usuário já informou 2ª entrada manualmente — respeita
                         if (e2Inp) e2Inp.value = abonoE2;
                     } else {
-                        // Só preenche e2 (ou extra_e1) se o fim NÃO cair no mesmo turno do início
-                        // (para não gerar s2 < e2 no mesmo turno)
                         if (turnoFim !== turnoInicio) {
-                            if (turnoFim === 2) {
-                                if (e2Inp) e2Inp.value = abonoFim;
-                            } else if (turnoFim === 3) {
-                                if (exE1Inp) exE1Inp.value = abonoFim;
-                            } else if (turnoFim === 1) {
-                                // Caso raro: fim no 1º turno mas início em outro → coloca e2
-                                if (e2Inp) e2Inp.value = abonoFim;
-                            }
+                            if (turnoFim === 2) { if (e2Inp) e2Inp.value = abonoFim; }
+                            else if (turnoFim === 3) { if (exE1Inp) exE1Inp.value = abonoFim; }
+                            else if (turnoFim === 1) { if (e2Inp) e2Inp.value = abonoFim; }
                         } else {
-                            // Mesmo turno: o abono é um intervalo dentro do mesmo turno.
-                            // Não há campo para "intervalo interno" — então ajustamos:
-                            //   - Se for turno 1: usamos e1=inicio, s1=fim (não mexe em e2)
-                            //   - Se for turno 2: usamos e2=inicio, s2=fim (não mexe em s1)
-                            //   - Se for turno 3: usamos extra_e1=inicio, extra_s1=fim
+                            // Mesmo turno
                             if (turnoInicio === 1) {
-                                // Já tratado acima: s1=inicio (mas queremos s1=fim)
                                 if (s1Inp) s1Inp.value = abonoFim;
                                 if (e1Inp && !abonoE1) e1Inp.value = abonoInicio;
                             } else if (turnoInicio === 2) {
@@ -6318,44 +5854,37 @@
                         }
                     }
 
-                    // Preenche s2 / extra_s1 manuais se informados
                     if (abonoS2 && s2Inp) s2Inp.value = abonoS2;
-
                     recalcularLinha(dia);
                 } else {
-                    // Dia inteiro: limpa tudo e marca como ABONO
-                    ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
-                        const inp = document.getElementById(`edit_${c}_${dia}`);
-                        if (inp) { inp.value = ''; inp.disabled = true; }
-                    });
-                    ['edit_total1_', 'edit_total2_', 'edit_total_extra_'].forEach(prefix => {
-                        const el = document.getElementById(`${prefix}${dia}`);
-                        if (el) el.value = '—';
-                    });
+                    ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => { const inp = document.getElementById(`edit_${c}_${dia}`); if (inp) { inp.value = ''; inp.disabled = true; } });
+                    ['edit_total1_', 'edit_total2_', 'edit_total_extra_'].forEach(prefix => { const el = document.getElementById(`${prefix}${dia}`); if (el) el.value = '—'; });
                     const elTG = document.getElementById(`edit_total_geral_${dia}`);
-                    if (elTG) {
-                        elTG.value = 'ABONO';
-                        elTG.className = 'total-geral abono';
-                    }
+                    if (elTG) { elTG.value = 'ABONO'; elTG.className = 'total-geral abono'; }
                 }
                 count++;
             }
 
             if (count === 0) { mostrarToast('⚠️ Nenhum dia do período está no mês selecionado.', 'warning'); return; }
             recalcularTotaisEditor();
-            salvarEditorAutomatico();
+            await salvarEditorAutomatico();
             fecharModalAbono();
             const descricao = modoAbono === 'horas'
                 ? `${count} dia(s) com abono ${abonoInicio}-${abonoFim} — ${motivo}`
                 : `${count} dia(s) abonado(s) integralmente — ${motivo}`;
             mostrarToast(`✅ ${descricao}`);
+
+            // ✅ CORRIGIDO: recarrega inline e aba de atestados
+            try {
+                if (funcionarioAtual && funcionarioAtual.id) {
+                    await carregarAtestadosInlineNoModal(funcionarioAtual.id);
+                    if (document.getElementById('atTabListaAtestados')) await recarregarAbaAtestados(funcionarioAtual.id);
+                }
+            } catch(e) { console.warn('Erro ao recarregar atestados:', e); }
         }
 
         function fecharModalEditor() {
-            if (autoSaveTimers.editor) {
-                clearTimeout(autoSaveTimers.editor);
-                salvarEditorAutomatico();
-            }
+            if (autoSaveTimers.editor) { clearTimeout(autoSaveTimers.editor); salvarEditorAutomatico(); }
             document.getElementById('modalEditor').classList.remove('active');
         }
 
@@ -6381,8 +5910,7 @@
                         const { error } = await supabaseClient.from('imagens_cartao').upsert({
                             funcionario_id: funcionarioAtual.id, mes, ano,
                             imagem_url: base64Data, imagem_base64: base64Data,
-                            nome_arquivo: file.name,
-                            uploaded_at: new Date().toISOString()
+                            nome_arquivo: file.name, uploaded_at: new Date().toISOString()
                         }, { onConflict: 'funcionario_id,mes,ano' });
                         if (error) throw error;
                         mostrarToast('✅ Imagem salva automaticamente no cartão!');
@@ -6401,16 +5929,8 @@
             mostrarToast('🧹 Imagem removida', 'info');
         }
 
-        function zoomIn() {
-            const img = document.getElementById('imgDisplay');
-            const current = parseFloat(img.style.backgroundSize) || 100;
-            img.style.backgroundSize = Math.min(current + 20, 300) + '%';
-        }
-        function zoomOut() {
-            const img = document.getElementById('imgDisplay');
-            const current = parseFloat(img.style.backgroundSize) || 100;
-            img.style.backgroundSize = Math.max(current - 20, 40) + '%';
-        }
+        function zoomIn() { const img = document.getElementById('imgDisplay'); const current = parseFloat(img.style.backgroundSize) || 100; img.style.backgroundSize = Math.min(current + 20, 300) + '%'; }
+        function zoomOut() { const img = document.getElementById('imgDisplay'); const current = parseFloat(img.style.backgroundSize) || 100; img.style.backgroundSize = Math.max(current - 20, 40) + '%'; }
         function resetZoom() { document.getElementById('imgDisplay').style.backgroundSize = 'contain'; }
 
         function abrirSelecaoFolgaBH() {
@@ -6431,9 +5951,7 @@
                 const btnFolga = tr?.querySelector('button[data-action="folga-bh"]');
                 const jaTemFolgaBH = btnFolga?.classList.contains('ativo-folga-bh') || false;
                 if (jaTemFolgaBH) btn.classList.add('ja-marcado-folga-bh');
-                const labelMarcado = jaTemFolgaBH
-                    ? '<span class="mini-sem" style="color:#fff;">✓ BH</span>'
-                    : `<span class="mini-sem">${getDiaSemana(i, mesIndex, ano)}</span>`;
+                const labelMarcado = jaTemFolgaBH ? '<span class="mini-sem" style="color:#fff;">✓ BH</span>' : `<span class="mini-sem">${getDiaSemana(i, mesIndex, ano)}</span>`;
                 btn.innerHTML = `${String(i).padStart(2, '0')}${labelMarcado}`;
                 btn.onclick = () => { fecharModalDiaEscolha(); toggleFolgaBH(i); };
                 grade.appendChild(btn);
@@ -6446,7 +5964,7 @@
             const ano = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
             const mesIndex = MESES.indexOf(mes);
             const dias = obterDiasDoMes(mes, ano);
-            document.getElementById('modalDiaEscolhaTitulo').innerHTML = '<i class="fas fa-notes-medical"></i> Selecione o Dia — Falta c/ Atestado';
+            document.getElementById('modalDiaEscolhaTitulo').innerHTML = '<i class="fas fa-notes-medical"></i> Selecione o Dia — Abonar Dia Inteiro';
             const grade = document.getElementById('gradeDiasEscolha');
             grade.innerHTML = '';
             for (let i = 1; i <= dias; i++) {
@@ -6459,9 +5977,7 @@
                 const btnFalta = tr?.querySelector('button[data-action="falta-atestado"]');
                 const jaTemFalta = btnFalta?.classList.contains('ativo-falta') || tr?.dataset.abonado === 'true';
                 if (jaTemFalta) btn.classList.add('ja-marcado-falta');
-                const labelMarcado = jaTemFalta
-                    ? '<span class="mini-sem" style="color:#fff;">✓ AT</span>'
-                    : `<span class="mini-sem">${getDiaSemana(i, mesIndex, ano)}</span>`;
+                const labelMarcado = jaTemFalta ? '<span class="mini-sem" style="color:#fff;">✓ AT</span>' : `<span class="mini-sem">${getDiaSemana(i, mesIndex, ano)}</span>`;
                 btn.innerHTML = `${String(i).padStart(2,'0')}${labelMarcado}`;
                 btn.onclick = () => { fecharModalDiaEscolha(); toggleFaltaAtestado(i); };
                 grade.appendChild(btn);
@@ -6476,27 +5992,15 @@
             if (file) {
                 if (file.size > 2 * 1024 * 1024) { mostrarToast('⚠️ Máx 2MB.', 'warning'); return; }
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    fotoBase64Atual = e.target.result;
-                    document.getElementById('previewFoto').src = fotoBase64Atual;
-                };
+                reader.onload = function(e) { fotoBase64Atual = e.target.result; document.getElementById('previewFoto').src = fotoBase64Atual; };
                 reader.readAsDataURL(file);
             }
         }
 
         function limparFormCadastro() {
-            ['cadNome','cadCPF','cadRG','cadAniversario','cadEstadoCivil','cadGenero','cadNacionalidade','cadPCD',
-             'cadDepartamento','cadCargo','cadAdmissao','cadASO','cadSalario','cadUltimoGozo',
-             'cadOrgaoEmissor','cadDataEmissaoRG','cadCTPS','cadSerieCTPS','cadPIS','cadTituloEleitor','cadCNH','cadCategoriaCNH','cadValidadeCNH',
-             'cadTelefone','cadCelular','cadCelular2','cadEmail','cadEmailPessoal','cadEmergenciaNome','cadEmergenciaParentesco','cadEmergenciaTelefone',
-             'cadPlanoSaude','cadPlanoOdonto','cadBanco','cadAgencia','cadConta','cadPix'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = '';
-            });
+            ['cadNome','cadCPF','cadRG','cadAniversario','cadEstadoCivil','cadGenero','cadNacionalidade','cadPCD','cadDepartamento','cadCargo','cadAdmissao','cadASO','cadSalario','cadUltimoGozo','cadOrgaoEmissor','cadDataEmissaoRG','cadCTPS','cadSerieCTPS','cadPIS','cadTituloEleitor','cadCNH','cadCategoriaCNH','cadValidadeCNH','cadTelefone','cadCelular','cadCelular2','cadEmail','cadEmailPessoal','cadEmergenciaNome','cadEmergenciaParentesco','cadEmergenciaTelefone','cadPlanoSaude','cadPlanoOdonto','cadBanco','cadAgencia','cadConta','cadPix'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             document.getElementById('cadUnidade').value = 'Spoleto';
-            ['cadValeTransporte','cadValeAlimentacao','cadValeRefeicao','cadSeguroVida'].forEach(id => {
-                const el = document.getElementById(id); if (el) el.value = '';
-            });
+            ['cadValeTransporte','cadValeAlimentacao','cadValeRefeicao','cadSeguroVida'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             const chkSemControle = document.getElementById('cadSemControlePonto');
             if (chkSemControle) chkSemControle.checked = false;
             document.getElementById('previewFoto').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e0e0'/%3E%3Ctext x='60' y='65' font-size='40' text-anchor='middle' fill='%23999' font-family='Arial'%3E?%3C/text%3E%3C/svg%3E";
@@ -6517,8 +6021,7 @@
             const sv = document.getElementById('cadSeguroVida').value;
             const pcd = document.getElementById('cadPCD').value;
             const dados = {
-                nome,
-                cpf: document.getElementById('cadCPF').value.trim() || null,
+                nome, cpf: document.getElementById('cadCPF').value.trim() || null,
                 rg: document.getElementById('cadRG').value.trim() || null,
                 unidade: document.getElementById('cadUnidade').value || 'Spoleto',
                 departamento: document.getElementById('cadDepartamento').value.trim() || null,
@@ -6642,10 +6145,7 @@
                 document.getElementById('cadSeguroVida').value = data.seguro_vida === true ? 'Sim' : (data.seguro_vida === false ? 'Não' : '');
                 const chkSemControle = document.getElementById('cadSemControlePonto');
                 if (chkSemControle) chkSemControle.checked = !!data.sem_controle_ponto;
-                if (data.foto) {
-                    document.getElementById('previewFoto').src = data.foto;
-                    fotoBase64Atual = data.foto;
-                }
+                if (data.foto) { document.getElementById('previewFoto').src = data.foto; fotoBase64Atual = data.foto; }
                 document.getElementById('btnCancelarEdicao').style.display = 'inline-block';
                 document.getElementById('tituloFormCadastro').textContent = 'Editando: ' + data.nome;
                 document.getElementById('btnSalvarFuncionario').innerHTML = '<i class="fas fa-save"></i> Atualizar';
@@ -6689,10 +6189,7 @@
                     document.getElementById('badgeErros').style.display = 'none';
                     return;
                 }
-                const { data: marcacoes, error: marcError } = await supabaseClient
-                    .from('marcacoes_ponto').select('*')
-                    .in('funcionario_id', funcIds)
-                    .eq('mes', mesFiltro).eq('ano', parseInt(anoFiltro));
+                const { data: marcacoes, error: marcError } = await supabaseClient.from('marcacoes_ponto').select('*').in('funcionario_id', funcIds).eq('mes', mesFiltro).eq('ano', parseInt(anoFiltro));
                 if (marcError) throw marcError;
                 const funcMap = {};
                 funcsComControle.forEach(f => { funcMap[f.id] = f; });
@@ -6706,9 +6203,7 @@
                     try { dados = typeof marc.dados === 'string' ? JSON.parse(marc.dados) : marc.dados; } catch(e) { dados = {}; }
                     const diasAbonados = await carregarMapaDiasAbonados(func.id, mesFiltro, parseInt(anoFiltro));
                     const analise = analisarDadosPonto(dados, diasDoMes, mesIndex, parseInt(anoFiltro), diasAbonados);
-                    analise.erros.forEach(e => {
-                        todosErros.push({ funcionarioId: func.id, funcionarioNome: func.nome, funcionarioUnidade: func.unidade, dia: e.dia, msg: e.msg });
-                    });
+                    analise.erros.forEach(e => { todosErros.push({ funcionarioId: func.id, funcionarioNome: func.nome, funcionarioUnidade: func.unidade, dia: e.dia, msg: e.msg }); });
                 }
                 const badge = document.getElementById('badgeErros');
                 if (todosErros.length > 0) { badge.textContent = todosErros.length; badge.style.display = 'inline-block'; }
@@ -6719,19 +6214,7 @@
                 }
                 let html = '';
                 todosErros.forEach((erro) => {
-                    html += `
-                        <div class="erro-item">
-                            <span class="erro-msg">
-                                <i class="fas fa-exclamation-circle" style="color:#dc3545;"></i>
-                                <strong>${erro.funcionarioNome}</strong>
-                                <span style="color:#7a3a00;">(${erro.funcionarioUnidade || '-'})</span>
-                                — Dia <span class="highlight">${String(erro.dia).padStart(2, '0')}</span>: ${erro.msg}
-                            </span>
-                            <div class="erro-actions">
-                                <button type="button" class="btn-action btn-primary btn-sm" onclick="abrirErroIndividual('${erro.funcionarioId}', ${erro.dia})"><i class="fas fa-eye"></i> Ver</button>
-                            </div>
-                        </div>
-                    `;
+                    html += `<div class="erro-item"><span class="erro-msg"><i class="fas fa-exclamation-circle" style="color:#dc3545;"></i> <strong>${erro.funcionarioNome}</strong> <span style="color:#7a3a00;">(${erro.funcionarioUnidade || '-'})</span> — Dia <span class="highlight">${String(erro.dia).padStart(2, '0')}</span>: ${erro.msg}</span><div class="erro-actions"><button type="button" class="btn-action btn-primary btn-sm" onclick="abrirErroIndividual('${erro.funcionarioId}', ${erro.dia})"><i class="fas fa-eye"></i> Ver</button></div></div>`;
                 });
                 container.innerHTML = html;
             } catch (error) {
@@ -6761,12 +6244,7 @@
                 const { data, error } = await supabaseClient.from('usuarios').select('*').order('nome');
                 if (error) throw error;
                 if (!data || data.length === 0) { container.innerHTML = '<p style="text-align:center;color:#7a3a00;padding:20px;">Nenhum usuário.</p>'; return; }
-                container.innerHTML = data.map(u => `
-                    <div style="display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #eee;align-items:center;">
-                        <div><strong>${u.nome}</strong> <span style="margin-left:10px;font-size:12px;color:#7a3a00;">${ROLE_LABELS[u.role] || u.role}</span></div>
-                        <button type="button" class="btn-action btn-danger btn-sm" onclick="excluirPerfilSupabase('${u.id}')"><i class="fas fa-trash"></i></button>
-                    </div>
-                `).join('');
+                container.innerHTML = data.map(u => `<div style="display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #eee;align-items:center;"><div><strong>${u.nome}</strong> <span style="margin-left:10px;font-size:12px;color:#7a3a00;">${ROLE_LABELS[u.role] || u.role}</span></div><button type="button" class="btn-action btn-danger btn-sm" onclick="excluirPerfilSupabase('${u.id}')"><i class="fas fa-trash"></i></button></div>`).join('');
             } catch (error) { container.innerHTML = `<p style="color:#dc3545;text-align:center;padding:20px;">Erro: ${error.message}</p>`; }
         }
 
@@ -6828,9 +6306,7 @@
             const relEmp = document.getElementById('relEmpresa');
             const relMes = document.getElementById('relMes');
             const relAno = document.getElementById('relAno');
-            [relFunc, relUni, relEmp, relMes, relAno].forEach(el => {
-                if (el) el.addEventListener('change', atualizarNomeArquivoRelatorio);
-            });
+            [relFunc, relUni, relEmp, relMes, relAno].forEach(el => { if (el) el.addEventListener('change', atualizarNomeArquivoRelatorio); });
             if (window.innerWidth <= 768) {
                 document.getElementById('sidebar').classList.add('collapsed');
                 document.getElementById('sidebarToggle').classList.add('collapsed');
