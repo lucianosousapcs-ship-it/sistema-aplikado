@@ -1791,7 +1791,7 @@
                         <input type="time" id="abonoHoraFim" value="14:00" step="60">
                     </div>
                 </div>
-                <small style="font-size:10px;color:#7a3a00;margin-top:4px;display:block;">O horário do abono será automaticamente preenchido nos campos: <b>1ª Saída</b> (início) e <b>2ª Entrada</b> (fim).</small>
+                <small style="font-size:10px;color:#7a3a00;margin-top:4px;display:block;"><b>Regra dos turnos:</b> 1º turno até <b>12:59</b>, 2º turno de <b>13:00</b> às <b>17:59</b>.</small>
             </div>
 
             <div id="abonoMarcacoesWrap" style="display:none;">
@@ -2240,6 +2240,11 @@
         const STORAGE_KEY = 'apliKado_ponto_session';
         const NOTURNO_INICIO_MIN = 22 * 60;
         const NOTURNO_FIM_MANHA_MIN = 5 * 60;
+
+        // ✅ LIMITES DE TURNO (regra do abono)
+        const LIMITE_1TURNO_MIN = 12 * 60 + 59;   // 12:59
+        const INICIO_2TURNO_MIN  = 13 * 60;        // 13:00
+        const LIMITE_2TURNO_MIN  = 17 * 60 + 59;   // 17:59
 
         let usuarioAtual = null;
         let usuariosSupabase = [];
@@ -5968,6 +5973,7 @@
             if (elAbon) elAbon.textContent = formatarHoras(totalAbonado);
         }
 
+        // ✅ FOLGA BH - agora salva IMEDIATAMENTE após a ação
         function toggleFolgaBH(dia) {
             const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
             if (!tr) return;
@@ -6015,9 +6021,11 @@
                 mostrarToast(`✅ Dia ${String(dia).padStart(2,'0')} marcado como Folga BH (-8h compensação)`);
             }
             recalcularTotaisEditor();
-            agendarAutoSave();
+            // ✅ SALVA IMEDIATAMENTE
+            salvarEditorAutomatico();
         }
 
+        // ✅ FALTA C/ ATESTADO - agora salva IMEDIATAMENTE após a ação
         async function toggleFaltaAtestado(dia) {
             const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
             if (!tr) return;
@@ -6047,7 +6055,8 @@
                 });
                 recalcularLinha(dia);
                 recalcularTotaisEditor();
-                agendarAutoSave();
+                // ✅ SALVA IMEDIATAMENTE
+                salvarEditorAutomatico();
                 mostrarToast(`📋 Dia ${String(dia).padStart(2,'0')} removido de Falta c/ Atestado`, 'info');
                 return;
             }
@@ -6072,7 +6081,8 @@
                 if (el) el.value = '—';
             });
             recalcularTotaisEditor();
-            agendarAutoSave();
+            // ✅ SALVA IMEDIATAMENTE
+            salvarEditorAutomatico();
             const mes = document.getElementById('editorMes').value;
             const ano = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
             const mesIndex = MESES.indexOf(mes);
@@ -6140,6 +6150,7 @@
             document.getElementById('modalAbono').classList.remove('active');
         }
 
+        // ✅ ABONO RESPEITANDO OS TURNOS: 1º até 12:59 / 2º de 13:00 às 17:59
         function confirmarAbono() {
             const inicio = document.getElementById('abonoDataInicio').value;
             const fim = document.getElementById('abonoDataFim').value;
@@ -6198,7 +6209,7 @@
                     delete tr.dataset.abonoFim;
                 }
                 if (modoAbono === 'horas') {
-                    // ✅ Abono parcial: HABILITA campos e PREENCHE automaticamente
+                    // ✅ HABILITA campos e aplica REGRA DOS TURNOS
                     ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                         const inp = document.getElementById(`edit_${c}_${dia}`);
                         if (inp) inp.disabled = false;
@@ -6207,10 +6218,37 @@
                     const s1Inp = document.getElementById(`edit_s1_${dia}`);
                     const e2Inp = document.getElementById(`edit_e2_${dia}`);
                     const s2Inp = document.getElementById(`edit_s2_${dia}`);
-                    // ✅ PREENCHE os campos correspondentes com o horário abonado
+
                     if (e1Inp && abonoE1) e1Inp.value = abonoE1;
-                    if (s1Inp) s1Inp.value = abonoS1 || abonoInicio;   // 1ª Saída = início do abono
-                    if (e2Inp) e2Inp.value = abonoE2 || abonoFim;      // 2ª Entrada = fim do abono
+
+                    // ✅ REGRA DOS TURNOS:
+                    // 1º turno: até 12:59  → s1 = abonoInicio (se abonoInicio <= 12:59)
+                    // 2º turno: 13:00 às 17:59 → e2 = abonoFim (se abonoFim >= 13:00)
+                    const abonoInicioMin = converterParaMinutos(abonoInicio);
+                    const abonoFimMin    = converterParaMinutos(abonoFim);
+
+                    // 1ª Saída (s1) — só se o horário estiver dentro do 1º turno (≤ 12:59)
+                    if (s1Inp) {
+                        if (abonoS1) {
+                            s1Inp.value = abonoS1;
+                        } else if (abonoInicioMin <= LIMITE_1TURNO_MIN) {
+                            s1Inp.value = abonoInicio;
+                        } else if (abonoFimMin <= LIMITE_1TURNO_MIN) {
+                            s1Inp.value = abonoFim;
+                        }
+                    }
+
+                    // 2ª Entrada (e2) — só se o horário estiver dentro do 2º turno (13:00 às 17:59)
+                    if (e2Inp) {
+                        if (abonoE2) {
+                            e2Inp.value = abonoE2;
+                        } else if (abonoFimMin >= INICIO_2TURNO_MIN && abonoFimMin <= LIMITE_2TURNO_MIN) {
+                            e2Inp.value = abonoFim;
+                        } else if (abonoInicioMin >= INICIO_2TURNO_MIN && abonoInicioMin <= LIMITE_2TURNO_MIN) {
+                            e2Inp.value = abonoInicio;
+                        }
+                    }
+
                     if (s2Inp && abonoS2) s2Inp.value = abonoS2;
                     recalcularLinha(dia);
                 } else {
@@ -6232,7 +6270,8 @@
             }
             if (count === 0) { mostrarToast('⚠️ Nenhum dia do período está no mês selecionado.', 'warning'); return; }
             recalcularTotaisEditor();
-            agendarAutoSave();
+            // ✅ SALVA IMEDIATAMENTE após aplicar o abono
+            salvarEditorAutomatico();
             fecharModalAbono();
             const descricao = modoAbono === 'horas' ? `${count} dia(s) com abono ${abonoInicio}-${abonoFim} — ${motivo}` : `${count} dia(s) abonado(s) integralmente — ${motivo}`;
             mostrarToast(`✅ ${descricao}`);
