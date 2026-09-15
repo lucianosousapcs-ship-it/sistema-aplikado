@@ -3418,7 +3418,7 @@
         }
 
         // ============================================================
-        // RELATÓRIO DE PONTO — item 1: filename com nome do funcionário
+        // RELATÓRIO DE PONTO
         // ============================================================
         function abrirRelatorioPonto() {
             const hoje = new Date();
@@ -3576,7 +3576,6 @@
                     container.innerHTML = `<div class="rel-empty"><i class="fas fa-calendar-times"></i><p>Nenhum funcionário com marcação no período</p><small>${mes}/${ano} — ${unidade || 'Todas as unidades'}</small></div>`;
                     return;
                 }
-                // Agrupar por unidade e por funcionário
                 const gruposPorUnidade = {};
                 comMarcacao.forEach(f => {
                     const u = f.unidade || 'Sem Unidade';
@@ -3585,7 +3584,6 @@
                 });
                 const unidadesOrdenadas = Object.keys(gruposPorUnidade).sort();
                 let html = '';
-                // Header
                 let subtituloRel = `${unidade || 'Todas as Unidades'} — ${mes}/${ano}`;
                 if (funcId) {
                     const f = comMarcacao[0];
@@ -3817,7 +3815,7 @@
         }
 
         // ============================================================
-        // CONTROLE DE HORAS — item 2: filename com nome da unidade
+        // CONTROLE DE HORAS
         // ============================================================
         function abrirControleHoras() {
             const hoje = new Date();
@@ -4191,7 +4189,6 @@
                             </div>
                         </div>
 
-                        <!-- NOVO (item 5): Atestados Anexados exibidos ao lado do cartão -->
                         <div class="atestados-inline-section">
                             <div class="atestados-inline-header">
                                 <div class="titulo"><i class="fas fa-notes-medical"></i> Atestados Anexados do Funcionário</div>
@@ -4888,7 +4885,7 @@
         }
 
         // ============================================================
-        // ATESTADOS (item 4: viewable inline - preview maior)
+        // ATESTADOS
         // ============================================================
         async function carregarAtestados(funcId) {
             try {
@@ -4932,7 +4929,6 @@
             return html;
         }
 
-        // NOVO (item 5): renderiza atestados inline na aba Ponto
         async function carregarAtestadosInlineNoModal(funcId) {
             const container = document.getElementById('modalAtestadosInline');
             if (!container) return;
@@ -5504,7 +5500,7 @@
         }
 
         // ============================================================
-        // PONTO (aba da pasta) — inclui atestados inline (item 5)
+        // PONTO (aba da pasta)
         // ============================================================
         async function carregarPontoNoModal() {
             if (!funcionarioAtual) return;
@@ -5614,7 +5610,6 @@
                 `;
             }
             await carregarCartaoNoModal(func.id, mes, ano);
-            // item 5: carregar atestados inline
             await carregarAtestadosInlineNoModal(func.id);
         }
 
@@ -5760,6 +5755,13 @@
                 const folgaBH = d.folga_bh || false;
                 const faltaAtestado = d.falta_atestado || false;
                 const temAbono = d.abono || false;
+                // ============================================================
+                // CORREÇÃO PRINCIPAL: campos só são desabilitados quando for
+                // abono INTEGRAL ou falta/atestado. Abono PARCIAL (com horário)
+                // mantém os campos habilitados para incluir marcações nos demais
+                // períodos do dia.
+                // ============================================================
+                const abonoParcial = temAbono && (d.abono_inicio || d.abono_fim || d.abono_horas);
                 let classesTr = '';
                 if (feriado) classesTr += ' linha-feriado';
                 if (folgaBH) classesTr += ' linha-folga-bh';
@@ -5788,14 +5790,21 @@
                 let totalGeralDisplay = total;
                 let totalGeralClass = 'total-geral';
                 if (temAbono) {
-                    if (d.abono_inicio && d.abono_fim) totalGeralDisplay = `ABONO ${d.abono_inicio}-${d.abono_fim}`;
-                    else totalGeralDisplay = d.abono_horas ? `ABONO ${d.abono_horas}` : 'ABONO';
+                    if (abonoParcial && total !== '00:00') {
+                        // Abono parcial com horas trabalhadas: mostra o total no campo
+                        totalGeralDisplay = total;
+                        tr.title = `Abono: ${d.abono_inicio || ''}${d.abono_fim ? '-' + d.abono_fim : ''} ${d.abono_horas || ''}`.trim();
+                    } else if (d.abono_inicio && d.abono_fim) {
+                        totalGeralDisplay = `ABONO ${d.abono_inicio}-${d.abono_fim}`;
+                    } else {
+                        totalGeralDisplay = d.abono_horas ? `ABONO ${d.abono_horas}` : 'ABONO';
+                    }
                     totalGeralClass = 'total-geral abono';
                 }
                 else if (abonado) { totalGeralDisplay = 'ABONADO'; totalGeralClass = 'total-geral abonado'; }
                 else if (folgaBH) { totalGeralDisplay = 'HORAS BH'; totalGeralClass = 'total-geral horas-bh'; }
-                // Se tem abono com horário, mantém campos habilitados (para os demais horários)
-                const desabilitarCampos = !isUser || (abonado || temAbono);
+                // Desabilita campos apenas se for abonado/falta ou abono INTEGRAL
+                const desabilitarCampos = !isUser || abonado || (temAbono && !abonoParcial);
                 tr.innerHTML = `
                     <td class="dia-cell">
                         <span class="dia-num">${String(i).padStart(2, '0')}</span>
@@ -5803,13 +5812,13 @@
                     </td>
                     <td><input type="time" id="edit_e1_${i}" value="${valE1}" ${desabilitarCampos ? 'disabled' : ''}></td>
                     <td><input type="time" id="edit_s1_${i}" value="${valS1}" ${desabilitarCampos ? 'disabled' : ''}></td>
-                    <td><input type="text" id="edit_total1_${i}" value="${abonado || temAbono ? '—' : diff1}" readonly></td>
+                    <td><input type="text" id="edit_total1_${i}" value="${abonado || temAbono ? (abonoParcial ? diff1 : '—') : diff1}" readonly></td>
                     <td><input type="time" id="edit_e2_${i}" value="${valE2}" ${desabilitarCampos ? 'disabled' : ''}></td>
                     <td><input type="time" id="edit_s2_${i}" value="${valS2}" ${desabilitarCampos ? 'disabled' : ''}></td>
-                    <td><input type="text" id="edit_total2_${i}" value="${abonado || temAbono ? '—' : diff2}" readonly></td>
+                    <td><input type="text" id="edit_total2_${i}" value="${abonado || temAbono ? (abonoParcial ? diff2 : '—') : diff2}" readonly></td>
                     <td><input type="time" id="edit_extra_e1_${i}" value="${valExtraE1}" ${desabilitarCampos ? 'disabled' : ''}></td>
                     <td><input type="time" id="edit_extra_s1_${i}" value="${valExtraS1}" ${desabilitarCampos ? 'disabled' : ''}></td>
-                    <td><input type="text" id="edit_total_extra_${i}" value="${abonado || temAbono ? '—' : diffExtra}" readonly></td>
+                    <td><input type="text" id="edit_total_extra_${i}" value="${abonado || temAbono ? (abonoParcial ? diffExtra : '—') : diffExtra}" readonly></td>
                     <td><input type="text" id="edit_total_geral_${i}" value="${totalGeralDisplay}" readonly class="${totalGeralClass}"></td>
                     <td>
                         <button type="button" class="btn-dia-acao ${folgaBH ? 'ativo-folga-bh' : ''}" data-action="folga-bh" data-dia="${i}" title="Folga BH"><i class="fas fa-clock"></i></button>
@@ -5912,7 +5921,7 @@
         function recalcularLinha(dia) {
             const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
             if (tr && (tr.dataset.abonado === 'true')) return;
-            // Se tem abono, recalcula normalmente as marcações
+            // Se tem abono parcial, recalcula normalmente as marcações
             const e1 = document.getElementById(`edit_e1_${dia}`)?.value || '';
             const s1 = document.getElementById(`edit_s1_${dia}`)?.value || '';
             const e2 = document.getElementById(`edit_e2_${dia}`)?.value || '';
@@ -5934,8 +5943,16 @@
                 const tr2 = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
                 const btnFolga = tr2?.querySelector('button[data-action="folga-bh"]');
                 if (tr2 && tr2.dataset.abono === 'true') {
-                    if (tr2.dataset.abonoInicio && tr2.dataset.abonoFim) elTG.value = `ABONO ${tr2.dataset.abonoInicio}-${tr2.dataset.abonoFim}`;
-                    else elTG.value = tr2.dataset.abonoHoras ? `ABONO ${tr2.dataset.abonoHoras}` : 'ABONO';
+                    const abonoParcial = tr2.dataset.abonoInicio || tr2.dataset.abonoFim || tr2.dataset.abonoHoras;
+                    if (abonoParcial && total !== '00:00') {
+                        // Abono parcial com marcações: mostra o total trabalhado
+                        elTG.value = total;
+                        elTG.title = `Abono: ${tr2.dataset.abonoInicio || ''}${tr2.dataset.abonoFim ? '-' + tr2.dataset.abonoFim : ''} ${tr2.dataset.abonoHoras || ''}`.trim();
+                    } else if (tr2.dataset.abonoInicio && tr2.dataset.abonoFim) {
+                        elTG.value = `ABONO ${tr2.dataset.abonoInicio}-${tr2.dataset.abonoFim}`;
+                    } else {
+                        elTG.value = tr2.dataset.abonoHoras ? `ABONO ${tr2.dataset.abonoHoras}` : 'ABONO';
+                    }
                     elTG.className = 'total-geral abono';
                 } else if (btnFolga && btnFolga.classList.contains('ativo-folga-bh')) {
                     elTG.value = 'HORAS BH';
@@ -5964,7 +5981,6 @@
                     if (tr.dataset.abonoHoras) totalAbonado += converterParaMinutos(tr.dataset.abonoHoras);
                     else if (tr.dataset.abonoInicio && tr.dataset.abonoFim) totalAbonado += converterParaMinutos(tr.dataset.abonoFim) - converterParaMinutos(tr.dataset.abonoInicio);
                     else totalAbonado += JORNADA_PADRAO_MINUTOS;
-                    // Ainda soma as marcações nos demais horários
                 }
                 const t1 = document.getElementById(`edit_total1_${i}`)?.value || '00:00';
                 const t2 = document.getElementById(`edit_total2_${i}`)?.value || '00:00';
@@ -5973,6 +5989,7 @@
                 const m1 = converterParaMinutos(t1);
                 const m2 = converterParaMinutos(t2);
                 const mE = converterParaMinutos(tE);
+                // Para abono: soma os períodos trabalhados individualmente
                 const mG = (tr && tr.dataset.abono === 'true') ? (m1 + m2 + mE) : converterParaMinutos(tG);
                 total1 += m1; total2 += m2; totalExtra += mE; totalGeral += mG;
                 if (mG > 0) qtdDias++;
@@ -6141,7 +6158,7 @@
         }
 
         // ============================================================
-        // ABONO DE PERÍODO (item 3: com horário e marcações restantes)
+        // ABONO DE PERÍODO — CORRIGIDO: permite marcar os demais períodos
         // ============================================================
         function abrirModalAbono() {
             if (!funcionarioAtual) { mostrarToast('⚠️ Nenhum funcionário ativo', 'warning'); return; }
@@ -6239,19 +6256,26 @@
                     delete tr.dataset.abonoInicio;
                     delete tr.dataset.abonoFim;
                 }
-                // Marcações nos demais horários (item 3)
-                if (modoAbono === 'horas' && (abonoE1 || abonoS1 || abonoE2 || abonoS2)) {
+                // ============================================================
+                // CORREÇÃO: modo "Por Horário" mantém TODOS os campos habilitados
+                // para que o usuário possa marcar os demais períodos do dia.
+                // ============================================================
+                if (modoAbono === 'horas') {
+                    ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
+                        const inp = document.getElementById(`edit_${c}_${dia}`);
+                        if (inp) inp.disabled = false;
+                    });
                     const e1Inp = document.getElementById(`edit_e1_${dia}`);
                     const s1Inp = document.getElementById(`edit_s1_${dia}`);
                     const e2Inp = document.getElementById(`edit_e2_${dia}`);
                     const s2Inp = document.getElementById(`edit_s2_${dia}`);
-                    if (e1Inp) { e1Inp.value = abonoE1; e1Inp.disabled = false; }
-                    if (s1Inp) { s1Inp.value = abonoS1; s1Inp.disabled = false; }
-                    if (e2Inp) { e2Inp.value = abonoE2; e2Inp.disabled = false; }
-                    if (s2Inp) { s2Inp.value = abonoS2; s2Inp.disabled = false; }
-                    // Recalcula esta linha com as marcações
+                    if (e1Inp && abonoE1) e1Inp.value = abonoE1;
+                    if (s1Inp && abonoS1) s1Inp.value = abonoS1;
+                    if (e2Inp && abonoE2) e2Inp.value = abonoE2;
+                    if (s2Inp && abonoS2) s2Inp.value = abonoS2;
                     recalcularLinha(dia);
                 } else {
+                    // Abono dia inteiro: desabilita os campos
                     ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                         const inp = document.getElementById(`edit_${c}_${dia}`);
                         if (inp) { inp.value = ''; inp.disabled = true; }
@@ -6260,12 +6284,11 @@
                         const el = document.getElementById(`${prefix}${dia}`);
                         if (el) el.value = '—';
                     });
-                }
-                const elTG = document.getElementById(`edit_total_geral_${dia}`);
-                if (elTG) {
-                    if (modoAbono === 'horas') elTG.value = `ABONO ${abonoInicio}-${abonoFim}`;
-                    else elTG.value = 'ABONO';
-                    elTG.className = 'total-geral abono';
+                    const elTG = document.getElementById(`edit_total_geral_${dia}`);
+                    if (elTG) {
+                        elTG.value = 'ABONO';
+                        elTG.className = 'total-geral abono';
+                    }
                 }
                 count++;
             }
@@ -6765,7 +6788,6 @@
             }
             const filtroCartaoAno = document.getElementById('filtroCartaoAno');
             if (filtroCartaoAno) filtroCartaoAno.value = anoAtual;
-            // Listeners para atualizar nome do arquivo do relatório quando filtros mudarem
             const relFunc = document.getElementById('relFuncionario');
             const relUni = document.getElementById('relUnidade');
             const relEmp = document.getElementById('relEmpresa');
