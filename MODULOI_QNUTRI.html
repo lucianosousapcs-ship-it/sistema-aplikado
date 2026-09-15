@@ -1791,7 +1791,13 @@
                         <input type="time" id="abonoHoraFim" value="14:00" step="60">
                     </div>
                 </div>
-                <small style="font-size:10px;color:#7a3a00;margin-top:4px;display:block;"><b>Regra dos turnos:</b> 1º turno até <b>12:59</b>, 2º turno de <b>13:00</b> às <b>17:59</b>.</small>
+                <small style="font-size:10px;color:#7a3a00;margin-top:4px;display:block;">
+                    <b>Regra dos turnos:</b><br>
+                    • <b>1º turno:</b> 08:00 → 12:59<br>
+                    • <b>2º turno:</b> 13:00 → 17:59<br>
+                    • <b>3º turno (extra):</b> 18:00 → última marcação<br>
+                    <i>O início do abono vai para a <b>saída</b> do turno onde cai; o fim vai para a <b>entrada</b> do turno onde cai.</i>
+                </small>
             </div>
 
             <div id="abonoMarcacoesWrap" style="display:none;">
@@ -1815,7 +1821,7 @@
                             <input type="time" id="abonoS2" step="60">
                         </div>
                     </div>
-                    <small style="font-size:10px;color:#7a3a00;margin-top:4px;display:block;">Se deixar em branco, a <b>1ª Saída</b> e a <b>2ª Entrada</b> serão preenchidas com o início e o fim do abono.</small>
+                    <small style="font-size:10px;color:#7a3a00;margin-top:4px;display:block;">Se deixar em branco, a <b>saída</b> e a <b>entrada</b> dos turnos serão preenchidas automaticamente conforme os horários do abono.</small>
                 </div>
             </div>
 
@@ -2241,10 +2247,15 @@
         const NOTURNO_INICIO_MIN = 22 * 60;
         const NOTURNO_FIM_MANHA_MIN = 5 * 60;
 
-        // ✅ LIMITES DE TURNO (regra do abono)
-        const LIMITE_1TURNO_MIN = 12 * 60 + 59;   // 12:59
-        const INICIO_2TURNO_MIN  = 13 * 60;        // 13:00
-        const LIMITE_2TURNO_MIN  = 17 * 60 + 59;   // 17:59
+        // ✅ LIMITES DE TURNO (regra do abono e da marcação)
+        // 1º turno: 08:00 até 12:59
+        // 2º turno: 13:00 até 17:59
+        // 3º turno (extra): 18:00 em diante
+        const INICIO_1TURNO_MIN = 8 * 60;          // 08:00
+        const LIMITE_1TURNO_MIN = 12 * 60 + 59;    // 12:59
+        const INICIO_2TURNO_MIN = 13 * 60;         // 13:00
+        const LIMITE_2TURNO_MIN = 17 * 60 + 59;    // 17:59
+        const INICIO_3TURNO_MIN = 18 * 60;         // 18:00
 
         let usuarioAtual = null;
         let usuariosSupabase = [];
@@ -5973,7 +5984,6 @@
             if (elAbon) elAbon.textContent = formatarHoras(totalAbonado);
         }
 
-        // ✅ FOLGA BH - agora salva IMEDIATAMENTE após a ação
         function toggleFolgaBH(dia) {
             const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
             if (!tr) return;
@@ -6021,11 +6031,9 @@
                 mostrarToast(`✅ Dia ${String(dia).padStart(2,'0')} marcado como Folga BH (-8h compensação)`);
             }
             recalcularTotaisEditor();
-            // ✅ SALVA IMEDIATAMENTE
             salvarEditorAutomatico();
         }
 
-        // ✅ FALTA C/ ATESTADO - agora salva IMEDIATAMENTE após a ação
         async function toggleFaltaAtestado(dia) {
             const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
             if (!tr) return;
@@ -6055,7 +6063,6 @@
                 });
                 recalcularLinha(dia);
                 recalcularTotaisEditor();
-                // ✅ SALVA IMEDIATAMENTE
                 salvarEditorAutomatico();
                 mostrarToast(`📋 Dia ${String(dia).padStart(2,'0')} removido de Falta c/ Atestado`, 'info');
                 return;
@@ -6081,7 +6088,6 @@
                 if (el) el.value = '—';
             });
             recalcularTotaisEditor();
-            // ✅ SALVA IMEDIATAMENTE
             salvarEditorAutomatico();
             const mes = document.getElementById('editorMes').value;
             const ano = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
@@ -6150,13 +6156,23 @@
             document.getElementById('modalAbono').classList.remove('active');
         }
 
-        // ✅ ABONO RESPEITANDO OS TURNOS: 1º até 12:59 / 2º de 13:00 às 17:59
+        // ============================================================================
+        // ✅ CONFIRMAR ABONO — CORRIGIDO PARA 3 TURNOS:
+        //   1º turno: 08:00 → 12:59  (campos e1 / s1)
+        //   2º turno: 13:00 → 17:59  (campos e2 / s2)
+        //   3º turno: 18:00 → última (campos extra_e1 / extra_s1)
+        //
+        // REGRA DE APLICAÇÃO:
+        //   • O INÍCIO do abono vai para a SAÍDA do turno onde ele cai.
+        //   • O FIM do abono vai para a ENTRADA do turno onde ele cai.
+        // ============================================================================
         function confirmarAbono() {
             const inicio = document.getElementById('abonoDataInicio').value;
             const fim = document.getElementById('abonoDataFim').value;
             const motivo = document.getElementById('abonoMotivo').value.trim() || 'Abono';
             const tipo = document.getElementById('abonoTipo').value;
             const modoAbono = document.querySelector('input[name="abonoModo"]:checked')?.value || 'dia_inteiro';
+
             if (!inicio || !fim) { mostrarToast('⚠️ Preencha as datas!', 'warning'); return; }
             const dtIni = parseDataLocal(inicio);
             const dtFim = parseDataLocal(fim);
@@ -6184,11 +6200,27 @@
             const anoAtual = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
             const mesIndex = MESES.indexOf(mesAtual);
             let count = 0;
+
+            // Converte horários em minutos
+            const inicioMin = modoAbono === 'horas' ? converterParaMinutos(abonoInicio) : 0;
+            const fimMin    = modoAbono === 'horas' ? converterParaMinutos(abonoFim)    : 0;
+
+            // Identifica em qual turno cai um determinado horário
+            function identificarTurno(min) {
+                if (min >= INICIO_1TURNO_MIN && min <= LIMITE_1TURNO_MIN) return 1;  // 08:00–12:59
+                if (min >= INICIO_2TURNO_MIN && min <= LIMITE_2TURNO_MIN) return 2;  // 13:00–17:59
+                if (min >= INICIO_3TURNO_MIN) return 3;                              // 18:00+
+                if (min < INICIO_1TURNO_MIN) return 1;                               // antes das 08:00 → trata como 1º
+                return 2;                                                            // fallback
+            }
+
             for (let d = new Date(dtIni.getFullYear(), dtIni.getMonth(), dtIni.getDate()); d <= dtFim; d = addDia(d)) {
                 if (d.getMonth() !== mesIndex || d.getFullYear() !== anoAtual) continue;
                 const dia = d.getDate();
                 const tr = document.querySelector(`#editorTbody tr[data-dia="${dia}"]`);
                 if (!tr) continue;
+
+                // Limpa estados anteriores
                 const btnFolga = tr.querySelector('button[data-action="folga-bh"]');
                 const btnFalta = tr.querySelector('button[data-action="falta-atestado"]');
                 if (btnFolga) btnFolga.classList.remove('ativo-folga-bh');
@@ -6196,6 +6228,8 @@
                 tr.classList.remove('linha-folga-bh', 'linha-falta-atestado');
                 delete tr.dataset.folgaBH;
                 delete tr.dataset.abonado;
+
+                // Aplica abono
                 tr.classList.add('linha-abono');
                 tr.dataset.abono = 'true';
                 tr.dataset.abonoMotivo = motivo;
@@ -6208,50 +6242,88 @@
                     delete tr.dataset.abonoInicio;
                     delete tr.dataset.abonoFim;
                 }
+
                 if (modoAbono === 'horas') {
-                    // ✅ HABILITA campos e aplica REGRA DOS TURNOS
+                    // Habilita os campos
                     ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                         const inp = document.getElementById(`edit_${c}_${dia}`);
                         if (inp) inp.disabled = false;
                     });
+
                     const e1Inp = document.getElementById(`edit_e1_${dia}`);
                     const s1Inp = document.getElementById(`edit_s1_${dia}`);
                     const e2Inp = document.getElementById(`edit_e2_${dia}`);
                     const s2Inp = document.getElementById(`edit_s2_${dia}`);
+                    const exE1Inp = document.getElementById(`edit_extra_e1_${dia}`);
+                    const exS1Inp = document.getElementById(`edit_extra_s1_${dia}`);
 
-                    if (e1Inp && abonoE1) e1Inp.value = abonoE1;
+                    // Entradas manuais do usuário têm prioridade absoluta
+                    if (abonoE1 && e1Inp) e1Inp.value = abonoE1;
 
-                    // ✅ REGRA DOS TURNOS:
-                    // 1º turno: até 12:59  → s1 = abonoInicio (se abonoInicio <= 12:59)
-                    // 2º turno: 13:00 às 17:59 → e2 = abonoFim (se abonoFim >= 13:00)
-                    const abonoInicioMin = converterParaMinutos(abonoInicio);
-                    const abonoFimMin    = converterParaMinutos(abonoFim);
+                    const turnoInicio = identificarTurno(inicioMin);
+                    const turnoFim    = identificarTurno(fimMin);
 
-                    // 1ª Saída (s1) — só se o horário estiver dentro do 1º turno (≤ 12:59)
-                    if (s1Inp) {
-                        if (abonoS1) {
-                            s1Inp.value = abonoS1;
-                        } else if (abonoInicioMin <= LIMITE_1TURNO_MIN) {
-                            s1Inp.value = abonoInicio;
-                        } else if (abonoFimMin <= LIMITE_1TURNO_MIN) {
-                            s1Inp.value = abonoFim;
+                    // ------------------------------------------------------------------
+                    // 1) INÍCIO do abono → vai para a SAÍDA do turno onde ele cai
+                    // ------------------------------------------------------------------
+                    if (abonoS1 || abonoS2) {
+                        // Usuário já informou saídas manualmente — respeita
+                        if (abonoS1 && s1Inp) s1Inp.value = abonoS1;
+                        if (abonoS2 && s2Inp) s2Inp.value = abonoS2;
+                    } else {
+                        if (turnoInicio === 1) {
+                            if (s1Inp) s1Inp.value = abonoInicio;
+                        } else if (turnoInicio === 2) {
+                            if (s2Inp) s2Inp.value = abonoInicio;
+                        } else { // turno 3 (extra)
+                            if (exS1Inp) exS1Inp.value = abonoInicio;
                         }
                     }
 
-                    // 2ª Entrada (e2) — só se o horário estiver dentro do 2º turno (13:00 às 17:59)
-                    if (e2Inp) {
-                        if (abonoE2) {
-                            e2Inp.value = abonoE2;
-                        } else if (abonoFimMin >= INICIO_2TURNO_MIN && abonoFimMin <= LIMITE_2TURNO_MIN) {
-                            e2Inp.value = abonoFim;
-                        } else if (abonoInicioMin >= INICIO_2TURNO_MIN && abonoInicioMin <= LIMITE_2TURNO_MIN) {
-                            e2Inp.value = abonoInicio;
+                    // ------------------------------------------------------------------
+                    // 2) FIM do abono → vai para a ENTRADA do turno onde ele cai
+                    // ------------------------------------------------------------------
+                    if (abonoE2) {
+                        // Usuário já informou 2ª entrada manualmente — respeita
+                        if (e2Inp) e2Inp.value = abonoE2;
+                    } else {
+                        // Só preenche e2 (ou extra_e1) se o fim NÃO cair no mesmo turno do início
+                        // (para não gerar s2 < e2 no mesmo turno)
+                        if (turnoFim !== turnoInicio) {
+                            if (turnoFim === 2) {
+                                if (e2Inp) e2Inp.value = abonoFim;
+                            } else if (turnoFim === 3) {
+                                if (exE1Inp) exE1Inp.value = abonoFim;
+                            } else if (turnoFim === 1) {
+                                // Caso raro: fim no 1º turno mas início em outro → coloca e2
+                                if (e2Inp) e2Inp.value = abonoFim;
+                            }
+                        } else {
+                            // Mesmo turno: o abono é um intervalo dentro do mesmo turno.
+                            // Não há campo para "intervalo interno" — então ajustamos:
+                            //   - Se for turno 1: usamos e1=inicio, s1=fim (não mexe em e2)
+                            //   - Se for turno 2: usamos e2=inicio, s2=fim (não mexe em s1)
+                            //   - Se for turno 3: usamos extra_e1=inicio, extra_s1=fim
+                            if (turnoInicio === 1) {
+                                // Já tratado acima: s1=inicio (mas queremos s1=fim)
+                                if (s1Inp) s1Inp.value = abonoFim;
+                                if (e1Inp && !abonoE1) e1Inp.value = abonoInicio;
+                            } else if (turnoInicio === 2) {
+                                if (s2Inp) s2Inp.value = abonoFim;
+                                if (e2Inp && !abonoE2) e2Inp.value = abonoInicio;
+                            } else {
+                                if (exS1Inp) exS1Inp.value = abonoFim;
+                                if (exE1Inp && !abonoE2) exE1Inp.value = abonoInicio;
+                            }
                         }
                     }
 
-                    if (s2Inp && abonoS2) s2Inp.value = abonoS2;
+                    // Preenche s2 / extra_s1 manuais se informados
+                    if (abonoS2 && s2Inp) s2Inp.value = abonoS2;
+
                     recalcularLinha(dia);
                 } else {
+                    // Dia inteiro: limpa tudo e marca como ABONO
                     ['e1','s1','e2','s2','extra_e1','extra_s1'].forEach(c => {
                         const inp = document.getElementById(`edit_${c}_${dia}`);
                         if (inp) { inp.value = ''; inp.disabled = true; }
@@ -6268,12 +6340,14 @@
                 }
                 count++;
             }
+
             if (count === 0) { mostrarToast('⚠️ Nenhum dia do período está no mês selecionado.', 'warning'); return; }
             recalcularTotaisEditor();
-            // ✅ SALVA IMEDIATAMENTE após aplicar o abono
             salvarEditorAutomatico();
             fecharModalAbono();
-            const descricao = modoAbono === 'horas' ? `${count} dia(s) com abono ${abonoInicio}-${abonoFim} — ${motivo}` : `${count} dia(s) abonado(s) integralmente — ${motivo}`;
+            const descricao = modoAbono === 'horas'
+                ? `${count} dia(s) com abono ${abonoInicio}-${abonoFim} — ${motivo}`
+                : `${count} dia(s) abonado(s) integralmente — ${motivo}`;
             mostrarToast(`✅ ${descricao}`);
         }
 
