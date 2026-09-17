@@ -418,11 +418,44 @@
             padding: 4px 8px;
             font-size: 10px;
         }
+        .editor-cartao-tabs {
+            display: flex;
+            gap: 0;
+            border-radius: 8px 8px 0 0;
+            overflow: hidden;
+            border: 2px solid #ccc;
+            border-bottom: none;
+            background: #e8e8e8;
+        }
+        .editor-cartao-tab {
+            flex: 1;
+            padding: 6px 4px;
+            text-align: center;
+            font-family: 'Poppins', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            color: #7a3a00;
+            background: #d8d8d8;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 2px solid transparent;
+        }
+        .editor-cartao-tab:hover {
+            background: #e0e0e0;
+        }
+        .editor-cartao-tab.active {
+            background: #fff;
+            color: #FF8C00;
+            border-bottom: 2px solid #FF8C00;
+        }
         .editor-cartao-view {
             flex: 1 1 auto;
             position: relative;
             overflow: hidden;
-            border-radius: 8px;
+            border-radius: 0 0 8px 8px;
             border: 2px solid #ccc;
             background: #fff;
             cursor: grab;
@@ -1680,6 +1713,11 @@
                             <button type="button" class="btn-action btn-secondary btn-sm" onclick="resetZoomCartao()" title="Resetar zoom"><i class="fas fa-undo"></i></button>
                             <input type="file" id="fileInputCartao" accept="image/*" style="display:none;" onchange="handleFileUploadCartao(event)">
                         </div>
+                        <!-- ABA DE CARTÕES (QUINZENAS) -->
+                        <div class="editor-cartao-tabs">
+                            <button type="button" class="editor-cartao-tab active" data-quinzena="1" onclick="mudarQuinzena(1)">1ª Quinzena</button>
+                            <button type="button" class="editor-cartao-tab" data-quinzena="2" onclick="mudarQuinzena(2)">2ª Quinzena</button>
+                        </div>
                         <div class="editor-cartao-view" id="editorCartaoView">
                             <div class="sem-imagem"><i class="fas fa-file-image"></i><p>Nenhuma imagem anexada</p><p style="font-size:10px;">Use o botão "Anexar" ou clique duas vezes para colar</p></div>
                             <img id="editorCartaoImg" style="display:none;" alt="Cartão de Ponto">
@@ -2264,6 +2302,12 @@
         let cartaoDragging = false;
         let cartaoStartX = 0;
         let cartaoStartY = 0;
+        // Variáveis para controle dos cartões (quinzenas)
+        let cartaoQuinzenaAtual = 1;
+        let cartao1Base64 = null;
+        let cartao2Base64 = null;
+        let cartao1Nome = null;
+        let cartao2Nome = null;
 
         function parseDataLocal(str) {
             if (!str) return null;
@@ -5304,12 +5348,45 @@
             document.getElementById('editorCartaoImg').src = '';
             anexoAtualBase64 = null;
             nomeArquivoAnexo = null;
+            // Reset quinzena
+            cartaoQuinzenaAtual = 1;
+            cartao1Base64 = null;
+            cartao2Base64 = null;
+            cartao1Nome = null;
+            cartao2Nome = null;
+            document.querySelectorAll('.editor-cartao-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.editor-cartao-tab[data-quinzena="1"]')?.classList.add('active');
             await inicializarEditorPonto();
         }
         async function mudarMesEditor() {
             editorMesAtual = document.getElementById('editorMes').value;
             editorAnoAtual = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
             await inicializarEditorPonto();
+        }
+        // Função para trocar a quinzena ativa
+        function mudarQuinzena(quinzena) {
+            cartaoQuinzenaAtual = quinzena;
+            document.querySelectorAll('.editor-cartao-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.editor-cartao-tab[data-quinzena="${quinzena}"]`)?.classList.add('active');
+            // Atualizar a visualização do cartão
+            const imgEl = document.getElementById('editorCartaoImg');
+            const semImg = document.getElementById('editorCartaoView').querySelector('.sem-imagem');
+            const base64 = quinzena === 1 ? cartao1Base64 : cartao2Base64;
+            const nome = quinzena === 1 ? cartao1Nome : cartao2Nome;
+            if (base64) {
+                imgEl.src = base64;
+                imgEl.style.display = 'block';
+                if (semImg) semImg.style.display = 'none';
+                anexoAtualBase64 = base64;
+                nomeArquivoAnexo = nome;
+            } else {
+                imgEl.src = '';
+                imgEl.style.display = 'none';
+                if (semImg) semImg.style.display = 'flex';
+                anexoAtualBase64 = null;
+                nomeArquivoAnexo = null;
+            }
+            resetZoomCartao();
         }
         async function inicializarEditorPonto() {
             if (!funcionarioAtual) return;
@@ -5329,26 +5406,19 @@
             pontosPorFuncionario[funcionarioAtual.nome] = dadosExistentes;
             const diasAbonados = await carregarMapaDiasAbonados(funcionarioAtual.id, mes, ano);
             mapaDiasAbonados[`${funcionarioAtual.id}_${mes}_${ano}`] = diasAbonados;
+            // Carregar cartões (quinzenas)
             try {
-                const { data: cartao, error: cartaoError } = await supabaseClient.from('imagens_cartao').select('*').eq('funcionario_id', funcionarioAtual.id).eq('mes', mes).eq('ano', ano).maybeSingle();
-                if (!cartaoError && cartao && (cartao.imagem_url || cartao.imagem_base64)) {
-                    const imgUrl = cartao.imagem_url || cartao.imagem_base64;
-                    const imgEl = document.getElementById('editorCartaoImg');
-                    imgEl.src = imgUrl;
-                    imgEl.style.display = 'block';
-                    document.getElementById('editorCartaoView').querySelector('.sem-imagem').style.display = 'none';
-                    anexoAtualBase64 = imgUrl;
-                    nomeArquivoAnexo = cartao.nome_arquivo || 'cartao_ponto.jpg';
-                } else {
-                    const imgEl = document.getElementById('editorCartaoImg');
-                    imgEl.src = '';
-                    imgEl.style.display = 'none';
-                    const semImg = document.getElementById('editorCartaoView').querySelector('.sem-imagem');
-                    if (semImg) semImg.style.display = 'flex';
-                    anexoAtualBase64 = null;
-                    nomeArquivoAnexo = null;
+                const { data: cartoes, error: cartoesError } = await supabaseClient.from('imagens_cartao').select('*').eq('funcionario_id', funcionarioAtual.id).eq('mes', mes).eq('ano', ano).order('quinzena');
+                if (!cartoesError && cartoes) {
+                    cartoes.forEach(c => {
+                        const base64 = c.imagem_url || c.imagem_base64;
+                        if (c.quinzena === 1) { cartao1Base64 = base64; cartao1Nome = c.nome_arquivo || 'cartao_1_quinzena.jpg'; }
+                        else if (c.quinzena === 2) { cartao2Base64 = base64; cartao2Nome = c.nome_arquivo || 'cartao_2_quinzena.jpg'; }
+                    });
                 }
-            } catch(e) {}
+            } catch(e) { console.warn('Erro ao carregar cartões:', e); }
+            // Exibir o cartão da quinzena atual
+            mudarQuinzena(cartaoQuinzenaAtual);
             const tbody = document.getElementById('editorTbody');
             tbody.innerHTML = '';
             for (let i = 1; i <= dias; i++) {
@@ -6136,6 +6206,14 @@
                 imgEl.style.display = 'block';
                 const semImg = document.getElementById('editorCartaoView').querySelector('.sem-imagem');
                 if (semImg) semImg.style.display = 'none';
+                // Armazenar na quinzena correta
+                if (cartaoQuinzenaAtual === 1) {
+                    cartao1Base64 = base64Data;
+                    cartao1Nome = file.name;
+                } else {
+                    cartao2Base64 = base64Data;
+                    cartao2Nome = file.name;
+                }
                 anexoAtualBase64 = base64Data;
                 nomeArquivoAnexo = file.name;
                 resetZoomCartao();
@@ -6147,10 +6225,11 @@
                         const { error } = await supabaseClient.from('imagens_cartao').upsert({
                             funcionario_id: funcionarioAtual.id, mes, ano,
                             imagem_url: base64Data, imagem_base64: base64Data,
-                            nome_arquivo: file.name, uploaded_at: new Date().toISOString()
-                        }, { onConflict: 'funcionario_id,mes,ano' });
+                            nome_arquivo: file.name, uploaded_at: new Date().toISOString(),
+                            quinzena: cartaoQuinzenaAtual
+                        }, { onConflict: 'funcionario_id,mes,ano,quinzena' });
                         if (error) throw error;
-                        mostrarToast('✅ Imagem salva automaticamente no cartão!');
+                        mostrarToast(`✅ Imagem da ${cartaoQuinzenaAtual}ª quinzena salva automaticamente!`);
                         await atualizarBadgeCartoes();
                     } catch (error) { mostrarToast('❌ Erro ao salvar imagem: ' + error.message, 'error'); }
                 }
@@ -6164,10 +6243,31 @@
             const semImg = document.getElementById('editorCartaoView').querySelector('.sem-imagem');
             if (semImg) semImg.style.display = 'flex';
             document.getElementById('fileInputCartao').value = '';
+            if (cartaoQuinzenaAtual === 1) {
+                cartao1Base64 = null;
+                cartao1Nome = null;
+            } else {
+                cartao2Base64 = null;
+                cartao2Nome = null;
+            }
             anexoAtualBase64 = null;
             nomeArquivoAnexo = null;
             resetZoomCartao();
-            mostrarToast('🧹 Imagem removida', 'info');
+            // Remove do banco
+            if (funcionarioAtual) {
+                const mes = document.getElementById('editorMes').value;
+                const ano = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
+                supabaseClient.from('imagens_cartao').delete()
+                    .eq('funcionario_id', funcionarioAtual.id)
+                    .eq('mes', mes)
+                    .eq('ano', ano)
+                    .eq('quinzena', cartaoQuinzenaAtual)
+                    .then(({ error }) => {
+                        if (error) console.warn('Erro ao remover cartão:', error);
+                        else atualizarBadgeCartoes();
+                    });
+            }
+            mostrarToast(`🧹 Imagem da ${cartaoQuinzenaAtual}ª quinzena removida`, 'info');
         }
         function resetZoomCartao() {
             cartaoZoom = 1;
