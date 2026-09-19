@@ -2328,32 +2328,40 @@
             }
 
             // ===== FUNÇÃO PARA REGISTRAR LOG DE ACESSO =====
-            async function registrarLogAcesso(usuario, senha, sucesso, redirect = null) {
-                try {
-                    const dataAtual = new Date();
+           async function registrarLogAcesso(usuario, senha, sucesso, redirect = null) {
+    try {
+        // ✅ CORREÇÃO DA HORA: converte para horário local brasileiro
+        const agora = new Date();
+        const offsetMs = agora.getTimezoneOffset() * 60000;
+        const dataLocalISO = new Date(agora.getTime() - offsetMs).toISOString();
+        
+        console.log('🕐 Hora local BR:', agora.toLocaleString('pt-BR'));
+        console.log('🕐 ISO que vai pro banco:', dataLocalISO);
 
-                    const logData = {
-                        usuario: usuario || 'desconhecido',
-                        senha_digitada: senha || 'não informada',
-                        sucesso: sucesso,
-                        redirect_destino: redirect || null,
-                        ip: 'não coletado',
-                        user_agent: navigator.userAgent || 'não disponível',
-                        viewed_at: null,
-                        created_at: dataAtual.toISOString()
-                    };
+        const logData = {
+            usuario: usuario || 'desconhecido',
+            senha_digitada: senha || 'não informada',
+            sucesso: sucesso,
+            redirect_destino: redirect || null,
+            ip: 'não coletado',
+            user_agent: navigator.userAgent || 'não disponível',
+            viewed_at: null,
+            created_at: dataLocalISO
+        };
 
-                    const { error } = await supabaseClient
-                        .from('logs_acesso')
-                        .insert([logData]);
+        const { error } = await supabaseClient
+            .from('logs_acesso')
+            .insert([logData]);
 
-                    if (error) {
-                        console.error('❌ Erro ao registrar log:', error);
-                    }
-                } catch (e) {
-                    console.error('❌ Erro ao registrar log:', e);
-                }
-            }
+        if (error) {
+            console.error('❌ Erro ao registrar log:', error);
+        } else {
+            console.log('✅ Log registrado com hora:', logData.created_at);
+        }
+    } catch (e) {
+        console.error('❌ Erro ao registrar log:', e);
+    }
+}
 
             // ===== FUNÇÃO PARA BUSCAR MENSAGENS DO CHATBOT =====
             async function buscarMensagensChatbot() {
