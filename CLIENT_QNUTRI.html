@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
+    <!-- ✅ Supabase JS (necessário para registrar logout no banco) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -767,7 +770,7 @@
                         <h3>Módulo III</h3>
                         <div class="module-subtitle">COMPRAS & SUPRIMENTOS</div>
                     </div>
-                    <span class="module-status-badge soon"><i class="fas fa-clock"></i> Em Breve</span>
+                    <span class="module-status-badge soon"><i class="fas fa-clock"></i> Em breve</span>
                 </div>
                 <div class="module-divider"></div>
                 <ul class="module-features">
@@ -799,7 +802,7 @@
                 <i class="fas fa-building"></i>
             </div>
             <h2>Alternar Cliente</h2>
-            <p>Você tem acesso a mais de um cliente. Para onde deseja ir?</p>
+            <p id="modalMensagem">Você tem acesso a mais de um cliente. Para onde deseja ir?</p>
             <div class="divider-line"></div>
             <div class="client-select-buttons">
                 <button class="client-select-btn primary" data-client="ALF">
@@ -817,13 +820,25 @@
 
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
+        // ==================================================
+        // INICIALIZAÇÃO
+        // ==================================================
         AOS.init({ duration: 500, once: true, offset: 15 });
+
+        // ===== CONFIGURAÇÃO SUPABASE =====
+        const SUPABASE_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // ===== PEGA O USUÁRIO LOGADO DA URL =====
         const urlParams = new URLSearchParams(window.location.search);
-        const usuarioLogado = urlParams.get('user') ? decodeURIComponent(urlParams.get('user')).toUpperCase().trim() : null;
+        const usuarioLogado = urlParams.get('user') 
+            ? decodeURIComponent(urlParams.get('user')).toUpperCase().trim() 
+            : null;
 
-        console.log('👤 Usuário logado na QNUTRI:', usuarioLogado);
+        console.log('═══════════════════════════════════════════');
+        console.log('👤 Usuário logado na QNUTRI:', usuarioLogado || '❌ NÃO IDENTIFICADO');
+        console.log('═══════════════════════════════════════════');
 
         // ===== LISTA DE USUÁRIOS MULTI-CLIENTE =====
         // Estes usuários PODEM alternar entre QNUTRI e ALF
@@ -833,21 +848,77 @@
             'LUCIANO SOUSA'
         ];
 
-        // ===== FUNÇÃO CENTRAL DE SAIR =====
-        function handleSairClick(e) {
+        // ===== MOSTRA O NOME DO USUÁRIO NO SUBTÍTULO =====
+        if (usuarioLogado) {
+            const subtitle = document.querySelector('.welcome-title .subtitle');
+            if (subtitle) {
+                subtitle.innerHTML = `Bem-vindo, <strong style="color:#7a3a00;">${usuarioLogado}</strong> — Gestão inteligente e automação de dados`;
+            }
+        }
+
+        // ==================================================
+        // FUNÇÃO: REGISTRAR LOGOUT NO BANCO (com hora local BR)
+        // ==================================================
+        async function registrarLogout(usuario, destino) {
+            if (!usuario) return;
+            try {
+                const agora = new Date();
+                const offsetMs = agora.getTimezoneOffset() * 60000;
+                const dataLocalISO = new Date(agora.getTime() - offsetMs).toISOString();
+
+                console.log('🚪 Registrando logout:', usuario, '→', destino);
+                console.log('🕐 Hora local BR:', agora.toLocaleString('pt-BR'));
+
+                // Atualiza a última sessão ativa deste usuário
+                const { error } = await supabaseClient
+                    .from('logs_acesso')
+                    .update({
+                        logout_em: dataLocalISO,
+                        redirect_destino: destino || null
+                    })
+                    .eq('usuario', usuario)
+                    .is('logout_em', null);
+
+                if (error) {
+                    console.warn('⚠️ Erro ao registrar logout (não bloqueia):', error);
+                } else {
+                    console.log('✅ Logout registrado no banco');
+                }
+            } catch (e) {
+                console.warn('⚠️ Erro ao registrar logout (não bloqueia):', e);
+            }
+        }
+
+        // ==================================================
+        // FUNÇÃO CENTRAL DE SAIR
+        // ==================================================
+        async function handleSairClick(e) {
             if (e) e.preventDefault();
 
-            // Se o usuário está identificado E tem permissão multi-cliente → mostra popup
-            if (usuarioLogado && USERS_MULTI_CLIENT.includes(usuarioLogado)) {
-                console.log('✅ Usuário multi-cliente detectado → exibindo popup de troca');
+            console.log('🚪 Clique em Sair. Usuário:', usuarioLogado);
+
+            // Sem usuário identificado → vai direto para o index
+            if (!usuarioLogado) {
+                console.log('ℹ️ Sem usuário identificado → indo para index.html');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Usuário multi-cliente → mostra popup
+            if (USERS_MULTI_CLIENT.includes(usuarioLogado)) {
+                console.log('✅ Usuário multi-cliente detectado → exibindo popup');
                 showClientSwitchModal();
             } else {
-                // Usuário single-client ou não identificado → sai direto
-                console.log('ℹ️ Usuário single-client (ou não identificado) → saindo direto');
+                // Single-cliente → sai direto
+                console.log('ℹ️ Usuário single-client → saindo direto');
+                await registrarLogout(usuarioLogado, 'index.html');
                 window.location.href = 'index.html';
             }
         }
 
+        // ==================================================
+        // MENU MOBILE
+        // ==================================================
         const mobileToggle = document.getElementById('mobileMenuToggle');
         const navMobile = document.getElementById('navMobile');
         mobileToggle.addEventListener('click', () => navMobile.classList.toggle('active'));
@@ -856,7 +927,9 @@
             link.addEventListener('click', () => navMobile.classList.remove('active'));
         });
 
-        // ===== POPUP DE SELEÇÃO DE CLIENTE =====
+        // ==================================================
+        // POPUP DE SELEÇÃO DE CLIENTE
+        // ==================================================
         const clientSwitchModal = document.getElementById('clientSwitchModal');
         const btnSairDefinitivo = document.getElementById('btnSairDefinitivo');
 
@@ -870,28 +943,34 @@
             document.body.style.overflow = '';
         }
 
-        // Evento para trocar para ALF
+        // Trocar para outro cliente (mantém o usuário)
         document.querySelectorAll('.client-select-btn[data-client]').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', async function() {
                 const client = this.dataset.client;
                 const user = usuarioLogado || '';
+
+                console.log('🔄 Trocando para cliente:', client, '| Usuário:', user);
+
+                // Registra a troca no log
+                await registrarLogout(user, `CLIENT_${client}.html`);
+
                 hideClientSwitchModal();
-                // Passa o usuário adiante para manter o contexto
+                // ✅ Mantém o ?user= ao trocar de cliente
                 window.location.href = `CLIENT_${client}.html?user=${encodeURIComponent(user)}`;
             });
         });
 
-        // Evento para sair definitivamente
-        btnSairDefinitivo.addEventListener('click', function() {
+        // Sair definitivamente
+        btnSairDefinitivo.addEventListener('click', async function() {
+            console.log('🚪 Sair definitivo');
+            await registrarLogout(usuarioLogado, 'index.html');
             hideClientSwitchModal();
             window.location.href = 'index.html';
         });
 
         // Fechar ao clicar fora
         clientSwitchModal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                hideClientSwitchModal();
-            }
+            if (e.target === this) hideClientSwitchModal();
         });
 
         // Fechar com ESC
@@ -901,7 +980,9 @@
             }
         });
 
-        // ===== BOTÕES DE SAIR (desktop e mobile) =====
+        // ==================================================
+        // BOTÕES DE SAIR (desktop e mobile)
+        // ==================================================
         document.getElementById('btnSair').addEventListener('click', handleSairClick);
 
         document.getElementById('btnSairMobile').addEventListener('click', function(e) {
@@ -909,45 +990,52 @@
             handleSairClick(e);
         });
 
-        // ===== NAVEGAÇÃO DOS MÓDULOS =====
+        // ==================================================
+        // NAVEGAÇÃO DOS MÓDULOS (sempre preserva ?user=)
+        // ==================================================
+        function navegarParaModulo(arquivo) {
+            const user = usuarioLogado || '';
+            window.location.href = `${arquivo}?user=${encodeURIComponent(user)}`;
+        }
+
         document.getElementById('linkFolhaPonto').addEventListener('click', function(e) {
             e.preventDefault();
-            window.location.href = `MODULOI_QNUTRI.html?user=${encodeURIComponent(usuarioLogado || '')}`;
+            navegarParaModulo('MODULOI_QNUTRI.html');
         });
 
         document.getElementById('linkControleFerias').addEventListener('click', function(e) {
             e.preventDefault();
-            window.location.href = `MODULO1_QFERIAS.html?user=${encodeURIComponent(usuarioLogado || '')}`;
+            navegarParaModulo('MODULO1_QFERIAS.html');
         });
 
         document.getElementById('linkValeTransporte').addEventListener('click', function(e) {
             e.preventDefault();
-            window.location.href = `CONEXOES.html?user=${encodeURIComponent(usuarioLogado || '')}`;
+            navegarParaModulo('CONEXOES.html');
         });
 
         document.getElementById('linkPagamentoSindicato').addEventListener('click', function(e) {
             e.preventDefault();
-            window.location.href = `SID_QNUTRI.html?user=${encodeURIComponent(usuarioLogado || '')}`;
+            navegarParaModulo('SID_QNUTRI.html');
         });
 
         document.getElementById('linkInssFgts').addEventListener('click', function(e) {
             e.preventDefault();
-            window.location.href = `INSS_QNUTRI.html?user=${encodeURIComponent(usuarioLogado || '')}`;
+            navegarParaModulo('INSS_QNUTRI.html');
         });
 
         document.getElementById('linkProjecaoFolha').addEventListener('click', function(e) {
             e.preventDefault();
-            window.location.href = `FOLHA_QNUTRI.html?user=${encodeURIComponent(usuarioLogado || '')}`;
+            navegarParaModulo('FOLHA_QNUTRI.html');
         });
 
         document.getElementById('linkPastaFuncionarios').addEventListener('click', function(e) {
             e.preventDefault();
-            window.location.href = `PASTA_QNUTRI.html?user=${encodeURIComponent(usuarioLogado || '')}`;
+            navegarParaModulo('PASTA_QNUTRI.html');
         });
 
         document.getElementById('linkMedicinaTrabalho').addEventListener('click', function(e) {
             e.preventDefault();
-            window.location.href = `MED_QNUTRI.html?user=${encodeURIComponent(usuarioLogado || '')}`;
+            navegarParaModulo('MED_QNUTRI.html');
         });
     </script>
 </body>
