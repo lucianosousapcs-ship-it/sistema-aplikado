@@ -2434,61 +2434,67 @@
             let pendingUser = null;
 
             // ===== FUNÇÃO DE LOGIN =====
-            async function handleLogin(username, password) {
-                const userConfig = USERS[username];
+          async function handleLogin(username, password) {
+    const userConfig = USERS[username];
 
-                if (!userConfig) {
-                    await registrarLogAcesso(username, password, false);
-                    alert('Usuário ou senha inválidos.');
-                    return false;
-                }
+    if (!userConfig) {
+        await registrarLogAcesso(username, password, false);
+        alert('Usuário ou senha inválidos.');
+        return false;
+    }
 
-                const definitivePassword = await getUserPassword(username);
+    const definitivePassword = await getUserPassword(username);
 
-                if (userConfig.isSpecial) {
-                    if (password === userConfig.initialPassword) {
-                        currentUser = username;
-                        await registrarLogAcesso(username, password, true, `${userConfig.client}.html`);
-                        window.location.href = `CLIENT_${userConfig.client}.html`;
-                        return true;
-                    } else {
-                        await registrarLogAcesso(username, password, false);
-                        alert('Usuário ou senha inválidos.');
-                        return false;
-                    }
-                }
+    // ---- USUÁRIO ESPECIAL (QNUTRI, ALF, VM) ----
+    if (userConfig.isSpecial) {
+        if (password === userConfig.initialPassword) {
+            currentUser = username;
+            await registrarLogAcesso(username, password, true, `CLIENT_${userConfig.client}.html`);
+            // ✅ SEMPRE passa ?user= na URL
+            window.location.href = `CLIENT_${userConfig.client}.html?user=${encodeURIComponent(username)}`;
+            return true;
+        } else {
+            await registrarLogAcesso(username, password, false);
+            alert('Usuário ou senha inválidos.');
+            return false;
+        }
+    }
 
-                const isFirst = definitivePassword === null;
+    const isFirst = definitivePassword === null;
 
-                if (isFirst) {
-                    if (password === userConfig.initialPassword) {
-                        pendingUser = username;
-                        await registrarLogAcesso(username, password, true);
-                        showChangePasswordModal();
-                        return true;
-                    } else {
-                        await registrarLogAcesso(username, password, false);
-                        alert('Usuário ou senha inválidos.');
-                        return false;
-                    }
-                } else {
-                    if (password === definitivePassword) {
-                        currentUser = username;
-                        await registrarLogAcesso(username, password, true);
+    // ---- PRIMEIRO ACESSO ----
+    if (isFirst) {
+        if (password === userConfig.initialPassword) {
+            pendingUser = username;
+            await registrarLogAcesso(username, password, true);
+            showChangePasswordModal();
+            return true;
+        } else {
+            await registrarLogAcesso(username, password, false);
+            alert('Usuário ou senha inválidos.');
+            return false;
+        }
+    }
 
-                        if (userConfig.type === 'select_client') {
-                            showClientSelectModal();
-                        } else if (userConfig.type === 'direct') {
-                            window.location.href = `CLIENT_${userConfig.client}.html`;
-                        }
-                        return true;
-                    } else {
-                        await registrarLogAcesso(username, password, false);
-                        alert('Usuário ou senha inválidos.');
-                        return false;
-                    }
-                }
-            }
+    // ---- ACESSO NORMAL ----
+    if (password === definitivePassword) {
+        currentUser = username;
+        await registrarLogAcesso(username, password, true);
+
+        if (userConfig.type === 'select_client') {
+            // Multi-cliente: mostra o modal
+            showClientSelectModal();
+        } else if (userConfig.type === 'direct') {
+            // Single-cliente: vai direto COM ?user=
+            window.location.href = `CLIENT_${userConfig.client}.html?user=${encodeURIComponent(username)}`;
+        }
+        return true;
+    } else {
+        await registrarLogAcesso(username, password, false);
+        alert('Usuário ou senha inválidos.');
+        return false;
+    }
+}
 
             // ===== MODAL DE SELEÇÃO DE CLIENTE =====
             function showClientSelectModal() {
@@ -2502,12 +2508,17 @@
             }
 
             document.querySelectorAll('.client-select-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const client = this.dataset.client;
-                    hideClientSelectModal();
-                    window.location.href = `CLIENT_${client}.html`;
-                });
-            });
+    btn.addEventListener('click', function() {
+        const client = this.dataset.client;
+        const user = currentUser || '';
+        
+        // ✅ Registra no log que o usuário escolheu um cliente
+        registrarLogAcesso(user, '***', true, `CLIENT_${client}.html`);
+        
+        hideClientSelectModal();
+        window.location.href = `CLIENT_${client}.html?user=${encodeURIComponent(user)}`;
+    });
+});
 
             // ===== MODAL DE ALTERAÇÃO DE SENHA =====
             function showChangePasswordModal() {
@@ -2570,12 +2581,13 @@
                         hideChangePasswordModal();
                         currentUser = username;
 
-                        const userConfig = USERS[username];
-                        if (userConfig.type === 'select_client') {
-                            showClientSelectModal();
-                        } else if (userConfig.type === 'direct') {
-                            window.location.href = `CLIENT_${userConfig.client}.html`;
-                        }
+                     const userConfig = USERS[username];
+if (userConfig.type === 'select_client') {
+    currentUser = username;
+    showClientSelectModal();
+} else if (userConfig.type === 'direct') {
+    window.location.href = `CLIENT_${userConfig.client}.html?user=${encodeURIComponent(username)}`;
+}
                     } else {
                         alert('Erro ao salvar senha. Tente novamente.');
                         this.disabled = false;
