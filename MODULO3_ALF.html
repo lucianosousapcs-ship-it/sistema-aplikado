@@ -543,6 +543,99 @@
         }
 
         /* ============================================================
+           BANNER DE AVISO - SANGRIAS DESATUALIZADAS
+           ============================================================ */
+        .banner-sangrias-desatualizadas {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1500;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95));
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-full);
+            box-shadow: 0 8px 32px rgba(245, 158, 11, 0.4), 0 0 60px rgba(245, 158, 11, 0.2);
+            color: #0B0E14;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            max-width: 90vw;
+            animation: bannerPulse 2s ease-in-out infinite;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .banner-sangrias-desatualizadas.visible {
+            display: flex;
+        }
+        .banner-sangrias-desatualizadas:hover {
+            transform: translateX(-50%) scale(1.02);
+            box-shadow: 0 12px 40px rgba(245, 158, 11, 0.6), 0 0 80px rgba(245, 158, 11, 0.3);
+        }
+        @keyframes bannerPulse {
+            0%, 100% { box-shadow: 0 8px 32px rgba(245, 158, 11, 0.4), 0 0 60px rgba(245, 158, 11, 0.2); }
+            50% { box-shadow: 0 8px 40px rgba(245, 158, 11, 0.7), 0 0 80px rgba(245, 158, 11, 0.4); }
+        }
+        .banner-sangrias-desatualizadas .banner-icon {
+            font-size: 22px;
+            flex-shrink: 0;
+            animation: spinIcon 3s linear infinite;
+        }
+        @keyframes spinIcon {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .banner-sangrias-desatualizadas .banner-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .banner-sangrias-desatualizadas .banner-text .banner-title {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+        .banner-sangrias-desatualizadas .banner-text .banner-sub {
+            font-size: 10px;
+            font-weight: 500;
+            opacity: 0.85;
+        }
+        .banner-sangrias-desatualizadas .banner-close {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.15);
+            border: none;
+            color: #0B0E14;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: var(--transition);
+            margin-left: 8px;
+        }
+        .banner-sangrias-desatualizadas .banner-close:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        .banner-sangrias-desatualizadas .banner-comparativo {
+            font-size: 10px;
+            font-weight: 500;
+            background: rgba(0, 0, 0, 0.15);
+            padding: 4px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+            margin-left: 4px;
+        }
+
+        /* ============================================================
            COMMAND BAR
            ============================================================ */
         .command-bar {
@@ -1292,6 +1385,14 @@
                 font-size: 10px;
             }
             .loading-progress-wrap { width: 320px; }
+            .banner-sangrias-desatualizadas {
+                bottom: 70px;
+                padding: 10px 16px;
+                font-size: 11px;
+                max-width: 95vw;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
         }
         @media (max-width: 480px) {
             .topbar {
@@ -1317,6 +1418,12 @@
                 padding: 6px 8px;
             }
             .loading-progress-wrap { width: 260px; }
+            .banner-sangrias-desatualizadas {
+                bottom: 60px;
+                padding: 8px 12px;
+                font-size: 10px;
+                border-radius: var(--radius);
+            }
         }
 
         /* ============================================================
@@ -1477,6 +1584,7 @@
     <header class="topbar">
         <a href="javascript:void(0);" class="logo" onclick="window.location.href='CLIENT_ALF.html'">Apli<span>kado</span></a>
         <div class="topbar-actions">
+            <button class="btn btn-outline btn-sm" onclick="verificarAtualizacaoSangrias()" title="Verificar sincronização de sangrias">🔄 Verificar</button>
             <button class="btn btn-outline btn-sm" onclick="window.location.href='CLIENT_ALF.html'">Voltar</button>
             <button class="btn btn-outline btn-sm" id="btnToggleTema" onclick="toggleTema()">Tema Escuro</button>
         </div>
@@ -1522,6 +1630,19 @@
             </div>
         </div>
     </main>
+
+    <!-- BANNER AVISO SANGRIAS DESATUALIZADAS -->
+    <div class="banner-sangrias-desatualizadas" id="bannerSangriasDesatualizadas" onclick="irParaSangrias()">
+        <span class="banner-icon">⚠</span>
+        <div class="banner-text">
+            <span class="banner-title">SANGRIA NECESSITA ATUALIZAÇÃO</span>
+            <span class="banner-sub">As sangrias (Contas Extras) estão desatualizadas em relação aos lançamentos.</span>
+        </div>
+        <span class="banner-comparativo" id="bannerComparativo">
+            Sangrias: <span id="bannerDataSangrias">-</span> | Lançamentos: <span id="bannerDataLancamentos">-</span>
+        </span>
+        <button class="banner-close" onclick="event.stopPropagation(); fecharBannerSangrias();" title="Fechar">✕</button>
+    </div>
 
     <!-- COMMAND BAR -->
     <div class="command-bar" id="commandBar">
@@ -2454,11 +2575,16 @@
         let pdfBlobAtual = null;
         let pdfNomeAtual = '';
 
+        // Controle de datas de atualização
+        let dataAtualizacaoSangrias = null;
+        let dataAtualizacaoLancamentos = null;
+
         const STORAGE_KEY_PLANOS_RECEITAS = 'planos_receitas_personalizados';
         const STORAGE_KEY_PLANOS_DESPESAS = 'planos_despesas_personalizados';
         const STORAGE_KEY_COMPARATIVOS = 'dados_comparativos_fechamento';
         const STORAGE_KEY_FLAGS = 'caixa_flags_pdf_sinais';
         const STORAGE_KEY_CORES_LINHAS_CAIXA = 'linhas_fechamento_cores';
+        const STORAGE_KEY_BANNER_SANGRIAS_FECHADO = 'banner_sangrias_fechado';
         const VERSAO_PLANO = "3.0";
         const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -2675,6 +2801,183 @@
                 if (opNormalized.includes(keyNormalized) || keyNormalized.includes(opNormalized)) return value;
             }
             return '4 - DESPESAS ADMINISTRATIVAS';
+        }
+
+        // ============================================================
+        // VERIFICAÇÃO DE ATUALIZAÇÃO DAS SANGRIAS (VERSÃO MELHORADA)
+        // ============================================================
+        async function verificarAtualizacaoSangrias() {
+            try {
+                console.log('🔍 Iniciando verificação de atualização das sangrias...');
+
+                // Buscar a data de atualização mais recente da tabela contas_extras (sangrias)
+                const { data: sangriasData, error: errorSangrias } = await supabaseClient
+                    .from('contas_extras')
+                    .select('data_atualizacao, id')
+                    .order('data_atualizacao', { ascending: false, nullsFirst: false })
+                    .limit(1);
+
+                if (errorSangrias) {
+                    console.error('❌ Erro ao buscar data de atualização das sangrias:', errorSangrias);
+                }
+
+                // Buscar a data de atualização mais recente da tabela dados_m2 (lançamentos)
+                const { data: lancamentosData, error: errorLancamentos } = await supabaseClient
+                    .from('dados_m2')
+                    .select('updated_at, id')
+                    .order('updated_at', { ascending: false, nullsFirst: false })
+                    .limit(1);
+
+                if (errorLancamentos) {
+                    console.error('❌ Erro ao buscar data de atualização dos lançamentos:', errorLancamentos);
+                }
+
+                // Também considerar vendas_alf como fonte de atualização
+                const { data: vendasDataAtual } = await supabaseClient
+                    .from('vendas_alf')
+                    .select('updated_at, id')
+                    .order('updated_at', { ascending: false, nullsFirst: false })
+                    .limit(1);
+
+                console.log('📊 Dados brutos:');
+                console.log('  - Sangrias (contas_extras):', sangriasData);
+                console.log('  - Lançamentos (dados_m2):', lancamentosData);
+                console.log('  - Vendas (vendas_alf):', vendasDataAtual);
+
+                dataAtualizacaoSangrias = sangriasData && sangriasData.length > 0 && sangriasData[0].data_atualizacao
+                    ? new Date(sangriasData[0].data_atualizacao)
+                    : null;
+
+                // Considerar a data mais recente entre dados_m2 e vendas_alf
+                let dataLancamentos = null;
+                if (lancamentosData && lancamentosData.length > 0 && lancamentosData[0].updated_at) {
+                    dataLancamentos = new Date(lancamentosData[0].updated_at);
+                }
+                if (vendasDataAtual && vendasDataAtual.length > 0 && vendasDataAtual[0].updated_at) {
+                    const dv = new Date(vendasDataAtual[0].updated_at);
+                    if (!dataLancamentos || dv > dataLancamentos) dataLancamentos = dv;
+                }
+                dataAtualizacaoLancamentos = dataLancamentos;
+
+                console.log('📅 Datas parseadas:');
+                console.log('  - Sangrias:', dataAtualizacaoSangrias);
+                console.log('  - Lançamentos (mais recente):', dataAtualizacaoLancamentos);
+
+                // ============================================================
+                // CRITÉRIOS DE DESATUALIZAÇÃO
+                // ============================================================
+                let sangriasDesatualizadas = false;
+                let motivo = '';
+
+                // Critério 1: Sangrias nunca foram atualizadas (data NULL) mas lançamentos sim
+                if (!dataAtualizacaoSangrias && dataAtualizacaoLancamentos) {
+                    sangriasDesatualizadas = true;
+                    motivo = 'Sangrias nunca foram atualizadas (data NULL)';
+                }
+                // Critério 2: Sangrias são mais antigas que lançamentos (qualquer diferença positiva)
+                else if (dataAtualizacaoSangrias && dataAtualizacaoLancamentos) {
+                    const diffMs = dataAtualizacaoLancamentos.getTime() - dataAtualizacaoSangrias.getTime();
+                    const diffMinutos = diffMs / (1000 * 60);
+                    const diffHoras = diffMinutos / 60;
+                    const diffDias = diffHoras / 24;
+
+                    console.log(`⏱️ Diferença: ${diffMinutos.toFixed(2)} minutos (${diffHoras.toFixed(2)} horas / ${diffDias.toFixed(2)} dias)`);
+
+                    // Se sangrias forem mais antigas que lançamentos (QUALQUER diferença positiva)
+                    if (diffMs > 0) {
+                        sangriasDesatualizadas = true;
+                        if (diffDias >= 1) {
+                            motivo = `Sangrias estão ${diffDias.toFixed(1)} dia(s) desatualizadas`;
+                        } else if (diffHoras >= 1) {
+                            motivo = `Sangrias estão ${diffHoras.toFixed(1)} hora(s) desatualizadas`;
+                        } else {
+                            motivo = `Sangrias estão ${diffMinutos.toFixed(0)} minuto(s) desatualizadas`;
+                        }
+                    }
+                }
+
+                console.log('🎯 Resultado:', sangriasDesatualizadas ? 'DESATUALIZADA' : 'ATUALIZADA', motivo ? `- ${motivo}` : '');
+
+                // Atualizar banner
+                atualizarBannerSangrias(sangriasDesatualizadas, dataAtualizacaoSangrias, dataAtualizacaoLancamentos, motivo);
+
+                return {
+                    sangriasDesatualizadas,
+                    dataAtualizacaoSangrias,
+                    dataAtualizacaoLancamentos,
+                    motivo
+                };
+            } catch (e) {
+                console.error('❌ Erro ao verificar atualização das sangrias:', e);
+                return { sangriasDesatualizadas: false, dataAtualizacaoSangrias: null, dataAtualizacaoLancamentos: null, motivo: '' };
+            }
+        }
+
+        function formatarDataHora(date) {
+            if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '-';
+            const dia = String(date.getDate()).padStart(2, '0');
+            const mes = String(date.getMonth() + 1).padStart(2, '0');
+            const ano = date.getFullYear();
+            const horas = String(date.getHours()).padStart(2, '0');
+            const minutos = String(date.getMinutes()).padStart(2, '0');
+            return `${dia}/${mes}/${ano} ${horas}:${minutos}`;
+        }
+
+        function atualizarBannerSangrias(desatualizado, dataSangrias, dataLancamentos, motivo) {
+            const banner = document.getElementById('bannerSangriasDesatualizadas');
+            if (!banner) {
+                console.warn('⚠️ Banner não encontrado no DOM');
+                return;
+            }
+
+            // Verificar se o usuário fechou o banner
+            const bannerFechado = localStorage.getItem(STORAGE_KEY_BANNER_SANGRIAS_FECHADO);
+            if (bannerFechado === 'true') {
+                banner.classList.remove('visible');
+                return;
+            }
+
+            if (desatualizado) {
+                banner.classList.add('visible');
+                console.log('✅ Banner de sangrias desatualizadas EXIBIDO');
+
+                // Atualizar textos
+                const dataSangriasEl = document.getElementById('bannerDataSangrias');
+                const dataLancamentosEl = document.getElementById('bannerDataLancamentos');
+
+                if (dataSangriasEl) {
+                    dataSangriasEl.textContent = formatarDataHora(dataSangrias);
+                }
+                if (dataLancamentosEl) {
+                    dataLancamentosEl.textContent = formatarDataHora(dataLancamentos);
+                }
+
+                // Atualizar subtítulo com o motivo
+                const bannerSub = banner.querySelector('.banner-sub');
+                if (bannerSub && motivo) {
+                    bannerSub.textContent = motivo + '. Clique para atualizar as sangrias.';
+                }
+            } else {
+                banner.classList.remove('visible');
+                console.log('ℹ️ Banner de sangrias OCULTO (dados atualizados)');
+            }
+        }
+
+        function fecharBannerSangrias() {
+            const banner = document.getElementById('bannerSangriasDesatualizadas');
+            if (banner) banner.classList.remove('visible');
+            localStorage.setItem(STORAGE_KEY_BANNER_SANGRIAS_FECHADO, 'true');
+        }
+
+        function irParaSangrias() {
+            // Abre o modal de lançamentos na aba de sangrias
+            abrirModalLancamentos();
+            setTimeout(() => {
+                const tabSangrias = document.querySelector('.modal-tab[onclick*="sangrias"]');
+                if (tabSangrias) {
+                    tabSangrias.click();
+                }
+            }, 300);
         }
 
         // ============================================================
@@ -5482,7 +5785,7 @@
         }
 
         // ============================================================
-        // PDF DESPESAS - CORRIGIDO (TOTAL NÃO CORTA)
+        // PDF DESPESAS
         // ============================================================
         async function gerarRelatorioPorPeriodo() {
             const periodo = document.getElementById('selectPeriodoRelatorio').value;
@@ -5584,7 +5887,7 @@
         }
 
         // ============================================================
-        // PDF CAIXA - CORRIGIDO
+        // PDF CAIXA
         // ============================================================
         function toggleDiasContainer(show) {
             document.getElementById('diasDisponiveisContainer').style.display = show ? 'block' : 'none';
@@ -5696,7 +5999,6 @@
             }
             const periodoDesc = mesAtual ? 'Mês Atual' : (diasSel.length > 0 ? `${diasSel.length} dia(s) selecionado(s)` : `${mesesSel.length} mês(es) selecionado(s)`);
 
-            // PÁGINA DE CONCILIAÇÃO - CORRIGIDA
             let conciliacaoLinhasHTML = '';
             for (const { data, row } of dados) {
                 const saidaOficial = todasSaidasPorData[data] || 0;
@@ -5721,9 +6023,7 @@
                 const totalGeralComparativo = totalGeralOficial;
                 const diff = totalGeralNovaIguacu - totalGeralComparativo;
                 const hasDivergencia = Math.abs(diff) > 0.01;
-                // CORRIGIDO: Se NÃO houver divergência, linha inteira fica verde
                 const corLinha = hasDivergencia ? '' : 'background:#D1FAE5;';
-                // CORRIGIDO: Fonte sempre preta
                 conciliacaoLinhasHTML += `<tr style="${corLinha}">
                     <td style="padding:6px 8px; border-bottom:1px solid #ccc; font-weight:600; color:#000000; font-family:Arial,sans-serif;">${data}</td>
                     <td style="padding:6px 8px; text-align:right; border-bottom:1px solid #ccc; color:#000000; font-family:Arial,sans-serif;">R$ ${formatMoneySimple(totalLojaOficial)}</td>
@@ -5825,10 +6125,16 @@
             try {
                 const { data: vendas } = await supabaseClient.from('vendas_alf').select('updated_at').order('updated_at', { ascending: false }).limit(1);
                 const { data: compras } = await supabaseClient.from('dados_m2').select('updated_at').order('updated_at', { ascending: false }).limit(1);
+                const { data: sangrias } = await supabaseClient.from('contas_extras').select('data_atualizacao').order('data_atualizacao', { ascending: false }).limit(1);
+                
                 let maisRecente = null;
                 if (vendas && vendas[0]?.updated_at) maisRecente = new Date(vendas[0].updated_at);
                 if (compras && compras[0]?.updated_at) {
                     const d = new Date(compras[0].updated_at);
+                    if (!maisRecente || d > maisRecente) maisRecente = d;
+                }
+                if (sangrias && sangrias[0]?.data_atualizacao) {
+                    const d = new Date(sangrias[0].data_atualizacao);
                     if (!maisRecente || d > maisRecente) maisRecente = d;
                 }
                 if (maisRecente) {
@@ -6041,6 +6347,10 @@
                 await carregarDadosReaisLancamentos();
                 atualizarLoading(65, 'Carregando Sangrias (Contas extras)...');
                 await carregarContasExtras();
+                
+                atualizarLoading(70, 'Verificando sincronização de sangrias...');
+                await verificarAtualizacaoSangrias();
+                
                 await carregarCoresDoSupabase();
                 carregarSaidasCaixa();
                 carregarDadosComparativos();
@@ -6057,7 +6367,7 @@
                     badge.innerHTML = '0';
                     badge.className = 'badge-notif zero-erros';
                 }
-                atualizarLoading(100, 'CONNCLUÍDO!');
+                atualizarLoading(100, 'CONCLUÍDO!');
                 console.log('Aplikado Módulo III - Inicializado com sucesso!');
             } catch (error) {
                 console.error('Erro na inicialização:', error);
@@ -6068,6 +6378,11 @@
         });
 
         setTimeout(() => { esconderLoading(); }, 15000);
+
+        // Verificação periódica a cada 60 segundos
+        setInterval(() => {
+            verificarAtualizacaoSangrias();
+        }, 60000);
     </script>
 </body>
 </html>
