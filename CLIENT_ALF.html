@@ -1180,11 +1180,27 @@
         const SUPABASE_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // ===== PEGA O USUÁRIO LOGADO DA URL =====
+        // ==================================================
+        // ✅ RECUPERA USUÁRIO (URL → localStorage como fallback)
+        // ==================================================
         const urlParams = new URLSearchParams(window.location.search);
-        const usuarioLogado = urlParams.get('user') 
+        let usuarioLogado = urlParams.get('user') 
             ? decodeURIComponent(urlParams.get('user')).toUpperCase().trim() 
             : null;
+
+        // 🔄 FALLBACK: se não veio na URL, tenta recuperar do localStorage
+        if (!usuarioLogado) {
+            const userStorage = localStorage.getItem('alk_user_logado');
+            if (userStorage) {
+                usuarioLogado = userStorage.toUpperCase().trim();
+                console.log('🔄 Usuário recuperado do localStorage:', usuarioLogado);
+            }
+        }
+
+        // ✅ Persiste o usuário no localStorage sempre que identificado
+        if (usuarioLogado) {
+            localStorage.setItem('alk_user_logado', usuarioLogado);
+        }
 
         console.log('═══════════════════════════════════════════');
         console.log('👤 Usuário logado na ALF:', usuarioLogado || '❌ NÃO IDENTIFICADO');
@@ -1251,12 +1267,18 @@
                 return;
             }
 
-            if (USERS_MULTI_CLIENT.includes(usuarioLogado)) {
+            // ✅ Verifica se é multi-cliente (case-insensitive e com trim)
+            const isMultiClient = USERS_MULTI_CLIENT.some(
+                u => u.toUpperCase().trim() === usuarioLogado.toUpperCase().trim()
+            );
+
+            if (isMultiClient) {
                 console.log('✅ Usuário multi-cliente detectado → exibindo popup');
                 showClientSwitchModal();
             } else {
                 console.log('ℹ️ Usuário single-client → saindo direto');
                 await registrarLogout(usuarioLogado, 'index.html');
+                localStorage.removeItem('alk_user_logado');
                 window.location.href = 'index.html';
             }
         }
@@ -1308,6 +1330,7 @@
         btnSairDefinitivo.addEventListener('click', async function() {
             console.log('🚪 Sair definitivo');
             await registrarLogout(usuarioLogado, 'index.html');
+            localStorage.removeItem('alk_user_logado');
             hideClientSwitchModal();
             window.location.href = 'index.html';
         });
