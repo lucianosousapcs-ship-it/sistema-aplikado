@@ -1584,7 +1584,7 @@
     <header class="topbar">
         <a href="javascript:void(0);" class="logo" onclick="window.location.href='CLIENT_ALF.html'">Apli<span>kado</span></a>
         <div class="topbar-actions">
-            <button class="btn btn-outline btn-sm" onclick="verificarAtualizacaoSangrias()" title="Verificar sincronização de sangrias">🔄 Verificar</button>
+            <!-- Botão "🔄 Verificar" REMOVIDO conforme Alterações.txt -->
             <button class="btn btn-outline btn-sm" onclick="window.location.href='CLIENT_ALF.html'">Voltar</button>
             <button class="btn btn-outline btn-sm" id="btnToggleTema" onclick="toggleTema()">Tema Escuro</button>
         </div>
@@ -2930,9 +2930,9 @@
                 return;
             }
 
-            // Verificar se o usuário fechou o banner
-            const bannerFechado = localStorage.getItem(STORAGE_KEY_BANNER_SANGRIAS_FECHADO);
-            if (bannerFechado === 'true') {
+            // Verificar se o usuário fechou o banner NESTA SESSÃO
+            const bannerFechado = sessionStorage.getItem(STORAGE_KEY_BANNER_SANGRIAS_FECHADO);
+            if (bannerFechado === 'true' && desatualizado) {
                 banner.classList.remove('visible');
                 return;
             }
@@ -2966,7 +2966,8 @@
         function fecharBannerSangrias() {
             const banner = document.getElementById('bannerSangriasDesatualizadas');
             if (banner) banner.classList.remove('visible');
-            localStorage.setItem(STORAGE_KEY_BANNER_SANGRIAS_FECHADO, 'true');
+            // Salva APENAS na sessão atual — ao recarregar a página, o banner volta se ainda estiver desatualizado
+            sessionStorage.setItem(STORAGE_KEY_BANNER_SANGRIAS_FECHADO, 'true');
         }
 
         function irParaSangrias() {
@@ -6322,6 +6323,9 @@
         // ============================================================
         document.addEventListener('DOMContentLoaded', async function() {
             try {
+                // Limpar flag antiga do localStorage (agora usa sessionStorage)
+                localStorage.removeItem('banner_sangrias_fechado');
+
                 atualizarLoading(10, 'Carregando preferências...');
                 carregarPreferenciaTema();
                 const savedBar = localStorage.getItem('command_bar_visivel');
