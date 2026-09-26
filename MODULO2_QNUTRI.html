@@ -76,20 +76,20 @@
             gap: 30px 40px;
             padding: 30px;
             transform: rotate(-22deg);
-            animation: girarQnutri 80s linear infinite;
+            animation: girarQnutri 60s linear infinite;
         }
         .sidebar-watermark span {
             font-family: 'Inter', sans-serif;
             font-size: 38px;
             font-weight: 700;
             letter-spacing: 6px;
-            color: rgba(255, 255, 255, 0.10);
+            color: rgba(255, 255, 255, 0.15);
             white-space: nowrap;
             line-height: 1;
         }
         @keyframes girarQnutri {
             0% { transform: rotate(-22deg) translate(0, 0); }
-            100% { transform: rotate(-22deg) translate(-60px, -60px); }
+            100% { transform: rotate(-22deg) translate(-100px, -100px); }
         }
 
         .sidebar::after {
@@ -513,9 +513,9 @@
         }
         table thead th {
             background: linear-gradient(180deg, #ffd9a8 0%, #ffc885 100%);
-            color: #4a2200;
+            color: #1a0f00 !important;
             font-size: 9.5px;
-            font-weight: 500;
+            font-weight: 700 !important;
             text-transform: uppercase;
             letter-spacing: 0.3px;
             padding: 9px 6px;
@@ -539,8 +539,8 @@
 
         table thead th.th-acoes {
             background: linear-gradient(180deg, #ffb347 0%, #ff8c00 100%);
-            color: #ffffff;
-            font-weight: 500;
+            color: #ffffff !important;
+            font-weight: 700 !important;
             letter-spacing: 0.5px;
             font-size: 9.5px;
             text-align: center;
@@ -855,7 +855,7 @@
             padding: 8px 4px;
             text-align: center;
             color: #1a0f00 !important;
-            font-weight: 500 !important;
+            font-weight: 700 !important;
             background: linear-gradient(180deg, #ffd9a8 0%, #ffc885 100%) !important;
             text-transform: uppercase;
             letter-spacing: 0.3px;
@@ -1145,10 +1145,10 @@
         .detalhe-list table { font-size: 11.5px; table-layout: auto; }
         .detalhe-list table thead th {
             background: linear-gradient(180deg, #ffd9a8 0%, #ffc885 100%);
-            color: #4a2200;
+            color: #1a0f00 !important;
             font-size: 10px;
             padding: 9px 10px;
-            font-weight: 500;
+            font-weight: 700 !important;
         }
         .detalhe-list table tbody td { padding: 10px 10px; font-size: 11.5px; font-weight: 400; }
         .detalhe-list table tbody tr:hover td { background: #fff1de; }
@@ -1251,9 +1251,9 @@
         .analise-table { width: 100%; border-collapse: collapse; font-size: 11.5px; table-layout: auto; }
         .analise-table thead th {
             background: linear-gradient(180deg, #ffd9a8 0%, #ffc885 100%);
-            color: #4a2200;
+            color: #1a0f00 !important;
             font-size: 10px;
-            font-weight: 500;
+            font-weight: 700 !important;
             text-transform: uppercase;
             letter-spacing: 0.3px;
             padding: 10px 12px;
@@ -1279,6 +1279,24 @@
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(255,140,0,0.06);
         }
+
+        .plano-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            margin-top: 10px;
+        }
+        .plano-list table { font-size: 11.5px; table-layout: auto; }
+        .plano-list table thead th {
+            background: linear-gradient(180deg, #ffd9a8 0%, #ffc885 100%);
+            color: #1a0f00 !important;
+            font-size: 10px;
+            padding: 9px 10px;
+            font-weight: 700 !important;
+        }
+        .plano-list table tbody td { padding: 8px 10px; font-size: 11.5px; font-weight: 400; }
+        .plano-list table tbody tr:hover td { background: #fff1de; }
 
         @media (max-width: 1400px) {
             table { font-size: 10.5px; }
@@ -1367,6 +1385,10 @@
             <button class="nav-item" data-tab="relatorio" onclick="switchTab('relatorio')">
                 <i class="fas fa-file-alt"></i>
                 <span>Relatório</span>
+            </button>
+            <button class="nav-item" onclick="abrirModalPlanoContas()">
+                <i class="fas fa-sitemap"></i>
+                <span>Plano de Contas</span>
             </button>
         </nav>
 
@@ -1796,6 +1818,53 @@
     </div>
 </div>
 
+<!-- POPUP GERENCIAR PLANO DE CONTAS -->
+<div id="popupPlanoContas" class="modal-overlay">
+    <div class="modal-content" style="max-width:800px;">
+        <div class="modal-header">
+            <h2><i class="fas fa-sitemap"></i> Plano de Contas</h2>
+            <button class="modal-close" onclick="fecharModalPlanoContas()">✕</button>
+        </div>
+        <div class="filter-bar" style="margin-bottom:12px;">
+            <div class="search-box"><input type="text" id="buscaPlanoContas" placeholder="Buscar código ou nome..." oninput="renderizarListaPlanoContas()"></div>
+            <select class="filter-select" id="filtroTipoPlanoContas" onchange="renderizarListaPlanoContas()">
+                <option value="todos">Todos os Tipos</option>
+                <option value="RECEITA">Receitas</option>
+                <option value="DESPESA">Despesas</option>
+            </select>
+            <div style="flex:1;"></div>
+            <button class="btn btn-primary" onclick="abrirPopupEditarPlanoConta()"><i class="fas fa-plus"></i> Nova Conta</button>
+        </div>
+        <div class="plano-list" id="listaPlanoContas">
+            <!-- Lista renderizada via JS -->
+        </div>
+    </div>
+</div>
+
+<!-- POPUP EDITAR/CRIAR PLANO DE CONTA -->
+<div id="popupEditarPlanoConta" class="modal-overlay">
+    <div class="modal-content" style="max-width:500px;">
+        <div class="modal-header">
+            <h2><i class="fas fa-edit"></i> <span id="popupPlanoContaTitulo">Editar Conta</span></h2>
+            <button class="modal-close" onclick="fecharPopupEditarPlanoConta()">✕</button>
+        </div>
+        <form id="formPlanoConta" onsubmit="salvarPlanoConta(event)">
+            <input type="hidden" id="planoContaId">
+            <div class="form-row">
+                <div class="form-group"><label><i class="fas fa-hashtag"></i> Código *</label><input type="text" id="planoContaCodigo" required placeholder="Ex: 1.01"></div>
+                <div class="form-group"><label><i class="fas fa-tag"></i> Tipo *</label><select id="planoContaTipo" required><option value="RECEITA">Receita</option><option value="DESPESA">Despesa</option></select></div>
+            </div>
+            <div class="form-group"><label><i class="fas fa-font"></i> Nome *</label><input type="text" id="planoContaNome" required placeholder="Ex: Vendas à Vista"></div>
+            <div class="form-group"><label><i class="fas fa-layer-group"></i> Grupo</label><input type="text" id="planoContaGrupo" placeholder="Ex: Receitas Operacionais"></div>
+            <div class="form-group"><label><i class="fas fa-check-circle"></i> Ativo</label><select id="planoContaAtivo"><option value="true">Sim</option><option value="false">Não</option></select></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="fecharPopupEditarPlanoConta()"><i class="fas fa-times"></i> Cancelar</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 const SUPABASE_URL = "https://avzxplcdutqzlxfievza.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_rkwsOtfEMpic9PsiExxC_w_rzYqZNRs";
@@ -2143,6 +2212,7 @@ function renderizarTudo() {
     try { renderizarDRE(); } catch(e) { console.error('DRE:', e); }
     try { renderizarAnalise(); } catch(e) { console.error('Analise:', e); }
     try { renderizarRelatorio(); } catch(e) { console.error('Relatorio:', e); }
+    try { renderizarListaPlanoContas(); } catch(e) { console.error('PlanoContas:', e); }
 }
 
 function atualizarContadoresSidebar() {
@@ -3339,6 +3409,106 @@ function baixarPDFRelatorioPopup() {
     mostrarToast('PDF baixado!', 'success');
 }
 
+/* ===== PLANO DE CONTAS ===== */
+function abrirModalPlanoContas() {
+    document.getElementById('popupPlanoContas').classList.add('active');
+    renderizarListaPlanoContas();
+}
+
+function fecharModalPlanoContas() {
+    document.getElementById('popupPlanoContas').classList.remove('active');
+    fecharPopupEditarPlanoConta();
+}
+
+function renderizarListaPlanoContas() {
+    const termo = (document.getElementById('buscaPlanoContas')?.value || '').toLowerCase();
+    const tipo = document.getElementById('filtroTipoPlanoContas')?.value || 'todos';
+    let filt = planosContas.filter(p => {
+        if (tipo !== 'todos' && p.tipo !== tipo) return false;
+        if (termo) {
+            const txt = `${p.codigo} ${p.nome} ${p.grupo}`.toLowerCase();
+            if (!txt.includes(termo)) return false;
+        }
+        return true;
+    });
+
+    const container = document.getElementById('listaPlanoContas');
+    if (filt.length === 0) {
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-sitemap"></i><p>Nenhuma conta encontrada</p></div>`;
+        return;
+    }
+    let html = `<table><thead><tr>
+        <th>Código</th><th>Nome</th><th>Tipo</th><th>Grupo</th><th>Ativo</th><th style="text-align:center;">Ações</th>
+    </tr></thead><tbody>`;
+    filt.forEach(p => {
+        const ativo = p.ativo !== false;
+        html += `<tr>
+            <td style="font-weight:600;color:#a04e00;">${escapeHtml(p.codigo)}</td>
+            <td>${escapeHtml(p.nome)}</td>
+            <td><span class="badge ${p.tipo === 'RECEITA' ? 'badge-receita' : 'badge-despesa'}">${p.tipo}</span></td>
+            <td>${escapeHtml(p.grupo || '-')}</td>
+            <td><span class="badge ${ativo ? 'badge-pago' : 'badge-nao-pago'}">${ativo ? 'Sim' : 'Não'}</span></td>
+            <td style="text-align:center;">
+                <button class="btn-actions" onclick="abrirPopupEditarPlanoConta(${p.id})" title="Editar conta">
+                    <i class="fas fa-edit"></i> Editar
+                </button>
+            </td>
+        </tr>`;
+    });
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+}
+
+function abrirPopupEditarPlanoConta(id = null) {
+    const isEdit = id !== null;
+    document.getElementById('popupPlanoContaTitulo').textContent = isEdit ? 'Editar Conta' : 'Nova Conta';
+    document.getElementById('planoContaId').value = id || '';
+    if (isEdit) {
+        const p = planosContas.find(c => c.id === id);
+        if (p) {
+            document.getElementById('planoContaCodigo').value = p.codigo || '';
+            document.getElementById('planoContaNome').value = p.nome || '';
+            document.getElementById('planoContaTipo').value = p.tipo || 'DESPESA';
+            document.getElementById('planoContaGrupo').value = p.grupo || '';
+            document.getElementById('planoContaAtivo').value = p.ativo !== false ? 'true' : 'false';
+        }
+    } else {
+        document.getElementById('planoContaCodigo').value = '';
+        document.getElementById('planoContaNome').value = '';
+        document.getElementById('planoContaTipo').value = 'DESPESA';
+        document.getElementById('planoContaGrupo').value = '';
+        document.getElementById('planoContaAtivo').value = 'true';
+    }
+    document.getElementById('popupEditarPlanoConta').classList.add('active');
+}
+
+function fecharPopupEditarPlanoConta() {
+    document.getElementById('popupEditarPlanoConta').classList.remove('active');
+}
+
+async function salvarPlanoConta(e) {
+    e.preventDefault();
+    const id = document.getElementById('planoContaId').value;
+    const dados = {
+        codigo: document.getElementById('planoContaCodigo').value.trim(),
+        nome: document.getElementById('planoContaNome').value.trim(),
+        tipo: document.getElementById('planoContaTipo').value,
+        grupo: document.getElementById('planoContaGrupo').value.trim() || null,
+        ativo: document.getElementById('planoContaAtivo').value === 'true'
+    };
+    if (!dados.codigo || !dados.nome) { mostrarToast('Código e Nome são obrigatórios.', 'warning'); return; }
+    try {
+        let r;
+        if (id) r = await supabaseClient.from('qnutri_plano_contas').update(dados).eq('id', id);
+        else r = await supabaseClient.from('qnutri_plano_contas').insert([dados]);
+        if (r.error) throw r.error;
+        mostrarToast(id ? 'Conta atualizada!' : 'Conta criada!', 'success');
+        fecharPopupEditarPlanoConta();
+        await carregarPlanosContas(); // Recarrega para atualizar tudo
+        renderizarListaPlanoContas(); // Atualiza a lista dentro do modal
+    } catch (err) { mostrarToast('Erro ao salvar conta: ' + err.message, 'error'); }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 QNUTRI Financeiro - Iniciando...');
     try {
@@ -3364,6 +3534,8 @@ document.addEventListener('DOMContentLoaded', () => {
             fecharPopupAtualizacao();
             fecharPopupPDFRelatorio();
             fecharActionPopover();
+            fecharModalPlanoContas();
+            fecharPopupEditarPlanoConta();
         }
     });
 });
