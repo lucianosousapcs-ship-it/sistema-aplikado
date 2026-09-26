@@ -482,6 +482,10 @@
         .dre-row-clickable { cursor: pointer; }
         .dre-row-clickable:hover td { background: #fff1de !important; }
 
+        /* Coluna SEM DATA — destaque sutil */
+        .dre-col-semdata { background: #fff8e7; border-left: 2px dashed #f0b96e !important; border-right: 2px dashed #f0b96e !important; }
+        .dre-col-semdata.dre-semdata-header { background: #ffd9a8 !important; }
+
         /* ===================================================================
            DRE MODO AMBOS — FONTES MAIORES + SCROLL HORIZONTAL + NEGATIVOS VERMELHO
            =================================================================== */
@@ -818,10 +822,11 @@
                 <span id="saldoRealizado" class="stat-value">R$ 0,00</span>
                 <span class="stat-sub" id="saldoRealizadoSub"></span>
             </div>
-            <div class="stat-card" onclick="abrirDetalheDashboard('projetado')">
-                <span class="stat-label">Projetado <span class="stat-hint">ver detalhes</span></span>
-                <span id="totalProjetado" class="stat-value">R$ 0,00</span>
-                <span class="stat-sub" id="totalProjetadoSub"></span>
+            <!-- CARD TROCADO: Contas em Atraso -->
+            <div class="stat-card" onclick="abrirDetalheDashboard('atraso')">
+                <span class="stat-label">Contas em Atraso <span class="stat-hint">ver vencidas</span></span>
+                <span id="totalAtraso" class="stat-value">R$ 0,00</span>
+                <span class="stat-sub" id="totalAtrasoSub"></span>
             </div>
             <div class="stat-card" onclick="abrirDetalheDashboard('copa')">
                 <span class="stat-label">COPA <span class="stat-hint">ver detalhes</span></span>
@@ -1107,7 +1112,7 @@
             <div class="form-row">
                 <div class="form-group"><label><i class="fas fa-tag"></i> Tipo *</label><select id="lancTipo" required><option value="RECEITA">Receita</option><option value="DESPESA">Despesa</option></select></div>
                 <div class="form-group"><label><i class="fas fa-layer-group"></i> Categoria *</label><select id="lancCategoria" required><option value="GERAL">GERAL</option><option value="COPA">COPA</option></select></div>
-                <div class="form-group"><label><i class="fas fa-calendar"></i> Vencto</label><input type="date" id="lancData"></div>
+                <div class="form-group"><label><i class="fas fa-calendar"></i> Vencto *</label><input type="date" id="lancData" required></div>
                 <div class="form-group"><label><i class="fas fa-check-circle"></i> Pago em</label><input type="text" id="lancPagoEm" placeholder="Ex: 03/08" maxlength="10"></div>
             </div>
             <div class="form-row">
@@ -1293,6 +1298,7 @@ let dadosLancamentoPendente = null;
 let modoEdicaoLancamento = false;
 
 const MESES_CURTO = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const LABEL_SEM_DATA = 'SEM DATA';
 
 const ALIASES_PLANO = {
     'RECEBIMENTOS': '100', 'VENDAS A VISTA': '101', 'VENDAS À VISTA': '101', 'VENDAS A PRAZO': '102',
@@ -1794,19 +1800,36 @@ function atualizarContadoresSidebar() {
     document.getElementById('navCountCopa').textContent = lancamentos.filter(l => l.categoria === 'COPA').length;
 }
 
+/* =====================================================================
+   ATUALIZA DASHBOARD
+   - Card "Contas em Atraso" substitui o antigo "Projetado"
+   - Conta como atraso: data válida < hoje E situação != PAGO
+   ===================================================================== */
 function atualizarDashboard() {
     const totRec = lancamentos.filter(l => l.tipo === 'RECEITA').reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
     const totDesp = lancamentos.filter(l => l.tipo === 'DESPESA').reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
-    const totProj = lancamentos.reduce((s, l) => s + (parseFloat(l.valor_projetado) || 0), 0);
     const totCopa = lancamentos.filter(l => l.categoria === 'COPA').reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
     const saldo = totRec - totDesp;
+
+    // Contas em atraso
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const contasAtraso = lancamentos.filter(l => {
+        if (!l.data) return false;
+        const d = new Date(l.data + 'T00:00:00');
+        if (isNaN(d.getTime())) return false;
+        const sit = (l.situacao || '').toUpperCase();
+        if (sit === 'PAGO' || sit === 'PAGO - MESES ANTERIORES') return false;
+        return d < hoje;
+    });
+    const totalAtraso = contasAtraso.reduce((s, l) => s + (parseFloat(l.valor_realizado) || parseFloat(l.valor_projetado) || 0), 0);
 
     document.getElementById('totalReceitas').textContent = formatarMoeda(totRec);
     document.getElementById('totalDespesas').textContent = formatarMoeda(totDesp);
     const elSaldo = document.getElementById('saldoRealizado');
     elSaldo.textContent = formatarMoeda(saldo);
     elSaldo.className = 'stat-value' + (saldo < 0 ? ' negativo' : '');
-    document.getElementById('totalProjetado').textContent = formatarMoeda(totProj);
+    document.getElementById('totalAtraso').textContent = formatarMoeda(totalAtraso);
+    document.getElementById('totalAtraso').className = 'stat-value' + (totalAtraso > 0 ? ' negativo' : '');
     document.getElementById('totalCopa').textContent = formatarMoeda(totCopa);
     document.getElementById('totalLancamentos').textContent = lancamentos.length;
 
@@ -1814,10 +1837,18 @@ function atualizarDashboard() {
     const qtdDesp = lancamentos.filter(l => l.tipo === 'DESPESA').length;
     document.getElementById('totalReceitasSub').innerHTML = `<i class="fas fa-arrow-up"></i> ${qtdRec} lançamentos`;
     document.getElementById('totalDespesasSub').innerHTML = `<i class="fas fa-arrow-down"></i> ${qtdDesp} lançamentos`;
-    document.getElementById('totalProjetadoSub').innerHTML = `<i class="fas fa-bullseye"></i> ${lancamentos.length} itens`;
+    document.getElementById('totalAtrasoSub').innerHTML = `<i class="fas fa-clock"></i> ${contasAtraso.length} conta(s) vencida(s)`;
+    document.getElementById('totalProjetadoSub') && (document.getElementById('totalProjetadoSub').innerHTML = '');
     document.getElementById('totalCopaSub').innerHTML = `<i class="fas fa-utensils"></i> ${lancamentos.filter(l => l.categoria === 'COPA').length} lançamentos`;
     document.getElementById('totalLancamentosSub').innerHTML = `<i class="fas fa-list"></i> ${lancamentos.filter(l => l.situacao === 'PAGO').length} pagos`;
     document.getElementById('saldoRealizadoSub').innerHTML = `<i class="fas fa-percentage"></i> Margem ${totRec > 0 ? ((saldo / totRec) * 100).toFixed(1) : '0.0'}%`;
+}
+
+/* Usuário: vazio => "Atualização Banco" */
+function getUsuarioExibicao(l) {
+    const u = (l.usuario_insercao || '').trim();
+    if (u) return u;
+    return 'Atualização Banco';
 }
 
 function gerarLinhaTabela(l, comTipo = true, comAcoes = true, comCategoria = true) {
@@ -1828,10 +1859,11 @@ function gerarLinhaTabela(l, comTipo = true, comAcoes = true, comCategoria = tru
     const badgeTipo = l.tipo === 'RECEITA' ? 'badge-receita' : 'badge-despesa';
     const badgeCat = getBadgeCategoria(l.categoria);
     const planoLabel = getPlanoLabel(l.plano_contas) || '-';
-    const usuarioIns = l.usuario_insercao || '—';
+    const usuarioIns = getUsuarioExibicao(l);
+    const semData = !l.data;
 
     let html = `<tr>
-        <td>${formatarData(l.data)}</td>
+        <td>${semData ? '<span class="badge badge-alerta">SEM DATA</span>' : formatarData(l.data)}</td>
         <td>${escapeHtml(l.pago_em || '-')}</td>
         <td title="${escapeHtml(l.nf || '')}">${escapeHtml(l.nf || '-')}</td>`;
     if (comTipo) html += `<td><span class="badge ${badgeTipo}">${l.tipo}</span></td>`;
@@ -1868,7 +1900,7 @@ function renderizarLancamentos() {
         if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
         if (sit !== 'todas' && (l.situacao || '').toUpperCase() !== sit.toUpperCase()) return false;
         if (termo) {
-            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${l.usuario_insercao || ''}`.toLowerCase();
+            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${getUsuarioExibicao(l)}`.toLowerCase();
             if (!txt.includes(termo)) return false;
         }
         return true;
@@ -1920,7 +1952,7 @@ function renderizarReceitas() {
         if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
         if (sit !== 'todas' && (l.situacao || '').toUpperCase() !== sit.toUpperCase()) return false;
         if (termo) {
-            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${l.usuario_insercao || ''}`.toLowerCase();
+            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${getUsuarioExibicao(l)}`.toLowerCase();
             if (!txt.includes(termo)) return false;
         }
         return true;
@@ -1955,7 +1987,7 @@ function renderizarDespesas() {
         if (l.tipo !== 'DESPESA') return false;
         if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
         if (termo) {
-            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${l.usuario_insercao || ''}`.toLowerCase();
+            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${getUsuarioExibicao(l)}`.toLowerCase();
             if (!txt.includes(termo)) return false;
         }
         return true;
@@ -1994,7 +2026,7 @@ function renderizarCopa() {
         if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
         if (sit !== 'todas' && (l.situacao || '').toUpperCase() !== sit.toUpperCase()) return false;
         if (termo) {
-            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${l.usuario_insercao || ''}`.toLowerCase();
+            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${getUsuarioExibicao(l)}`.toLowerCase();
             if (!txt.includes(termo)) return false;
         }
         return true;
@@ -2033,6 +2065,9 @@ function setDREModo(modo) {
     renderizarDRE();
 }
 
+/* =====================================================================
+   RENDERIZA DRE — com coluna SEM DATA e TOTAL incluindo registros sem data
+   ===================================================================== */
 function renderizarDRE() {
     const card = document.getElementById('dreTableCard');
     if (card) card.classList.toggle('dre-modo-ambos', dreModo === 'ambos');
@@ -2042,61 +2077,70 @@ function renderizarDRE() {
     let filt = filtrarPorCategoria(lancamentos, cat);
     if (tipoFiltro !== 'todos') filt = filt.filter(l => l.tipo === tipoFiltro);
 
+    // grupos[chave].meses tem 12 meses + 'SD' (sem data)
     const grupos = {};
     filt.forEach(l => {
         const chave = getChavePlano(l.plano_contas, l.tipo);
         if (!grupos[chave]) {
             grupos[chave] = { tipo: l.tipo, meses: {}, itens: [] };
             for (let m = 1; m <= 12; m++) grupos[chave].meses[String(m).padStart(2, '0')] = { p: 0, r: 0 };
+            grupos[chave].meses['SD'] = { p: 0, r: 0 };
         }
-        const mm = getMes(l.data);
-        if (mm) {
-            grupos[chave].meses[mm].p += parseFloat(l.valor_projetado) || 0;
-            grupos[chave].meses[mm].r += parseFloat(l.valor_realizado) || 0;
-        }
+        const mm = getMes(l.data); // '' se sem data
+        const slot = mm ? mm : 'SD';
+        grupos[chave].meses[slot].p += parseFloat(l.valor_projetado) || 0;
+        grupos[chave].meses[slot].r += parseFloat(l.valor_realizado) || 0;
         grupos[chave].itens.push(l);
     });
 
-    let totReceitasP = 0, totReceitasR = 0, totDespesasP = 0, totDespesasR = 0;
-    const mesesTotais = {};
-    for (let m = 1; m <= 12; m++) {
-        mesesTotais[String(m).padStart(2, '0')] = { recP: 0, recR: 0, despP: 0, despR: 0, lucroP: 0, lucroR: 0 };
-    }
-    Object.values(grupos).forEach(g => {
-        for (let m = 1; m <= 12; m++) {
-            const mm = String(m).padStart(2, '0');
-            if (g.tipo === 'RECEITA') {
-                mesesTotais[mm].recP += g.meses[mm].p;
-                mesesTotais[mm].recR += g.meses[mm].r;
-                totReceitasP += g.meses[mm].p;
-                totReceitasR += g.meses[mm].r;
-            } else {
-                mesesTotais[mm].despP += g.meses[mm].p;
-                mesesTotais[mm].despR += g.meses[mm].r;
-                totDespesasP += g.meses[mm].p;
-                totDespesasR += g.meses[mm].r;
-            }
-        }
-    });
-    for (let m = 1; m <= 12; m++) {
-        const mm = String(m).padStart(2, '0');
-        mesesTotais[mm].lucroP = mesesTotais[mm].recP - mesesTotais[mm].despP;
-        mesesTotais[mm].lucroR = mesesTotais[mm].recR - mesesTotais[mm].despR;
-    }
+    // Totais por mês + sem data
+    const totais = {};
+    for (let m = 1; m <= 12; m++) totais[String(m).padStart(2, '0')] = { recP: 0, recR: 0, despP: 0, despR: 0, lucroP: 0, lucroR: 0 };
+    totais['SD'] = { recP: 0, recR: 0, despP: 0, despR: 0, lucroP: 0, lucroR: 0 };
 
+    Object.values(grupos).forEach(g => {
+        Object.keys(g.meses).forEach(mm => {
+            if (g.tipo === 'RECEITA') {
+                totais[mm].recP += g.meses[mm].p;
+                totais[mm].recR += g.meses[mm].r;
+            } else {
+                totais[mm].despP += g.meses[mm].p;
+                totais[mm].despR += g.meses[mm].r;
+            }
+        });
+    });
+    Object.keys(totais).forEach(mm => {
+        totais[mm].lucroP = totais[mm].recP - totais[mm].despP;
+        totais[mm].lucroR = totais[mm].recR - totais[mm].despR;
+    });
+
+    // Cabeçalho: 12 meses + SEM DATA + TOTAL
     let theadHtml = '<tr><th style="text-align:left;padding-left:8px;width:13%;font-size:10px;">Descrição</th>';
     for (let m = 1; m <= 12; m++) {
         const label = MESES_CURTO[m - 1];
         if (dreModo === 'ambos') theadHtml += `<th colspan="2" style="border-left:1px solid #8a5a20;font-size:11px;">${label}</th>`;
         else theadHtml += `<th style="font-size:10px;">${label}</th>`;
     }
-    theadHtml += dreModo === 'ambos' ? `<th colspan="2" style="border-left:2px solid var(--accent);font-size:11px;">TOTAL</th>` : `<th style="border-left:2px solid var(--accent);font-size:10px;">TOTAL</th>`;
+    // Coluna SEM DATA
+    if (dreModo === 'ambos') {
+        theadHtml += `<th colspan="2" class="dre-col-semdata dre-semdata-header" style="font-size:11px;">SEM DATA</th>`;
+    } else {
+        theadHtml += `<th class="dre-col-semdata dre-semdata-header" style="font-size:10px;">SEM DATA</th>`;
+    }
+    // Coluna TOTAL
+    if (dreModo === 'ambos') {
+        theadHtml += `<th colspan="2" style="border-left:2px solid var(--accent);font-size:11px;">TOTAL</th>`;
+    } else {
+        theadHtml += `<th style="border-left:2px solid var(--accent);font-size:10px;">TOTAL</th>`;
+    }
     theadHtml += '</tr>';
+
     if (dreModo === 'ambos') {
         theadHtml += '<tr><th style="font-size:9px;padding:3px;min-width:220px;background:#d99b3f;">DESCRIÇÃO</th>';
         for (let m = 1; m <= 12; m++) {
             theadHtml += `<th style="font-size:10px;padding:4px 6px;border-left:1px solid #8a5a20;min-width:130px;">PROJETADO</th><th style="font-size:10px;padding:4px 6px;min-width:130px;">REALIZADO</th>`;
         }
+        theadHtml += `<th class="dre-col-semdata" style="font-size:10px;padding:4px 6px;min-width:130px;">PROJETADO</th><th class="dre-col-semdata" style="font-size:10px;padding:4px 6px;min-width:130px;">REALIZADO</th>`;
         theadHtml += `<th style="font-size:10px;padding:4px 6px;border-left:2px solid var(--accent);min-width:130px;">PROJETADO</th><th style="font-size:10px;padding:4px 6px;min-width:130px;">REALIZADO</th></tr>`;
     }
     document.getElementById('theadDRE').innerHTML = theadHtml;
@@ -2106,6 +2150,7 @@ function renderizarDRE() {
         let linha = `<tr class="${classeTotal} dre-row-clickable" onclick="abrirDetalheDRE('${escapeHtml(chaveGrupo || label)}')">`;
         linha += `<td style="text-align:left;padding-left:${isTotal ? '10px' : '16px'};font-weight:${isTotal ? '700' : '500'};line-height:1.2;">${escapeHtml(label)}</td>`;
 
+        // Meses 01..12
         for (let m = 1; m <= 12; m++) {
             const mm = String(m).padStart(2, '0');
             const d = mesesData[mm] || { p: 0, r: 0 };
@@ -2127,8 +2172,29 @@ function renderizarDRE() {
             }
         }
 
-        const totP = Object.values(mesesData).reduce((s, d) => s + (d.p || 0), 0);
-        const totR = Object.values(mesesData).reduce((s, d) => s + (d.r || 0), 0);
+        // Coluna SEM DATA
+        const dSD = mesesData['SD'] || { p: 0, r: 0 };
+        if (dreModo === 'ambos') {
+            const corP = dSD.p < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+            const corR = dSD.r < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+            linha += `<td class="dre-col-semdata" style="${corP}">${dSD.p !== 0 ? formatarMoeda(dSD.p) : '-'}</td>`;
+            linha += `<td class="dre-col-semdata" style="${corR}">${dSD.r !== 0 ? formatarMoeda(dSD.r) : '-'}</td>`;
+        } else if (dreModo === 'projetado') {
+            const corP = dSD.p < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+            linha += `<td class="dre-col-semdata" style="${corP}">${dSD.p !== 0 ? formatarMoeda(dSD.p) : '-'}</td>`;
+        } else if (dreModo === 'desvio') {
+            const desvio = dSD.r - dSD.p;
+            const corD = desvio < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+            linha += `<td class="dre-col-semdata" style="${corD}">${desvio !== 0 ? formatarMoeda(desvio) : '-'}</td>`;
+        } else {
+            const corR = dSD.r < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+            linha += `<td class="dre-col-semdata" style="${corR}">${dSD.r !== 0 ? formatarMoeda(dSD.r) : '-'}</td>`;
+        }
+
+        // Totais (incluindo SEM DATA)
+        const todosSlots = Object.values(mesesData);
+        const totP = todosSlots.reduce((s, d) => s + (d.p || 0), 0);
+        const totR = todosSlots.reduce((s, d) => s + (d.r || 0), 0);
 
         if (dreModo === 'ambos') {
             const corTP = totP < 0 ? 'color:#b91c1c;font-weight:700;' : '';
@@ -2150,12 +2216,12 @@ function renderizarDRE() {
         return linha;
     }
 
-    const mesesRec = {};
-    for (let m = 1; m <= 12; m++) {
-        const mm = String(m).padStart(2, '0');
-        mesesRec[mm] = { p: mesesTotais[mm].recP, r: mesesTotais[mm].recR };
+    // RECEITAS
+    if (tipoFiltro !== 'DESPESA') {
+        const mesesRec = {};
+        Object.keys(totais).forEach(mm => { mesesRec[mm] = { p: totais[mm].recP, r: totais[mm].recR }; });
+        html += gerarLinha('RECEITAS', mesesRec, true, 'receita', '__RECEITAS__', 'dre-row-receitas-total');
     }
-    if (tipoFiltro !== 'DESPESA') html += gerarLinha('RECEITAS', mesesRec, true, 'receita', '__RECEITAS__', 'dre-row-receitas-total');
 
     const ordenarGrupos = (a, b) => {
         const ca = getPlanoCodigo(a[0]) || '999999';
@@ -2167,29 +2233,27 @@ function renderizarDRE() {
         html += gerarLinha(k, g.meses, false, 'receita', k, 'dre-row-grupo-receita');
     });
 
-    const mesesDesp = {};
-    for (let m = 1; m <= 12; m++) {
-        const mm = String(m).padStart(2, '0');
-        mesesDesp[mm] = { p: mesesTotais[mm].despP, r: mesesTotais[mm].despR };
+    // DESPESAS
+    if (tipoFiltro !== 'RECEITA') {
+        const mesesDesp = {};
+        Object.keys(totais).forEach(mm => { mesesDesp[mm] = { p: totais[mm].despP, r: totais[mm].despR }; });
+        html += gerarLinha('DESPESAS', mesesDesp, true, 'despesa', '__DESPESAS__', 'dre-row-despesas-total');
     }
-    if (tipoFiltro !== 'RECEITA') html += gerarLinha('DESPESAS', mesesDesp, true, 'despesa', '__DESPESAS__', 'dre-row-despesas-total');
 
     const gruposDesp = Object.entries(grupos).filter(([_, g]) => g.tipo === 'DESPESA').sort(ordenarGrupos);
     gruposDesp.forEach(([k, g]) => {
         html += gerarLinha(k, g.meses, false, 'despesa', k, 'dre-row-grupo-despesa');
     });
 
+    // RESULTADO
     if (tipoFiltro === 'todos') {
         const mesesLucro = {};
-        for (let m = 1; m <= 12; m++) {
-            const mm = String(m).padStart(2, '0');
-            mesesLucro[mm] = { p: mesesTotais[mm].lucroP, r: mesesTotais[mm].lucroR };
-        }
+        Object.keys(totais).forEach(mm => { mesesLucro[mm] = { p: totais[mm].lucroP, r: totais[mm].lucroR }; });
         html += gerarLinha('RESULTADO', mesesLucro, true, null, '__RESULTADO__', 'dre-row-resultado');
     }
 
     const tbody = document.getElementById('corpoDRE');
-    const cols = dreModo === 'ambos' ? 26 : 14;
+    const cols = dreModo === 'ambos' ? 28 : 15;
     tbody.innerHTML = html || `<tr><td colspan="${cols}"><div class="empty-state"><i class="fas fa-chart-pie"></i><p>Sem dados no DRE</p></div></td></tr>`;
 }
 
@@ -2329,12 +2393,27 @@ function exportarAnaliseCSV() {
     a.click();
 }
 
+/* =====================================================================
+   DETALHES DO DASHBOARD — agora trata 'atraso'
+   ===================================================================== */
 function abrirDetalheDashboard(tipo) {
     let lista = [];
     let titulo = '';
     if (tipo === 'receitas') { lista = lancamentos.filter(l => l.tipo === 'RECEITA'); titulo = 'Detalhamento de Receitas'; }
     else if (tipo === 'despesas') { lista = lancamentos.filter(l => l.tipo === 'DESPESA'); titulo = 'Detalhamento de Despesas'; }
     else if (tipo === 'saldo') { lista = lancamentos; titulo = 'Detalhamento do Saldo'; }
+    else if (tipo === 'atraso') {
+        const hoje = new Date(); hoje.setHours(0,0,0,0);
+        lista = lancamentos.filter(l => {
+            if (!l.data) return false;
+            const d = new Date(l.data + 'T00:00:00');
+            if (isNaN(d.getTime())) return false;
+            const sit = (l.situacao || '').toUpperCase();
+            if (sit === 'PAGO' || sit === 'PAGO - MESES ANTERIORES') return false;
+            return d < hoje;
+        });
+        titulo = 'Contas em Atraso (Vencidas e em Aberto)';
+    }
     else if (tipo === 'projetado') { lista = lancamentos; titulo = 'Detalhamento do Projetado'; }
     else if (tipo === 'copa') { lista = lancamentos.filter(l => l.categoria === 'COPA'); titulo = 'Detalhamento COPA'; }
     else { lista = lancamentos; titulo = 'Todos os Lançamentos'; }
@@ -2348,6 +2427,7 @@ function abrirDetalheValor(id) {
     const r = parseFloat(l.valor_realizado) || 0;
     const d = r - p;
     const pct = p !== 0 ? (d / Math.abs(p)) * 100 : 0;
+    const usuarioIns = getUsuarioExibicao(l);
 
     document.getElementById('detalheTitulo').textContent = `Detalhamento — ${l.fornecedor || 'Lançamento'}`;
     document.getElementById('detalheStats').innerHTML = `
@@ -2362,12 +2442,12 @@ function abrirDetalheValor(id) {
         <tbody>
             <tr><td>Tipo</td><td><span class="badge ${l.tipo === 'RECEITA' ? 'badge-receita' : 'badge-despesa'}">${l.tipo}</span></td></tr>
             <tr><td>Categoria</td><td><span class="badge ${getBadgeCategoria(l.categoria)}">${getLabelCategoria(l.categoria)}</span></td></tr>
-            <tr><td>Data Vencto</td><td>${formatarData(l.data)}</td></tr>
+            <tr><td>Data Vencto</td><td>${l.data ? formatarData(l.data) : '<span class="badge badge-alerta">SEM DATA</span>'}</td></tr>
             <tr><td>Pago em</td><td>${escapeHtml(l.pago_em || '-')}</td></tr>
             <tr><td>NF</td><td>${escapeHtml(l.nf || '-')}</td></tr>
             <tr><td>Fornecedor / Cliente</td><td>${escapeHtml(l.fornecedor || '-')}</td></tr>
             <tr><td>Plano de Contas</td><td style="color:#000;font-weight:600;">${escapeHtml(getPlanoLabel(l.plano_contas) || '-')}</td></tr>
-            <tr><td>Usuário que inseriu</td><td style="color:#4a2c91;font-weight:600;">${escapeHtml(l.usuario_insercao || '—')}</td></tr>
+            <tr><td>Usuário que inseriu</td><td style="color:#4a2c91;font-weight:600;">${escapeHtml(usuarioIns)}</td></tr>
             <tr><td>Banco</td><td>${escapeHtml(l.banco || '-')}</td></tr>
             <tr><td>Observação</td><td>${escapeHtml(l.observacao || '-')}</td></tr>
         </tbody></table>
@@ -2416,10 +2496,10 @@ function abrirDetalheGenerico(titulo, lista) {
             const r = parseFloat(l.valor_realizado) || 0;
             const d = r - p;
             html += `<tr style="cursor:pointer;" onclick="fecharPopupDetalhe();abrirDetalheValor(${l.id})">
-                <td>${formatarData(l.data)}</td>
+                <td>${l.data ? formatarData(l.data) : '<span class="badge badge-alerta">SEM DATA</span>'}</td>
                 <td>${escapeHtml(l.fornecedor || '-')}</td>
                 <td style="color:#000;font-size:11px;font-weight:500;">${escapeHtml(getPlanoLabel(l.plano_contas) || '-')}</td>
-                <td style="color:#4a2c91;font-size:10px;font-weight:600;">${escapeHtml(l.usuario_insercao || '—')}</td>
+                <td style="color:#4a2c91;font-size:10px;font-weight:600;">${escapeHtml(getUsuarioExibicao(l))}</td>
                 <td style="text-align:center;"><span class="badge ${l.tipo === 'RECEITA' ? 'badge-receita' : 'badge-despesa'}">${l.tipo}</span></td>
                 <td style="text-align:right;font-variant-numeric:tabular-nums;color:#0369a1;">${formatarMoeda(p)}</td>
                 <td style="text-align:right;font-variant-numeric:tabular-nums;">${formatarMoeda(r)}</td>
@@ -2442,7 +2522,7 @@ function abrirAtualizacaoRapida(id) {
     const l = lancamentos.find(i => i.id === id);
     if (!l) return;
     lancamentoParaAtualizar = id;
-    document.getElementById('atualizacaoTitulo').textContent = `${l.fornecedor || 'Lançamento'} — ${formatarData(l.data)}`;
+    document.getElementById('atualizacaoTitulo').textContent = `${l.fornecedor || 'Lançamento'} — ${l.data ? formatarData(l.data) : 'SEM DATA'}`;
     document.getElementById('atualizacaoSituacao').value = '';
     document.getElementById('atualizacaoPagoEm').value = l.pago_em || '';
     document.getElementById('atualizacaoValor').value = '';
@@ -2538,7 +2618,7 @@ function editarLancamento(id) {
     document.getElementById('lancRealizado').value = l.valor_realizado || 0;
     document.getElementById('lancBanco').value = l.banco || '';
     document.getElementById('lancObservacao').value = l.observacao || '';
-    document.getElementById('lancUsuarioInsercao').value = l.usuario_insercao || usuarioLogado?.nome || '—';
+    document.getElementById('lancUsuarioInsercao').value = getUsuarioExibicao(l);
 }
 
 function fecharPopupLancamento() {
@@ -2546,35 +2626,14 @@ function fecharPopupLancamento() {
     modoEdicaoLancamento = false;
 }
 
+/* =====================================================================
+   SALVAR LANÇAMENTO — agora exige data (Vencto obrigatório)
+   ===================================================================== */
 async function salvarLancamento(e) {
     e.preventDefault();
     const id = document.getElementById('lancId').value;
 
-    if (!id && !usuarioLogado) {
-        const tipo = document.getElementById('lancTipo').value;
-        dadosLancamentoPendente = {
-            tipo,
-            categoria: document.getElementById('lancCategoria').value || 'GERAL',
-            data: document.getElementById('lancData').value || null,
-            pago_em: document.getElementById('lancPagoEm').value.trim() || null,
-            nf: document.getElementById('lancNF').value.trim() || null,
-            fornecedor: document.getElementById('lancFornecedor').value.trim() || null,
-            plano_contas: document.getElementById('lancPlano').value.trim() || null,
-            valor_projetado: parseFloat(document.getElementById('lancProjetado').value) || 0,
-            valor_realizado: parseFloat(document.getElementById('lancRealizado').value) || 0,
-            situacao: document.getElementById('lancSituacao').value || null,
-            banco: document.getElementById('lancBanco').value || null,
-            observacao: document.getElementById('lancObservacao').value.trim() || null
-        };
-        if (!dadosLancamentoPendente.fornecedor) { mostrarToast('Informe o Fornecedor / Cliente.', 'warning'); return; }
-        if (!dadosLancamentoPendente.plano_contas) { mostrarToast('Selecione o Plano de Contas.', 'warning'); return; }
-
-        fecharPopupLancamento();
-        abrirModalLoginInsercao('Faça login para confirmar o cadastro do lançamento');
-        return;
-    }
-
-    const dados = {
+    const dadosBase = {
         tipo: document.getElementById('lancTipo').value,
         categoria: document.getElementById('lancCategoria').value || 'GERAL',
         data: document.getElementById('lancData').value || null,
@@ -2588,16 +2647,26 @@ async function salvarLancamento(e) {
         banco: document.getElementById('lancBanco').value || null,
         observacao: document.getElementById('lancObservacao').value.trim() || null
     };
-    if (!dados.fornecedor) { mostrarToast('Informe o Fornecedor / Cliente.', 'warning'); return; }
-    if (!dados.plano_contas) { mostrarToast('Selecione o Plano de Contas.', 'warning'); return; }
 
-    if (!dados.usuario_insercao) dados.usuario_insercao = usuarioLogado?.nome || null;
+    if (!dadosBase.fornecedor) { mostrarToast('Informe o Fornecedor / Cliente.', 'warning'); return; }
+    if (!dadosBase.plano_contas) { mostrarToast('Selecione o Plano de Contas.', 'warning'); return; }
+    if (!dadosBase.data) { mostrarToast('Informe a data de Vencimento (Vencto). Lançamento sem data não é permitido.', 'warning'); return; }
 
-    await executarSalvarLancamento(dados, id);
+    if (!id && !usuarioLogado) {
+        dadosLancamentoPendente = { ...dadosBase };
+        fecharPopupLancamento();
+        abrirModalLoginInsercao('Faça login para confirmar o cadastro do lançamento');
+        return;
+    }
+
+    if (!dadosBase.usuario_insercao) dadosBase.usuario_insercao = usuarioLogado?.nome || null;
+
+    await executarSalvarLancamento(dadosBase, id);
 }
 
 async function executarSalvarLancamento(dados, id = null) {
     if (!dados.usuario_insercao) dados.usuario_insercao = usuarioLogado?.nome || null;
+    if (!dados.data) { mostrarToast('Data de vencimento é obrigatória.', 'warning'); return; }
 
     async function tentarSalvar(payload) {
         if (id) return await supabaseClient.from('qnutri_lancamentos').update(payload).eq('id', id);
@@ -2685,7 +2754,7 @@ function renderizarRelatorio() {
         if (tipo !== 'todos' && l.tipo !== tipo) return false;
         if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
         if (termo) {
-            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${l.usuario_insercao || ''}`.toLowerCase();
+            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${getUsuarioExibicao(l)}`.toLowerCase();
             if (!txt.includes(termo)) return false;
         }
         return true;
@@ -2730,7 +2799,7 @@ async function gerarPDFGenerico(titulo, filt, orientacao = 'landscape', corTitul
         const d = r - p;
         const isCopa = (l.categoria || 'GERAL').toUpperCase() === 'COPA';
         linhas += `<tr${isCopa ? ' style="background:#f8f5ff;"' : ''}>
-            <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:9px;">${formatarData(l.data)}</td>
+            <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:9px;">${l.data ? formatarData(l.data) : 'SEM DATA'}</td>
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:9px;">${escapeHtml(l.pago_em || '')}</td>
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:9px;">${escapeHtml(l.nf || '')}</td>
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:9px;">${l.tipo}</td>
@@ -2741,7 +2810,7 @@ async function gerarPDFGenerico(titulo, filt, orientacao = 'landscape', corTitul
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:right;font-size:9px;">${f(r)}</td>
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:right;font-size:9px;">${f(d)}</td>
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:8px;">${escapeHtml(l.situacao || '')}</td>
-            <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:8px;color:#4a2c91;font-weight:700;">${escapeHtml(l.usuario_insercao || '—')}</td>
+            <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:8px;color:#4a2c91;font-weight:700;">${escapeHtml(getUsuarioExibicao(l))}</td>
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:8px;">${escapeHtml(l.banco || '')}</td>
         </tr>`;
     });
@@ -2790,7 +2859,7 @@ function gerarPDFReceitas() {
         if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
         if (sit !== 'todas' && (l.situacao || '').toUpperCase() !== sit.toUpperCase()) return false;
         if (termo) {
-            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${l.usuario_insercao || ''}`.toLowerCase();
+            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${getUsuarioExibicao(l)}`.toLowerCase();
             if (!txt.includes(termo)) return false;
         }
         return true;
@@ -2805,7 +2874,7 @@ function gerarPDFDespesas() {
         if (l.tipo !== 'DESPESA') return false;
         if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
         if (termo) {
-            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${l.usuario_insercao || ''}`.toLowerCase();
+            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${getUsuarioExibicao(l)}`.toLowerCase();
             if (!txt.includes(termo)) return false;
         }
         return true;
@@ -2822,7 +2891,7 @@ function gerarPDFCopa() {
         if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
         if (sit !== 'todas' && (l.situacao || '').toUpperCase() !== sit.toUpperCase()) return false;
         if (termo) {
-            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${l.usuario_insercao || ''}`.toLowerCase();
+            const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${getPlanoLabel(l.plano_contas)} ${getUsuarioExibicao(l)}`.toLowerCase();
             if (!txt.includes(termo)) return false;
         }
         return true;
@@ -2947,7 +3016,7 @@ async function gerarPDFRelatorioPopup() {
         const d = r - p;
         const isCopa = (l.categoria || 'GERAL').toUpperCase() === 'COPA';
         linhas += `<tr${isCopa ? ' style="background:#f8f5ff;"' : ''}>
-            <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:9px;">${formatarData(l.data)}</td>
+            <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:9px;">${l.data ? formatarData(l.data) : 'SEM DATA'}</td>
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:9px;">${escapeHtml(l.pago_em || '')}</td>
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:9px;">${escapeHtml(l.nf || '')}</td>
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:9px;">${l.tipo}</td>
@@ -2958,7 +3027,7 @@ async function gerarPDFRelatorioPopup() {
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:right;font-size:9px;">${f(r)}</td>
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:right;font-size:9px;">${f(d)}</td>
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:8px;">${escapeHtml(l.situacao || '')}</td>
-            <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:8px;color:#4a2c91;font-weight:700;">${escapeHtml(l.usuario_insercao || '—')}</td>
+            <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:8px;color:#4a2c91;font-weight:700;">${escapeHtml(getUsuarioExibicao(l))}</td>
             <td style="padding:5px 6px;border:1px solid #ddd;text-align:center;font-size:8px;">${escapeHtml(l.banco || '')}</td>
         </tr>`;
     });
@@ -3085,10 +3154,7 @@ function fecharPopupEditarPlanoConta() {
 }
 
 /* =====================================================================
-   salvarPlanoConta — RLS-tolerante
-   - Update SEM .select() obrigatório (RLS pode bloquear retorno)
-   - Validação por re-leitura tolerante a erro de RLS
-   - Sincroniza lançamentos por label exato, código exato e prefixo
+   salvarPlanoConta — RLS-tolerante (sem alteração)
    ===================================================================== */
 async function salvarPlanoConta(e) {
     e.preventDefault();
@@ -3121,7 +3187,6 @@ async function salvarPlanoConta(e) {
 
         let r;
         if (isEdicao) {
-            // UPDATE SEM .select() — RLS pode bloquear retorno mas o update funciona
             r = await supabaseClient
                 .from('qnutri_plano_contas')
                 .update(dados)
@@ -3135,7 +3200,6 @@ async function salvarPlanoConta(e) {
 
         if (r.error) throw r.error;
 
-        // Validação: re-lê o registro para confirmar que gravou (tolerante a RLS)
         if (isEdicao) {
             const { data: verificacao, error: errVerif } = await supabaseClient
                 .from('qnutri_plano_contas')
@@ -3145,7 +3209,6 @@ async function salvarPlanoConta(e) {
 
             if (errVerif) {
                 console.warn('Não foi possível verificar (RLS de SELECT bloqueado):', errVerif.message);
-                // Não bloqueia — o update provavelmente funcionou
             } else if (!verificacao) {
                 throw new Error('Registro não encontrado após update. Verifique se o ID ' + idNum + ' existe.');
             } else if (verificacao.codigo !== dados.codigo || verificacao.nome !== dados.nome) {
@@ -3153,7 +3216,6 @@ async function salvarPlanoConta(e) {
             }
         }
 
-        // Sincroniza lançamentos vinculados ao plano
         let totalSincronizados = 0;
 
         if (isEdicao && planoAntigo) {
