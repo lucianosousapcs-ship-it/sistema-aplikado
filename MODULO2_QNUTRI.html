@@ -164,7 +164,7 @@
         .empty-state p { font-size: 13px; font-weight: 600; }
 
         .resumo-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 12px; margin-bottom: 16px;
         }
         .resumo-card {
@@ -386,30 +386,54 @@
         </div>
 
         <!-- ============================================================ -->
-        <!-- ABA LANÇAMENTOS                                              -->
+        <!-- ABA LANÇAMENTOS (COM FILTRO DE MÊS + SITUAÇÃO)               -->
         <!-- ============================================================ -->
         <div id="tab-lancamentos" class="tab-content active">
+            <div class="resumo-grid" id="resumoLancamentos"></div>
             <div class="table-section">
                 <div class="table-header">
                     <h3><i class="fas fa-list"></i> Todos os Lançamentos <span class="badge-count" id="countLancamentos">0</span></h3>
                     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                        <div class="search-box" style="min-width:200px;">
+                        <div class="search-box" style="min-width:180px;">
                             <input type="text" id="buscaLancamentos" placeholder="🔍 Buscar fornecedor, NF..." oninput="renderizarLancamentos()">
                         </div>
-                        <div class="filter-group" style="min-width:120px; flex:0 1 auto;">
+                        <div class="filter-group" style="min-width:110px; flex:0 1 auto;">
                             <select id="filtroTipoLanc" onchange="renderizarLancamentos()">
                                 <option value="todos">Todos os Tipos</option>
                                 <option value="RECEITA">Receitas</option>
                                 <option value="DESPESA">Despesas</option>
                             </select>
                         </div>
-                        <div class="filter-group" style="min-width:130px; flex:0 1 auto;">
+                        <div class="filter-group" style="min-width:120px; flex:0 1 auto;">
+                            <select id="filtroMesLanc" onchange="renderizarLancamentos()">
+                                <option value="todos">Todos os Meses</option>
+                                <option value="01">Janeiro</option><option value="02">Fevereiro</option>
+                                <option value="03">Março</option><option value="04">Abril</option>
+                                <option value="05">Maio</option><option value="06">Junho</option>
+                                <option value="07">Julho</option><option value="08">Agosto</option>
+                                <option value="09">Setembro</option><option value="10">Outubro</option>
+                                <option value="11">Novembro</option><option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="filter-group" style="min-width:120px; flex:0 1 auto;">
                             <select id="filtroCategoriaLanc" class="copa-select" onchange="renderizarLancamentos()">
                                 <option value="todas">Todas Categorias</option>
                                 <option value="GERAL">GERAL</option>
                                 <option value="COPA">💜 COPA</option>
                             </select>
                         </div>
+                        <div class="filter-group" style="min-width:140px; flex:0 1 auto;">
+                            <select id="filtroSituacaoLanc" onchange="renderizarLancamentos()">
+                                <option value="todas">Todas as Situações</option>
+                                <option value="PAGO">Pago</option>
+                                <option value="NÃO PAGO">Não Pago</option>
+                                <option value="PENDENTE MESES ANTERIORES">Pendente Meses Anteriores</option>
+                                <option value="PAGO - MESES ANTERIORES">Pago - Meses Anteriores</option>
+                            </select>
+                        </div>
+                        <button class="btn-action btn-outline" onclick="limparFiltrosLancamentos()" title="Limpar filtros">
+                            <i class="fas fa-eraser"></i>
+                        </button>
                         <button class="btn-action btn-success" onclick="abrirPopupLancamento('RECEITA')">
                             <i class="fas fa-plus"></i> Nova Receita
                         </button>
@@ -570,7 +594,7 @@
         </div>
 
         <!-- ============================================================ -->
-        <!-- ABA COPA (NOVA)                                              -->
+        <!-- ABA COPA                                                     -->
         <!-- ============================================================ -->
         <div id="tab-copa" class="tab-content">
             <div class="resumo-grid" id="resumoCopa"></div>
@@ -1051,19 +1075,25 @@
             return html;
         }
 
-        // ===== FILTRO GENÉRICO =====
         function filtrarPorCategoria(lista, catFiltro) {
             if (!catFiltro || catFiltro === 'todas') return lista;
             return lista.filter(l => (l.categoria || 'GERAL').toUpperCase() === catFiltro.toUpperCase());
         }
 
+        // ============================================================
+        // RENDERIZAR LANÇAMENTOS — COM FILTRO DE MÊS + SITUAÇÃO
+        // ============================================================
         function renderizarLancamentos() {
             const termo = (document.getElementById('buscaLancamentos')?.value || '').toLowerCase();
             const tipo = document.getElementById('filtroTipoLanc')?.value || 'todos';
+            const mes = document.getElementById('filtroMesLanc')?.value || 'todos';
             const cat = document.getElementById('filtroCategoriaLanc')?.value || 'todas';
+            const sit = document.getElementById('filtroSituacaoLanc')?.value || 'todas';
 
             let filt = lancamentos.filter(l => {
                 if (tipo !== 'todos' && l.tipo !== tipo) return false;
+                if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
+                if (sit !== 'todas' && (l.situacao || '').toUpperCase() !== sit.toUpperCase()) return false;
                 if (termo) {
                     const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${l.plano_contas || ''}`.toLowerCase();
                     if (!txt.includes(termo)) return false;
@@ -1072,6 +1102,26 @@
             });
             filt = filtrarPorCategoria(filt, cat);
 
+            // ===== Resumo dinâmico =====
+            const tP = filt.reduce((s, l) => s + (parseFloat(l.valor_projetado) || 0), 0);
+            const tR = filt.reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
+            const tCopa = filt.filter(l => (l.categoria || 'GERAL').toUpperCase() === 'COPA')
+                .reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
+            const qtdReceitas = filt.filter(l => l.tipo === 'RECEITA').length;
+            const qtdDespesas = filt.filter(l => l.tipo === 'DESPESA').length;
+
+            const resumoEl = document.getElementById('resumoLancamentos');
+            if (resumoEl) {
+                resumoEl.innerHTML = `
+                    <div class="resumo-card"><h4>Total Projetado</h4><div class="valor neutro">${formatarMoeda(tP)}</div></div>
+                    <div class="resumo-card"><h4>Total Faturado</h4><div class="valor ${tR >= 0 ? 'positivo' : 'negativo'}">${formatarMoeda(tR)}</div></div>
+                    <div class="resumo-card copa-card"><h4>💜 COPA</h4><div class="valor copa">${formatarMoeda(tCopa)}</div></div>
+                    <div class="resumo-card"><h4>Diferença</h4><div class="valor ${tR - tP >= 0 ? 'positivo' : 'negativo'}">${formatarMoeda(tR - tP)}</div></div>
+                    <div class="resumo-card"><h4>Receitas</h4><div class="valor positivo">${qtdReceitas}</div></div>
+                    <div class="resumo-card"><h4>Despesas</h4><div class="valor negativo">${qtdDespesas}</div></div>
+                `;
+            }
+
             document.getElementById('countLancamentos').textContent = filt.length;
             const tbody = document.getElementById('corpoLancamentos');
             if (filt.length === 0) {
@@ -1079,7 +1129,7 @@
                     <div class="empty-state">
                         <i class="fas fa-inbox"></i>
                         <p>Nenhum lançamento encontrado</p>
-                        <p style="font-size:11px; margin-top:6px; font-weight:500;">Clique em "Nova Receita" ou "Nova Despesa" para começar.</p>
+                        <p style="font-size:11px; margin-top:6px; font-weight:500;">Ajuste os filtros ou clique em "Nova Receita" / "Nova Despesa".</p>
                     </div>
                 </td></tr>`;
                 return;
@@ -1087,6 +1137,18 @@
             let html = '';
             filt.forEach(l => { html += gerarLinhaTabela(l, true, true, true); });
             tbody.innerHTML = html;
+        }
+
+        function limparFiltrosLancamentos() {
+            const ids = ['buscaLancamentos', 'filtroTipoLanc', 'filtroMesLanc', 'filtroCategoriaLanc', 'filtroSituacaoLanc'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (el.tagName === 'INPUT') el.value = '';
+                else el.selectedIndex = 0;
+            });
+            renderizarLancamentos();
+            mostrarToast('🧹 Filtros limpos!');
         }
 
         function renderizarReceitas() {
@@ -1165,7 +1227,6 @@
             tbody.innerHTML = html;
         }
 
-        // ===== RENDERIZAR ABA COPA =====
         function renderizarCopa() {
             const termo = (document.getElementById('buscaCopa')?.value || '').toLowerCase();
             const mes = document.getElementById('filtroMesCopa')?.value || 'todos';
