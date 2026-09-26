@@ -256,22 +256,38 @@
             padding: 3px 9px; border-radius: 4px; margin-left: 6px; border: 1px solid #f0b96e;
         }
 
-        .table-wrapper { flex: 1; overflow-y: auto; overflow-x: auto; min-height: 0; }
-        .table-wrapper::-webkit-scrollbar { width: 12px; height: 12px; }
-        .table-wrapper::-webkit-scrollbar-track { background: #f4f4f4; }
+        /* =====================================================================
+           BARRA DE ROLAGEM HORIZONTAL em TODAS as tabelas
+           ===================================================================== */
+        .table-wrapper { 
+            flex: 1; 
+            overflow-y: auto; 
+            overflow-x: auto; 
+            min-height: 0; 
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-wrapper::-webkit-scrollbar { width: 14px; height: 14px; }
+        .table-wrapper::-webkit-scrollbar-track { background: #f4f4f4; border-radius: 4px; }
         .table-wrapper::-webkit-scrollbar-thumb { background: #c9c9c9; border-radius: 4px; border: 2px solid #f4f4f4; }
         .table-wrapper::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        .table-wrapper::-webkit-scrollbar-corner { background: #f4f4f4; }
 
+        /* =====================================================================
+           TABELAS — COLUNAS EXPANDIDAS PARA MOSTRAR DADOS INTEGRAIS
+           table-layout: auto + min-width para forçar rolagem horizontal
+           ===================================================================== */
         table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
             font-size: 12px;
-            table-layout: fixed;
+            table-layout: auto;
             background: #ffffff;
             color: #000000;
+            min-width: 1400px;
         }
 
+        /* Cabeçalhos executivos */
         table thead th {
             background: linear-gradient(180deg, var(--th-bg-1) 0%, var(--th-bg-2) 100%);
             color: #000000 !important;
@@ -279,7 +295,7 @@
             font-weight: 800 !important;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            padding: 12px 8px;
+            padding: 12px 10px;
             text-align: left;
             border-bottom: 2px solid var(--th-border);
             border-right: 1px solid var(--th-border-soft);
@@ -287,8 +303,6 @@
             white-space: nowrap;
             cursor: pointer;
             user-select: none;
-            overflow: hidden;
-            text-overflow: ellipsis;
             line-height: 1.15;
         }
         table thead th:last-child { border-right: none; }
@@ -311,6 +325,7 @@
         table thead th.sorted-asc .sort-icon,
         table thead th.sorted-desc .sort-icon { opacity: 1; color: #000; }
 
+        /* Cabeçalho AÇÕES — agora PRIMEIRA COLUNA */
         table thead th.th-acoes {
             background: linear-gradient(180deg, var(--th-acoes-bg-1) 0%, var(--th-acoes-bg-2) 100%) !important;
             color: #000000 !important;
@@ -318,9 +333,12 @@
             letter-spacing: 0.7px;
             font-size: 12px;
             text-align: center;
-            border-right: none;
             cursor: default;
             border-bottom: 2px solid #7c3aed;
+            min-width: 100px;
+            position: sticky;
+            left: 0;
+            z-index: 6;
         }
         table thead th.th-acoes:hover {
             background: linear-gradient(180deg, var(--th-acoes-bg-1) 0%, var(--th-acoes-bg-2) 100%) !important;
@@ -336,16 +354,15 @@
             color: #4c1d95 !important;
         }
 
+        /* Células — dados integrais, sem truncar */
         table tbody td {
-            padding: 10px 8px;
+            padding: 10px 10px;
             border-bottom: 1px solid var(--row-border);
             border-right: 1px solid #efefef;
             color: #000000;
             vertical-align: middle;
             text-align: left;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
             font-size: 12px;
             font-weight: 400;
             background: #ffffff;
@@ -354,66 +371,95 @@
         table tbody td:last-child { border-right: none; }
         table tbody td:first-child { font-weight: 400; color: #000000; }
 
+        /* Zebra cinza */
         table tbody tr:nth-child(even) td { background: var(--row-zebra); }
         table tbody tr:hover td { background: var(--row-hover) !important; }
         table tbody tr:hover td.td-acoes { background: var(--row-hover-alt) !important; }
         table tbody tr:last-child td { border-bottom: none; }
 
+        /* Célula de Ações — primeira coluna, fixa (sticky) */
+        table tbody td.td-acoes {
+            text-align: center !important;
+            padding: 8px 6px !important;
+            vertical-align: middle;
+            position: sticky;
+            left: 0;
+            z-index: 3;
+            background: #ffffff;
+            border-right: 2px solid var(--th-border-soft) !important;
+            min-width: 100px;
+        }
+        table tbody tr:nth-child(even) td.td-acoes { background: var(--row-zebra); }
+        table tbody tr:hover td.td-acoes { background: var(--row-hover-alt) !important; }
+
+        /* =====================================================================
+           COLUNAS COM LARGURA MÍNIMA ADEQUADA (dados integrais)
+           ===================================================================== */
+        #tabelaLancamentos col.c-acao, #tabelaRelatorio col.c-acao, 
+        #tabelaReceitas col.c-acao, #tabelaDespesas col.c-acao, 
+        #tabelaCopa col.c-acao { min-width: 100px; }
+        
+        #tabelaLancamentos col.c-data, #tabelaRelatorio col.c-data,
+        #tabelaReceitas col.c-data, #tabelaDespesas col.c-data,
+        #tabelaCopa col.c-data { min-width: 120px; }
+        
+        #tabelaLancamentos col.c-pago, #tabelaRelatorio col.c-pago,
+        #tabelaReceitas col.c-pago, #tabelaDespesas col.c-pago,
+        #tabelaCopa col.c-pago { min-width: 100px; }
+        
+        #tabelaLancamentos col.c-nf, #tabelaRelatorio col.c-nf,
+        #tabelaReceitas col.c-nf, #tabelaDespesas col.c-nf,
+        #tabelaCopa col.c-nf { min-width: 100px; }
+        
+        #tabelaLancamentos col.c-tipo, #tabelaRelatorio col.c-tipo { min-width: 100px; }
+        #tabelaLancamentos col.c-cat, #tabelaRelatorio col.c-cat,
+        #tabelaReceitas col.c-cat, #tabelaDespesas col.c-cat { min-width: 110px; }
+        
+        #tabelaLancamentos col.c-forn, #tabelaRelatorio col.c-forn,
+        #tabelaReceitas col.c-forn, #tabelaDespesas col.c-forn,
+        #tabelaCopa col.c-forn { min-width: 220px; }
+        
+        #tabelaLancamentos col.c-plano, #tabelaRelatorio col.c-plano,
+        #tabelaReceitas col.c-plano, #tabelaDespesas col.c-plano,
+        #tabelaCopa col.c-plano { min-width: 260px; }
+        
+        #tabelaLancamentos col.c-proj, #tabelaRelatorio col.c-proj,
+        #tabelaReceitas col.c-proj, #tabelaDespesas col.c-proj,
+        #tabelaCopa col.c-proj { min-width: 130px; }
+        
+        #tabelaLancamentos col.c-real, #tabelaRelatorio col.c-real,
+        #tabelaReceitas col.c-real, #tabelaDespesas col.c-real,
+        #tabelaCopa col.c-real { min-width: 130px; }
+        
+        #tabelaLancamentos col.c-dif, #tabelaRelatorio col.c-dif,
+        #tabelaReceitas col.c-dif, #tabelaDespesas col.c-dif,
+        #tabelaCopa col.c-dif { min-width: 120px; }
+        
+        #tabelaLancamentos col.c-sit, #tabelaRelatorio col.c-sit,
+        #tabelaReceitas col.c-sit, #tabelaDespesas col.c-sit,
+        #tabelaCopa col.c-sit { min-width: 140px; }
+        
+        #tabelaLancamentos col.c-user, #tabelaRelatorio col.c-user,
+        #tabelaReceitas col.c-user, #tabelaDespesas col.c-user,
+        #tabelaCopa col.c-user { min-width: 140px; }
+        
+        #tabelaLancamentos col.c-banco, #tabelaRelatorio col.c-banco,
+        #tabelaReceitas col.c-banco, #tabelaDespesas col.c-banco,
+        #tabelaCopa col.c-banco { min-width: 130px; }
+
         .cell-plano { color: #000000 !important; font-weight: 400; }
 
-        #tabelaLancamentos col.c-data, #tabelaRelatorio col.c-data { width: 8.5%; }
-        #tabelaLancamentos col.c-pago, #tabelaRelatorio col.c-pago { width: 7%; }
-        #tabelaLancamentos col.c-nf, #tabelaRelatorio col.c-nf { width: 5%; }
-        #tabelaLancamentos col.c-tipo, #tabelaRelatorio col.c-tipo { width: 7%; }
-        #tabelaLancamentos col.c-cat, #tabelaRelatorio col.c-cat { width: 7%; }
-        #tabelaLancamentos col.c-forn, #tabelaRelatorio col.c-forn { width: 15%; }
-        #tabelaLancamentos col.c-plano, #tabelaRelatorio col.c-plano { width: 13%; }
-        #tabelaLancamentos col.c-proj, #tabelaRelatorio col.c-proj { width: 8.5%; }
-        #tabelaLancamentos col.c-real, #tabelaRelatorio col.c-real { width: 8.5%; }
-        #tabelaLancamentos col.c-dif, #tabelaRelatorio col.c-dif { width: 8%; }
-        #tabelaLancamentos col.c-sit, #tabelaRelatorio col.c-sit { width: 9%; }
-        #tabelaLancamentos col.c-user, #tabelaRelatorio col.c-user { width: 9%; }
-        #tabelaLancamentos col.c-banco, #tabelaRelatorio col.c-banco { width: 7%; }
-        #tabelaLancamentos col.c-acao { width: 6.5%; }
-
-        #tabelaReceitas col.c-data, #tabelaDespesas col.c-data { width: 8.5%; }
-        #tabelaReceitas col.c-pago, #tabelaDespesas col.c-pago { width: 7%; }
-        #tabelaReceitas col.c-nf, #tabelaDespesas col.c-nf { width: 5.5%; }
-        #tabelaReceitas col.c-cat, #tabelaDespesas col.c-cat { width: 7%; }
-        #tabelaReceitas col.c-forn, #tabelaDespesas col.c-forn { width: 16%; }
-        #tabelaReceitas col.c-plano, #tabelaDespesas col.c-plano { width: 14%; }
-        #tabelaReceitas col.c-proj, #tabelaDespesas col.c-proj { width: 9%; }
-        #tabelaReceitas col.c-real, #tabelaDespesas col.c-real { width: 9%; }
-        #tabelaReceitas col.c-dif, #tabelaDespesas col.c-dif { width: 8.5%; }
-        #tabelaReceitas col.c-sit, #tabelaDespesas col.c-sit { width: 9%; }
-        #tabelaReceitas col.c-user, #tabelaDespesas col.c-user { width: 9%; }
-        #tabelaReceitas col.c-banco, #tabelaDespesas col.c-banco { width: 7%; }
-        #tabelaReceitas col.c-acao, #tabelaDespesas col.c-acao { width: 6.5%; }
-
-        #tabelaCopa col.c-data { width: 9%; }
-        #tabelaCopa col.c-pago { width: 7.5%; }
-        #tabelaCopa col.c-nf { width: 6%; }
-        #tabelaCopa col.c-forn { width: 17%; }
-        #tabelaCopa col.c-plano { width: 15%; }
-        #tabelaCopa col.c-proj { width: 9.5%; }
-        #tabelaCopa col.c-real { width: 9.5%; }
-        #tabelaCopa col.c-dif { width: 9%; }
-        #tabelaCopa col.c-sit { width: 9.5%; }
-        #tabelaCopa col.c-user { width: 9%; }
-        #tabelaCopa col.c-banco { width: 7.5%; }
-        #tabelaCopa col.c-acao { width: 6.5%; }
-
         .cell-primary { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-        .cell-primary .main-text { font-weight: 400; color: #000000; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cell-primary .main-text { font-weight: 400; color: #000000; font-size: 12px; white-space: nowrap; }
 
-        .cell-money { font-weight: 400; font-variant-numeric: tabular-nums; text-align: right; font-size: 12px; color: #000000; }
+        .cell-money { font-weight: 400; font-variant-numeric: tabular-nums; text-align: right; font-size: 12px; color: #000000; white-space: nowrap; }
         .cell-money.positivo { color: #047857; }
         .cell-money.negativo { color: #b91c1c; }
         .cell-money.info { color: #0369a1; }
         .cell-center { text-align: center; }
         .cell-clickable { cursor: pointer; }
         .cell-clickable:hover { background: #ffe8cc !important; color: var(--accent-dark) !important; }
-        .cell-user { font-size: 12px; color: #000000; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cell-user { font-size: 12px; color: #000000; font-weight: 400; white-space: nowrap; }
 
         .badge {
             display: inline-block; padding: 3px 8px; border-radius: 4px;
@@ -439,13 +485,8 @@
         .empty-state p.sub { font-size: 12px; font-weight: 400; color: #5a3a10; margin-top: 5px; }
 
         /* =====================================================================
-           BOTÃO AÇÕES — NOVO ESTILO: VERDE, SEM ÍCONES, TEXTO SIMPLES
+           BOTÃO AÇÕES — VERDE, SEM ÍCONES
            ===================================================================== */
-        .td-acoes {
-            text-align: center !important;
-            padding: 6px 4px !important;
-            vertical-align: middle;
-        }
         .btn-actions {
             display: inline-flex; align-items: center; justify-content: center;
             min-width: 80px;
@@ -525,17 +566,12 @@
         .view-toggle button:hover:not(.active) { color: var(--accent-dark); }
 
         /* =====================================================================
-           DRE — COLUNA DESCRIÇÃO EXPANDIDA + ROLAGEM HORIZONTAL
-           Aplicado em TODOS os modos (realizado, projetado, desvio, ambos)
+           DRE — Descrição expandida + rolagem horizontal
            ===================================================================== */
         #dreTableWrapper {
             overflow-x: auto !important;
             overflow-y: auto !important;
         }
-        #dreTableWrapper::-webkit-scrollbar { width: 12px; height: 12px; }
-        #dreTableWrapper::-webkit-scrollbar-track { background: #f4f4f4; }
-        #dreTableWrapper::-webkit-scrollbar-thumb { background: #c9c9c9; border-radius: 4px; border: 2px solid #f4f4f4; }
-        #dreTableWrapper::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
         #tabelaDRE { 
             font-size: 12px; 
@@ -558,11 +594,10 @@
             border-right: 1px solid var(--th-border-soft);
             border-bottom: 2px solid var(--th-border);
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            position: sticky; top: 0; z-index: 5;
         }
         #tabelaDRE thead th:last-child { border-right: none; }
-        #tabelaDRE thead th:first-child { text-align: left; padding-left: 12px; min-width: 250px; }
+        #tabelaDRE thead th:first-child { text-align: left; padding-left: 12px; min-width: 300px; }
 
         #tabelaDRE tbody td {
             font-size: 12px;
@@ -571,44 +606,35 @@
             color: #000000 !important;
             font-weight: 400 !important;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
             font-variant-numeric: tabular-nums;
             border-right: 1px solid #efefef;
             border-bottom: 1px solid var(--row-border);
             background: #ffffff;
-            min-width: 120px;
+            min-width: 130px;
         }
         #tabelaDRE tbody tr:nth-child(even) td { background: var(--row-zebra); }
         #tabelaDRE tbody tr:hover td { background: var(--row-hover) !important; }
         #tabelaDRE tbody td:last-child { border-right: none; }
 
-        /* Primeira coluna — EXPANDIDA, ROLAGEM HORIZONTAL, texto completo visível */
         #tabelaDRE tbody td:first-child {
             text-align: left;
             font-weight: 400 !important;
             color: #000000 !important;
             white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
             line-height: 1.2;
             font-size: 12px;
             padding-left: 12px;
             padding-right: 10px;
             border-right: 2px solid var(--th-border-soft);
             background: #fffaf1;
-            min-width: 250px !important;
-            max-width: 350px !important;
+            min-width: 300px !important;
+            max-width: 400px !important;
             position: sticky;
             left: 0;
             z-index: 2;
         }
         #tabelaDRE tbody tr:nth-child(even) td:first-child { background: #f5f0e6; }
         #tabelaDRE tbody tr:hover td:first-child { background: var(--row-hover) !important; }
-
-        #tabelaDRE .col-desc { width: auto; min-width: 250px; }
-        #tabelaDRE .col-mes { width: auto; }
-        #tabelaDRE .col-total { width: auto; }
 
         .dre-row-receitas-total td { background: linear-gradient(90deg, #d1fae5 0%, #ecfdf5 100%) !important; color: #065f46 !important; font-weight: 700 !important; font-size: 13px !important; border-top: 2px solid #34d399 !important; border-bottom: 2px solid #34d399 !important; }
         .dre-row-receitas-total td:first-child { background: #d1fae5 !important; font-weight: 700 !important; }
@@ -630,8 +656,6 @@
 
         .dre-col-semdata { background: #fafafa !important; border-left: 2px dashed var(--th-border) !important; border-right: 2px dashed var(--th-border) !important; }
         .dre-col-semdata.dre-semdata-header { background: linear-gradient(180deg, #fff0d8 0%, #ffe0bb 100%) !important; color: #000000 !important; }
-
-        .dre-valor-negativo { color: #b91c1c !important; }
 
         /* ===== MODAL ===== */
         .modal-overlay {
@@ -713,9 +737,9 @@
         .detalhe-stat .val.negativo { color: #b91c1c; }
 
         .detalhe-list { max-height: 460px; overflow-y: auto; border: 1px solid var(--border); border-radius: 7px; }
-        .detalhe-list table { font-size: 12px; table-layout: auto; }
+        .detalhe-list table { font-size: 12px; table-layout: auto; min-width: 100%; }
         .detalhe-list table thead th { background: linear-gradient(180deg, var(--th-bg-1) 0%, var(--th-bg-2) 100%); color: #000000 !important; font-size: 12px; padding: 10px 12px; font-weight: 800 !important; letter-spacing: 0.5px; border-bottom: 2px solid var(--th-border); }
-        .detalhe-list table tbody td { padding: 9px 12px; font-size: 12px; font-weight: 400; color: #000000; }
+        .detalhe-list table tbody td { padding: 9px 12px; font-size: 12px; font-weight: 400; color: #000000; white-space: nowrap; }
         .detalhe-list table tbody tr:nth-child(even) td { background: var(--row-zebra); }
         .detalhe-list table tbody tr:hover td { background: var(--row-hover); }
 
@@ -747,7 +771,7 @@
         .desvio-card-bar-fill.atencao { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
         .desvio-card-bar-fill.ok { background: linear-gradient(90deg, #10b981, #34d399); }
 
-        .analise-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; table-layout: auto; }
+        .analise-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; table-layout: auto; min-width: 100%; }
         .analise-table thead th {
             background: linear-gradient(180deg, var(--th-bg-1) 0%, var(--th-bg-2) 100%);
             color: #000000 !important;
@@ -759,33 +783,33 @@
         }
         .analise-table thead th:first-child { border-top-left-radius: 8px; }
         .analise-table thead th:last-child { border-top-right-radius: 8px; }
-        .analise-table tbody td { padding: 9px 12px; border-bottom: 1px solid var(--row-border); font-weight: 400; color: #000000; background: #ffffff; font-size: 12px; }
+        .analise-table tbody td { padding: 9px 12px; border-bottom: 1px solid var(--row-border); font-weight: 400; color: #000000; background: #ffffff; font-size: 12px; white-space: nowrap; }
         .analise-table tbody tr:nth-child(even) td { background: var(--row-zebra); }
         .analise-table tbody tr { transition: background 0.15s; }
         .analise-table tbody tr:hover td { background: var(--row-hover); }
         .analise-table tbody tr:last-child td { border-bottom: none; }
 
-        .analise-container { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(255,140,0,0.06); }
+        .analise-container { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(255,140,0,0.06); overflow-x: auto; }
 
-        .plano-list { max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 7px; margin-top: 10px; }
-        .plano-list table { font-size: 12px; table-layout: auto; }
-        .plano-list table thead th { background: linear-gradient(180deg, var(--th-bg-1) 0%, var(--th-bg-2) 100%); color: #000000 !important; font-size: 12px; padding: 11px 12px; font-weight: 800 !important; letter-spacing: 0.5px; border-bottom: 2px solid var(--th-border); }
-        .plano-list table tbody td { padding: 9px 12px; font-size: 12px; font-weight: 400; color: #000000; }
+        .plano-list { max-height: 400px; overflow-y: auto; overflow-x: auto; border: 1px solid var(--border); border-radius: 7px; margin-top: 10px; }
+        .plano-list table { font-size: 12px; table-layout: auto; min-width: 100%; }
+        .plano-list table thead th { background: linear-gradient(180deg, var(--th-bg-1) 0%, var(--th-bg-2) 100%); color: #000000 !important; font-size: 12px; padding: 11px 12px; font-weight: 800 !important; letter-spacing: 0.5px; border-bottom: 2px solid var(--th-border); white-space: nowrap; }
+        .plano-list table tbody td { padding: 9px 12px; font-size: 12px; font-weight: 400; color: #000000; white-space: nowrap; }
         .plano-list table tbody tr:nth-child(even) td { background: var(--row-zebra); }
         .plano-list table tbody tr:hover td { background: var(--row-hover); }
 
         @media (max-width: 1400px) {
-            table { font-size: 12px; }
-            table thead th { font-size: 11.5px; padding: 11px 7px; }
-            table tbody td { font-size: 12px; padding: 9px 7px; }
+            table { font-size: 12px; min-width: 1300px; }
+            table thead th { font-size: 11.5px; padding: 11px 8px; }
+            table tbody td { font-size: 12px; padding: 9px 8px; }
             .cell-money { font-size: 12px; }
             .btn-actions { font-size: 10.5px; padding: 7px 12px; min-width: 75px; }
         }
         @media (max-width: 1200px) {
             .dashboard { grid-template-columns: repeat(3, 1fr); }
-            table { font-size: 11.5px; }
-            table thead th { font-size: 11px; padding: 10px 6px; letter-spacing: 0.4px; }
-            table tbody td { font-size: 11.5px; padding: 9px 6px; }
+            table { font-size: 11.5px; min-width: 1200px; }
+            table thead th { font-size: 11px; padding: 10px 7px; letter-spacing: 0.4px; }
+            table tbody td { font-size: 11.5px; padding: 9px 7px; }
             .badge { font-size: 10.5px; padding: 3px 6px; }
             .btn-actions { font-size: 10px; padding: 6px 10px; min-width: 70px; }
         }
@@ -798,7 +822,6 @@
             .dashboard { padding: 10px 14px 0; }
             .form-row { flex-direction: column; gap: 0; }
             .pdf-popup-content { max-width: 100%; max-height: 95vh; }
-            .table-wrapper { overflow-x: auto; }
             table { table-layout: auto; min-width: 1100px; }
             .desvios-grid { grid-template-columns: 1fr; }
         }
@@ -952,12 +975,13 @@
                     <div class="table-wrapper">
                         <table id="tabelaLancamentos">
                             <colgroup>
-                                <col class="c-data"><col class="c-pago"><col class="c-nf"><col class="c-tipo"><col class="c-cat">
+                                <col class="c-acao"><col class="c-data"><col class="c-pago"><col class="c-nf"><col class="c-tipo"><col class="c-cat">
                                 <col class="c-forn"><col class="c-plano"><col class="c-proj"><col class="c-real"><col class="c-dif">
-                                <col class="c-sit"><col class="c-user"><col class="c-banco"><col class="c-acao">
+                                <col class="c-sit"><col class="c-user"><col class="c-banco">
                             </colgroup>
                             <thead>
                                 <tr>
+                                    <th class="th-acoes">AÇÕES<span class="th-sub">opções</span></th>
                                     <th data-sort="data">Vencimento <span class="sort-icon">↕</span></th>
                                     <th data-sort="pago_em">Pago em <span class="sort-icon">↕</span></th>
                                     <th data-sort="nf">Nota Fiscal <span class="sort-icon">↕</span></th>
@@ -971,7 +995,6 @@
                                     <th data-sort="situacao">Situação <span class="sort-icon">↕</span></th>
                                     <th data-sort="usuario_insercao">Usuário <span class="sort-icon">↕</span></th>
                                     <th data-sort="banco">Banco <span class="sort-icon">↕</span></th>
-                                    <th class="th-acoes">AÇÕES<span class="th-sub">clique para opções</span></th>
                                 </tr>
                             </thead>
                             <tbody id="corpoLancamentos"></tbody>
@@ -995,12 +1018,13 @@
                     <div class="table-wrapper">
                         <table id="tabelaReceitas">
                             <colgroup>
-                                <col class="c-data"><col class="c-pago"><col class="c-nf"><col class="c-cat">
+                                <col class="c-acao"><col class="c-data"><col class="c-pago"><col class="c-nf"><col class="c-cat">
                                 <col class="c-forn"><col class="c-plano"><col class="c-proj"><col class="c-real"><col class="c-dif">
-                                <col class="c-sit"><col class="c-user"><col class="c-banco"><col class="c-acao">
+                                <col class="c-sit"><col class="c-user"><col class="c-banco">
                             </colgroup>
                             <thead>
                                 <tr>
+                                    <th class="th-acoes">AÇÕES<span class="th-sub">opções</span></th>
                                     <th data-sort="data">Vencimento <span class="sort-icon">↕</span></th>
                                     <th data-sort="pago_em">Pago em <span class="sort-icon">↕</span></th>
                                     <th data-sort="nf">Nota Fiscal <span class="sort-icon">↕</span></th>
@@ -1013,7 +1037,6 @@
                                     <th data-sort="situacao">Situação <span class="sort-icon">↕</span></th>
                                     <th data-sort="usuario_insercao">Usuário <span class="sort-icon">↕</span></th>
                                     <th data-sort="banco">Banco <span class="sort-icon">↕</span></th>
-                                    <th class="th-acoes">AÇÕES<span class="th-sub">clique para opções</span></th>
                                 </tr>
                             </thead>
                             <tbody id="corpoReceitas"></tbody>
@@ -1037,12 +1060,13 @@
                     <div class="table-wrapper">
                         <table id="tabelaDespesas">
                             <colgroup>
-                                <col class="c-data"><col class="c-pago"><col class="c-nf"><col class="c-cat">
+                                <col class="c-acao"><col class="c-data"><col class="c-pago"><col class="c-nf"><col class="c-cat">
                                 <col class="c-forn"><col class="c-plano"><col class="c-proj"><col class="c-real"><col class="c-dif">
-                                <col class="c-sit"><col class="c-user"><col class="c-banco"><col class="c-acao">
+                                <col class="c-sit"><col class="c-user"><col class="c-banco">
                             </colgroup>
                             <thead>
                                 <tr>
+                                    <th class="th-acoes">AÇÕES<span class="th-sub">opções</span></th>
                                     <th data-sort="data">Vencimento <span class="sort-icon">↕</span></th>
                                     <th data-sort="pago_em">Pago em <span class="sort-icon">↕</span></th>
                                     <th data-sort="nf">Nota Fiscal <span class="sort-icon">↕</span></th>
@@ -1055,7 +1079,6 @@
                                     <th data-sort="situacao">Situação <span class="sort-icon">↕</span></th>
                                     <th data-sort="usuario_insercao">Usuário <span class="sort-icon">↕</span></th>
                                     <th data-sort="banco">Banco <span class="sort-icon">↕</span></th>
-                                    <th class="th-acoes">AÇÕES<span class="th-sub">clique para opções</span></th>
                                 </tr>
                             </thead>
                             <tbody id="corpoDespesas"></tbody>
@@ -1079,12 +1102,13 @@
                     <div class="table-wrapper">
                         <table id="tabelaCopa">
                             <colgroup>
-                                <col class="c-data"><col class="c-pago"><col class="c-nf">
+                                <col class="c-acao"><col class="c-data"><col class="c-pago"><col class="c-nf">
                                 <col class="c-forn"><col class="c-plano"><col class="c-proj"><col class="c-real"><col class="c-dif">
-                                <col class="c-sit"><col class="c-user"><col class="c-banco"><col class="c-acao">
+                                <col class="c-sit"><col class="c-user"><col class="c-banco">
                             </colgroup>
                             <thead>
                                 <tr>
+                                    <th class="th-acoes">AÇÕES<span class="th-sub">opções</span></th>
                                     <th data-sort="data">Vencimento <span class="sort-icon">↕</span></th>
                                     <th data-sort="pago_em">Pago em <span class="sort-icon">↕</span></th>
                                     <th data-sort="nf">Nota Fiscal <span class="sort-icon">↕</span></th>
@@ -1096,7 +1120,6 @@
                                     <th data-sort="situacao">Situação <span class="sort-icon">↕</span></th>
                                     <th data-sort="usuario_insercao">Usuário <span class="sort-icon">↕</span></th>
                                     <th data-sort="banco">Banco <span class="sort-icon">↕</span></th>
-                                    <th class="th-acoes">AÇÕES<span class="th-sub">clique para opções</span></th>
                                 </tr>
                             </thead>
                             <tbody id="corpoCopa"></tbody>
@@ -1156,12 +1179,13 @@
                     <div class="table-wrapper">
                         <table id="tabelaRelatorio">
                             <colgroup>
-                                <col class="c-data"><col class="c-pago"><col class="c-nf"><col class="c-tipo"><col class="c-cat">
+                                <col class="c-acao"><col class="c-data"><col class="c-pago"><col class="c-nf"><col class="c-tipo"><col class="c-cat">
                                 <col class="c-forn"><col class="c-plano"><col class="c-proj"><col class="c-real"><col class="c-dif">
                                 <col class="c-sit"><col class="c-user"><col class="c-banco">
                             </colgroup>
                             <thead>
                                 <tr>
+                                    <th class="th-acoes">AÇÕES<span class="th-sub">opções</span></th>
                                     <th data-sort="data">Vencimento <span class="sort-icon">↕</span></th>
                                     <th data-sort="pago_em">Pago em <span class="sort-icon">↕</span></th>
                                     <th data-sort="nf">Nota Fiscal <span class="sort-icon">↕</span></th>
@@ -1930,6 +1954,9 @@ function getUsuarioExibicao(l) {
     return 'Atualização Banco';
 }
 
+/* =====================================================================
+   LINHA DE TABELA — Botão Ações agora é a PRIMEIRA coluna
+   ===================================================================== */
 function gerarLinhaTabela(l, comTipo = true, comAcoes = true, comCategoria = true) {
     const p = parseFloat(l.valor_projetado) || 0;
     const r = parseFloat(l.valor_realizado) || 0;
@@ -1941,28 +1968,31 @@ function gerarLinhaTabela(l, comTipo = true, comAcoes = true, comCategoria = tru
     const usuarioIns = getUsuarioExibicao(l);
     const semData = !l.data;
 
-    let html = `<tr>
-        <td>${semData ? '<span class="badge badge-alerta">SEM DATA</span>' : formatarData(l.data)}</td>
+    let html = `<tr>`;
+    
+    // PRIMEIRA COLUNA: AÇÕES
+    if (comAcoes) {
+        html += `<td class="td-acoes">
+            <button class="btn-actions" onclick="abrirActionPopover(event, ${l.id})" title="Ver ações disponíveis">
+                Ações
+            </button>
+        </td>`;
+    }
+    
+    html += `<td>${semData ? '<span class="badge badge-alerta">SEM DATA</span>' : formatarData(l.data)}</td>
         <td>${escapeHtml(l.pago_em || '-')}</td>
         <td title="${escapeHtml(l.nf || '')}">${escapeHtml(l.nf || '-')}</td>`;
     if (comTipo) html += `<td><span class="badge ${badgeTipo}">${l.tipo}</span></td>`;
     if (comCategoria) html += `<td><span class="badge ${badgeCat}">${getLabelCategoria(l.categoria)}</span></td>`;
-    html += `<td title="${escapeHtml(l.fornecedor || '')}"><div class="cell-primary"><div class="main-text">${escapeHtml(l.fornecedor || '-')}</div></div></td>
-        <td class="cell-plano" title="${escapeHtml(planoLabel)}">${escapeHtml(planoLabel)}</td>
+    html += `<td><div class="cell-primary"><div class="main-text">${escapeHtml(l.fornecedor || '-')}</div></div></td>
+        <td class="cell-plano">${escapeHtml(planoLabel)}</td>
         <td class="cell-money info cell-clickable" onclick="abrirDetalheValor(${l.id})">${formatarMoeda(p)}</td>
         <td class="cell-money ${r > 0 ? (l.tipo === 'RECEITA' ? 'positivo' : 'negativo') : ''} cell-clickable" onclick="abrirDetalheValor(${l.id})">${formatarMoeda(r)}</td>
         <td class="cell-money ${d >= 0 ? 'positivo' : 'negativo'} cell-clickable" onclick="abrirDetalheValor(${l.id})">${formatarMoeda(d)}</td>
         <td><span class="badge ${badgeSit} cell-clickable" onclick="abrirAtualizacaoRapida(${l.id})">${escapeHtml(l.situacao || '-')}</span></td>
-        <td><span class="cell-user" title="Usuário que inseriu: ${escapeHtml(usuarioIns)}"><i class="fas fa-user-circle" style="margin-right:3px;font-size:10px;opacity:0.7;"></i>${escapeHtml(usuarioIns)}</span></td>
-        <td title="${escapeHtml(l.banco || '')}">${escapeHtml(l.banco || '-')}</td>`;
-    if (comAcoes) {
-      html += `<td class="td-acoes">
-    <button class="btn-actions" onclick="abrirActionPopover(event, ${l.id})" title="Ver ações disponíveis">
-        Ações
-    </button>
-</td>`;
-    }
-    html += `</tr>`;
+        <td><span class="cell-user"><i class="fas fa-user-circle" style="margin-right:3px;font-size:10px;opacity:0.7;"></i>${escapeHtml(usuarioIns)}</span></td>
+        <td>${escapeHtml(l.banco || '-')}</td>
+        </tr>`;
     return html;
 }
 
@@ -2143,9 +2173,6 @@ function setDREModo(modo) {
     renderizarDRE();
 }
 
-/* =====================================================================
-   RENDERIZA DRE — COLUNA DESCRIÇÃO EXPANDIDA + ROLAGEM HORIZONTAL
-   ===================================================================== */
 function renderizarDRE() {
     const cat = document.getElementById('filtroCategoriaDRE')?.value || 'todas';
     const tipoFiltro = document.getElementById('filtroTipoDRE')?.value || 'todos';
@@ -2187,31 +2214,31 @@ function renderizarDRE() {
         totais[mm].lucroR = totais[mm].recR - totais[mm].despR;
     });
 
-    let theadHtml = '<tr><th style="text-align:left;padding-left:12px;min-width:250px;">Descrição</th>';
+    let theadHtml = '<tr><th style="text-align:left;padding-left:12px;min-width:300px;">Descrição</th>';
     for (let m = 1; m <= 12; m++) {
         const label = MESES_CURTO[m - 1];
-        if (dreModo === 'ambos') theadHtml += `<th colspan="2" style="border-left:1px solid var(--th-border-soft);min-width:240px;">${label}</th>`;
-        else theadHtml += `<th style="min-width:120px;">${label}</th>`;
+        if (dreModo === 'ambos') theadHtml += `<th colspan="2" style="border-left:1px solid var(--th-border-soft);min-width:260px;">${label}</th>`;
+        else theadHtml += `<th style="min-width:130px;">${label}</th>`;
     }
     if (dreModo === 'ambos') {
-        theadHtml += `<th colspan="2" class="dre-col-semdata dre-semdata-header" style="min-width:240px;">SEM DATA</th>`;
+        theadHtml += `<th colspan="2" class="dre-col-semdata dre-semdata-header" style="min-width:260px;">SEM DATA</th>`;
     } else {
-        theadHtml += `<th class="dre-col-semdata dre-semdata-header" style="min-width:120px;">SEM DATA</th>`;
+        theadHtml += `<th class="dre-col-semdata dre-semdata-header" style="min-width:130px;">SEM DATA</th>`;
     }
     if (dreModo === 'ambos') {
-        theadHtml += `<th colspan="2" style="border-left:2px solid var(--th-border);min-width:240px;">TOTAL</th>`;
+        theadHtml += `<th colspan="2" style="border-left:2px solid var(--th-border);min-width:260px;">TOTAL</th>`;
     } else {
-        theadHtml += `<th style="border-left:2px solid var(--th-border);min-width:120px;">TOTAL</th>`;
+        theadHtml += `<th style="border-left:2px solid var(--th-border);min-width:130px;">TOTAL</th>`;
     }
     theadHtml += '</tr>';
 
     if (dreModo === 'ambos') {
-        theadHtml += '<tr><th style="min-width:250px;">DESCRIÇÃO</th>';
+        theadHtml += '<tr><th style="min-width:300px;">DESCRIÇÃO</th>';
         for (let m = 1; m <= 12; m++) {
-            theadHtml += `<th style="min-width:120px;border-left:1px solid var(--th-border-soft);">PROJETADO</th><th style="min-width:120px;">REALIZADO</th>`;
+            theadHtml += `<th style="min-width:130px;border-left:1px solid var(--th-border-soft);">PROJETADO</th><th style="min-width:130px;">REALIZADO</th>`;
         }
-        theadHtml += `<th class="dre-col-semdata" style="min-width:120px;">PROJETADO</th><th class="dre-col-semdata" style="min-width:120px;">REALIZADO</th>`;
-        theadHtml += `<th style="min-width:120px;border-left:2px solid var(--th-border);">PROJETADO</th><th style="min-width:120px;">REALIZADO</th></tr>`;
+        theadHtml += `<th class="dre-col-semdata" style="min-width:130px;">PROJETADO</th><th class="dre-col-semdata" style="min-width:130px;">REALIZADO</th>`;
+        theadHtml += `<th style="min-width:130px;border-left:2px solid var(--th-border);">PROJETADO</th><th style="min-width:130px;">REALIZADO</th></tr>`;
     }
     document.getElementById('theadDRE').innerHTML = theadHtml;
 
@@ -2219,7 +2246,7 @@ function renderizarDRE() {
     function gerarLinha(label, mesesData, isTotal = false, corTipo = null, chaveGrupo = null, classeTotal = '') {
         let linha = `<tr class="${classeTotal} dre-row-clickable" onclick="abrirDetalheDRE('${escapeHtml(chaveGrupo || label)}')">`;
         const paddingLeft = isTotal ? '12px' : '16px';
-        linha += `<td style="text-align:left;padding-left:${paddingLeft};min-width:250px;max-width:350px;" title="${escapeHtml(label)}">${escapeHtml(label)}</td>`;
+        linha += `<td style="text-align:left;padding-left:${paddingLeft};min-width:300px;max-width:400px;" title="${escapeHtml(label)}">${escapeHtml(label)}</td>`;
 
         for (let m = 1; m <= 12; m++) {
             const mm = String(m).padStart(2, '0');
@@ -2227,18 +2254,18 @@ function renderizarDRE() {
             if (dreModo === 'ambos') {
                 const corP = d.p < 0 ? 'color:#b91c1c;' : '';
                 const corR = d.r < 0 ? 'color:#b91c1c;' : '';
-                linha += `<td style="border-left:1px solid #efefef;min-width:120px;${corP}">${d.p !== 0 ? formatarMoeda(d.p) : '-'}</td>`;
-                linha += `<td style="min-width:120px;${corR}">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
+                linha += `<td style="border-left:1px solid #efefef;min-width:130px;${corP}">${d.p !== 0 ? formatarMoeda(d.p) : '-'}</td>`;
+                linha += `<td style="min-width:130px;${corR}">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
             } else if (dreModo === 'projetado') {
                 const corP = d.p < 0 ? 'color:#b91c1c;' : '';
-                linha += `<td style="min-width:120px;${corP}">${d.p !== 0 ? formatarMoeda(d.p) : '-'}</td>`;
+                linha += `<td style="min-width:130px;${corP}">${d.p !== 0 ? formatarMoeda(d.p) : '-'}</td>`;
             } else if (dreModo === 'desvio') {
                 const desvio = d.r - d.p;
                 const corD = desvio < 0 ? 'color:#b91c1c;' : '';
-                linha += `<td style="min-width:120px;${corD}">${desvio !== 0 ? formatarMoeda(desvio) : '-'}</td>`;
+                linha += `<td style="min-width:130px;${corD}">${desvio !== 0 ? formatarMoeda(desvio) : '-'}</td>`;
             } else {
                 const corR = d.r < 0 ? 'color:#b91c1c;' : '';
-                linha += `<td style="min-width:120px;${corR}">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
+                linha += `<td style="min-width:130px;${corR}">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
             }
         }
 
@@ -2246,18 +2273,18 @@ function renderizarDRE() {
         if (dreModo === 'ambos') {
             const corP = dSD.p < 0 ? 'color:#b91c1c;' : '';
             const corR = dSD.r < 0 ? 'color:#b91c1c;' : '';
-            linha += `<td class="dre-col-semdata" style="min-width:120px;${corP}">${dSD.p !== 0 ? formatarMoeda(dSD.p) : '-'}</td>`;
-            linha += `<td class="dre-col-semdata" style="min-width:120px;${corR}">${dSD.r !== 0 ? formatarMoeda(dSD.r) : '-'}</td>`;
+            linha += `<td class="dre-col-semdata" style="min-width:130px;${corP}">${dSD.p !== 0 ? formatarMoeda(dSD.p) : '-'}</td>`;
+            linha += `<td class="dre-col-semdata" style="min-width:130px;${corR}">${dSD.r !== 0 ? formatarMoeda(dSD.r) : '-'}</td>`;
         } else if (dreModo === 'projetado') {
             const corP = dSD.p < 0 ? 'color:#b91c1c;' : '';
-            linha += `<td class="dre-col-semdata" style="min-width:120px;${corP}">${dSD.p !== 0 ? formatarMoeda(dSD.p) : '-'}</td>`;
+            linha += `<td class="dre-col-semdata" style="min-width:130px;${corP}">${dSD.p !== 0 ? formatarMoeda(dSD.p) : '-'}</td>`;
         } else if (dreModo === 'desvio') {
             const desvio = dSD.r - dSD.p;
             const corD = desvio < 0 ? 'color:#b91c1c;' : '';
-            linha += `<td class="dre-col-semdata" style="min-width:120px;${corD}">${desvio !== 0 ? formatarMoeda(desvio) : '-'}</td>`;
+            linha += `<td class="dre-col-semdata" style="min-width:130px;${corD}">${desvio !== 0 ? formatarMoeda(desvio) : '-'}</td>`;
         } else {
             const corR = dSD.r < 0 ? 'color:#b91c1c;' : '';
-            linha += `<td class="dre-col-semdata" style="min-width:120px;${corR}">${dSD.r !== 0 ? formatarMoeda(dSD.r) : '-'}</td>`;
+            linha += `<td class="dre-col-semdata" style="min-width:130px;${corR}">${dSD.r !== 0 ? formatarMoeda(dSD.r) : '-'}</td>`;
         }
 
         const todosSlots = Object.values(mesesData);
@@ -2267,18 +2294,18 @@ function renderizarDRE() {
         if (dreModo === 'ambos') {
             const corTP = totP < 0 ? 'color:#b91c1c;' : '';
             const corTR = totR < 0 ? 'color:#b91c1c;' : '';
-            linha += `<td style="border-left:2px solid var(--th-border-soft);min-width:120px;${corTP}">${formatarMoeda(totP)}</td>`;
-            linha += `<td style="min-width:120px;${corTR}">${formatarMoeda(totR)}</td>`;
+            linha += `<td style="border-left:2px solid var(--th-border-soft);min-width:130px;${corTP}">${formatarMoeda(totP)}</td>`;
+            linha += `<td style="min-width:130px;${corTR}">${formatarMoeda(totR)}</td>`;
         } else if (dreModo === 'projetado') {
             const corTP = totP < 0 ? 'color:#b91c1c;' : '';
-            linha += `<td style="border-left:2px solid var(--th-border-soft);min-width:120px;${corTP}">${formatarMoeda(totP)}</td>`;
+            linha += `<td style="border-left:2px solid var(--th-border-soft);min-width:130px;${corTP}">${formatarMoeda(totP)}</td>`;
         } else if (dreModo === 'desvio') {
             const desvio = totR - totP;
             const corD = desvio < 0 ? 'color:#b91c1c;' : '';
-            linha += `<td style="border-left:2px solid var(--th-border-soft);min-width:120px;${corD}">${formatarMoeda(desvio)}</td>`;
+            linha += `<td style="border-left:2px solid var(--th-border-soft);min-width:130px;${corD}">${formatarMoeda(desvio)}</td>`;
         } else {
             const corTR = totR < 0 ? 'color:#b91c1c;' : '';
-            linha += `<td style="border-left:2px solid var(--th-border-soft);min-width:120px;${corTR}">${formatarMoeda(totR)}</td>`;
+            linha += `<td style="border-left:2px solid var(--th-border-soft);min-width:130px;${corTR}">${formatarMoeda(totR)}</td>`;
         }
         linha += '</tr>';
         return linha;
@@ -2839,11 +2866,11 @@ function renderizarRelatorio() {
     `;
     const tbody = document.getElementById('corpoRelatorio');
     if (filt.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="13"><div class="empty-state"><i class="fas fa-file-alt"></i><p>Nenhum lançamento encontrado</p></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="14"><div class="empty-state"><i class="fas fa-file-alt"></i><p>Nenhum lançamento encontrado</p></div></td></tr>`;
         return;
     }
     let html = '';
-    filt.forEach(l => { html += gerarLinhaTabela(l, true, false, true); });
+    filt.forEach(l => { html += gerarLinhaTabela(l, true, true, true); });
     tbody.innerHTML = html;
 }
 
