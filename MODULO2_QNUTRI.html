@@ -593,7 +593,6 @@
         table tbody tr:hover td { background: #fff1de; }
         table tbody tr:hover td.td-acoes { background: #ffe8cc; }
 
-        /* Larguras fixas */
         #tabelaLancamentos col.c-data, #tabelaRelatorio col.c-data { width: 7.5%; }
         #tabelaLancamentos col.c-pago, #tabelaRelatorio col.c-pago { width: 6.5%; }
         #tabelaLancamentos col.c-nf, #tabelaRelatorio col.c-nf { width: 5%; }
@@ -664,7 +663,6 @@
             color: var(--accent-dark) !important;
         }
 
-        /* Badges */
         .badge {
             display: inline-block;
             padding: 3px 7px;
@@ -699,7 +697,6 @@
         .empty-state p { font-size: 12.5px; font-weight: 700; color: #3d2200; }
         .empty-state p.sub { font-size: 11px; font-weight: 600; color: #5a3a10; margin-top: 5px; }
 
-        /* BOTÃO DE AÇÕES */
         .btn-actions {
             display: inline-flex;
             align-items: center;
@@ -810,7 +807,6 @@
             margin: 4px 6px;
         }
 
-        /* RESUMO CARDS */
         .resumo-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -867,7 +863,6 @@
             font-weight: 700;
         }
 
-        /* VIEW TOGGLE */
         .view-toggle {
             display: inline-flex;
             background: #ffd9a8;
@@ -899,10 +894,9 @@
         }
         .view-toggle button:hover:not(.active) { color: var(--accent-dark); }
 
-        /* DRE TABLE — EXECUTIVO, FONTES PRETAS, COLUNA DESCRIÇÃO REDUZIDA */
         #tabelaDRE { font-size: 10px; table-layout: fixed; }
         #tabelaDRE thead th {
-            font-size: 9px;
+            font-size: 8px;
             padding: 6px 2px;
             text-align: center;
             color: #1a0f00 !important;
@@ -914,7 +908,7 @@
             text-overflow: ellipsis;
         }
         #tabelaDRE tbody td {
-            font-size: 10px;
+            font-size: 9px;
             padding: 6px 2px;
             text-align: right;
             color: #1a0f00 !important;
@@ -930,12 +924,12 @@
             color: #1a0f00 !important;
             white-space: normal;
             word-break: break-word;
-            line-height: 1.2;
+            line-height: 1.15;
+            font-size: 9px;
         }
         .dre-row-clickable { cursor: pointer; }
         .dre-row-clickable:hover td { background: #fff1de !important; }
 
-        /* MODAL */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -1045,7 +1039,6 @@
             border-top: 1px solid var(--border);
         }
 
-        /* TOAST */
         .toast {
             position: fixed;
             bottom: 22px;
@@ -1087,7 +1080,6 @@
         }
         .alert-erro.show { display: block; }
 
-        /* PDF POPUP */
         .pdf-popup-overlay {
             display: none;
             position: fixed;
@@ -1164,7 +1156,6 @@
             background: #fff2e0;
         }
 
-        /* DETALHAMENTO */
         .detalhe-modal { max-width: 1000px; }
         .detalhe-stats {
             display: grid;
@@ -1213,7 +1204,6 @@
         .detalhe-list table tbody td { padding: 10px 10px; font-size: 11.5px; font-weight: 600; }
         .detalhe-list table tbody tr:hover td { background: #fff1de; }
 
-        /* ANÁLISE DESVIO */
         .desvio-item {
             display: flex;
             align-items: center;
@@ -1300,7 +1290,6 @@
             box-shadow: 0 2px 8px rgba(255,140,0,0.06);
         }
 
-        /* RESPONSIVE */
         @media (max-width: 1400px) {
             table { font-size: 10.5px; }
             table thead th { font-size: 9px; padding: 8px 5px; }
@@ -1823,7 +1812,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_rkwsOtfEMpic9PsiExxC_w_rzYqZNRs";
 
 let supabaseClient = null;
 let lancamentos = [];
-let planosContas = [];  // Novo: catálogo de planos de contas
+let planosContas = [];
 let lancamentoParaExcluir = null;
 let lancamentoParaAtualizar = null;
 let dreModo = 'realizado';
@@ -1832,7 +1821,6 @@ let sortConfig = { campo: 'data', direcao: 'desc' };
 
 const MESES_CURTO = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-/* ===== ACTION POPOVER ===== */
 let popoverAbertoId = null;
 
 function abrirActionPopover(event, id) {
@@ -2022,9 +2010,9 @@ function filtrarPorCategoria(lista, catFiltro) {
 
 /* ===== HELPERS PLANO DE CONTAS ===== */
 function getPlanoLabel(codigo) {
-    // Retorna "100 - RECEBIMENTOS" ou apenas o código se não achar
     if (!codigo) return '';
-    const plano = planosContas.find(p => p.codigo === String(codigo).split(' - ')[0]);
+    const cod = getPlanoCodigo(codigo);
+    const plano = planosContas.find(p => String(p.codigo) === cod);
     if (plano) return `${plano.codigo} - ${plano.nome}`;
     return codigo;
 }
@@ -2037,6 +2025,15 @@ function getPlanoNome(valor) {
     const partes = String(valor).split(' - ');
     return partes.length > 1 ? partes.slice(1).join(' - ') : '';
 }
+function normalizarCodigo(codigo) {
+    if (!codigo) return 0;
+    const s = String(codigo).trim();
+    if (s.includes('.')) {
+        const [g, sg] = s.split('.');
+        return parseInt(g) * 100000 + parseInt(sg) * 1000;
+    }
+    return parseInt(s) * 100;
+}
 
 /* ===== CARREGAR PLANO DE CONTAS ===== */
 async function carregarPlanosContas() {
@@ -2045,7 +2042,7 @@ async function carregarPlanosContas() {
             .from('qnutri_plano_contas')
             .select('*')
             .eq('ativo', true)
-            .order('codigo', { ascending: true });
+            .order('id', { ascending: true });
         if (error) {
             console.warn('Erro ao carregar plano de contas:', error.message);
             planosContas = [];
@@ -2079,7 +2076,6 @@ async function carregarDados() {
         if (!supabaseClient) {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
-        // Carrega plano de contas e lançamentos em paralelo
         await carregarPlanosContas();
 
         const { data, error } = await supabaseClient
@@ -2383,10 +2379,9 @@ function renderizarDRE() {
     let filt = filtrarPorCategoria(lancamentos, cat);
     if (tipoFiltro !== 'todos') filt = filt.filter(l => l.tipo === tipoFiltro);
 
-    // Agrupa pelo CÓDIGO do plano de contas (não mais pelo texto)
     const grupos = {};
     filt.forEach(l => {
-        const codigo = getPlanoCodigo(l.plano_contas) || (l.tipo === 'RECEITA' ? '999' : '999');
+        const codigo = getPlanoCodigo(l.plano_contas) || '999';
         const nome = getPlanoNome(l.plano_contas) || (l.tipo === 'RECEITA' ? 'Receitas não classificadas' : 'Despesas não classificadas');
         const chave = `${codigo} - ${nome}`;
         if (!grupos[chave]) {
@@ -2430,7 +2425,6 @@ function renderizarDRE() {
     const lucroP = totReceitasP - totDespesasP;
     const lucroR = totReceitasR - totDespesasR;
 
-    // COLUNA DESCRIÇÃO: 13% (era 18%) — libera espaço para as colunas de valores
     let theadHtml = '<tr><th style="text-align:left;padding-left:8px;width:13%;font-size:8px;">Descrição</th>';
     for (let m = 1; m <= 12; m++) {
         const label = MESES_CURTO[m - 1];
@@ -2491,9 +2485,8 @@ function renderizarDRE() {
     }
     if (tipoFiltro !== 'DESPESA') html += gerarLinha('RECEITAS', mesesRec, true, 'receita', '__RECEITAS__');
 
-    // Ordena por código numérico
     const gruposRec = Object.entries(grupos).filter(([_, g]) => g.tipo === 'RECEITA')
-        .sort((a, b) => (parseInt(a[1].codigo) || 0) - (parseInt(b[1].codigo) || 0));
+        .sort((a, b) => normalizarCodigo(a[1].codigo) - normalizarCodigo(b[1].codigo));
     gruposRec.forEach(([k, g]) => {
         html += gerarLinha(k, g.meses, false, 'receita', k);
     });
@@ -2506,7 +2499,7 @@ function renderizarDRE() {
     if (tipoFiltro !== 'RECEITA') html += gerarLinha('DESPESAS', mesesDesp, true, 'despesa', '__DESPESAS__');
 
     const gruposDesp = Object.entries(grupos).filter(([_, g]) => g.tipo === 'DESPESA')
-        .sort((a, b) => (parseInt(a[1].codigo) || 0) - (parseInt(b[1].codigo) || 0));
+        .sort((a, b) => normalizarCodigo(a[1].codigo) - normalizarCodigo(b[1].codigo));
     gruposDesp.forEach(([k, g]) => {
         html += gerarLinha(k, g.meses, false, 'despesa', k);
     });
@@ -2731,7 +2724,6 @@ function abrirDetalheValor(id, campo) {
 }
 
 function abrirDetalheGrupo(chave) {
-    // Extrai o código da chave "100 - RECEBIMENTOS"
     const codigo = getPlanoCodigo(chave);
     const lista = lancamentos.filter(l => getPlanoCodigo(l.plano_contas) === codigo);
     abrirDetalheGenerico(`Plano: ${chave}`, lista);
@@ -2861,7 +2853,6 @@ function editarLancamento(id) {
     document.getElementById('lancPagoEm').value = l.pago_em || '';
     document.getElementById('lancNF').value = l.nf || '';
     document.getElementById('lancFornecedor').value = l.fornecedor || '';
-    // Tenta casar com uma opção existente do select
     const selPlano = document.getElementById('lancPlano');
     const valorPlano = getPlanoLabel(l.plano_contas) || '';
     let encontrou = false;
@@ -2869,7 +2860,6 @@ function editarLancamento(id) {
         if (selPlano.options[i].value === valorPlano) { selPlano.selectedIndex = i; encontrou = true; break; }
     }
     if (!encontrou && valorPlano) {
-        // Adiciona opção temporária para não perder o dado
         const opt = document.createElement('option');
         opt.value = valorPlano;
         opt.textContent = valorPlano;
@@ -3152,7 +3142,7 @@ async function gerarPDFDRE() {
     if (tipoFiltro !== 'DESPESA') {
         linhas += `<tr style="background:#ecfdf5;font-weight:bold;"><td style="padding:8px;border:1px solid #000;text-align:left;">RECEITAS</td><td style="padding:8px;border:1px solid #000;text-align:right;">R$ ${f(tPR)}</td><td style="padding:8px;border:1px solid #000;text-align:right;">R$ ${f(tRR)}</td><td style="padding:8px;border:1px solid #000;text-align:right;">R$ ${f(tRR - tPR)}</td><td style="padding:8px;border:1px solid #000;text-align:center;">${tPR > 0 ? ((tRR / tPR) * 100).toFixed(1) : '100.0'}%</td></tr>`;
         Object.entries(grupos).filter(([_, g]) => g.tipo === 'RECEITA')
-            .sort((a, b) => (parseInt(a[1].codigo) || 0) - (parseInt(b[1].codigo) || 0))
+            .sort((a, b) => normalizarCodigo(a[1].codigo) - normalizarCodigo(b[1].codigo))
             .forEach(([k, g]) => {
                 linhas += `<tr><td style="padding:6px 8px;border:1px solid #ddd;text-align:left;padding-left:24px;">${escapeHtml(k)}</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right;">R$ ${f(g.p)}</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right;">R$ ${f(g.r)}</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right;">R$ ${f(g.r - g.p)}</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:center;">${g.p > 0 ? ((g.r / g.p) * 100).toFixed(1) : '100.0'}%</td></tr>`;
             });
@@ -3160,7 +3150,7 @@ async function gerarPDFDRE() {
     if (tipoFiltro !== 'RECEITA') {
         linhas += `<tr style="background:#fef2f2;font-weight:bold;"><td style="padding:8px;border:1px solid #000;text-align:left;">DESPESAS</td><td style="padding:8px;border:1px solid #000;text-align:right;">R$ ${f(tPD)}</td><td style="padding:8px;border:1px solid #000;text-align:right;">R$ ${f(tRD)}</td><td style="padding:8px;border:1px solid #000;text-align:right;">R$ ${f(tRD - tPD)}</td><td style="padding:8px;border:1px solid #000;text-align:center;">${tPD > 0 ? ((tRD / tPD) * 100).toFixed(1) : '0.0'}%</td></tr>`;
         Object.entries(grupos).filter(([_, g]) => g.tipo === 'DESPESA')
-            .sort((a, b) => (parseInt(a[1].codigo) || 0) - (parseInt(b[1].codigo) || 0))
+            .sort((a, b) => normalizarCodigo(a[1].codigo) - normalizarCodigo(b[1].codigo))
             .forEach(([k, g]) => {
                 linhas += `<tr><td style="padding:6px 8px;border:1px solid #ddd;text-align:left;padding-left:24px;">${escapeHtml(k)}</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right;">R$ ${f(g.p)}</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right;">R$ ${f(g.r)}</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:right;">R$ ${f(g.r - g.p)}</td><td style="padding:6px 8px;border:1px solid #ddd;text-align:center;">${g.p > 0 ? ((g.r / g.p) * 100).toFixed(1) : '0.0'}%</td></tr>`;
             });
