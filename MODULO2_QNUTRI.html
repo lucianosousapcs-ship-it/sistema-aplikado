@@ -483,7 +483,7 @@
         .dre-row-clickable:hover td { background: #fff1de !important; }
 
         /* ===================================================================
-           DRE MODO AMBOS — FONTES MAIORES + SCROLL HORIZONTAL
+           DRE MODO AMBOS — FONTES MAIORES + SCROLL HORIZONTAL + NEGATIVOS VERMELHO
            =================================================================== */
         .dre-modo-ambos .table-wrapper {
             overflow-x: auto !important;
@@ -501,6 +501,7 @@
             padding: 6px 8px !important;
             border-right: 1px solid #8a5a20;
             white-space: nowrap;
+            min-width: 130px;
         }
         .dre-modo-ambos #tabelaDRE thead th:last-child { border-right: none; }
         .dre-modo-ambos #tabelaDRE tbody td {
@@ -514,7 +515,7 @@
             text-overflow: clip;
             border-right: 1px solid #c9c9c9;
             border-bottom: 1px solid #e0e0e0;
-            min-width: 105px;
+            min-width: 130px;
         }
         .dre-modo-ambos #tabelaDRE tbody td:last-child { border-right: none; }
         .dre-modo-ambos #tabelaDRE tbody td:first-child {
@@ -543,6 +544,12 @@
         .dre-modo-ambos .dre-row-resultado td {
             font-size: 11px !important;
             padding: 6px 8px !important;
+        }
+
+        /* Negativos em vermelho no modo Ambos */
+        .dre-modo-ambos .dre-valor-negativo {
+            color: #b91c1c !important;
+            font-weight: 700 !important;
         }
 
         /* ===== MODAL ===== */
@@ -2088,9 +2095,9 @@ function renderizarDRE() {
     if (dreModo === 'ambos') {
         theadHtml += '<tr><th style="font-size:9px;padding:3px;min-width:220px;background:#d99b3f;">DESCRIÇÃO</th>';
         for (let m = 1; m <= 12; m++) {
-            theadHtml += `<th style="font-size:10px;padding:4px 6px;border-left:1px solid #8a5a20;min-width:105px;">P</th><th style="font-size:10px;padding:4px 6px;min-width:105px;">R</th>`;
+            theadHtml += `<th style="font-size:10px;padding:4px 6px;border-left:1px solid #8a5a20;min-width:130px;">PROJETADO</th><th style="font-size:10px;padding:4px 6px;min-width:130px;">REALIZADO</th>`;
         }
-        theadHtml += `<th style="font-size:10px;padding:4px 6px;border-left:2px solid var(--accent);min-width:110px;">P</th><th style="font-size:10px;padding:4px 6px;min-width:110px;">R</th></tr>`;
+        theadHtml += `<th style="font-size:10px;padding:4px 6px;border-left:2px solid var(--accent);min-width:130px;">PROJETADO</th><th style="font-size:10px;padding:4px 6px;min-width:130px;">REALIZADO</th></tr>`;
     }
     document.getElementById('theadDRE').innerHTML = theadHtml;
 
@@ -2098,33 +2105,46 @@ function renderizarDRE() {
     function gerarLinha(label, mesesData, isTotal = false, corTipo = null, chaveGrupo = null, classeTotal = '') {
         let linha = `<tr class="${classeTotal} dre-row-clickable" onclick="abrirDetalheDRE('${escapeHtml(chaveGrupo || label)}')">`;
         linha += `<td style="text-align:left;padding-left:${isTotal ? '10px' : '16px'};font-weight:${isTotal ? '700' : '500'};line-height:1.2;">${escapeHtml(label)}</td>`;
+
         for (let m = 1; m <= 12; m++) {
             const mm = String(m).padStart(2, '0');
             const d = mesesData[mm] || { p: 0, r: 0 };
             if (dreModo === 'ambos') {
-                linha += `<td style="border-left:1px solid #c9c9c9;">${d.p !== 0 ? formatarMoeda(d.p) : '-'}</td>`;
-                linha += `<td>${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
+                const corP = d.p < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+                const corR = d.r < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+                linha += `<td style="border-left:1px solid #c9c9c9;${corP}">${d.p !== 0 ? formatarMoeda(d.p) : '-'}</td>`;
+                linha += `<td style="${corR}">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
             } else if (dreModo === 'projetado') {
-                linha += `<td>${d.p > 0 ? formatarMoeda(d.p) : '-'}</td>`;
+                const corP = d.p < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+                linha += `<td style="${corP}">${d.p !== 0 ? formatarMoeda(d.p) : '-'}</td>`;
             } else if (dreModo === 'desvio') {
                 const desvio = d.r - d.p;
-                linha += `<td>${desvio !== 0 ? formatarMoeda(desvio) : '-'}</td>`;
+                const corD = desvio < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+                linha += `<td style="${corD}">${desvio !== 0 ? formatarMoeda(desvio) : '-'}</td>`;
             } else {
-                linha += `<td>${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
+                const corR = d.r < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+                linha += `<td style="${corR}">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
             }
         }
+
         const totP = Object.values(mesesData).reduce((s, d) => s + (d.p || 0), 0);
         const totR = Object.values(mesesData).reduce((s, d) => s + (d.r || 0), 0);
+
         if (dreModo === 'ambos') {
-            linha += `<td style="border-left:2px solid var(--accent);">${formatarMoeda(totP)}</td>`;
-            linha += `<td>${formatarMoeda(totR)}</td>`;
+            const corTP = totP < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+            const corTR = totR < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+            linha += `<td style="border-left:2px solid var(--accent);${corTP}">${formatarMoeda(totP)}</td>`;
+            linha += `<td style="${corTR}">${formatarMoeda(totR)}</td>`;
         } else if (dreModo === 'projetado') {
-            linha += `<td style="border-left:2px solid var(--accent);">${formatarMoeda(totP)}</td>`;
+            const corTP = totP < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+            linha += `<td style="border-left:2px solid var(--accent);${corTP}">${formatarMoeda(totP)}</td>`;
         } else if (dreModo === 'desvio') {
             const desvio = totR - totP;
-            linha += `<td style="border-left:2px solid var(--accent);">${formatarMoeda(desvio)}</td>`;
+            const corD = desvio < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+            linha += `<td style="border-left:2px solid var(--accent);${corD}">${formatarMoeda(desvio)}</td>`;
         } else {
-            linha += `<td style="border-left:2px solid var(--accent);">${formatarMoeda(totR)}</td>`;
+            const corTR = totR < 0 ? 'color:#b91c1c;font-weight:700;' : '';
+            linha += `<td style="border-left:2px solid var(--accent);${corTR}">${formatarMoeda(totR)}</td>`;
         }
         linha += '</tr>';
         return linha;
@@ -3065,15 +3085,16 @@ function fecharPopupEditarPlanoConta() {
 }
 
 /* =====================================================================
-   CORREÇÃO DEFINITIVA — salvarPlanoConta
-   - Força update com .select() para confirmar que gravou
-   - Valida se o ID é válido (numérico)
+   salvarPlanoConta — RLS-tolerante
+   - Update SEM .select() obrigatório (RLS pode bloquear retorno)
+   - Validação por re-leitura tolerante a erro de RLS
    - Sincroniza lançamentos por label exato, código exato e prefixo
    ===================================================================== */
 async function salvarPlanoConta(e) {
     e.preventDefault();
     const idRaw = document.getElementById('planoContaId').value;
-    const id = idRaw ? Number(idRaw) : null;
+    const idNum = idRaw ? Number(idRaw) : null;
+    const isEdicao = idRaw !== '' && idRaw !== null && idRaw !== undefined;
 
     const dados = {
         codigo: document.getElementById('planoContaCodigo').value.trim(),
@@ -3086,29 +3107,26 @@ async function salvarPlanoConta(e) {
 
     try {
         let planoAntigo = null;
-        if (id) {
-            planoAntigo = planosContas.find(c => Number(c.id) === id);
+        if (isEdicao) {
+            planoAntigo = planosContas.find(c => String(c.id) === String(idRaw)) || null;
             if (!planoAntigo) {
-                // fallback: tenta buscar direto no banco
-                const { data: consulta } = await supabaseClient
+                const { data } = await supabaseClient
                     .from('qnutri_plano_contas')
                     .select('*')
-                    .eq('id', id)
+                    .eq('id', idNum)
                     .maybeSingle();
-                if (consulta) planoAntigo = consulta;
+                if (data) planoAntigo = data;
             }
         }
 
         let r;
-        if (id) {
-            // UPDATE com .select() para CONFIRMAR que o registro foi atualizado
+        if (isEdicao) {
+            // UPDATE SEM .select() — RLS pode bloquear retorno mas o update funciona
             r = await supabaseClient
                 .from('qnutri_plano_contas')
                 .update(dados)
-                .eq('id', id)
-                .select('*');
+                .eq('id', idNum);
         } else {
-            // INSERT com .select() para retornar o registro criado
             r = await supabaseClient
                 .from('qnutri_plano_contas')
                 .insert([dados])
@@ -3117,19 +3135,32 @@ async function salvarPlanoConta(e) {
 
         if (r.error) throw r.error;
 
-        // Validação: se for UPDATE, precisa retornar 1 linha
-        if (id && (!r.data || r.data.length === 0)) {
-            throw new Error('Nenhum registro foi atualizado. Verifique se o ID existe na tabela qnutri_plano_contas.');
+        // Validação: re-lê o registro para confirmar que gravou (tolerante a RLS)
+        if (isEdicao) {
+            const { data: verificacao, error: errVerif } = await supabaseClient
+                .from('qnutri_plano_contas')
+                .select('id, codigo, nome')
+                .eq('id', idNum)
+                .maybeSingle();
+
+            if (errVerif) {
+                console.warn('Não foi possível verificar (RLS de SELECT bloqueado):', errVerif.message);
+                // Não bloqueia — o update provavelmente funcionou
+            } else if (!verificacao) {
+                throw new Error('Registro não encontrado após update. Verifique se o ID ' + idNum + ' existe.');
+            } else if (verificacao.codigo !== dados.codigo || verificacao.nome !== dados.nome) {
+                throw new Error('Os dados não foram atualizados no banco. Verifique permissões RLS de UPDATE.');
+            }
         }
 
+        // Sincroniza lançamentos vinculados ao plano
         let totalSincronizados = 0;
 
-        if (id && planoAntigo) {
+        if (isEdicao && planoAntigo) {
             const labelAntigo = `${planoAntigo.codigo} - ${planoAntigo.nome}`;
             const labelNovo = `${dados.codigo} - ${dados.nome}`;
             const codigoAntigo = String(planoAntigo.codigo).trim();
 
-            // 1) Match exato pelo LABEL antigo
             if (labelAntigo !== labelNovo) {
                 const { data: at1, error: e1 } = await supabaseClient
                     .from('qnutri_lancamentos')
@@ -3140,7 +3171,6 @@ async function salvarPlanoConta(e) {
                 if (e1) console.warn('Sync label exato:', e1.message);
             }
 
-            // 2) Match exato apenas pelo CÓDIGO antigo
             if (codigoAntigo) {
                 const { data: at2, error: e2 } = await supabaseClient
                     .from('qnutri_lancamentos')
@@ -3150,7 +3180,6 @@ async function salvarPlanoConta(e) {
                 if (!e2 && at2) totalSincronizados += at2.length;
                 if (e2) console.warn('Sync código exato:', e2.message);
 
-                // 3) Match por PREFIXO: qualquer lançamento que comece com o código antigo
                 const { data: candidatos, error: e3 } = await supabaseClient
                     .from('qnutri_lancamentos')
                     .select('id, plano_contas')
