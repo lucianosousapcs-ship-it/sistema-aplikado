@@ -10,282 +10,1110 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
         :root {
-            --sidebar-w: 230px;
-            --bg-app: #f5f7fa;
+            --sidebar-w: 240px;
+            --bg-app: #eef1f5;
             --bg-card: #ffffff;
-            --border: #e3e7eb;
-            --border-light: #d1d8e0;
-            --text-primary: #1f2937;
-            --text-secondary: #4b5563;
-            --text-muted: #9ca3af;
+            --bg-header: #e8eaed;
+            --border: #d8dce1;
+            --border-soft: #eef0f3;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a5568;
+            --text-muted: #8896a8;
             --accent: #FF8C00;
             --accent-hover: #e07000;
-            --accent-dark: #cc7000;
-            --accent-glow: rgba(255, 140, 0, 0.15);
+            --accent-dark: #b85c00;
+            --accent-glow: rgba(255, 140, 0, 0.12);
             --copa: #7c3aed;
-            --success: #059669;
+            --success: #0d9488;
             --danger: #dc2626;
             --warning: #d97706;
             --info: #0891b2;
-            --nav-bg: #0a0f15;
+            --nav-bg: #14181f;
             --nav-text: #FF8C00;
-            --shadow-sm: 0 1px 3px rgba(16,24,40,0.06);
-            --shadow-md: 0 4px 16px rgba(16,24,40,0.10);
-            --shadow-lg: 0 12px 40px rgba(16,24,40,0.15);
+            --shadow-sm: 0 1px 2px rgba(16,24,40,0.04);
+            --shadow-md: 0 2px 8px rgba(16,24,40,0.06);
+            --shadow-lg: 0 12px 32px rgba(16,24,40,0.12);
         }
+
         html, body { height: 100%; overflow: hidden; }
-        body { background: var(--bg-app); font-family: 'Inter', sans-serif; color: var(--text-primary); font-size: 13px; -webkit-font-smoothing: antialiased; }
+
+        body {
+            background: var(--bg-app);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-primary);
+            font-size: 13px;
+            -webkit-font-smoothing: antialiased;
+            font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+        }
+
         .app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
-        .sidebar { width: var(--sidebar-w); background: var(--nav-bg); color: var(--nav-text); display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid #1a2332; box-shadow: 4px 0 20px rgba(0,0,0,0.15); }
-        .sidebar-brand { padding: 20px 20px 18px; border-bottom: 1px solid rgba(255, 140, 0, 0.15); display: flex; align-items: center; gap: 10px; }
-        .sidebar-brand .brand-logo { width: 38px; height: 38px; background: linear-gradient(135deg, #FF8C00, #cc7000); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #0a0f15; font-weight: 900; font-size: 17px; box-shadow: 0 4px 12px rgba(255, 140, 0, 0.4); }
-        .sidebar-brand .brand-text { font-size: 14px; font-weight: 800; color: #fff; line-height: 1.1; }
-        .sidebar-brand .brand-text small { display: block; font-size: 10px; font-weight: 500; color: rgba(255, 140, 0, 0.8); margin-top: 3px; }
-        .sidebar-section-title { font-size: 9.5px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255, 140, 0, 0.5); font-weight: 700; padding: 16px 20px 8px; }
-        .sidebar-nav { flex: 1; padding: 6px 10px; overflow-y: auto; }
-        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: var(--nav-text); font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-bottom: 2px; border: none; background: transparent; width: 100%; text-align: left; font-family: inherit; text-decoration: none; }
-        .nav-item:hover { background: rgba(255, 140, 0, 0.1); color: #ffb347; transform: translateX(3px); }
-        .nav-item.active { background: linear-gradient(90deg, rgba(255, 140, 0, 0.25), rgba(255, 140, 0, 0.05)); color: #fff; font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
-        .nav-item i { width: 18px; font-size: 13px; text-align: center; color: var(--nav-text); }
-        .nav-item.active i { color: var(--accent); }
-        .nav-item .nav-count { margin-left: auto; background: rgba(255, 140, 0, 0.15); color: var(--nav-text); font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 10px; }
-        .nav-item.active .nav-count { background: var(--accent); color: #0a0f15; }
-        .sidebar-footer { padding: 12px 10px; border-top: 1px solid rgba(255, 140, 0, 0.15); display: flex; flex-direction: column; gap: 2px; }
-        .sidebar-footer .btn-sair { color: #ff6b6b; }
-        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-        .topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-shrink: 0; }
-        .topbar-title h1 { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 9px; }
+
+        /* ==============================
+           SIDEBAR
+        ============================== */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--nav-bg);
+            color: var(--nav-text);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            border-right: 1px solid #1f2630;
+        }
+        .sidebar-brand {
+            padding: 24px 22px 22px;
+            border-bottom: 1px solid rgba(255, 140, 0, 0.12);
+        }
+        .sidebar-brand .brand-text {
+            font-size: 17px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.3px;
+            line-height: 1.1;
+        }
+        .sidebar-brand .brand-text small {
+            display: block;
+            font-size: 10.5px;
+            font-weight: 500;
+            color: rgba(255, 140, 0, 0.85);
+            margin-top: 4px;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+        }
+
+        .sidebar-section-title {
+            font-size: 9.5px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: rgba(255, 140, 0, 0.5);
+            font-weight: 700;
+            padding: 18px 22px 8px;
+        }
+
+        .sidebar-nav { flex: 1; padding: 4px 10px; overflow-y: auto; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255, 140, 0, 0.3); border-radius: 2px; }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 10px 12px;
+            border-radius: 7px;
+            color: var(--nav-text);
+            font-size: 12.5px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: 1px;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+            text-decoration: none;
+        }
+        .nav-item:hover {
+            background: rgba(255, 140, 0, 0.08);
+            color: #ffb347;
+        }
+        .nav-item.active {
+            background: rgba(255, 140, 0, 0.14);
+            color: #fff;
+            font-weight: 600;
+            box-shadow: inset 2px 0 0 var(--accent);
+        }
+        .nav-item i {
+            width: 17px;
+            font-size: 13px;
+            text-align: center;
+            color: var(--nav-text);
+            opacity: 0.85;
+        }
+        .nav-item.active i { color: var(--accent); opacity: 1; }
+        .nav-item .nav-count {
+            margin-left: auto;
+            background: rgba(255, 140, 0, 0.12);
+            color: var(--nav-text);
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .nav-item.active .nav-count {
+            background: var(--accent);
+            color: #14181f;
+        }
+
+        .sidebar-footer {
+            padding: 12px 10px;
+            border-top: 1px solid rgba(255, 140, 0, 0.12);
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .sidebar-footer .btn-sair { color: #ef4444; }
+        .sidebar-footer .btn-sair:hover { background: rgba(220, 38, 38, 0.15); color: #fff; }
+
+        /* ==============================
+           MAIN
+        ============================== */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .topbar {
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            padding: 16px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+        .topbar-title h1 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
         .topbar-title h1 i { color: var(--accent); font-size: 16px; }
-        .topbar-title p { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
+        .topbar-title p {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            margin-top: 3px;
+            font-weight: 400;
+        }
         .topbar-actions { display: flex; align-items: center; gap: 8px; }
-        .dashboard { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; padding: 16px 24px 4px; flex-shrink: 0; }
-        .stat-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; box-shadow: var(--shadow-sm); transition: all 0.25s; position: relative; overflow: hidden; cursor: pointer; }
-        .stat-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); }
-        .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--accent); }
-        .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; color: var(--text-muted); display: flex; justify-content: space-between; }
-        .stat-label .stat-hint { font-size: 8px; color: var(--accent); opacity: 0; transition: opacity 0.2s; }
+
+        /* ==============================
+           DASHBOARD CARDS
+        ============================== */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 1px;
+            padding: 20px 28px 0;
+            background: transparent;
+            flex-shrink: 0;
+        }
+        .stat-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+        .stat-card:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+        .stat-card:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+        .stat-card:not(:first-child) { border-left: none; }
+        .stat-card:hover {
+            background: #fafbfc;
+            z-index: 2;
+            box-shadow: 0 0 0 1px var(--accent), 0 4px 12px rgba(255,140,0,0.08);
+        }
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0; bottom: 0;
+            height: 2px;
+            background: transparent;
+            transition: background 0.2s;
+        }
+        .stat-card:hover::after { background: var(--accent); }
+
+        .stat-label {
+            font-size: 10.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            font-weight: 700;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .stat-label .stat-hint {
+            font-size: 9px;
+            color: var(--accent);
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-weight: 600;
+            text-transform: none;
+            letter-spacing: 0;
+        }
         .stat-card:hover .stat-hint { opacity: 1; }
-        .stat-value { font-size: 19px; font-weight: 800; line-height: 1.15; }
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.1;
+            letter-spacing: -0.6px;
+            font-variant-numeric: tabular-nums;
+        }
         .stat-value.negativo { color: var(--danger); }
         .stat-value.positivo { color: var(--success); }
-        .stat-sub { font-size: 10px; color: var(--text-muted); font-weight: 500; display: flex; align-items: center; gap: 4px; }
-        .content { flex: 1; overflow: hidden; padding: 12px 24px 20px; display: flex; flex-direction: column; min-height: 0; }
+        .stat-sub {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 2px;
+        }
+        .stat-sub i { font-size: 9px; }
+
+        /* ==============================
+           CONTENT
+        ============================== */
+        .content {
+            flex: 1;
+            overflow: hidden;
+            padding: 16px 28px 24px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
         .tab-content { display: none; flex-direction: column; height: 100%; min-height: 0; }
         .tab-content.active { display: flex; }
-        .filter-bar { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; box-shadow: var(--shadow-sm); flex-shrink: 0; margin-bottom: 12px; }
-        .filter-bar .search-box { position: relative; flex: 1; min-width: 160px; max-width: 280px; }
-        .filter-bar .search-box input { width: 100%; padding: 8px 12px 8px 32px; background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; font-family: inherit; outline: none; }
-        .filter-bar .search-box input:focus { background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-        .filter-bar .search-box::before { content: '\f002'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 11px; }
-        .filter-select { padding: 8px 12px; background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; font-family: inherit; font-weight: 500; outline: none; cursor: pointer; }
-        .filter-select:focus { background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-        .btn { padding: 8px 14px; border: 1px solid transparent; border-radius: 8px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.18s; white-space: nowrap; }
+
+        /* ==============================
+           FILTER BAR
+        ============================== */
+        .filter-bar {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+            margin-bottom: 14px;
+        }
+        .filter-bar .search-box { position: relative; flex: 1; min-width: 180px; max-width: 300px; }
+        .filter-bar .search-box input {
+            width: 100%;
+            padding: 9px 14px 9px 34px;
+            background: #f7f8fa;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text-primary);
+            font-size: 12.5px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.15s;
+        }
+        .filter-bar .search-box input::placeholder { color: var(--text-muted); }
+        .filter-bar .search-box input:focus {
+            background: #fff;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .filter-bar .search-box::before {
+            content: '\f002';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 11px;
+            pointer-events: none;
+        }
+
+        .filter-select {
+            padding: 9px 12px;
+            background: #f7f8fa;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text-primary);
+            font-size: 12px;
+            font-family: inherit;
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .filter-select:focus {
+            background: #fff;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .btn {
+            padding: 9px 16px;
+            border: 1px solid transparent;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.15s;
+            white-space: nowrap;
+            letter-spacing: -0.1px;
+        }
         .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
-        .btn-primary { background: var(--accent); color: #fff; font-weight: 700; }
+        .btn:active { transform: translateY(0); }
+        .btn-primary { background: var(--accent); color: #fff; }
         .btn-primary:hover { background: var(--accent-hover); }
         .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #0b7c72; }
         .btn-danger { background: var(--danger); color: #fff; }
-        .btn-copa { background: var(--copa); color: #fff; font-weight: 700; }
-        .btn-outline { background: #fff; color: var(--text-secondary); border-color: var(--border-light); }
-        .btn-outline:hover { background: #f9fafb; border-color: var(--accent); }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-copa { background: var(--copa); color: #fff; }
+        .btn-copa:hover { background: #6d28d9; }
+        .btn-outline {
+            background: #fff;
+            color: var(--text-secondary);
+            border-color: var(--border);
+        }
+        .btn-outline:hover { background: #f7f8fa; color: var(--text-primary); border-color: var(--accent); }
         .btn-xs { padding: 4px 8px; font-size: 10.5px; }
-        .table-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-sm); flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
-        .table-card-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; background: #fafbfc; }
-        .table-card-header h3 { font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+        /* ==============================
+           TABLE — ESTILO EXECUTIVO
+        ============================== */
+        .table-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+        .table-card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .table-card-header h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            letter-spacing: -0.2px;
+        }
         .table-card-header h3 i { color: var(--accent); font-size: 13px; }
-        .badge-count { background: var(--accent-glow); color: var(--accent-dark); font-size: 10px; font-weight: 800; padding: 3px 10px; border-radius: 10px; border: 1px solid rgba(255, 140, 0, 0.3); }
+        .badge-count {
+            background: #f1f3f5;
+            color: var(--text-secondary);
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+
         .table-wrapper { flex: 1; overflow: auto; min-height: 0; }
-        .table-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
-        .table-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        table thead th { background: linear-gradient(180deg, #0a0f15, #1a2332); color: var(--accent); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; padding: 12px 8px; text-align: center; border-bottom: 2px solid var(--accent); position: sticky; top: 0; z-index: 5; white-space: nowrap; cursor: pointer; user-select: none; }
-        table thead th:hover { background: linear-gradient(180deg, #1a2332, #2a3a52); }
-        table thead th .sort-icon { margin-left: 4px; opacity: 0.4; font-size: 9px; }
-        table thead th.sorted-asc .sort-icon, table thead th.sorted-desc .sort-icon { opacity: 1; }
-        table thead th:first-child { text-align: left; padding-left: 16px; }
-        table tbody td { padding: 11px 8px; border-bottom: 1px solid #f1f3f5; text-align: center; white-space: nowrap; font-size: 11.5px; }
-        table tbody td:first-child { text-align: left; padding-left: 16px; font-weight: 700; }
-        table tbody tr:nth-child(even) td { background: #fafbfc; }
-        table tbody tr:hover td { background: #fff8ed !important; box-shadow: inset 0 0 0 1px rgba(255, 140, 0, 0.15); }
-        table tbody tr.copa-row td { background: #faf8ff; }
-        table tbody tr.copa-row:hover td { background: #eee7fb !important; }
-        .cell-clickable { cursor: pointer; }
-        .cell-clickable:hover { color: var(--accent) !important; text-decoration: underline; text-decoration-style: dotted; }
-        .cell-money { font-weight: 700; font-variant-numeric: tabular-nums; }
+        .table-wrapper::-webkit-scrollbar { width: 10px; height: 10px; }
+        .table-wrapper::-webkit-scrollbar-track { background: #f7f8fa; }
+        .table-wrapper::-webkit-scrollbar-thumb { background: #cdd3db; border-radius: 5px; border: 2px solid #f7f8fa; }
+        .table-wrapper::-webkit-scrollbar-thumb:hover { background: #a8b3c1; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+        }
+        table thead th {
+            background: var(--bg-header);
+            color: #2c3542;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid #dde1e6;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+        table thead th:last-child { border-right: none; }
+        table thead th:hover { background: #dee1e5; }
+        table thead th .sort-icon { margin-left: 5px; opacity: 0.35; font-size: 9px; font-weight: 400; }
+        table thead th.sorted-asc .sort-icon,
+        table thead th.sorted-desc .sort-icon { opacity: 1; color: var(--accent); }
+
+        table tbody td {
+            padding: 14px;
+            border-bottom: 1px solid var(--border-soft);
+            border-right: 1px solid var(--border-soft);
+            color: var(--text-primary);
+            vertical-align: middle;
+            text-align: left;
+            white-space: nowrap;
+            font-size: 12.5px;
+        }
+        table tbody td:last-child { border-right: none; }
+        table tbody td:first-child {
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        table tbody tr { transition: background 0.12s; }
+        table tbody tr:hover td { background: #fafbfc; }
+
+        /* Linha tipo "Funcionário" com subtítulo */
+        .cell-primary {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .cell-primary .main-text {
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 12.5px;
+        }
+        .cell-primary .sub-text {
+            font-size: 11px;
+            color: var(--accent-dark);
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Ajustes de alinhamento numérico */
+        .cell-money {
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+        }
         .cell-money.positivo { color: var(--success); }
         .cell-money.negativo { color: var(--danger); }
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.4px; border: 1px solid transparent; }
-        .badge-receita { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
-        .badge-despesa { background: #fecaca; color: #991b1b; border-color: #fca5a5; }
-        .badge-pago { background: #a7f3d0; color: #064e3b; border-color: #6ee7b7; }
-        .badge-nao-pago { background: #fecaca; color: #991b1b; border-color: #fca5a5; }
-        .badge-pendente, .badge-alerta { background: #fde68a; color: #92400e; border-color: #fcd34d; }
-        .badge-geral { background: #fed7aa; color: #9a3412; border-color: #fdba74; }
-        .badge-copa { background: #ddd6fe; color: #5b21b6; border-color: #c4b5fd; }
-        .badge-desvio-ok { background: #a7f3d0; color: #064e3b; }
-        .badge-desvio-atencao { background: #fde68a; color: #92400e; }
-        .badge-desvio-critico { background: #fecaca; color: #991b1b; }
-        .empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
-        .empty-state i { font-size: 42px; color: rgba(255, 140, 0, 0.35); display: block; margin-bottom: 12px; }
-        .empty-state p { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
-        .empty-state p.sub { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-top: 4px; }
-        .resumo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 12px; flex-shrink: 0; }
-        .resumo-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; cursor: pointer; transition: all 0.2s; }
-        .resumo-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); }
-        .resumo-card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-2px); }
-        .resumo-card h4 { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 700; }
-        .resumo-card .valor { font-size: 18px; font-weight: 800; line-height: 1.1; }
+        .cell-money.info { color: var(--info); }
+        .cell-center { text-align: center; }
+        .cell-clickable { cursor: pointer; }
+        .cell-clickable:hover {
+            background: #fff8ed !important;
+            color: var(--accent-dark) !important;
+        }
+
+        /* Badges minimalistas */
+        .badge {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 10.5px;
+            letter-spacing: 0.2px;
+            border: 1px solid transparent;
+            text-transform: uppercase;
+        }
+        .badge-receita { background: #e6f7f3; color: #0d9488; border-color: #b8e6dd; }
+        .badge-despesa { background: #fdeaea; color: #c53030; border-color: #f8c9c9; }
+        .badge-pago { background: #e6f7f3; color: #0d9488; border-color: #b8e6dd; }
+        .badge-nao-pago { background: #fdeaea; color: #c53030; border-color: #f8c9c9; }
+        .badge-pendente { background: #fef5e7; color: #b45309; border-color: #fbd9a3; }
+        .badge-alerta { background: #fef5e7; color: #b45309; border-color: #fbd9a3; }
+        .badge-geral { background: #fff3e0; color: #b85c00; border-color: #ffd9a3; }
+        .badge-copa { background: #f0ebfc; color: #6d28d9; border-color: #d5c7f5; }
+
+        .badge-desvio-ok { background: #e6f7f3; color: #0d9488; border-color: #b8e6dd; }
+        .badge-desvio-atencao { background: #fef5e7; color: #b45309; border-color: #fbd9a3; }
+        .badge-desvio-critico { background: #fdeaea; color: #c53030; border-color: #f8c9c9; }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .empty-state i {
+            font-size: 40px;
+            color: #d8dce1;
+            display: block;
+            margin-bottom: 14px;
+        }
+        .empty-state p { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+        .empty-state p.sub { font-size: 11.5px; font-weight: 400; color: var(--text-muted); margin-top: 5px; }
+
+        /* ==============================
+           RESUMO CARDS
+        ============================== */
+        .resumo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 1px;
+            margin-bottom: 14px;
+            flex-shrink: 0;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .resumo-card {
+            background: #fff;
+            padding: 14px 16px;
+            cursor: pointer;
+            transition: background 0.15s;
+            position: relative;
+        }
+        .resumo-card:hover { background: #fafbfc; }
+        .resumo-card:hover::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0; bottom: 0;
+            height: 2px;
+            background: var(--accent);
+        }
+        .resumo-card h4 {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .resumo-card .valor {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.1;
+            letter-spacing: -0.5px;
+            font-variant-numeric: tabular-nums;
+        }
         .resumo-card .valor.positivo { color: var(--success); }
         .resumo-card .valor.negativo { color: var(--danger); }
         .resumo-card .valor.copa { color: var(--copa); }
-        .resumo-card .detalhe { font-size: 10px; color: var(--text-muted); margin-top: 5px; display: flex; justify-content: space-between; }
-        .view-toggle { display: inline-flex; background: #f1f3f5; border-radius: 10px; padding: 3px; gap: 2px; border: 1px solid var(--border); }
-        .view-toggle button { padding: 7px 14px; border: none; background: transparent; border-radius: 8px; font-size: 11px; font-weight: 600; font-family: inherit; color: var(--text-secondary); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
-        .view-toggle button.active { background: var(--accent); color: #fff; font-weight: 700; }
-        #tabelaDRE { font-size: 10px; }
-        #tabelaDRE thead th { font-size: 9px; padding: 8px 4px; }
-        #tabelaDRE tbody td { font-size: 10px; padding: 8px 4px; }
+        .resumo-card .detalhe {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        /* ==============================
+           VIEW TOGGLE (DRE)
+        ============================== */
+        .view-toggle {
+            display: inline-flex;
+            background: #f1f3f5;
+            border-radius: 7px;
+            padding: 3px;
+            gap: 2px;
+            border: 1px solid var(--border);
+        }
+        .view-toggle button {
+            padding: 7px 14px;
+            border: none;
+            background: transparent;
+            border-radius: 5px;
+            font-size: 11.5px;
+            font-weight: 600;
+            font-family: inherit;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .view-toggle button.active {
+            background: #fff;
+            color: var(--accent-dark);
+            font-weight: 700;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+        }
+        .view-toggle button:hover:not(.active) { color: var(--text-primary); }
+
+        /* DRE TABLE */
+        #tabelaDRE { font-size: 11.5px; }
+        #tabelaDRE thead th { font-size: 10px; padding: 10px 6px; text-align: center; }
+        #tabelaDRE tbody td { font-size: 11px; padding: 10px 6px; text-align: right; }
+        #tabelaDRE tbody td:first-child { text-align: left; }
         .dre-row-clickable { cursor: pointer; }
         .dre-row-clickable:hover td { background: #fff8ed !important; }
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(3px); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
+
+        /* ==============================
+           MODAL
+        ============================== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
         .modal-overlay.active { display: flex; }
-        .modal-content { background: #fff; border-radius: 16px; box-shadow: var(--shadow-lg); max-width: 720px; width: 100%; max-height: 92vh; overflow-y: auto; padding: 24px 26px; }
-        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
-        .modal-header h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 9px; }
-        .modal-header h2 i { color: var(--accent); }
-        .modal-close { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: none; background: #f1f3f5; color: var(--text-secondary); border-radius: 8px; font-size: 14px; cursor: pointer; }
+        .modal-content {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            max-width: 720px;
+            width: 100%;
+            max-height: 92vh;
+            overflow-y: auto;
+            padding: 26px 28px;
+            animation: modalSlide 0.2s ease;
+        }
+        @keyframes modalSlide {
+            from { opacity: 0; transform: scale(0.98) translateY(6px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            gap: 12px;
+        }
+        .modal-header h2 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: -0.3px;
+        }
+        .modal-header h2 i { color: var(--accent); font-size: 15px; }
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: #f1f3f5;
+            color: var(--text-secondary);
+            border-radius: 7px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
         .modal-close:hover { background: var(--danger); color: #fff; }
-        .form-group { margin-bottom: 13px; }
-        .form-group label { display: block; font-size: 10.5px; color: var(--text-secondary); margin-bottom: 5px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
-        .form-group label i { color: var(--accent); margin-right: 4px; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px; font-family: inherit; font-weight: 500; outline: none; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-        .form-row { display: flex; gap: 12px; }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group label {
+            display: block;
+            font-size: 10.5px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .form-group label i { color: var(--accent); margin-right: 5px; }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: #f7f8fa;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text-primary);
+            font-size: 12.5px;
+            font-family: inherit;
+            font-weight: 500;
+            outline: none;
+            transition: all 0.15s;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            background: #fff;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+        .form-row { display: flex; gap: 14px; }
         .form-row .form-group { flex: 1; }
-        .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
-        .toast { position: fixed; bottom: 22px; right: 22px; z-index: 10000; padding: 14px 20px; border-radius: 10px; font-size: 12.5px; font-weight: 600; color: #fff; box-shadow: var(--shadow-lg); max-width: 380px; display: flex; align-items: center; gap: 10px; }
-        .toast.success { background: linear-gradient(135deg, #059669, #10b981); }
-        .toast.error { background: linear-gradient(135deg, #dc2626, #ef4444); }
-        .toast.warning { background: linear-gradient(135deg, #d97706, #f59e0b); }
-        .toast.info { background: linear-gradient(135deg, #e07000, #FF8C00); }
-        .toast.copa { background: linear-gradient(135deg, #6d28d9, #7c3aed); }
-        .alert-erro { display: none; background: #fef2f2; border: 1px solid #fecaca; border-left: 3px solid var(--danger); padding: 12px 16px; border-radius: 10px; font-size: 12px; color: #991b1b; font-weight: 500; margin-bottom: 12px; }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ==============================
+           TOAST
+        ============================== */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 10000;
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #fff;
+            box-shadow: var(--shadow-lg);
+            max-width: 380px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: toastIn 0.25s ease;
+        }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .toast.success { background: #0d9488; }
+        .toast.error { background: #dc2626; }
+        .toast.warning { background: #d97706; }
+        .toast.info { background: #FF8C00; }
+        .toast.copa { background: #7c3aed; }
+
+        /* ALERT ERRO */
+        .alert-erro {
+            display: none;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-left: 3px solid var(--danger);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #991b1b;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
         .alert-erro.show { display: block; }
-        .pdf-popup-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 3000; align-items: center; justify-content: center; padding: 20px; }
+
+        /* PDF POPUP */
+        .pdf-popup-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
         .pdf-popup-overlay.active { display: flex; }
-        .pdf-popup-content { background: #fff; border-radius: 16px; box-shadow: var(--shadow-lg); width: 100%; max-width: 900px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
-        .pdf-popup-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #0a0f15, #1a2332); color: var(--accent); }
-        .pdf-popup-header h2 { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 9px; }
-        .pdf-popup-close { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: none; background: rgba(255, 140, 0, 0.2); color: var(--accent); border-radius: 8px; font-size: 14px; cursor: pointer; }
-        .pdf-popup-body { padding: 16px 20px; overflow-y: auto; flex: 1; min-height: 0; }
-        .pdf-preview { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #fff; min-height: 400px; display: flex; align-items: center; justify-content: center; }
-        .pdf-preview iframe { width: 100%; height: 500px; border: none; }
-        .pdf-popup-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; background: #f9fafb; }
+        .pdf-popup-content {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 920px;
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .pdf-popup-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #14181f;
+            color: var(--accent);
+        }
+        .pdf-popup-header h2 {
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pdf-popup-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: rgba(255, 140, 0, 0.15);
+            color: var(--accent);
+            border-radius: 7px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .pdf-popup-close:hover { background: var(--accent); color: #14181f; }
+        .pdf-popup-body { padding: 18px 24px; overflow-y: auto; flex: 1; min-height: 0; }
+        .pdf-preview {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pdf-preview iframe { width: 100%; height: 520px; border: none; }
+        .pdf-popup-footer {
+            padding: 14px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            background: #f7f8fa;
+        }
+
+        /* DETALHAMENTO */
         .detalhe-modal { max-width: 1000px; }
-        .detalhe-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
-        .detalhe-stat { background: #f9fafb; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; position: relative; overflow: hidden; }
-        .detalhe-stat::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); }
-        .detalhe-stat h5 { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; font-weight: 700; }
-        .detalhe-stat .val { font-size: 16px; font-weight: 800; }
+        .detalhe-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1px;
+            margin-bottom: 18px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .detalhe-stat {
+            background: #fff;
+            padding: 14px 16px;
+        }
+        .detalhe-stat h5 {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+        .detalhe-stat .val {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
         .detalhe-stat .val.positivo { color: var(--success); }
         .detalhe-stat .val.negativo { color: var(--danger); }
-        .detalhe-list { max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; }
-        .detalhe-list table { font-size: 11px; }
-        .detalhe-list table thead th { background: linear-gradient(180deg, #0a0f15, #1a2332); color: var(--accent); font-size: 9px; padding: 8px 6px; }
-        .detalhe-list table tbody td { padding: 8px 6px; font-size: 11px; }
-        .desvio-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #fff; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
-        .desvio-item:hover { border-color: var(--accent); background: #fff8ed; transform: translateX(3px); }
-        .desvio-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
-        .desvio-icon.critico { background: #fecaca; color: #991b1b; }
-        .desvio-icon.atencao { background: #fde68a; color: #92400e; }
-        .desvio-icon.ok { background: #a7f3d0; color: #064e3b; }
+
+        .detalhe-list {
+            max-height: 420px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .detalhe-list table { font-size: 12px; }
+        .detalhe-list table thead th {
+            background: var(--bg-header);
+            color: #2c3542;
+            font-size: 10.5px;
+            padding: 10px 12px;
+        }
+        .detalhe-list table tbody td { padding: 11px 12px; font-size: 12px; }
+        .detalhe-list table tbody tr:hover td { background: #fafbfc; }
+
+        /* ANÁLISE DESVIO */
+        .desvio-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .desvio-item:hover {
+            border-color: var(--accent);
+            box-shadow: 0 2px 8px rgba(255,140,0,0.08);
+        }
+        .desvio-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+        .desvio-icon.critico { background: #fdeaea; color: #c53030; }
+        .desvio-icon.atencao { background: #fef5e7; color: #b45309; }
+        .desvio-icon.ok { background: #e6f7f3; color: #0d9488; }
         .desvio-info { flex: 1; min-width: 0; }
-        .desvio-info .titulo { font-size: 12.5px; font-weight: 700; margin-bottom: 3px; }
-        .desvio-info .sub { font-size: 10.5px; color: var(--text-muted); }
+        .desvio-info .titulo {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 3px;
+        }
+        .desvio-info .sub { font-size: 11px; color: var(--text-muted); }
         .desvio-valores { text-align: right; flex-shrink: 0; }
-        .desvio-valores .principal { font-size: 14px; font-weight: 800; margin-bottom: 2px; }
-        .desvio-valores .secundario { font-size: 10px; color: var(--text-muted); }
-        @media (max-width: 1200px) { .dashboard { grid-template-columns: repeat(3, 1fr); } }
+        .desvio-valores .principal {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 2px;
+            font-variant-numeric: tabular-nums;
+        }
+        .desvio-valores .secundario { font-size: 10.5px; color: var(--text-muted); }
+
+        /* RESPONSIVE */
+        @media (max-width: 1200px) {
+            .dashboard { grid-template-columns: repeat(3, 1fr); }
+        }
         @media (max-width: 900px) {
-            .sidebar { position: fixed; left: -230px; z-index: 100; transition: left 0.25s; height: 100vh; }
+            .sidebar { position: fixed; left: -240px; z-index: 100; transition: left 0.25s; height: 100vh; }
             .sidebar.open { left: 0; }
             .dashboard { grid-template-columns: repeat(2, 1fr); }
+            .topbar { padding: 12px 16px; }
+            .content { padding: 12px 16px 16px; }
+            .dashboard { padding: 12px 16px 0; }
             .form-row { flex-direction: column; gap: 0; }
+            .pdf-popup-content { max-width: 100%; max-height: 95vh; }
         }
-        @media (max-width: 600px) { .dashboard { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) {
+            .dashboard { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 
 <div class="app">
+
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-            <div class="brand-logo">Q</div>
-            <div class="brand-text">QNUTRI<small>Módulo Financeiro</small></div>
+            <div class="brand-text">
+                QNUTRI
+                <small>Módulo Financeiro</small>
+            </div>
         </div>
+
         <div class="sidebar-section-title">Navegação</div>
         <nav class="sidebar-nav">
-            <button class="nav-item active" data-tab="lancamentos" onclick="switchTab('lancamentos')"><i class="fas fa-list"></i><span>Lançamentos</span><span class="nav-count" id="navCountLanc">0</span></button>
-            <button class="nav-item" data-tab="receitas" onclick="switchTab('receitas')"><i class="fas fa-arrow-up"></i><span>Receitas</span><span class="nav-count" id="navCountRec">0</span></button>
-            <button class="nav-item" data-tab="despesas" onclick="switchTab('despesas')"><i class="fas fa-arrow-down"></i><span>Despesas</span><span class="nav-count" id="navCountDesp">0</span></button>
-            <button class="nav-item" data-tab="copa" onclick="switchTab('copa')"><i class="fas fa-utensils"></i><span>COPA</span><span class="nav-count" id="navCountCopa">0</span></button>
-            <button class="nav-item" data-tab="dre" onclick="switchTab('dre')"><i class="fas fa-chart-pie"></i><span>DRE</span></button>
-            <button class="nav-item" data-tab="analise" onclick="switchTab('analise')"><i class="fas fa-search-dollar"></i><span>Análise de Desvio</span></button>
-            <button class="nav-item" data-tab="relatorio" onclick="switchTab('relatorio')"><i class="fas fa-file-alt"></i><span>Relatório</span></button>
+            <button class="nav-item active" data-tab="lancamentos" onclick="switchTab('lancamentos')">
+                <i class="fas fa-list"></i>
+                <span>Lançamentos</span>
+                <span class="nav-count" id="navCountLanc">0</span>
+            </button>
+            <button class="nav-item" data-tab="receitas" onclick="switchTab('receitas')">
+                <i class="fas fa-arrow-up"></i>
+                <span>Receitas</span>
+                <span class="nav-count" id="navCountRec">0</span>
+            </button>
+            <button class="nav-item" data-tab="despesas" onclick="switchTab('despesas')">
+                <i class="fas fa-arrow-down"></i>
+                <span>Despesas</span>
+                <span class="nav-count" id="navCountDesp">0</span>
+            </button>
+            <button class="nav-item" data-tab="copa" onclick="switchTab('copa')">
+                <i class="fas fa-utensils"></i>
+                <span>COPA</span>
+                <span class="nav-count" id="navCountCopa">0</span>
+            </button>
+            <button class="nav-item" data-tab="dre" onclick="switchTab('dre')">
+                <i class="fas fa-chart-pie"></i>
+                <span>DRE</span>
+            </button>
+            <button class="nav-item" data-tab="analise" onclick="switchTab('analise')">
+                <i class="fas fa-search-dollar"></i>
+                <span>Análise de Desvio</span>
+            </button>
+            <button class="nav-item" data-tab="relatorio" onclick="switchTab('relatorio')">
+                <i class="fas fa-file-alt"></i>
+                <span>Relatório</span>
+            </button>
         </nav>
+
         <div class="sidebar-footer">
-            <a class="nav-item" href="CLIENT_QNUTRI.html"><i class="fas fa-arrow-left"></i><span>Voltar</span></a>
-            <button class="nav-item" onclick="carregarDados()"><i class="fas fa-sync"></i><span>Recarregar</span></button>
-            <a class="nav-item btn-sair" onclick="window.location.href='CLIENT_QNUTRI.html'"><i class="fas fa-sign-out-alt"></i><span>Sair</span></a>
+            <a class="nav-item" href="CLIENT_QNUTRI.html">
+                <i class="fas fa-arrow-left"></i>
+                <span>Voltar</span>
+            </a>
+            <button class="nav-item" onclick="carregarDados()">
+                <i class="fas fa-sync"></i>
+                <span>Recarregar</span>
+            </button>
+            <a class="nav-item btn-sair" onclick="window.location.href='CLIENT_QNUTRI.html'">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Sair</span>
+            </a>
         </div>
     </aside>
 
     <div class="main">
+
         <div class="topbar">
             <div class="topbar-title">
                 <h1 id="topbarTitle"><i class="fas fa-chart-line"></i> Visão Geral</h1>
                 <p id="topbarSubtitle">Todos os lançamentos financeiros</p>
             </div>
             <div class="topbar-actions">
-                <button class="btn btn-outline" onclick="carregarDados()"><i class="fas fa-sync"></i> Atualizar</button>
+                <button class="btn btn-outline" onclick="carregarDados()">
+                    <i class="fas fa-sync"></i> Atualizar
+                </button>
             </div>
         </div>
 
         <div class="dashboard">
             <div class="stat-card" onclick="abrirDetalheDashboard('receitas')">
-                <span class="stat-label">Receitas <span class="stat-hint">clique</span></span>
+                <span class="stat-label">Receitas <span class="stat-hint">ver detalhes</span></span>
                 <span id="totalReceitas" class="stat-value">R$ 0,00</span>
                 <span class="stat-sub" id="totalReceitasSub"></span>
             </div>
             <div class="stat-card" onclick="abrirDetalheDashboard('despesas')">
-                <span class="stat-label">Despesas <span class="stat-hint">clique</span></span>
+                <span class="stat-label">Despesas <span class="stat-hint">ver detalhes</span></span>
                 <span id="totalDespesas" class="stat-value">R$ 0,00</span>
                 <span class="stat-sub" id="totalDespesasSub"></span>
             </div>
             <div class="stat-card" onclick="abrirDetalheDashboard('saldo')">
-                <span class="stat-label">Saldo Faturado <span class="stat-hint">clique</span></span>
+                <span class="stat-label">Saldo Faturado <span class="stat-hint">ver detalhes</span></span>
                 <span id="saldoRealizado" class="stat-value">R$ 0,00</span>
                 <span class="stat-sub" id="saldoRealizadoSub"></span>
             </div>
             <div class="stat-card" onclick="abrirDetalheDashboard('projetado')">
-                <span class="stat-label">Projetado <span class="stat-hint">clique</span></span>
+                <span class="stat-label">Projetado <span class="stat-hint">ver detalhes</span></span>
                 <span id="totalProjetado" class="stat-value">R$ 0,00</span>
                 <span class="stat-sub" id="totalProjetadoSub"></span>
             </div>
             <div class="stat-card" onclick="abrirDetalheDashboard('copa')">
-                <span class="stat-label">COPA <span class="stat-hint">clique</span></span>
+                <span class="stat-label">COPA <span class="stat-hint">ver detalhes</span></span>
                 <span id="totalCopa" class="stat-value">R$ 0,00</span>
                 <span class="stat-sub" id="totalCopaSub"></span>
             </div>
             <div class="stat-card" onclick="abrirDetalheDashboard('lancamentos')">
-                <span class="stat-label">Lançamentos <span class="stat-hint">clique</span></span>
+                <span class="stat-label">Lançamentos <span class="stat-hint">ver detalhes</span></span>
                 <span id="totalLancamentos" class="stat-value">0</span>
                 <span class="stat-sub" id="totalLancamentosSub"></span>
             </div>
         </div>
 
         <div class="content">
+
             <div id="alertErro" class="alert-erro"><strong>⚠️ Atenção:</strong> <span id="alertErroMsg"></span></div>
 
             <!-- LANÇAMENTOS -->
@@ -305,25 +1133,26 @@
                 <div class="table-card">
                     <div class="table-card-header">
                         <h3><i class="fas fa-list"></i> Todos os Lançamentos <span class="badge-count" id="countLancamentos">0</span></h3>
-                        <span style="font-size:10px;color:var(--text-muted);"><i class="fas fa-info-circle"></i> Clique nos valores para detalhar</span>
                     </div>
                     <div class="table-wrapper">
                         <table id="tabelaLancamentos">
-                            <thead><tr>
-                                <th data-sort="data" style="width:80px;">Vencto <span class="sort-icon">↕</span></th>
-                                <th data-sort="pago_em" style="width:65px;">Pago em <span class="sort-icon">↕</span></th>
-                                <th data-sort="nf" style="width:55px;">NF <span class="sort-icon">↕</span></th>
-                                <th data-sort="tipo" style="width:65px;">Tipo <span class="sort-icon">↕</span></th>
-                                <th data-sort="categoria" style="width:75px;">Categoria <span class="sort-icon">↕</span></th>
-                                <th data-sort="fornecedor" style="text-align:left;padding-left:16px;">Fornecedor / Cliente <span class="sort-icon">↕</span></th>
-                                <th data-sort="plano_contas" style="width:110px;">Plano de Contas <span class="sort-icon">↕</span></th>
-                                <th data-sort="valor_projetado" style="width:95px;">Projetado <span class="sort-icon">↕</span></th>
-                                <th data-sort="valor_realizado" style="width:95px;">Faturado <span class="sort-icon">↕</span></th>
-                                <th style="width:95px;">Diferença</th>
-                                <th data-sort="situacao" style="width:140px;">Situação <span class="sort-icon">↕</span></th>
-                                <th data-sort="banco" style="width:110px;">Banco <span class="sort-icon">↕</span></th>
-                                <th style="width:100px;">Ações</th>
-                            </tr></thead>
+                            <thead>
+                                <tr>
+                                    <th data-sort="data" style="width:100px;">Vencto <span class="sort-icon">↕</span></th>
+                                    <th data-sort="pago_em" style="width:90px;">Pago em <span class="sort-icon">↕</span></th>
+                                    <th data-sort="nf" style="width:80px;">NF <span class="sort-icon">↕</span></th>
+                                    <th data-sort="tipo" style="width:90px;">Tipo <span class="sort-icon">↕</span></th>
+                                    <th data-sort="categoria" style="width:100px;">Categoria <span class="sort-icon">↕</span></th>
+                                    <th data-sort="fornecedor">Fornecedor / Cliente <span class="sort-icon">↕</span></th>
+                                    <th data-sort="plano_contas" style="width:140px;">Plano de Contas <span class="sort-icon">↕</span></th>
+                                    <th data-sort="valor_projetado" style="width:120px;text-align:right;">Projetado <span class="sort-icon">↕</span></th>
+                                    <th data-sort="valor_realizado" style="width:120px;text-align:right;">Faturado <span class="sort-icon">↕</span></th>
+                                    <th style="width:120px;text-align:right;">Diferença</th>
+                                    <th data-sort="situacao" style="width:160px;">Situação <span class="sort-icon">↕</span></th>
+                                    <th data-sort="banco" style="width:130px;">Banco <span class="sort-icon">↕</span></th>
+                                    <th style="width:120px;text-align:center;">Ações</th>
+                                </tr>
+                            </thead>
                             <tbody id="corpoLancamentos"></tbody>
                         </table>
                     </div>
@@ -345,20 +1174,22 @@
                     <div class="table-card-header"><h3><i class="fas fa-arrow-up"></i> Receitas <span class="badge-count" id="countReceitas">0</span></h3></div>
                     <div class="table-wrapper">
                         <table id="tabelaReceitas">
-                            <thead><tr>
-                                <th data-sort="data" style="width:80px;">Vencto <span class="sort-icon">↕</span></th>
-                                <th data-sort="pago_em" style="width:65px;">Pago em <span class="sort-icon">↕</span></th>
-                                <th data-sort="nf" style="width:55px;">NF <span class="sort-icon">↕</span></th>
-                                <th data-sort="categoria" style="width:75px;">Categoria <span class="sort-icon">↕</span></th>
-                                <th data-sort="fornecedor" style="text-align:left;padding-left:16px;">Fornecedor / Cliente <span class="sort-icon">↕</span></th>
-                                <th data-sort="plano_contas" style="width:110px;">Plano de Contas <span class="sort-icon">↕</span></th>
-                                <th data-sort="valor_projetado" style="width:95px;">Projetado <span class="sort-icon">↕</span></th>
-                                <th data-sort="valor_realizado" style="width:95px;">Faturado <span class="sort-icon">↕</span></th>
-                                <th style="width:95px;">Diferença</th>
-                                <th data-sort="situacao" style="width:140px;">Situação <span class="sort-icon">↕</span></th>
-                                <th data-sort="banco" style="width:110px;">Banco <span class="sort-icon">↕</span></th>
-                                <th style="width:100px;">Ações</th>
-                            </tr></thead>
+                            <thead>
+                                <tr>
+                                    <th data-sort="data" style="width:100px;">Vencto <span class="sort-icon">↕</span></th>
+                                    <th data-sort="pago_em" style="width:90px;">Pago em <span class="sort-icon">↕</span></th>
+                                    <th data-sort="nf" style="width:80px;">NF <span class="sort-icon">↕</span></th>
+                                    <th data-sort="categoria" style="width:100px;">Categoria <span class="sort-icon">↕</span></th>
+                                    <th data-sort="fornecedor">Fornecedor / Cliente <span class="sort-icon">↕</span></th>
+                                    <th data-sort="plano_contas" style="width:140px;">Plano de Contas <span class="sort-icon">↕</span></th>
+                                    <th data-sort="valor_projetado" style="width:120px;text-align:right;">Projetado <span class="sort-icon">↕</span></th>
+                                    <th data-sort="valor_realizado" style="width:120px;text-align:right;">Faturado <span class="sort-icon">↕</span></th>
+                                    <th style="width:120px;text-align:right;">Diferença</th>
+                                    <th data-sort="situacao" style="width:160px;">Situação <span class="sort-icon">↕</span></th>
+                                    <th data-sort="banco" style="width:130px;">Banco <span class="sort-icon">↕</span></th>
+                                    <th style="width:120px;text-align:center;">Ações</th>
+                                </tr>
+                            </thead>
                             <tbody id="corpoReceitas"></tbody>
                         </table>
                     </div>
@@ -380,20 +1211,22 @@
                     <div class="table-card-header"><h3><i class="fas fa-arrow-down"></i> Despesas <span class="badge-count" id="countDespesas">0</span></h3></div>
                     <div class="table-wrapper">
                         <table id="tabelaDespesas">
-                            <thead><tr>
-                                <th data-sort="data" style="width:80px;">Vencto <span class="sort-icon">↕</span></th>
-                                <th data-sort="pago_em" style="width:65px;">Pago em <span class="sort-icon">↕</span></th>
-                                <th data-sort="nf" style="width:55px;">NF <span class="sort-icon">↕</span></th>
-                                <th data-sort="categoria" style="width:75px;">Categoria <span class="sort-icon">↕</span></th>
-                                <th data-sort="fornecedor" style="text-align:left;padding-left:16px;">Fornecedor / Cliente <span class="sort-icon">↕</span></th>
-                                <th data-sort="plano_contas" style="width:110px;">Plano de Contas <span class="sort-icon">↕</span></th>
-                                <th data-sort="valor_projetado" style="width:95px;">Projetado <span class="sort-icon">↕</span></th>
-                                <th data-sort="valor_realizado" style="width:95px;">Faturado <span class="sort-icon">↕</span></th>
-                                <th style="width:95px;">Diferença</th>
-                                <th data-sort="situacao" style="width:140px;">Situação <span class="sort-icon">↕</span></th>
-                                <th data-sort="banco" style="width:110px;">Banco <span class="sort-icon">↕</span></th>
-                                <th style="width:100px;">Ações</th>
-                            </tr></thead>
+                            <thead>
+                                <tr>
+                                    <th data-sort="data" style="width:100px;">Vencto <span class="sort-icon">↕</span></th>
+                                    <th data-sort="pago_em" style="width:90px;">Pago em <span class="sort-icon">↕</span></th>
+                                    <th data-sort="nf" style="width:80px;">NF <span class="sort-icon">↕</span></th>
+                                    <th data-sort="categoria" style="width:100px;">Categoria <span class="sort-icon">↕</span></th>
+                                    <th data-sort="fornecedor">Fornecedor / Cliente <span class="sort-icon">↕</span></th>
+                                    <th data-sort="plano_contas" style="width:140px;">Plano de Contas <span class="sort-icon">↕</span></th>
+                                    <th data-sort="valor_projetado" style="width:120px;text-align:right;">Projetado <span class="sort-icon">↕</span></th>
+                                    <th data-sort="valor_realizado" style="width:120px;text-align:right;">Faturado <span class="sort-icon">↕</span></th>
+                                    <th style="width:120px;text-align:right;">Diferença</th>
+                                    <th data-sort="situacao" style="width:160px;">Situação <span class="sort-icon">↕</span></th>
+                                    <th data-sort="banco" style="width:130px;">Banco <span class="sort-icon">↕</span></th>
+                                    <th style="width:120px;text-align:center;">Ações</th>
+                                </tr>
+                            </thead>
                             <tbody id="corpoDespesas"></tbody>
                         </table>
                     </div>
@@ -415,19 +1248,21 @@
                     <div class="table-card-header"><h3><i class="fas fa-utensils"></i> Lançamentos COPA <span class="badge-count" id="countCopa">0</span></h3></div>
                     <div class="table-wrapper">
                         <table id="tabelaCopa">
-                            <thead><tr>
-                                <th data-sort="data" style="width:80px;">Vencto <span class="sort-icon">↕</span></th>
-                                <th data-sort="pago_em" style="width:65px;">Pago em <span class="sort-icon">↕</span></th>
-                                <th data-sort="nf" style="width:55px;">NF <span class="sort-icon">↕</span></th>
-                                <th data-sort="fornecedor" style="text-align:left;padding-left:16px;">Fornecedor / Cliente <span class="sort-icon">↕</span></th>
-                                <th data-sort="plano_contas" style="width:110px;">Plano de Contas <span class="sort-icon">↕</span></th>
-                                <th data-sort="valor_projetado" style="width:95px;">Projetado <span class="sort-icon">↕</span></th>
-                                <th data-sort="valor_realizado" style="width:95px;">Faturado <span class="sort-icon">↕</span></th>
-                                <th style="width:95px;">Diferença</th>
-                                <th data-sort="situacao" style="width:140px;">Situação <span class="sort-icon">↕</span></th>
-                                <th data-sort="banco" style="width:110px;">Banco <span class="sort-icon">↕</span></th>
-                                <th style="width:100px;">Ações</th>
-                            </tr></thead>
+                            <thead>
+                                <tr>
+                                    <th data-sort="data" style="width:100px;">Vencto <span class="sort-icon">↕</span></th>
+                                    <th data-sort="pago_em" style="width:90px;">Pago em <span class="sort-icon">↕</span></th>
+                                    <th data-sort="nf" style="width:80px;">NF <span class="sort-icon">↕</span></th>
+                                    <th data-sort="fornecedor">Fornecedor / Cliente <span class="sort-icon">↕</span></th>
+                                    <th data-sort="plano_contas" style="width:140px;">Plano de Contas <span class="sort-icon">↕</span></th>
+                                    <th data-sort="valor_projetado" style="width:120px;text-align:right;">Projetado <span class="sort-icon">↕</span></th>
+                                    <th data-sort="valor_realizado" style="width:120px;text-align:right;">Faturado <span class="sort-icon">↕</span></th>
+                                    <th style="width:120px;text-align:right;">Diferença</th>
+                                    <th data-sort="situacao" style="width:160px;">Situação <span class="sort-icon">↕</span></th>
+                                    <th data-sort="banco" style="width:130px;">Banco <span class="sort-icon">↕</span></th>
+                                    <th style="width:120px;text-align:center;">Ações</th>
+                                </tr>
+                            </thead>
                             <tbody id="corpoCopa"></tbody>
                         </table>
                     </div>
@@ -468,7 +1303,7 @@
                 </div>
                 <div class="table-card">
                     <div class="table-card-header"><h3><i class="fas fa-search-dollar"></i> Análise de Desvio — Projetado vs Realizado</h3></div>
-                    <div class="table-wrapper" id="corpoAnalise" style="padding: 16px;"></div>
+                    <div class="table-wrapper" id="corpoAnalise" style="padding: 18px;"></div>
                 </div>
             </div>
 
@@ -487,20 +1322,22 @@
                     <div class="table-card-header"><h3><i class="fas fa-file-alt"></i> Relatório Detalhado</h3></div>
                     <div class="table-wrapper">
                         <table id="tabelaRelatorio">
-                            <thead><tr>
-                                <th data-sort="data" style="width:80px;">Vencto <span class="sort-icon">↕</span></th>
-                                <th data-sort="pago_em" style="width:65px;">Pago em <span class="sort-icon">↕</span></th>
-                                <th data-sort="nf" style="width:55px;">NF <span class="sort-icon">↕</span></th>
-                                <th data-sort="tipo" style="width:65px;">Tipo <span class="sort-icon">↕</span></th>
-                                <th data-sort="categoria" style="width:75px;">Categoria <span class="sort-icon">↕</span></th>
-                                <th data-sort="fornecedor" style="text-align:left;padding-left:16px;">Fornecedor / Cliente <span class="sort-icon">↕</span></th>
-                                <th data-sort="plano_contas" style="width:110px;">Plano de Contas <span class="sort-icon">↕</span></th>
-                                <th data-sort="valor_projetado" style="width:95px;">Projetado <span class="sort-icon">↕</span></th>
-                                <th data-sort="valor_realizado" style="width:95px;">Faturado <span class="sort-icon">↕</span></th>
-                                <th style="width:95px;">Diferença</th>
-                                <th data-sort="situacao" style="width:140px;">Situação <span class="sort-icon">↕</span></th>
-                                <th data-sort="banco" style="width:110px;">Banco <span class="sort-icon">↕</span></th>
-                            </tr></thead>
+                            <thead>
+                                <tr>
+                                    <th data-sort="data" style="width:100px;">Vencto <span class="sort-icon">↕</span></th>
+                                    <th data-sort="pago_em" style="width:90px;">Pago em <span class="sort-icon">↕</span></th>
+                                    <th data-sort="nf" style="width:80px;">NF <span class="sort-icon">↕</span></th>
+                                    <th data-sort="tipo" style="width:90px;">Tipo <span class="sort-icon">↕</span></th>
+                                    <th data-sort="categoria" style="width:100px;">Categoria <span class="sort-icon">↕</span></th>
+                                    <th data-sort="fornecedor">Fornecedor / Cliente <span class="sort-icon">↕</span></th>
+                                    <th data-sort="plano_contas" style="width:140px;">Plano de Contas <span class="sort-icon">↕</span></th>
+                                    <th data-sort="valor_projetado" style="width:120px;text-align:right;">Projetado <span class="sort-icon">↕</span></th>
+                                    <th data-sort="valor_realizado" style="width:120px;text-align:right;">Faturado <span class="sort-icon">↕</span></th>
+                                    <th style="width:120px;text-align:right;">Diferença</th>
+                                    <th data-sort="situacao" style="width:160px;">Situação <span class="sort-icon">↕</span></th>
+                                    <th data-sort="banco" style="width:130px;">Banco <span class="sort-icon">↕</span></th>
+                                </tr>
+                            </thead>
                             <tbody id="corpoRelatorio"></tbody>
                         </table>
                     </div>
@@ -511,10 +1348,13 @@
     </div>
 </div>
 
-<!-- POPUPS -->
+<!-- POPUP LANÇAMENTO -->
 <div id="popupLancamento" class="modal-overlay">
     <div class="modal-content">
-        <div class="modal-header"><h2><i class="fas fa-edit"></i> <span id="popupLancTitulo">Novo Lançamento</span></h2><button class="modal-close" onclick="fecharPopupLancamento()">✕</button></div>
+        <div class="modal-header">
+            <h2><i class="fas fa-edit"></i> <span id="popupLancTitulo">Novo Lançamento</span></h2>
+            <button class="modal-close" onclick="fecharPopupLancamento()">✕</button>
+        </div>
         <form id="formLancamento" onsubmit="salvarLancamento(event)">
             <input type="hidden" id="lancId">
             <div class="form-row">
@@ -550,7 +1390,7 @@
 <div id="popupAtualizacao" class="modal-overlay">
     <div class="modal-content" style="max-width:480px;">
         <div class="modal-header"><h2><i class="fas fa-bolt"></i> Atualização Rápida</h2><button class="modal-close" onclick="fecharPopupAtualizacao()">✕</button></div>
-        <p style="color:var(--text-secondary);font-size:12px;margin-bottom:14px;"><strong id="atualizacaoTitulo"></strong></p>
+        <p style="color:var(--text-secondary);font-size:12.5px;margin-bottom:16px;"><strong id="atualizacaoTitulo"></strong></p>
         <div class="form-group"><label><i class="fas fa-info-circle"></i> Situação</label><select id="atualizacaoSituacao"><option value="">Manter atual</option><option value="PAGO">PAGO</option><option value="NÃO PAGO">NÃO PAGO</option><option value="PENDENTE MESES ANTERIORES">PENDENTE MESES ANTERIORES</option><option value="PAGO - MESES ANTERIORES">PAGO - MESES ANTERIORES</option></select></div>
         <div class="form-group"><label><i class="fas fa-check-circle"></i> Pago em (data)</label><input type="text" id="atualizacaoPagoEm" placeholder="Ex: 03/08" maxlength="10"></div>
         <div class="form-group"><label><i class="fas fa-money-bill-wave"></i> Valor Faturado (R$)</label><input type="number" id="atualizacaoValor" step="0.01" placeholder="Deixe vazio para manter"></div>
@@ -584,7 +1424,7 @@
     <div class="pdf-popup-content">
         <div class="pdf-popup-header"><h2><i class="fas fa-file-pdf"></i> Gerar Relatório PDF</h2><button class="pdf-popup-close" onclick="fecharPopupPDFRelatorio()">✕</button></div>
         <div class="pdf-popup-body">
-            <div class="filter-bar" style="margin-bottom:12px;">
+            <div class="filter-bar" style="margin-bottom:14px;">
                 <select class="filter-select" id="pdfTipoRelatorio"><option value="todos">Todos os Tipos</option><option value="RECEITA">Apenas Receitas</option><option value="DESPESA">Apenas Despesas</option></select>
                 <select class="filter-select" id="pdfCategoriaRelatorio"><option value="todas">Todas Categorias</option><option value="GERAL">GERAL</option><option value="COPA">COPA</option></select>
                 <select class="filter-select" id="pdfMesRelatorio"><option value="todos">Todos os Meses</option><option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select>
@@ -604,9 +1444,6 @@
 </div>
 
 <script>
-// ============================================================
-// SUPABASE
-// ============================================================
 const SUPABASE_URL = "https://avzxplcdutqzlxfievza.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_rkwsOtfEMpic9PsiExxC_w_rzYqZNRs";
 
@@ -620,9 +1457,6 @@ let sortConfig = { campo: 'data', direcao: 'desc' };
 
 const MESES_CURTO = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-// ============================================================
-// HELPERS
-// ============================================================
 function formatarMoeda(v) {
     const n = parseFloat(v) || 0;
     const s = n < 0 ? '-' : '';
@@ -745,9 +1579,6 @@ function filtrarPorCategoria(lista, catFiltro) {
     return lista.filter(l => (l.categoria || 'GERAL').toUpperCase() === catFiltro.toUpperCase());
 }
 
-// ============================================================
-// CARREGAR DADOS
-// ============================================================
 async function carregarDados() {
     esconderAlertaErro();
     try {
@@ -837,9 +1668,6 @@ function atualizarDashboard() {
     document.getElementById('saldoRealizadoSub').innerHTML = `<i class="fas fa-percentage"></i> Margem ${totRec > 0 ? ((saldo / totRec) * 100).toFixed(1) : '0.0'}%`;
 }
 
-// ============================================================
-// LINHA DA TABELA
-// ============================================================
 function gerarLinhaTabela(l, comTipo = true, comAcoes = true, comCategoria = true) {
     const p = parseFloat(l.valor_projetado) || 0;
     const r = parseFloat(l.valor_realizado) || 0;
@@ -855,15 +1683,15 @@ function gerarLinhaTabela(l, comTipo = true, comAcoes = true, comCategoria = tru
         <td>${escapeHtml(l.nf || '-')}</td>`;
     if (comTipo) html += `<td><span class="badge ${badgeTipo}">${l.tipo}</span></td>`;
     if (comCategoria) html += `<td><span class="badge ${badgeCat}">${getLabelCategoria(l.categoria)}</span></td>`;
-    html += `<td style="text-align:left;padding-left:16px;font-weight:600;">${escapeHtml(l.fornecedor || '-')}</td>
+    html += `<td><div class="cell-primary"><div class="main-text">${escapeHtml(l.fornecedor || '-')}</div></div></td>
         <td>${escapeHtml(l.plano_contas || '-')}</td>
-        <td class="cell-money cell-clickable" style="color:var(--info);" onclick="abrirDetalheValor(${l.id}, 'projetado')" title="Clique para detalhar">${formatarMoeda(p)}</td>
-        <td class="cell-money cell-clickable ${r > 0 ? (l.tipo === 'RECEITA' ? 'positivo' : 'negativo') : ''}" onclick="abrirDetalheValor(${l.id}, 'realizado')" title="Clique para detalhar">${formatarMoeda(r)}</td>
-        <td class="cell-money cell-clickable ${d >= 0 ? 'positivo' : 'negativo'}" onclick="abrirDetalheValor(${l.id}, 'desvio')" title="Clique para analisar desvio">${formatarMoeda(d)}</td>
-        <td><span class="badge ${badgeSit} cell-clickable" onclick="abrirAtualizacaoRapida(${l.id})" title="Clique para atualizar">${escapeHtml(l.situacao || '-')}</span></td>
+        <td class="cell-money info cell-clickable" onclick="abrirDetalheValor(${l.id}, 'projetado')">${formatarMoeda(p)}</td>
+        <td class="cell-money ${r > 0 ? (l.tipo === 'RECEITA' ? 'positivo' : 'negativo') : ''} cell-clickable" onclick="abrirDetalheValor(${l.id}, 'realizado')">${formatarMoeda(r)}</td>
+        <td class="cell-money ${d >= 0 ? 'positivo' : 'negativo'} cell-clickable" onclick="abrirDetalheValor(${l.id}, 'desvio')">${formatarMoeda(d)}</td>
+        <td><span class="badge ${badgeSit} cell-clickable" onclick="abrirAtualizacaoRapida(${l.id})">${escapeHtml(l.situacao || '-')}</span></td>
         <td>${escapeHtml(l.banco || '-')}</td>`;
     if (comAcoes) {
-        html += `<td>
+        html += `<td class="cell-center">
             <button class="btn btn-outline btn-xs" onclick="event.stopPropagation(); editarLancamento(${l.id})" title="Editar"><i class="fas fa-edit"></i></button>
             <button class="btn btn-primary btn-xs" onclick="event.stopPropagation(); abrirAtualizacaoRapida(${l.id})" title="Atualização rápida"><i class="fas fa-bolt"></i></button>
             <button class="btn btn-danger btn-xs" onclick="event.stopPropagation(); abrirPopupExclusao(${l.id})" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -873,9 +1701,6 @@ function gerarLinhaTabela(l, comTipo = true, comAcoes = true, comCategoria = tru
     return html;
 }
 
-// ============================================================
-// RENDERIZAÇÕES
-// ============================================================
 function renderizarLancamentos() {
     const termo = (document.getElementById('buscaLancamentos')?.value || '').toLowerCase();
     const tipo = document.getElementById('filtroTipoLanc')?.value || 'todos';
@@ -1046,9 +1871,6 @@ function renderizarCopa() {
     tbody.innerHTML = html;
 }
 
-// ============================================================
-// DRE
-// ============================================================
 function setDREModo(modo) {
     dreModo = modo;
     document.querySelectorAll('#dreToggle button').forEach(b => {
@@ -1107,10 +1929,10 @@ function renderizarDRE() {
     const lucroP = totReceitasP - totDespesasP;
     const lucroR = totReceitasR - totDespesasR;
 
-    let theadHtml = '<tr><th style="text-align:left;padding-left:16px;width:20%;">Descrição</th>';
+    let theadHtml = '<tr><th style="text-align:left;padding-left:14px;width:20%;">Descrição</th>';
     for (let m = 1; m <= 12; m++) {
         const label = MESES_CURTO[m - 1];
-        if (dreModo === 'ambos') theadHtml += `<th colspan="2" style="border-left:1px solid rgba(255,140,0,0.2);">${label}</th>`;
+        if (dreModo === 'ambos') theadHtml += `<th colspan="2" style="border-left:1px solid rgba(0,0,0,0.05);">${label}</th>`;
         else theadHtml += `<th>${label}</th>`;
     }
     theadHtml += dreModo === 'ambos' ? `<th colspan="2" style="border-left:2px solid var(--accent);">TOTAL</th>` : `<th style="border-left:2px solid var(--accent);">TOTAL</th>`;
@@ -1118,7 +1940,7 @@ function renderizarDRE() {
     if (dreModo === 'ambos') {
         theadHtml += '<tr><th style="font-size:8px;padding:4px;"></th>';
         for (let m = 1; m <= 12; m++) {
-            theadHtml += `<th style="font-size:8px;padding:4px 2px;border-left:1px solid rgba(255,140,0,0.2);">Proj</th><th style="font-size:8px;padding:4px 2px;">Real</th>`;
+            theadHtml += `<th style="font-size:8px;padding:4px 2px;border-left:1px solid rgba(0,0,0,0.05);">Proj</th><th style="font-size:8px;padding:4px 2px;">Real</th>`;
         }
         theadHtml += `<th style="font-size:8px;padding:4px 2px;border-left:2px solid var(--accent);">Proj</th><th style="font-size:8px;padding:4px 2px;">Real</th></tr>`;
     }
@@ -1126,35 +1948,35 @@ function renderizarDRE() {
 
     let html = '';
     function gerarLinha(label, mesesData, isTotal = false, corTipo = null, chaveGrupo = null) {
-        let linha = `<tr${isTotal ? ' style="font-weight:800;background:rgba(255,140,0,0.05);"' : ''} class="dre-row-clickable" onclick="abrirDetalheDRE('${escapeHtml(chaveGrupo || label)}')">`;
-        linha += `<td style="text-align:left;padding-left:${isTotal ? '16px' : '28px'};font-weight:${isTotal ? '800' : '500'};font-size:${isTotal ? '12px' : '11px'};color:${isTotal ? (corTipo === 'receita' ? 'var(--success)' : 'var(--danger)') : 'var(--text-secondary)'};">${escapeHtml(label)}</td>`;
+        let linha = `<tr${isTotal ? ' style="font-weight:700;background:#fafbfc;"' : ''} class="dre-row-clickable" onclick="abrirDetalheDRE('${escapeHtml(chaveGrupo || label)}')">`;
+        linha += `<td style="text-align:left;padding-left:${isTotal ? '14px' : '26px'};font-weight:${isTotal ? '700' : '500'};color:${isTotal ? (corTipo === 'receita' ? 'var(--success)' : 'var(--danger)') : 'var(--text-secondary)'};">${escapeHtml(label)}</td>`;
         for (let m = 1; m <= 12; m++) {
             const mm = String(m).padStart(2, '0');
             const d = mesesData[mm] || { p: 0, r: 0 };
             if (dreModo === 'ambos') {
-                linha += `<td class="cell-money" style="font-size:10px;color:var(--info);border-left:1px solid var(--border);">${d.p > 0 ? formatarMoeda(d.p) : '-'}</td>`;
-                linha += `<td class="cell-money" style="font-size:10px;color:${corTipo === 'receita' ? 'var(--success)' : corTipo === 'despesa' ? 'var(--danger)' : 'var(--text-primary)'};">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
+                linha += `<td style="color:var(--info);border-left:1px solid var(--border-soft);">${d.p > 0 ? formatarMoeda(d.p) : '-'}</td>`;
+                linha += `<td style="color:${corTipo === 'receita' ? 'var(--success)' : corTipo === 'despesa' ? 'var(--danger)' : 'var(--text-primary)'};">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
             } else if (dreModo === 'projetado') {
-                linha += `<td class="cell-money" style="font-size:10px;color:var(--info);">${d.p > 0 ? formatarMoeda(d.p) : '-'}</td>`;
+                linha += `<td style="color:var(--info);">${d.p > 0 ? formatarMoeda(d.p) : '-'}</td>`;
             } else if (dreModo === 'desvio') {
                 const desvio = d.r - d.p;
-                linha += `<td class="cell-money" style="font-size:10px;color:${desvio >= 0 ? 'var(--success)' : 'var(--danger)'};">${desvio !== 0 ? formatarMoeda(desvio) : '-'}</td>`;
+                linha += `<td style="color:${desvio >= 0 ? 'var(--success)' : 'var(--danger)'};">${desvio !== 0 ? formatarMoeda(desvio) : '-'}</td>`;
             } else {
-                linha += `<td class="cell-money" style="font-size:10px;color:${corTipo === 'receita' ? 'var(--success)' : corTipo === 'despesa' ? 'var(--danger)' : 'var(--text-primary)'};">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
+                linha += `<td style="color:${corTipo === 'receita' ? 'var(--success)' : corTipo === 'despesa' ? 'var(--danger)' : 'var(--text-primary)'};">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
             }
         }
         const totP = Object.values(mesesData).reduce((s, d) => s + (d.p || 0), 0);
         const totR = Object.values(mesesData).reduce((s, d) => s + (d.r || 0), 0);
         if (dreModo === 'ambos') {
-            linha += `<td class="cell-money" style="font-size:11px;font-weight:800;color:var(--info);border-left:2px solid var(--accent);">${formatarMoeda(totP)}</td>`;
-            linha += `<td class="cell-money" style="font-size:11px;font-weight:800;color:${corTipo === 'receita' ? 'var(--success)' : corTipo === 'despesa' ? 'var(--danger)' : 'var(--text-primary)'};">${formatarMoeda(totR)}</td>`;
+            linha += `<td style="font-weight:700;color:var(--info);border-left:2px solid var(--accent);">${formatarMoeda(totP)}</td>`;
+            linha += `<td style="font-weight:700;color:${corTipo === 'receita' ? 'var(--success)' : corTipo === 'despesa' ? 'var(--danger)' : 'var(--text-primary)'};">${formatarMoeda(totR)}</td>`;
         } else if (dreModo === 'projetado') {
-            linha += `<td class="cell-money" style="font-size:11px;font-weight:800;color:var(--info);border-left:2px solid var(--accent);">${formatarMoeda(totP)}</td>`;
+            linha += `<td style="font-weight:700;color:var(--info);border-left:2px solid var(--accent);">${formatarMoeda(totP)}</td>`;
         } else if (dreModo === 'desvio') {
             const desvio = totR - totP;
-            linha += `<td class="cell-money" style="font-size:11px;font-weight:800;color:${desvio >= 0 ? 'var(--success)' : 'var(--danger)'};border-left:2px solid var(--accent);">${formatarMoeda(desvio)}</td>`;
+            linha += `<td style="font-weight:700;color:${desvio >= 0 ? 'var(--success)' : 'var(--danger)'};border-left:2px solid var(--accent);">${formatarMoeda(desvio)}</td>`;
         } else {
-            linha += `<td class="cell-money" style="font-size:11px;font-weight:800;color:${corTipo === 'receita' ? 'var(--success)' : corTipo === 'despesa' ? 'var(--danger)' : 'var(--text-primary)'};border-left:2px solid var(--accent);">${formatarMoeda(totR)}</td>`;
+            linha += `<td style="font-weight:700;color:${corTipo === 'receita' ? 'var(--success)' : corTipo === 'despesa' ? 'var(--danger)' : 'var(--text-primary)'};border-left:2px solid var(--accent);">${formatarMoeda(totR)}</td>`;
         }
         linha += '</tr>';
         return linha;
@@ -1186,33 +2008,33 @@ function renderizarDRE() {
             const mm = String(m).padStart(2, '0');
             mesesLucro[mm] = { p: mesesTotais[mm].lucroP, r: mesesTotais[mm].lucroR };
         }
-        html += `<tr style="background:linear-gradient(90deg,rgba(255,140,0,0.15),rgba(255,140,0,0.05));border-top:2px solid var(--accent);font-weight:800;">
-            <td style="text-align:left;padding-left:16px;color:var(--accent);font-size:12.5px;">RESULTADO (LUCRO/PREJUÍZO)</td>`;
+        html += `<tr style="background:#fff8ed;border-top:2px solid var(--accent);font-weight:700;">
+            <td style="text-align:left;padding-left:14px;color:var(--accent-dark);">RESULTADO (LUCRO/PREJUÍZO)</td>`;
         for (let m = 1; m <= 12; m++) {
             const mm = String(m).padStart(2, '0');
             const d = mesesLucro[mm];
             if (dreModo === 'ambos') {
-                html += `<td class="cell-money" style="font-size:10px;font-weight:800;color:${d.p >= 0 ? 'var(--success)' : 'var(--danger)'};border-left:1px solid var(--border);">${d.p !== 0 ? formatarMoeda(d.p) : '-'}</td>`;
-                html += `<td class="cell-money" style="font-size:10px;font-weight:800;color:${d.r >= 0 ? 'var(--success)' : 'var(--danger)'};">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
+                html += `<td style="font-weight:700;color:${d.p >= 0 ? 'var(--success)' : 'var(--danger)'};border-left:1px solid var(--border-soft);">${d.p !== 0 ? formatarMoeda(d.p) : '-'}</td>`;
+                html += `<td style="font-weight:700;color:${d.r >= 0 ? 'var(--success)' : 'var(--danger)'};">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
             } else if (dreModo === 'projetado') {
-                html += `<td class="cell-money" style="font-size:10px;font-weight:800;color:${d.p >= 0 ? 'var(--success)' : 'var(--danger)'};">${d.p !== 0 ? formatarMoeda(d.p) : '-'}</td>`;
+                html += `<td style="font-weight:700;color:${d.p >= 0 ? 'var(--success)' : 'var(--danger)'};">${d.p !== 0 ? formatarMoeda(d.p) : '-'}</td>`;
             } else if (dreModo === 'desvio') {
                 const desvio = d.r - d.p;
-                html += `<td class="cell-money" style="font-size:10px;font-weight:800;color:${desvio >= 0 ? 'var(--success)' : 'var(--danger)'};">${desvio !== 0 ? formatarMoeda(desvio) : '-'}</td>`;
+                html += `<td style="font-weight:700;color:${desvio >= 0 ? 'var(--success)' : 'var(--danger)'};">${desvio !== 0 ? formatarMoeda(desvio) : '-'}</td>`;
             } else {
-                html += `<td class="cell-money" style="font-size:10px;font-weight:800;color:${d.r >= 0 ? 'var(--success)' : 'var(--danger)'};">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
+                html += `<td style="font-weight:700;color:${d.r >= 0 ? 'var(--success)' : 'var(--danger)'};">${d.r !== 0 ? formatarMoeda(d.r) : '-'}</td>`;
             }
         }
         if (dreModo === 'ambos') {
-            html += `<td class="cell-money" style="font-size:11px;font-weight:800;color:${lucroP >= 0 ? 'var(--success)' : 'var(--danger)'};border-left:2px solid var(--accent);">${formatarMoeda(lucroP)}</td>`;
-            html += `<td class="cell-money" style="font-size:11px;font-weight:800;color:${lucroR >= 0 ? 'var(--success)' : 'var(--danger)'};">${formatarMoeda(lucroR)}</td>`;
+            html += `<td style="font-weight:700;color:${lucroP >= 0 ? 'var(--success)' : 'var(--danger)'};border-left:2px solid var(--accent);">${formatarMoeda(lucroP)}</td>`;
+            html += `<td style="font-weight:700;color:${lucroR >= 0 ? 'var(--success)' : 'var(--danger)'};">${formatarMoeda(lucroR)}</td>`;
         } else if (dreModo === 'projetado') {
-            html += `<td class="cell-money" style="font-size:11px;font-weight:800;color:${lucroP >= 0 ? 'var(--success)' : 'var(--danger)'};border-left:2px solid var(--accent);">${formatarMoeda(lucroP)}</td>`;
+            html += `<td style="font-weight:700;color:${lucroP >= 0 ? 'var(--success)' : 'var(--danger)'};border-left:2px solid var(--accent);">${formatarMoeda(lucroP)}</td>`;
         } else if (dreModo === 'desvio') {
             const desvio = lucroR - lucroP;
-            html += `<td class="cell-money" style="font-size:11px;font-weight:800;color:${desvio >= 0 ? 'var(--success)' : 'var(--danger)'};border-left:2px solid var(--accent);">${formatarMoeda(desvio)}</td>`;
+            html += `<td style="font-weight:700;color:${desvio >= 0 ? 'var(--success)' : 'var(--danger)'};border-left:2px solid var(--accent);">${formatarMoeda(desvio)}</td>`;
         } else {
-            html += `<td class="cell-money" style="font-size:11px;font-weight:800;color:${lucroR >= 0 ? 'var(--success)' : 'var(--danger)'};border-left:2px solid var(--accent);">${formatarMoeda(lucroR)}</td>`;
+            html += `<td style="font-weight:700;color:${lucroR >= 0 ? 'var(--success)' : 'var(--danger)'};border-left:2px solid var(--accent);">${formatarMoeda(lucroR)}</td>`;
         }
         html += '</tr>';
     }
@@ -1222,9 +2044,6 @@ function renderizarDRE() {
     tbody.innerHTML = html || `<tr><td colspan="${cols}"><div class="empty-state"><i class="fas fa-chart-pie"></i><p>Sem dados no DRE</p></div></td></tr>`;
 }
 
-// ============================================================
-// ANÁLISE
-// ============================================================
 function renderizarAnalise() {
     const cat = document.getElementById('filtroCategoriaAnalise')?.value || 'todas';
     const tipo = document.getElementById('filtroTipoAnalise')?.value || 'todos';
@@ -1275,9 +2094,9 @@ function renderizarAnalise() {
     }
 
     const ofensores = arr.slice(0, 5);
-    let html = `<div style="margin-bottom:16px;">
-        <h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">
-            <i class="fas fa-fire" style="color:var(--danger);"></i> Top 5 Ofensores (maiores desvios)
+    let html = `<div style="margin-bottom:18px;">
+        <h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px;font-weight:700;">
+            <i class="fas fa-fire" style="color:var(--danger);"></i> Top 5 Ofensores
         </h4>`;
     ofensores.forEach(o => {
         const icon = getIconDesvio(o.nivel);
@@ -1296,27 +2115,28 @@ function renderizarAnalise() {
     });
     html += `</div>`;
 
-    html += `<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">
+    html += `<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px;font-weight:700;">
         <i class="fas fa-list"></i> Todos os Desvios
     </h4>`;
-    html += `<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
-        <table style="font-size:11px;">
+    html += `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+        <table style="font-size:12px;">
             <thead><tr>
-                <th style="text-align:left;padding-left:16px;">Plano de Contas</th>
-                <th>Tipo</th><th>Projetado</th><th>Realizado</th><th>Desvio</th><th>%</th><th>Nível</th>
+                <th style="text-align:left;padding-left:14px;">Plano de Contas</th>
+                <th style="text-align:center;">Tipo</th><th style="text-align:right;">Projetado</th><th style="text-align:right;">Realizado</th>
+                <th style="text-align:right;">Desvio</th><th style="text-align:right;">%</th><th style="text-align:center;">Nível</th>
             </tr></thead><tbody>`;
     arrFiltrado.forEach(o => {
         const icon = getIconDesvio(o.nivel);
         const badge = getBadgeDesvio(o.nivel);
         const corPct = o.desvio >= 0 ? 'var(--success)' : 'var(--danger)';
         html += `<tr style="cursor:pointer;" onclick="abrirDetalheGrupo('${escapeHtml(o.chave)}')">
-            <td style="text-align:left;padding-left:16px;font-weight:600;">${escapeHtml(o.chave)}</td>
-            <td><span class="badge ${o.tipo === 'RECEITA' ? 'badge-receita' : 'badge-despesa'}">${o.tipo}</span></td>
-            <td class="cell-money" style="color:var(--info);">${formatarMoeda(o.p)}</td>
-            <td class="cell-money">${formatarMoeda(o.r)}</td>
-            <td class="cell-money" style="color:${corPct};font-weight:800;">${formatarMoeda(o.desvio)}</td>
-            <td style="color:${corPct};font-weight:700;">${o.pct >= 0 ? '+' : ''}${o.pct.toFixed(1)}%</td>
-            <td><span class="badge ${badge}"><i class="fas ${icon}"></i> ${o.nivel.toUpperCase()}</span></td>
+            <td style="text-align:left;padding-left:14px;font-weight:600;">${escapeHtml(o.chave)}</td>
+            <td style="text-align:center;"><span class="badge ${o.tipo === 'RECEITA' ? 'badge-receita' : 'badge-despesa'}">${o.tipo}</span></td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums;color:var(--info);">${formatarMoeda(o.p)}</td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums;">${formatarMoeda(o.r)}</td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:${corPct};">${formatarMoeda(o.desvio)}</td>
+            <td style="text-align:right;font-weight:600;color:${corPct};">${o.pct >= 0 ? '+' : ''}${o.pct.toFixed(1)}%</td>
+            <td style="text-align:center;"><span class="badge ${badge}"><i class="fas ${icon}"></i> ${o.nivel.toUpperCase()}</span></td>
         </tr>`;
     });
     html += `</tbody></table></div>`;
@@ -1354,9 +2174,6 @@ function exportarAnaliseCSV() {
     mostrarToast('CSV exportado!', 'success');
 }
 
-// ============================================================
-// POPUP DETALHAMENTO
-// ============================================================
 function abrirDetalheDashboard(tipo) {
     let lista = [];
     let titulo = '';
@@ -1434,19 +2251,19 @@ function abrirDetalheGenerico(titulo, lista) {
     if (lista.length === 0) {
         document.getElementById('detalheConteudo').innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><p>Nenhum registro</p></div>`;
     } else {
-        let html = '<table><thead><tr><th>Data</th><th>Fornecedor</th><th>Tipo</th><th>Projetado</th><th>Realizado</th><th>Desvio</th><th>Situação</th></tr></thead><tbody>';
+        let html = '<table><thead><tr><th>Data</th><th>Fornecedor</th><th style="text-align:center;">Tipo</th><th style="text-align:right;">Projetado</th><th style="text-align:right;">Realizado</th><th style="text-align:right;">Desvio</th><th style="text-align:center;">Situação</th></tr></thead><tbody>';
         lista.slice(0, 100).forEach(l => {
             const p = parseFloat(l.valor_projetado) || 0;
             const r = parseFloat(l.valor_realizado) || 0;
             const d = r - p;
             html += `<tr style="cursor:pointer;" onclick="fecharPopupDetalhe();abrirDetalheValor(${l.id},'desvio')">
                 <td>${formatarData(l.data)}</td>
-                <td style="text-align:left;">${escapeHtml(l.fornecedor || '-')}</td>
-                <td><span class="badge ${l.tipo === 'RECEITA' ? 'badge-receita' : 'badge-despesa'}">${l.tipo}</span></td>
-                <td class="cell-money" style="color:var(--info);">${formatarMoeda(p)}</td>
-                <td class="cell-money">${formatarMoeda(r)}</td>
-                <td class="cell-money" style="color:${d >= 0 ? 'var(--success)' : 'var(--danger)'};">${formatarMoeda(d)}</td>
-                <td><span class="badge ${getBadgeSituacao(l.situacao)}">${escapeHtml(l.situacao || '-')}</span></td>
+                <td>${escapeHtml(l.fornecedor || '-')}</td>
+                <td style="text-align:center;"><span class="badge ${l.tipo === 'RECEITA' ? 'badge-receita' : 'badge-despesa'}">${l.tipo}</span></td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;color:var(--info);">${formatarMoeda(p)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;">${formatarMoeda(r)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;color:${d >= 0 ? 'var(--success)' : 'var(--danger)'};font-weight:600;">${formatarMoeda(d)}</td>
+                <td style="text-align:center;"><span class="badge ${getBadgeSituacao(l.situacao)}">${escapeHtml(l.situacao || '-')}</span></td>
             </tr>`;
         });
         if (lista.length > 100) {
@@ -1462,9 +2279,6 @@ function fecharPopupDetalhe() {
     document.getElementById('popupDetalhe').classList.remove('active');
 }
 
-// ============================================================
-// ATUALIZAÇÃO RÁPIDA
-// ============================================================
 function abrirAtualizacaoRapida(id) {
     const l = lancamentos.find(i => i.id === id);
     if (!l) return;
@@ -1500,9 +2314,6 @@ async function confirmarAtualizacaoRapida() {
     } catch (err) { mostrarToast('Erro ao atualizar: ' + err.message, 'error'); }
 }
 
-// ============================================================
-// LANÇAMENTO / EXCLUSÃO
-// ============================================================
 function abrirPopupLancamento(tipo, categoria = 'GERAL') {
     document.getElementById('popupLancTitulo').textContent = tipo === 'RECEITA' ? 'Nova Receita' : 'Nova Despesa';
     document.getElementById('lancId').value = '';
@@ -1594,9 +2405,6 @@ async function confirmarExclusao() {
     } catch (err) { mostrarToast('Erro ao excluir: ' + err.message, 'error'); }
 }
 
-// ============================================================
-// NAVEGAÇÃO
-// ============================================================
 const TAB_TITLES = {
     lancamentos: { title: 'Lançamentos', sub: 'Todos os lançamentos financeiros', icon: 'fa-list' },
     receitas: { title: 'Receitas', sub: 'Entradas e recebimentos', icon: 'fa-arrow-up' },
@@ -1629,9 +2437,6 @@ function switchTab(tab) {
     if (tab === 'relatorio') { sortConfig = { campo: 'data', direcao: 'desc' }; renderizarRelatorio(); }
 }
 
-// ============================================================
-// RELATÓRIO
-// ============================================================
 function renderizarRelatorio() {
     const tipo = document.getElementById('filtroTipoRelatorio')?.value || 'todos';
     const cat = document.getElementById('filtroCategoriaRelatorio')?.value || 'todas';
@@ -1676,9 +2481,6 @@ function renderizarRelatorio() {
     tbody.innerHTML = html;
 }
 
-// ============================================================
-// PDF
-// ============================================================
 async function gerarPDFGenerico(titulo, filt, orientacao = 'landscape', corTitulo = '#FF8C00') {
     const f = v => (parseFloat(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     let tP = 0, tR = 0;
@@ -1754,7 +2556,7 @@ function gerarPDFReceitas() {
         }
         return true;
     });
-    gerarPDFGenerico('Relatório de Receitas', filt, 'landscape', '#16a34a');
+    gerarPDFGenerico('Relatório de Receitas', filt, 'landscape', '#0d9488');
 }
 function gerarPDFDespesas() {
     const termo = (document.getElementById('buscaDespesas')?.value || '').toLowerCase();
@@ -1863,9 +2665,6 @@ async function gerarPDFDRE() {
     } catch (err) { mostrarToast('Erro PDF: ' + err.message, 'error'); }
 }
 
-// ============================================================
-// POPUP PDF RELATÓRIO
-// ============================================================
 function abrirPopupPDFRelatorio() {
     document.getElementById('popupPDFRelatorio').classList.add('active');
     document.getElementById('pdfPreviewContainer').innerHTML = `<div class="empty-state"><i class="fas fa-file-pdf"></i><p>Configure os filtros e clique em "Pré-visualizar"</p></div>`;
@@ -1951,7 +2750,7 @@ async function gerarPDFRelatorioPopup() {
         const blob = await html2pdf().set(opt).from(temp).outputPdf('blob');
         pdfBlobAtual = blob;
         const url = URL.createObjectURL(blob);
-        document.getElementById('pdfPreviewContainer').innerHTML = `<iframe src="${url}" style="width:100%;height:500px;border:none;"></iframe>`;
+        document.getElementById('pdfPreviewContainer').innerHTML = `<iframe src="${url}" style="width:100%;height:520px;border:none;"></iframe>`;
         mostrarToast('Pré-visualização gerada!', 'success');
     } catch (err) { mostrarToast('Erro PDF: ' + err.message, 'error'); }
 }
@@ -1970,9 +2769,6 @@ function baixarPDFRelatorioPopup() {
     mostrarToast('PDF baixado!', 'success');
 }
 
-// ============================================================
-// INIT
-// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 QNUTRI Financeiro - Iniciando...');
     try {
@@ -1989,14 +2785,6 @@ document.addEventListener('DOMContentLoaded', () => {
     configurarSortTabela('tabelaDespesas', renderizarDespesas);
     configurarSortTabela('tabelaCopa', renderizarCopa);
     configurarSortTabela('tabelaRelatorio', renderizarRelatorio);
-
-    document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
-        item.addEventListener('click', () => {
-            if (window.innerWidth <= 900) {
-                document.getElementById('sidebar').classList.remove('open');
-            }
-        });
-    });
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
