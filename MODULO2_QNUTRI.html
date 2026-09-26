@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QNUTRI - Módulo Financeiro | ApliKado</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #ffe0b0 0%, #ffb84d 30%, #FF8C00 60%, #e07000 100%);
+            font-family: 'Poppins', sans-serif;
+            color: #1a0a00;
+            min-height: 100vh;
+            padding-bottom: 40px;
+        }
+        .main-header {
+            position: fixed; top: 0; left: 0; width: 100%;
+            background: rgba(10, 6, 2, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 140, 0, 0.15);
+            z-index: 1000; padding: 4px 14px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 42px; flex-wrap: nowrap; overflow: hidden; gap: 10px;
+        }
+        .logo { font-size: 15px; font-weight: 700; color: #fff; flex-shrink: 0; letter-spacing: -0.3px; }
+        .logo span { color: #FF8C00; }
+        .nav-menu { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; min-width: 0; }
+        .nav-menu a {
+            color: rgba(255, 255, 255, 0.75); text-decoration: none;
+            font-size: 10.5px; font-weight: 500; padding: 4px 9px;
+            border-radius: 6px; display: flex; align-items: center; gap: 5px;
+            cursor: pointer; transition: all 0.3s; white-space: nowrap; flex-shrink: 0;
+        }
+        .nav-menu a:hover { color: #fff; background: rgba(255, 140, 0, 0.15); }
+        .nav-menu a.btn-sair { color: #dc3545; background: rgba(220,53,69,0.1); }
+        .nav-menu a.btn-sair:hover { color: #fff; background: rgba(220,53,69,0.3); }
+        .nav-menu a i { font-size: 10px; }
+        .container {
+            max-width: 1500px; margin: 0 auto;
+            padding: 58px 16px 20px;
+            display: flex; flex-direction: column; gap: 16px;
+        }
+        .page-title { text-align: center; margin-bottom: 4px; }
+        .page-title h1 { font-size: 26px; font-weight: 800; color: #1a0a00; }
+        .page-title h1 i { color: #FF8C00; margin-right: 10px; }
+
+        .alert-erro {
+            display: none;
+            background: #fff3cd;
+            border-left: 5px solid #dc3545;
+            padding: 14px 18px;
+            border-radius: 12px;
+            font-size: 12.5px;
+            color: #721c24;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .alert-erro.show { display: block; }
+        .alert-erro strong { color: #dc3545; }
+
+        .dashboard {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px; margin-bottom: 6px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 140, 0, 0.15);
+            padding: 14px 16px; border-radius: 14px;
+            display: flex; flex-direction: column; gap: 4px;
+            transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(255,140,0,0.16); border-color: rgba(255,140,0,0.35); }
+        .stat-label { font-size: 10px; color: #7a3a00; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+        .stat-value { font-size: 20px; font-weight: 800; color: #1a0a00; line-height: 1.1; }
+        .stat-value.receita { color: #28a745; }
+        .stat-value.despesa { color: #dc3545; }
+        .stat-value.saldo { color: #FF8C00; }
+        .stat-value.saldo.negativo { color: #dc3545; }
+        .stat-value.projetado { color: #17a2b8; }
+
+        .tab-nav {
+            display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap;
+            border-bottom: 1px solid rgba(255,140,0,0.15); padding-bottom: 6px;
+        }
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 140, 0, 0.15);
+            padding: 9px 18px; font-family: 'Poppins', sans-serif;
+            font-size: 12px; font-weight: 700; color: #7a3a00;
+            cursor: pointer; border-radius: 10px; transition: all 0.3s;
+            display: flex; align-items: center; gap: 7px; letter-spacing: 0.2px;
+        }
+        .tab-btn:hover { background: rgba(255, 140, 0, 0.15); color: #1a0a00; }
+        .tab-btn.active { background: #FF8C00; color: #fff; border-color: #FF8C00; box-shadow: 0 6px 18px rgba(255, 140, 0, 0.3); }
+        .tab-btn i { font-size: 13px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .table-section {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            border-radius: 16px; padding: 18px;
+            border: 1px solid rgba(255, 140, 0, 0.15);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .table-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 14px; flex-wrap: wrap; gap: 10px;
+        }
+        .table-header h3 { font-size: 16px; color: #1a0a00; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+        .table-header h3 i { color: #FF8C00; }
+        .badge-count { background: #FF8C00; color: #fff; border-radius: 20px; padding: 2px 12px; font-size: 11px; font-weight: 700; }
+        .table-wrapper {
+            overflow: auto; max-height: calc(100vh - 400px);
+            border-radius: 12px; border: 1px solid rgba(255, 140, 0, 0.15);
+            background: #fff;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table thead th {
+            background: #FF8C00; color: #fff; font-size: 9.5px; font-weight: 800;
+            padding: 11px 8px; text-align: center; text-transform: uppercase;
+            letter-spacing: 0.4px; position: sticky; top: 0; z-index: 5;
+            white-space: nowrap; border-bottom: 2px solid #e07000;
+        }
+        table thead th:first-child { text-align: left; padding-left: 12px; }
+        table tbody td {
+            padding: 9px 8px; border-bottom: 1px solid #f0e5d5;
+            text-align: center; font-size: 11px; color: #1a0a00;
+            background: #fff; white-space: nowrap;
+        }
+        table tbody td:first-child { text-align: left; padding-left: 12px; font-weight: 600; }
+        table tbody tr:hover td { background: #fff8f0; }
+        table tbody tr.hidden { display: none; }
+
+        .badge {
+            display: inline-block; padding: 3px 10px; border-radius: 12px;
+            font-weight: 800; font-size: 9px; text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .badge-receita { background: #d4edda; color: #155724; }
+        .badge-despesa { background: #f8d7da; color: #721c24; }
+        .badge-pago { background: #d4edda; color: #155724; }
+        .badge-nao-pago { background: #f8d7da; color: #721c24; }
+        .badge-pendente { background: #fff3cd; color: #856404; }
+        .badge-ok { background: #d4edda; color: #155724; }
+        .badge-alerta { background: #fff3cd; color: #856404; }
+
+        .empty-state { text-align: center; padding: 50px 20px; color: #7a3a00; }
+        .empty-state i { font-size: 48px; color: rgba(255, 140, 0, 0.4); display: block; margin-bottom: 14px; }
+        .empty-state p { font-size: 13px; font-weight: 600; }
+
+        .resumo-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px; margin-bottom: 16px;
+        }
+        .resumo-card {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 140, 0, 0.15);
+            border-radius: 14px; padding: 16px 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .resumo-card h4 { font-size: 10px; color: #7a3a00; text-transform: uppercase; margin-bottom: 8px; font-weight: 800; letter-spacing: 0.6px; }
+        .resumo-card .valor { font-size: 22px; font-weight: 800; color: #1a0a00; line-height: 1.1; }
+        .resumo-card .valor.positivo { color: #28a745; }
+        .resumo-card .valor.negativo { color: #dc3545; }
+        .resumo-card .valor.neutro { color: #FF8C00; }
+        .resumo-card .detalhe { font-size: 10.5px; color: #7a3a00; margin-top: 6px; display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
+
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label {
+            font-size: 9.5px; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.6px; color: #7a3a00; white-space: nowrap;
+        }
+        .filter-group input, .filter-group select {
+            padding: 9px 12px; background: #fff;
+            border: 1.5px solid rgba(255, 140, 0, 0.25);
+            border-radius: 9px; color: #1a0a00;
+            font-family: 'Poppins', sans-serif; font-size: 12px; font-weight: 600;
+            outline: none; transition: all 0.24s; width: 100%;
+        }
+        .filter-group input:focus, .filter-group select:focus { border-color: #FF8C00; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.12); }
+
+        .search-box { position: relative; }
+        .search-box input {
+            padding: 10px 14px; background: #fff;
+            border: 1.5px solid rgba(255, 140, 0, 0.25);
+            border-radius: 9px; color: #1a0a00; font-size: 12px;
+            font-family: 'Poppins', sans-serif; outline: none;
+            transition: all 0.24s; width: 100%;
+        }
+        .search-box input:focus { border-color: #FF8C00; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.12); }
+        .search-box input::placeholder { color: #b07040; }
+
+        .btn-action {
+            font-family: 'Poppins', sans-serif; padding: 9px 16px;
+            border: none; border-radius: 10px; font-size: 12px;
+            font-weight: 700; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            transition: all 0.3s; white-space: nowrap; letter-spacing: 0.2px;
+        }
+        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.15); }
+        .btn-action:active { transform: translateY(0) scale(0.97); }
+        .btn-action:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+        .btn-primary { background: #FF8C00; color: #fff; }
+        .btn-primary:hover { background: #e07000; }
+        .btn-success { background: #28a745; color: #fff; }
+        .btn-success:hover { background: #1e7e34; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-danger:hover { background: #a71e2c; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+        .btn-info { background: #17a2b8; color: #fff; }
+        .btn-purple { background: #6f42c1; color: #fff; }
+        .btn-outline { background: rgba(255, 255, 255, 0.85); color: #7a3a00; border: 1.5px solid rgba(255, 140, 0, 0.35); }
+        .btn-outline:hover { background: #fff; border-color: #FF8C00; }
+        .btn-xs { padding: 4px 8px; font-size: 10px; }
+
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 2000; align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: #ffffff; border-radius: 20px;
+            border: 1px solid rgba(255, 140, 0, 0.2);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+            max-width: 1200px; width: 100%; max-height: 92vh;
+            overflow-y: auto; padding: 24px;
+            animation: modalSlide 0.3s ease; color: #1a0a00;
+        }
+        @keyframes modalSlide {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 20px; padding-bottom: 16px;
+            border-bottom: 2px solid #FF8C00; flex-wrap: wrap; gap: 12px;
+        }
+        .modal-header h2 {
+            font-size: 20px; font-weight: 800;
+            color: #1a0a00; display: flex; align-items: center; gap: 10px;
+        }
+        .modal-header h2 i { color: #FF8C00; }
+        .modal-header h2 span { color: #FF8C00; }
+        .modal-close {
+            width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+            border: none; background: #f5f0e8; color: #7a3a00; border-radius: 50%;
+            font-size: 18px; cursor: pointer; transition: all 0.24s; flex-shrink: 0;
+        }
+        .modal-close:hover { background: #dc3545; color: #fff; }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group label {
+            display: block; font-size: 10px; color: #7a3a00;
+            margin-bottom: 5px; text-transform: uppercase;
+            font-weight: 800; letter-spacing: 0.5px;
+        }
+        .form-group label i { color: #FF8C00; margin-right: 4px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 10px 13px; background: #fff;
+            border: 1.5px solid rgba(255, 140, 0, 0.25);
+            border-radius: 9px; color: #1a0a00;
+            font-size: 12.5px; font-family: 'Poppins', sans-serif;
+            font-weight: 600; outline: none; transition: all 0.24s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: #FF8C00; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.12);
+        }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+
+        .modal-actions {
+            display: flex; gap: 10px; justify-content: flex-end;
+            margin-top: 20px; padding-top: 16px;
+            border-top: 1px solid #f0e5d5;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 54px 12px 20px; }
+            .page-title h1 { font-size: 20px; }
+            .dashboard { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .stat-value { font-size: 16px; }
+            .tab-btn { padding: 7px 12px; font-size: 10.5px; }
+            .table-wrapper { max-height: none; }
+            table { font-size: 10px; }
+            table thead th, table tbody td { padding: 6px 4px; font-size: 9.5px; }
+            .modal-content { padding: 16px; }
+            .modal-header h2 { font-size: 16px; }
+            .form-row { flex-direction: column; gap: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo">Q<span>NUTRI</span></div>
+        <nav class="nav-menu">
+            <a href="CLIENT_QNUTRI.html"><i class="fas fa-arrow-left"></i> <span>Voltar</span></a>
+            <a onclick="carregarDados()"><i class="fas fa-sync"></i> <span>Recarregar</span></a>
+            <a class="btn-sair" onclick="window.location.href='CLIENT_QNUTRI.html'"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="page-title">
+            <h1><i class="fas fa-chart-line"></i> Módulo Financeiro</h1>
+        </div>
+
+        <div id="alertErro" class="alert-erro">
+            <strong>⚠️ Atenção:</strong> <span id="alertErroMsg"></span>
+        </div>
+
+        <div class="dashboard">
+            <div class="stat-card">
+                <span class="stat-label">Receitas (Faturado)</span>
+                <span id="totalReceitas" class="stat-value receita">R$ 0,00</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Despesas (Faturado)</span>
+                <span id="totalDespesas" class="stat-value despesa">R$ 0,00</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Saldo Faturado</span>
+                <span id="saldoRealizado" class="stat-value saldo">R$ 0,00</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Total Projetado</span>
+                <span id="totalProjetado" class="stat-value projetado">R$ 0,00</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Lançamentos</span>
+                <span id="totalLancamentos" class="stat-value">0</span>
+            </div>
+        </div>
+
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="lancamentos" onclick="switchTab('lancamentos')">
+                <i class="fas fa-list"></i> Lançamentos
+            </button>
+            <button class="tab-btn" data-tab="receitas" onclick="switchTab('receitas')">
+                <i class="fas fa-arrow-up"></i> Receitas
+            </button>
+            <button class="tab-btn" data-tab="despesas" onclick="switchTab('despesas')">
+                <i class="fas fa-arrow-down"></i> Despesas
+            </button>
+            <button class="tab-btn" data-tab="dre" onclick="switchTab('dre')">
+                <i class="fas fa-chart-pie"></i> DRE
+            </button>
+            <button class="tab-btn" data-tab="relatorio" onclick="switchTab('relatorio')">
+                <i class="fas fa-file-alt"></i> Relatório
+            </button>
+        </div>
+
+        <div id="tab-lancamentos" class="tab-content active">
+            <div class="table-section">
+                <div class="table-header">
+                    <h3><i class="fas fa-list"></i> Todos os Lançamentos <span class="badge-count" id="countLancamentos">0</span></h3>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <div class="search-box" style="min-width:200px;">
+                            <input type="text" id="buscaLancamentos" placeholder="🔍 Buscar fornecedor, NF..." oninput="renderizarLancamentos()">
+                        </div>
+                        <div class="filter-group" style="min-width:120px; flex:0 1 auto;">
+                            <select id="filtroTipoLanc" onchange="renderizarLancamentos()">
+                                <option value="todos">Todos os Tipos</option>
+                                <option value="RECEITA">Receitas</option>
+                                <option value="DESPESA">Despesas</option>
+                            </select>
+                        </div>
+                        <button class="btn-action btn-success" onclick="abrirPopupLancamento('RECEITA')">
+                            <i class="fas fa-plus"></i> Nova Receita
+                        </button>
+                        <button class="btn-action btn-danger" onclick="abrirPopupLancamento('DESPESA')">
+                            <i class="fas fa-plus"></i> Nova Despesa
+                        </button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:85px;">Vencto</th>
+                                <th style="width:70px;">Pago em</th>
+                                <th style="width:60px;">NF</th>
+                                <th style="width:70px;">Tipo</th>
+                                <th style="text-align:left; padding-left:12px;">Fornecedor / Cliente</th>
+                                <th style="width:110px;">Plano de Contas</th>
+                                <th style="width:95px;">Projetado</th>
+                                <th style="width:95px;">Faturado</th>
+                                <th style="width:95px;">Diferença</th>
+                                <th style="width:140px;">Situação</th>
+                                <th style="width:110px;">Banco</th>
+                                <th style="width:90px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoLancamentos"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-receitas" class="tab-content">
+            <div class="resumo-grid" id="resumoReceitas"></div>
+            <div class="table-section">
+                <div class="table-header">
+                    <h3><i class="fas fa-arrow-up"></i> Receitas <span class="badge-count" id="countReceitas">0</span></h3>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <div class="search-box" style="min-width:200px;">
+                            <input type="text" id="buscaReceitas" placeholder="🔍 Buscar fornecedor, NF..." oninput="renderizarReceitas()">
+                        </div>
+                        <div class="filter-group" style="min-width:130px; flex:0 1 auto;">
+                            <select id="filtroMesReceitas" onchange="renderizarReceitas()">
+                                <option value="todos">Todos os Meses</option>
+                                <option value="01">Janeiro</option><option value="02">Fevereiro</option>
+                                <option value="03">Março</option><option value="04">Abril</option>
+                                <option value="05">Maio</option><option value="06">Junho</option>
+                                <option value="07">Julho</option><option value="08">Agosto</option>
+                                <option value="09">Setembro</option><option value="10">Outubro</option>
+                                <option value="11">Novembro</option><option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="filter-group" style="min-width:130px; flex:0 1 auto;">
+                            <select id="filtroSituacaoReceitas" onchange="renderizarReceitas()">
+                                <option value="todas">Todas as Situações</option>
+                                <option value="PAGO">Pago</option>
+                                <option value="NÃO PAGO">Não Pago</option>
+                                <option value="PENDENTE MESES ANTERIORES">Pendente Meses Anteriores</option>
+                                <option value="PAGO - MESES ANTERIORES">Pago - Meses Anteriores</option>
+                            </select>
+                        </div>
+                        <button class="btn-action btn-success" onclick="abrirPopupLancamento('RECEITA')">
+                            <i class="fas fa-plus"></i> Nova
+                        </button>
+                        <button class="btn-action btn-primary" onclick="gerarPDFReceitas()">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:85px;">Vencto</th>
+                                <th style="width:70px;">Pago em</th>
+                                <th style="width:60px;">NF</th>
+                                <th style="text-align:left; padding-left:12px;">Fornecedor / Cliente</th>
+                                <th style="width:110px;">Plano de Contas</th>
+                                <th style="width:95px;">Projetado</th>
+                                <th style="width:95px;">Faturado</th>
+                                <th style="width:95px;">Diferença</th>
+                                <th style="width:140px;">Situação</th>
+                                <th style="width:110px;">Banco</th>
+                                <th style="width:90px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoReceitas"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-despesas" class="tab-content">
+            <div class="resumo-grid" id="resumoDespesas"></div>
+            <div class="table-section">
+                <div class="table-header">
+                    <h3><i class="fas fa-arrow-down"></i> Despesas <span class="badge-count" id="countDespesas">0</span></h3>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <div class="search-box" style="min-width:200px;">
+                            <input type="text" id="buscaDespesas" placeholder="🔍 Buscar fornecedor, NF..." oninput="renderizarDespesas()">
+                        </div>
+                        <div class="filter-group" style="min-width:130px; flex:0 1 auto;">
+                            <select id="filtroMesDespesas" onchange="renderizarDespesas()">
+                                <option value="todos">Todos os Meses</option>
+                                <option value="01">Janeiro</option><option value="02">Fevereiro</option>
+                                <option value="03">Março</option><option value="04">Abril</option>
+                                <option value="05">Maio</option><option value="06">Junho</option>
+                                <option value="07">Julho</option><option value="08">Agosto</option>
+                                <option value="09">Setembro</option><option value="10">Outubro</option>
+                                <option value="11">Novembro</option><option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <button class="btn-action btn-danger" onclick="abrirPopupLancamento('DESPESA')">
+                            <i class="fas fa-plus"></i> Nova
+                        </button>
+                        <button class="btn-action btn-primary" onclick="gerarPDFDespesas()">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:85px;">Vencto</th>
+                                <th style="width:70px;">Pago em</th>
+                                <th style="width:60px;">NF</th>
+                                <th style="text-align:left; padding-left:12px;">Fornecedor / Cliente</th>
+                                <th style="width:110px;">Plano de Contas</th>
+                                <th style="width:95px;">Projetado</th>
+                                <th style="width:95px;">Faturado</th>
+                                <th style="width:95px;">Diferença</th>
+                                <th style="width:140px;">Situação</th>
+                                <th style="width:110px;">Banco</th>
+                                <th style="width:90px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoDespesas"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-dre" class="tab-content">
+            <div class="table-section">
+                <div class="table-header">
+                    <h3><i class="fas fa-chart-pie"></i> DRE — Demonstrativo de Resultados</h3>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <div class="filter-group" style="min-width:140px; flex:0 1 auto;">
+                            <select id="filtroMesDRE" onchange="renderizarDRE()">
+                                <option value="todos">Todos os Meses</option>
+                                <option value="01">Janeiro</option><option value="02">Fevereiro</option>
+                                <option value="03">Março</option><option value="04">Abril</option>
+                                <option value="05">Maio</option><option value="06">Junho</option>
+                                <option value="07">Julho</option><option value="08">Agosto</option>
+                                <option value="09">Setembro</option><option value="10">Outubro</option>
+                                <option value="11">Novembro</option><option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <button class="btn-action btn-primary" onclick="gerarPDFDRE()">
+                            <i class="fas fa-file-pdf"></i> Gerar PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="text-align:left; padding-left:12px; width:40%;">Descrição</th>
+                                <th style="width:15%;">Projetado</th>
+                                <th style="width:15%;">Faturado</th>
+                                <th style="width:15%;">Diferença</th>
+                                <th style="width:15%;">% Realizado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoDRE"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-relatorio" class="tab-content">
+            <div class="resumo-grid" id="resumoRelatorio"></div>
+            <div class="table-section">
+                <div class="table-header">
+                    <h3><i class="fas fa-file-alt"></i> Relatório Detalhado</h3>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <div class="filter-group" style="min-width:130px; flex:0 1 auto;">
+                            <select id="filtroTipoRelatorio" onchange="renderizarRelatorio()">
+                                <option value="todos">Todos os Tipos</option>
+                                <option value="RECEITA">Apenas Receitas</option>
+                                <option value="DESPESA">Apenas Despesas</option>
+                            </select>
+                        </div>
+                        <div class="filter-group" style="min-width:130px; flex:0 1 auto;">
+                            <select id="filtroMesRelatorio" onchange="renderizarRelatorio()">
+                                <option value="todos">Todos os Meses</option>
+                                <option value="01">Janeiro</option><option value="02">Fevereiro</option>
+                                <option value="03">Março</option><option value="04">Abril</option>
+                                <option value="05">Maio</option><option value="06">Junho</option>
+                                <option value="07">Julho</option><option value="08">Agosto</option>
+                                <option value="09">Setembro</option><option value="10">Outubro</option>
+                                <option value="11">Novembro</option><option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="search-box" style="min-width:150px;">
+                            <input type="text" id="buscaRelatorio" placeholder="🔍 Buscar..." oninput="renderizarRelatorio()">
+                        </div>
+                        <button class="btn-action btn-primary" onclick="gerarPDFRelatorio()">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:85px;">Vencto</th>
+                                <th style="width:70px;">Pago em</th>
+                                <th style="width:60px;">NF</th>
+                                <th style="width:75px;">Tipo</th>
+                                <th style="text-align:left; padding-left:12px;">Fornecedor / Cliente</th>
+                                <th style="width:110px;">Plano de Contas</th>
+                                <th style="width:95px;">Projetado</th>
+                                <th style="width:95px;">Faturado</th>
+                                <th style="width:95px;">Diferença</th>
+                                <th style="width:140px;">Situação</th>
+                                <th style="width:110px;">Banco</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoRelatorio"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="popupLancamento" class="modal-overlay">
+        <div class="modal-content" style="max-width:720px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> <span id="popupLancTitulo">Novo Lançamento</span></h2>
+                <button class="modal-close" onclick="fecharPopupLancamento()">✕</button>
+            </div>
+            <form id="formLancamento" onsubmit="salvarLancamento(event)">
+                <input type="hidden" id="lancId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><i class="fas fa-tag"></i> Tipo *</label>
+                        <select id="lancTipo" required>
+                            <option value="RECEITA">Receita</option>
+                            <option value="DESPESA">Despesa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-calendar"></i> Vencto</label>
+                        <input type="date" id="lancData">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-check-circle"></i> Pago em</label>
+                        <input type="text" id="lancPagoEm" placeholder="Ex: 03/08" maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-file-invoice"></i> NF</label>
+                        <input type="text" id="lancNF" placeholder="Nº NF" maxlength="50">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-building"></i> Fornecedor / Cliente *</label>
+                    <input type="text" id="lancFornecedor" required placeholder="Ex: SM LANCHONETE">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><i class="fas fa-sitemap"></i> Plano de Contas</label>
+                        <input type="text" id="lancPlano" placeholder="Ex: RECEBIMENTOS" value="RECEBIMENTOS">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-info-circle"></i> Situação</label>
+                        <select id="lancSituacao">
+                            <option value="">Selecione...</option>
+                            <option value="PAGO">PAGO</option>
+                            <option value="NÃO PAGO">NÃO PAGO</option>
+                            <option value="PENDENTE MESES ANTERIORES">PENDENTE MESES ANTERIORES</option>
+                            <option value="PAGO - MESES ANTERIORES">PAGO - MESES ANTERIORES</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><i class="fas fa-bullseye"></i> Valor Projetado (R$)</label>
+                        <input type="number" id="lancProjetado" step="0.01" value="0" placeholder="0,00">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-money-bill-wave"></i> Valor Faturado (R$)</label>
+                        <input type="number" id="lancRealizado" step="0.01" value="0" placeholder="0,00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><i class="fas fa-university"></i> Banco</label>
+                        <select id="lancBanco">
+                            <option value="">Selecione...</option>
+                            <option value="Bco Brasil JD">Bco Brasil JD</option>
+                            <option value="Bco Brasil CL">Bco Brasil CL</option>
+                            <option value="Bradesco NR">Bradesco NR</option>
+                            <option value="Bradesco CL">Bradesco CL</option>
+                            <option value="Itaú">Itaú</option>
+                            <option value="Santander">Santander</option>
+                            <option value="Caixa">Caixa</option>
+                            <option value="Nubank">Nubank</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:2;">
+                        <label><i class="fas fa-comment"></i> Observação</label>
+                        <input type="text" id="lancObservacao" placeholder="Ex: Diferença evento 10 Jan">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-action btn-secondary" onclick="fecharPopupLancamento()">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn-action btn-primary">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="popupExclusao" class="modal-overlay">
+        <div class="modal-content" style="max-width:440px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-exclamation-triangle" style="color:#dc3545;"></i> <span style="color:#dc3545;">Confirmar Exclusão</span></h2>
+                <button class="modal-close" onclick="fecharPopupExclusao()">✕</button>
+            </div>
+            <p style="color: #7a3a00; margin-bottom: 20px; font-size: 13px; font-weight: 600;">
+                Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.
+            </p>
+            <div class="modal-actions">
+                <button class="btn-action btn-secondary" onclick="fecharPopupExclusao()">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button class="btn-action btn-danger" onclick="confirmarExclusao()">
+                    <i class="fas fa-trash"></i> Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // SUPABASE — QNUTRI
+        // ============================================================
+        const SUPABASE_URL = "https://avzxplcdutqzlxfievza.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_rkwsOtfEMpic9PsiExxC_w_rzYqZNRs";
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let lancamentos = [];
+        let lancamentoParaExcluir = null;
+
+        function formatarMoeda(v) {
+            const n = parseFloat(v) || 0;
+            const s = n < 0 ? '-' : '';
+            return `${s}R$ ${Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+        function formatarData(d) {
+            if (!d) return '-';
+            const p = String(d).split('-');
+            if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
+            return d;
+        }
+        function getMesAno(d) {
+            if (!d) return '';
+            const p = String(d).split('-');
+            if (p.length === 3) return `${p[0]}-${p[1]}`;
+            return '';
+        }
+        function escapeHtml(t) {
+            if (t === null || t === undefined) return '';
+            return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+        function mostrarToast(msg, tipo = '') {
+            const t = document.createElement('div');
+            t.style.cssText = `position: fixed; bottom: 24px; right: 24px; z-index: 10000;
+                background: ${tipo === 'error' ? '#dc3545' : (tipo === 'warning' ? '#ffc107' : '#28a745')};
+                color: ${tipo === 'warning' ? '#212529' : '#fff'};
+                padding: 14px 22px; border-radius: 12px; font-size: 13px;
+                font-family: 'Poppins', sans-serif; font-weight: 700;
+                box-shadow: 0 12px 32px rgba(0,0,0,0.25); max-width: 400px;`;
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => {
+                t.style.transition = 'opacity 0.3s, transform 0.3s';
+                t.style.opacity = '0'; t.style.transform = 'translateX(100%)';
+                setTimeout(() => t.remove(), 350);
+            }, 4000);
+        }
+        function getBadgeSituacao(s) {
+            if (!s) return 'badge-alerta';
+            const sl = s.toUpperCase();
+            if (sl === 'PAGO') return 'badge-pago';
+            if (sl === 'NÃO PAGO' || sl === 'NAO PAGO') return 'badge-nao-pago';
+            if (sl.includes('PENDENTE')) return 'badge-pendente';
+            if (sl.includes('PAGO')) return 'badge-pago';
+            return 'badge-alerta';
+        }
+        function mostrarAlertaErro(msg) {
+            const box = document.getElementById('alertErro');
+            const el = document.getElementById('alertErroMsg');
+            if (!box || !el) return;
+            el.innerHTML = msg;
+            box.classList.add('show');
+        }
+        function esconderAlertaErro() {
+            const box = document.getElementById('alertErro');
+            if (box) box.classList.remove('show');
+        }
+
+        async function carregarDados() {
+            esconderAlertaErro();
+            try {
+                const { data, error } = await supabaseClient
+                    .from('qnutri_lancamentos')
+                    .select('*')
+                    .order('data', { ascending: false, nullsFirst: false });
+
+                if (error) {
+                    console.error('Erro Supabase:', error);
+                    if (error.message.includes('Could not find the table') || error.code === '42P01' || error.code === 'PGRST205') {
+                        mostrarAlertaErro('A tabela <strong>qnutri_lancamentos</strong> não existe no Supabase da QNUTRI. Execute o SQL de criação no SQL Editor antes de continuar.');
+                    } else {
+                        mostrarAlertaErro('Erro ao carregar dados: ' + escapeHtml(error.message));
+                    }
+                    mostrarToast('Erro ao carregar: ' + error.message, 'error');
+                    lancamentos = [];
+                    renderizarTudo();
+                    return;
+                }
+
+                lancamentos = data || [];
+                renderizarTudo();
+
+                if (lancamentos.length === 0) {
+                    mostrarToast('📋 Tabela vazia. Clique em "+ Nova Receita" ou "+ Nova Despesa" para começar.', 'warning');
+                } else {
+                    mostrarToast(`✅ ${lancamentos.length} lançamentos carregados!`);
+                }
+            } catch (err) {
+                console.error('Erro geral:', err);
+                mostrarAlertaErro('Erro de conexão: ' + escapeHtml(err.message));
+                mostrarToast('Erro: ' + err.message, 'error');
+                lancamentos = [];
+                renderizarTudo();
+            }
+        }
+
+        function renderizarTudo() {
+            atualizarDashboard();
+            renderizarLancamentos();
+            renderizarReceitas();
+            renderizarDespesas();
+            renderizarDRE();
+            renderizarRelatorio();
+        }
+
+        function atualizarDashboard() {
+            const totRec = lancamentos.filter(l => l.tipo === 'RECEITA')
+                .reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
+            const totDesp = lancamentos.filter(l => l.tipo === 'DESPESA')
+                .reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
+            const totProj = lancamentos
+                .reduce((s, l) => s + (parseFloat(l.valor_projetado) || 0), 0);
+            const saldo = totRec - totDesp;
+
+            document.getElementById('totalReceitas').textContent = formatarMoeda(totRec);
+            document.getElementById('totalDespesas').textContent = formatarMoeda(totDesp);
+            const el = document.getElementById('saldoRealizado');
+            el.textContent = formatarMoeda(saldo);
+            el.className = 'stat-value saldo' + (saldo < 0 ? ' negativo' : '');
+            document.getElementById('totalProjetado').textContent = formatarMoeda(totProj);
+            document.getElementById('totalLancamentos').textContent = lancamentos.length;
+        }
+
+        function gerarLinhaTabela(l, comTipo = true, comAcoes = true) {
+            const p = parseFloat(l.valor_projetado) || 0;
+            const r = parseFloat(l.valor_realizado) || 0;
+            const d = r - p;
+            const badgeSit = getBadgeSituacao(l.situacao);
+            const badgeTipo = l.tipo === 'RECEITA' ? 'badge-receita' : 'badge-despesa';
+
+            let html = `<tr>
+                <td>${formatarData(l.data)}</td>
+                <td>${escapeHtml(l.pago_em || '-')}</td>
+                <td>${escapeHtml(l.nf || '-')}</td>`;
+            if (comTipo) html += `<td><span class="badge ${badgeTipo}" style="font-size:8.5px;">${l.tipo}</span></td>`;
+            html += `<td style="text-align:left; padding-left:12px; color:#1a0a00; font-weight:600;">${escapeHtml(l.fornecedor || '-')}</td>
+                <td>${escapeHtml(l.plano_contas || '-')}</td>
+                <td style="color:#17a2b8; font-weight:700;">${formatarMoeda(p)}</td>
+                <td style="color:${l.tipo === 'RECEITA' ? '#28a745' : '#dc3545'}; font-weight:700;">${formatarMoeda(r)}</td>
+                <td style="color:${d >= 0 ? '#28a745' : '#dc3545'}; font-weight:700;">${formatarMoeda(d)}</td>
+                <td><span class="badge ${badgeSit}" style="font-size:8.5px;">${escapeHtml(l.situacao || '-')}</span></td>
+                <td>${escapeHtml(l.banco || '-')}</td>`;
+            if (comAcoes) {
+                html += `<td>
+                    <button class="btn-action btn-outline btn-xs" onclick="editarLancamento(${l.id})" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="btn-action btn-danger btn-xs" onclick="abrirPopupExclusao(${l.id})" title="Excluir"><i class="fas fa-trash"></i></button>
+                </td>`;
+            }
+            html += `</tr>`;
+            return html;
+        }
+
+        function renderizarLancamentos() {
+            const termo = (document.getElementById('buscaLancamentos')?.value || '').toLowerCase();
+            const tipo = document.getElementById('filtroTipoLanc')?.value || 'todos';
+            const filt = lancamentos.filter(l => {
+                if (tipo !== 'todos' && l.tipo !== tipo) return false;
+                if (termo) {
+                    const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${l.plano_contas || ''}`.toLowerCase();
+                    if (!txt.includes(termo)) return false;
+                }
+                return true;
+            });
+
+            document.getElementById('countLancamentos').textContent = filt.length;
+            const tbody = document.getElementById('corpoLancamentos');
+            if (filt.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="12">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>Nenhum lançamento encontrado</p>
+                        <p style="font-size:11px; margin-top:6px; font-weight:500;">Clique em "Nova Receita" ou "Nova Despesa" para começar.</p>
+                    </div>
+                </td></tr>`;
+                return;
+            }
+            let html = '';
+            filt.forEach(l => { html += gerarLinhaTabela(l, true, true); });
+            tbody.innerHTML = html;
+        }
+
+        function renderizarReceitas() {
+            const termo = (document.getElementById('buscaReceitas')?.value || '').toLowerCase();
+            const mes = document.getElementById('filtroMesReceitas')?.value || 'todos';
+            const sit = document.getElementById('filtroSituacaoReceitas')?.value || 'todas';
+            const filt = lancamentos.filter(l => {
+                if (l.tipo !== 'RECEITA') return false;
+                if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
+                if (sit !== 'todas' && (l.situacao || '').toUpperCase() !== sit.toUpperCase()) return false;
+                if (termo) {
+                    const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${l.plano_contas || ''}`.toLowerCase();
+                    if (!txt.includes(termo)) return false;
+                }
+                return true;
+            });
+
+            const tP = filt.reduce((s, l) => s + (parseFloat(l.valor_projetado) || 0), 0);
+            const tR = filt.reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
+
+            document.getElementById('countReceitas').textContent = filt.length;
+            document.getElementById('resumoReceitas').innerHTML = `
+                <div class="resumo-card"><h4>Total Projetado</h4><div class="valor neutro">${formatarMoeda(tP)}</div></div>
+                <div class="resumo-card"><h4>Total Faturado</h4><div class="valor positivo">${formatarMoeda(tR)}</div></div>
+                <div class="resumo-card"><h4>Diferença</h4><div class="valor ${tR - tP >= 0 ? 'positivo' : 'negativo'}">${formatarMoeda(tR - tP)}</div></div>
+                <div class="resumo-card"><h4>% Realizado</h4><div class="valor neutro">${tP > 0 ? ((tR / tP) * 100).toFixed(1) : '100.0'}%</div></div>
+            `;
+
+            const tbody = document.getElementById('corpoReceitas');
+            if (filt.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><i class="fas fa-arrow-up"></i><p>Nenhuma receita encontrada</p></div></td></tr>`;
+                return;
+            }
+            let html = '';
+            filt.forEach(l => { html += gerarLinhaTabela(l, false, true); });
+            tbody.innerHTML = html;
+        }
+
+        function renderizarDespesas() {
+            const termo = (document.getElementById('buscaDespesas')?.value || '').toLowerCase();
+            const mes = document.getElementById('filtroMesDespesas')?.value || 'todos';
+            const filt = lancamentos.filter(l => {
+                if (l.tipo !== 'DESPESA') return false;
+                if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
+                if (termo) {
+                    const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${l.plano_contas || ''}`.toLowerCase();
+                    if (!txt.includes(termo)) return false;
+                }
+                return true;
+            });
+
+            const tP = filt.reduce((s, l) => s + (parseFloat(l.valor_projetado) || 0), 0);
+            const tR = filt.reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
+
+            document.getElementById('countDespesas').textContent = filt.length;
+            document.getElementById('resumoDespesas').innerHTML = `
+                <div class="resumo-card"><h4>Total Projetado</h4><div class="valor neutro">${formatarMoeda(tP)}</div></div>
+                <div class="resumo-card"><h4>Total Faturado</h4><div class="valor negativo">${formatarMoeda(tR)}</div></div>
+                <div class="resumo-card"><h4>Diferença</h4><div class="valor ${tR - tP <= 0 ? 'positivo' : 'negativo'}">${formatarMoeda(tR - tP)}</div></div>
+                <div class="resumo-card"><h4>% Realizado</h4><div class="valor neutro">${tP > 0 ? ((tR / tP) * 100).toFixed(1) : '0.0'}%</div></div>
+            `;
+
+            const tbody = document.getElementById('corpoDespesas');
+            if (filt.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><i class="fas fa-arrow-down"></i><p>Nenhuma despesa encontrada</p><p style="font-size:11px; margin-top:6px; font-weight:500;">Clique em "Nova" para começar.</p></div></td></tr>`;
+                return;
+            }
+            let html = '';
+            filt.forEach(l => { html += gerarLinhaTabela(l, false, true); });
+            tbody.innerHTML = html;
+        }
+
+        function renderizarDRE() {
+            const mes = document.getElementById('filtroMesDRE')?.value || 'todos';
+            const filt = lancamentos.filter(l => mes === 'todos' || getMesAno(l.data).endsWith(`-${mes}`));
+
+            const grupos = {};
+            filt.forEach(l => {
+                const chave = l.plano_contas || (l.tipo === 'RECEITA' ? 'Receitas não classificadas' : 'Despesas não classificadas');
+                if (!grupos[chave]) grupos[chave] = { p: 0, r: 0, tipo: l.tipo };
+                grupos[chave].p += parseFloat(l.valor_projetado) || 0;
+                grupos[chave].r += parseFloat(l.valor_realizado) || 0;
+            });
+
+            let tPR = 0, tRR = 0, tPD = 0, tRD = 0;
+            Object.values(grupos).forEach(g => {
+                if (g.tipo === 'RECEITA') { tPR += g.p; tRR += g.r; }
+                else { tPD += g.p; tRD += g.r; }
+            });
+            const lucroP = tPR - tPD;
+            const lucroR = tRR - tRD;
+
+            let html = '';
+            html += `<tr style="background: rgba(40,167,69,0.1); border-top: 2px solid #28a745;">
+                <td style="font-weight:800; color:#28a745; text-align:left; padding-left:12px; font-size:12.5px;">RECEITAS</td>
+                <td style="color:#28a745; font-weight:800; font-size:12.5px;">${formatarMoeda(tPR)}</td>
+                <td style="color:#28a745; font-weight:800; font-size:12.5px;">${formatarMoeda(tRR)}</td>
+                <td style="color:${tRR - tPR >= 0 ? '#28a745' : '#dc3545'}; font-weight:800;">${formatarMoeda(tRR - tPR)}</td>
+                <td style="font-weight:700;">${tPR > 0 ? ((tRR / tPR) * 100).toFixed(1) : '100.0'}%</td>
+            </tr>`;
+
+            Object.entries(grupos).filter(([_, g]) => g.tipo === 'RECEITA').forEach(([k, g]) => {
+                const d = g.r - g.p;
+                html += `<tr>
+                    <td style="text-align:left; padding-left:30px; color:#7a3a00; font-weight:600;">${escapeHtml(k)}</td>
+                    <td style="color:#17a2b8; font-weight:600;">${formatarMoeda(g.p)}</td>
+                    <td style="color:#28a745; font-weight:600;">${formatarMoeda(g.r)}</td>
+                    <td style="color:${d >= 0 ? '#28a745' : '#dc3545'}; font-weight:600;">${formatarMoeda(d)}</td>
+                    <td style="font-weight:600;">${g.p > 0 ? ((g.r / g.p) * 100).toFixed(1) : '100.0'}%</td>
+                </tr>`;
+            });
+
+            html += `<tr style="background: rgba(220,53,69,0.1); border-top: 2px solid #dc3545;">
+                <td style="font-weight:800; color:#dc3545; text-align:left; padding-left:12px; font-size:12.5px;">DESPESAS</td>
+                <td style="color:#dc3545; font-weight:800; font-size:12.5px;">${formatarMoeda(tPD)}</td>
+                <td style="color:#dc3545; font-weight:800; font-size:12.5px;">${formatarMoeda(tRD)}</td>
+                <td style="color:${tRD - tPD <= 0 ? '#28a745' : '#dc3545'}; font-weight:800;">${formatarMoeda(tRD - tPD)}</td>
+                <td style="font-weight:700;">${tPD > 0 ? ((tRD / tPD) * 100).toFixed(1) : '0.0'}%</td>
+            </tr>`;
+
+            Object.entries(grupos).filter(([_, g]) => g.tipo === 'DESPESA').forEach(([k, g]) => {
+                const d = g.r - g.p;
+                html += `<tr>
+                    <td style="text-align:left; padding-left:30px; color:#7a3a00; font-weight:600;">${escapeHtml(k)}</td>
+                    <td style="color:#17a2b8; font-weight:600;">${formatarMoeda(g.p)}</td>
+                    <td style="color:#dc3545; font-weight:600;">${formatarMoeda(g.r)}</td>
+                    <td style="color:${d <= 0 ? '#28a745' : '#dc3545'}; font-weight:600;">${formatarMoeda(d)}</td>
+                    <td style="font-weight:600;">${g.p > 0 ? ((g.r / g.p) * 100).toFixed(1) : '0.0'}%</td>
+                </tr>`;
+            });
+
+            html += `<tr style="background: rgba(255,140,0,0.12); border-top: 2px solid #FF8C00;">
+                <td style="font-weight:800; color:#FF8C00; text-align:left; padding-left:12px; font-size:13px;">RESULTADO (LUCRO/PREJUÍZO)</td>
+                <td style="color:#FF8C00; font-weight:800; font-size:13px;">${formatarMoeda(lucroP)}</td>
+                <td style="color:${lucroR >= 0 ? '#28a745' : '#dc3545'}; font-weight:800; font-size:13px;">${formatarMoeda(lucroR)}</td>
+                <td style="color:#FF8C00; font-weight:700;">${formatarMoeda(lucroR - lucroP)}</td>
+                <td style="font-weight:700;">${tPR > 0 ? ((lucroR / tPR) * 100).toFixed(1) : '0.0'}%</td>
+            </tr>`;
+
+            const tbody = document.getElementById('corpoDRE');
+            tbody.innerHTML = html || `<tr><td colspan="5"><div class="empty-state"><i class="fas fa-chart-pie"></i><p>Sem dados no DRE</p></div></td></tr>`;
+        }
+
+        function renderizarRelatorio() {
+            const tipo = document.getElementById('filtroTipoRelatorio')?.value || 'todos';
+            const mes = document.getElementById('filtroMesRelatorio')?.value || 'todos';
+            const termo = (document.getElementById('buscaRelatorio')?.value || '').toLowerCase();
+
+            const filt = lancamentos.filter(l => {
+                if (tipo !== 'todos' && l.tipo !== tipo) return false;
+                if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
+                if (termo) {
+                    const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${l.plano_contas || ''}`.toLowerCase();
+                    if (!txt.includes(termo)) return false;
+                }
+                return true;
+            });
+
+            let tPR = 0, tRR = 0, tPD = 0, tRD = 0;
+            filt.forEach(l => {
+                const p = parseFloat(l.valor_projetado) || 0;
+                const r = parseFloat(l.valor_realizado) || 0;
+                if (l.tipo === 'RECEITA') { tPR += p; tRR += r; }
+                else { tPD += p; tRD += r; }
+            });
+            const sP = tPR - tPD;
+            const sR = tRR - tRD;
+
+            document.getElementById('resumoRelatorio').innerHTML = `
+                <div class="resumo-card"><h4>Receitas</h4><div class="valor positivo">${formatarMoeda(tRR)}</div><div class="detalhe"><span>Projetado: ${formatarMoeda(tPR)}</span><span>${tPR > 0 ? ((tRR / tPR) * 100).toFixed(1) : '100.0'}%</span></div></div>
+                <div class="resumo-card"><h4>Despesas</h4><div class="valor negativo">${formatarMoeda(tRD)}</div><div class="detalhe"><span>Projetado: ${formatarMoeda(tPD)}</span><span>${tPD > 0 ? ((tRD / tPD) * 100).toFixed(1) : '0.0'}%</span></div></div>
+                <div class="resumo-card"><h4>Saldo</h4><div class="valor ${sR >= 0 ? 'positivo' : 'negativo'}">${formatarMoeda(sR)}</div><div class="detalhe"><span>Projetado: ${formatarMoeda(sP)}</span><span>${sP !== 0 ? ((sR / Math.abs(sP)) * 100).toFixed(1) : '0.0'}%</span></div></div>
+            `;
+
+            const tbody = document.getElementById('corpoRelatorio');
+            if (filt.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><i class="fas fa-file-alt"></i><p>Nenhum lançamento encontrado</p></div></td></tr>`;
+                return;
+            }
+            let html = '';
+            filt.forEach(l => { html += gerarLinhaTabela(l, true, false); });
+            tbody.innerHTML = html;
+        }
+
+        function abrirPopupLancamento(tipo) {
+            document.getElementById('popupLancTitulo').textContent = tipo === 'RECEITA' ? 'Nova Receita' : 'Nova Despesa';
+            document.getElementById('lancId').value = '';
+            document.getElementById('lancTipo').value = tipo;
+            document.getElementById('lancData').value = new Date().toISOString().split('T')[0];
+            document.getElementById('lancPagoEm').value = '';
+            document.getElementById('lancNF').value = '';
+            document.getElementById('lancFornecedor').value = '';
+            document.getElementById('lancPlano').value = tipo === 'RECEITA' ? 'RECEBIMENTOS' : '';
+            document.getElementById('lancSituacao').value = '';
+            document.getElementById('lancProjetado').value = '0';
+            document.getElementById('lancRealizado').value = '0';
+            document.getElementById('lancBanco').value = '';
+            document.getElementById('lancObservacao').value = '';
+            document.getElementById('popupLancamento').classList.add('active');
+            setTimeout(() => document.getElementById('lancFornecedor').focus(), 150);
+        }
+        function editarLancamento(id) {
+            const l = lancamentos.find(i => i.id === id);
+            if (!l) return;
+            document.getElementById('popupLancTitulo').textContent = l.tipo === 'RECEITA' ? 'Editar Receita' : 'Editar Despesa';
+            document.getElementById('lancId').value = l.id;
+            document.getElementById('lancTipo').value = l.tipo;
+            document.getElementById('lancData').value = l.data || '';
+            document.getElementById('lancPagoEm').value = l.pago_em || '';
+            document.getElementById('lancNF').value = l.nf || '';
+            document.getElementById('lancFornecedor').value = l.fornecedor || '';
+            document.getElementById('lancPlano').value = l.plano_contas || '';
+            document.getElementById('lancSituacao').value = l.situacao || '';
+            document.getElementById('lancProjetado').value = l.valor_projetado || 0;
+            document.getElementById('lancRealizado').value = l.valor_realizado || 0;
+            document.getElementById('lancBanco').value = l.banco || '';
+            document.getElementById('lancObservacao').value = l.observacao || '';
+            document.getElementById('popupLancamento').classList.add('active');
+        }
+        function fecharPopupLancamento() { document.getElementById('popupLancamento').classList.remove('active'); }
+
+        async function salvarLancamento(e) {
+            e.preventDefault();
+            const id = document.getElementById('lancId').value;
+            const dados = {
+                tipo: document.getElementById('lancTipo').value,
+                data: document.getElementById('lancData').value || null,
+                pago_em: document.getElementById('lancPagoEm').value.trim() || null,
+                nf: document.getElementById('lancNF').value.trim() || null,
+                fornecedor: document.getElementById('lancFornecedor').value.trim() || null,
+                plano_contas: document.getElementById('lancPlano').value.trim() || null,
+                valor_projetado: parseFloat(document.getElementById('lancProjetado').value) || 0,
+                valor_realizado: parseFloat(document.getElementById('lancRealizado').value) || 0,
+                situacao: document.getElementById('lancSituacao').value || null,
+                banco: document.getElementById('lancBanco').value || null,
+                observacao: document.getElementById('lancObservacao').value.trim() || null
+            };
+            if (!dados.fornecedor) { mostrarToast('Informe o Fornecedor / Cliente.', 'warning'); return; }
+
+            try {
+                let r;
+                if (id) r = await supabaseClient.from('qnutri_lancamentos').update(dados).eq('id', id);
+                else r = await supabaseClient.from('qnutri_lancamentos').insert([dados]);
+                if (r.error) throw r.error;
+                mostrarToast(id ? '✅ Lançamento atualizado!' : '✅ Lançamento registrado!');
+                fecharPopupLancamento();
+                await carregarDados();
+            } catch (err) {
+                mostrarToast('Erro ao salvar: ' + err.message, 'error');
+            }
+        }
+
+        function abrirPopupExclusao(id) {
+            lancamentoParaExcluir = id;
+            document.getElementById('popupExclusao').classList.add('active');
+        }
+        function fecharPopupExclusao() {
+            lancamentoParaExcluir = null;
+            document.getElementById('popupExclusao').classList.remove('active');
+        }
+        async function confirmarExclusao() {
+            if (!lancamentoParaExcluir) return;
+            try {
+                const { error } = await supabaseClient.from('qnutri_lancamentos').delete().eq('id', lancamentoParaExcluir);
+                if (error) throw error;
+                mostrarToast('✅ Lançamento excluído!');
+                fecharPopupExclusao();
+                await carregarDados();
+            } catch (err) { mostrarToast('Erro ao excluir: ' + err.message, 'error'); }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            if (tab === 'lancamentos') renderizarLancamentos();
+            if (tab === 'receitas') renderizarReceitas();
+            if (tab === 'despesas') renderizarDespesas();
+            if (tab === 'dre') renderizarDRE();
+            if (tab === 'relatorio') renderizarRelatorio();
+        }
+
+        async function gerarPDFGenerico(titulo, filt, orientacao = 'landscape') {
+            const f = v => (parseFloat(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            let tP = 0, tR = 0;
+            filt.forEach(l => { tP += parseFloat(l.valor_projetado) || 0; tR += parseFloat(l.valor_realizado) || 0; });
+
+            let linhas = '';
+            filt.forEach(l => {
+                const p = parseFloat(l.valor_projetado) || 0;
+                const r = parseFloat(l.valor_realizado) || 0;
+                const d = r - p;
+                linhas += `<tr>
+                    <td style="padding:5px 6px; border:1px solid #ccc; text-align:center; font-size:9px;">${formatarData(l.data)}</td>
+                    <td style="padding:5px 6px; border:1px solid #ccc; text-align:center; font-size:9px;">${escapeHtml(l.pago_em || '')}</td>
+                    <td style="padding:5px 6px; border:1px solid #ccc; text-align:center; font-size:9px;">${escapeHtml(l.nf || '')}</td>
+                    <td style="padding:5px 6px; border:1px solid #ccc; text-align:center; font-size:9px;">${l.tipo}</td>
+                    <td style="padding:5px 6px; border:1px solid #ccc; text-align:left; font-size:9px;">${escapeHtml(l.fornecedor || '')}</td>
+                    <td style="padding:5px 6px; border:1px solid #ccc; text-align:center; font-size:9px;">${escapeHtml(l.plano_contas || '')}</td>
+                    <td style="padding:5px 6px; border:1px solid #ccc; text-align:right; font-size:9px;">${f(p)}</td>
+                    <td style="padding:5px 6px; border:1px solid #ccc; text-align:right; font-size:9px;">${f(r)}</td>
+                    <td style="padding:5px 6px; border:1px solid #ccc; text-align:right; font-size:9px;">${f(d)}</td>
+                    <td style="padding:5px 6px; border:1px solid #ccc; text-align:center; font-size:8px;">${escapeHtml(l.situacao || '')}</td>
+                    <td style="padding:5px 6px; border:1px solid #ccc; text-align:center; font-size:8px;">${escapeHtml(l.banco || '')}</td>
+                </tr>`;
+            });
+            if (!linhas) linhas = `<tr><td colspan="11" style="padding:20px; text-align:center; color:#666;">Nenhum registro</td></tr>`;
+
+            const dataEm = new Date().toLocaleString('pt-BR');
+            const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo}</title>
+                <style>@page{size:A4 ${orientacao};margin:10mm;} body{font-family:Arial,sans-serif;padding:12px;color:#000;background:#fff;font-size:10px;}
+                h1{text-align:center;font-size:16px;margin:0;} .sub{text-align:center;font-size:10px;margin:4px 0 12px 0;color:#333;}
+                .info{text-align:center;background:#f5f5f5;padding:6px;margin-bottom:12px;font-size:9px;}
+                table{width:100%;border-collapse:collapse;font-size:9px;}
+                thead th{background:#E0E0E0;border:1px solid #000;padding:5px;text-align:center;font-weight:bold;font-size:8px;}
+                .totais{margin-top:12px;text-align:right;font-size:11px;font-weight:bold;padding:8px;background:#f0f0f0;border:2px solid #000;}
+                .footer{text-align:center;font-size:8px;color:#666;margin-top:16px;padding-top:8px;border-top:1px solid #ccc;}</style>
+                </head><body>
+                <h1>${titulo}</h1>
+                <div class="sub">QNUTRI | Módulo Financeiro</div>
+                <div class="info"><strong>Emissão:</strong> ${dataEm} | <strong>Registros:</strong> ${filt.length}</div>
+                <table><thead><tr><th>Vencto</th><th>Pago em</th><th>NF</th><th>Tipo</th><th>Fornecedor/Cliente</th><th>Plano</th><th>Projetado</th><th>Faturado</th><th>Diferença</th><th>Situação</th><th>Banco</th></tr></thead>
+                <tbody>${linhas}</tbody></table>
+                <div class="totais">Total Projetado: R$ ${f(tP)} &nbsp;|&nbsp; Total Faturado: R$ ${f(tR)} &nbsp;|&nbsp; Diferença: R$ ${f(tR - tP)}</div>
+                <div class="footer">QNUTRI - Sistema de Gestão Financeira | ${dataEm}</div>
+                </body></html>`;
+
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            const nome = `${titulo.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+            const opt = {
+                margin: [0.3, 0.3, 0.3, 0.3], filename: nome,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, backgroundColor: '#FFFFFF', useCORS: true, logging: false },
+                jsPDF: { unit: 'in', format: 'a4', orientation: orientacao }
+            };
+            try {
+                mostrarToast('📄 Gerando PDF...', 'info');
+                const blob = await html2pdf().set(opt).from(temp).outputPdf('blob');
+                const url = URL.createObjectURL(blob);
+                const w = window.open(url, '_blank');
+                if (!w) { const a = document.createElement('a'); a.href = url; a.download = nome; a.click(); }
+            } catch (err) { mostrarToast('Erro PDF: ' + err.message, 'error'); }
+        }
+
+        function gerarPDFReceitas() {
+            const termo = (document.getElementById('buscaReceitas')?.value || '').toLowerCase();
+            const mes = document.getElementById('filtroMesReceitas')?.value || 'todos';
+            const sit = document.getElementById('filtroSituacaoReceitas')?.value || 'todas';
+            const filt = lancamentos.filter(l => {
+                if (l.tipo !== 'RECEITA') return false;
+                if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
+                if (sit !== 'todas' && (l.situacao || '').toUpperCase() !== sit.toUpperCase()) return false;
+                if (termo) {
+                    const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${l.plano_contas || ''}`.toLowerCase();
+                    if (!txt.includes(termo)) return false;
+                }
+                return true;
+            });
+            gerarPDFGenerico('Relatório de Receitas', filt, 'landscape');
+        }
+        function gerarPDFDespesas() {
+            const termo = (document.getElementById('buscaDespesas')?.value || '').toLowerCase();
+            const mes = document.getElementById('filtroMesDespesas')?.value || 'todos';
+            const filt = lancamentos.filter(l => {
+                if (l.tipo !== 'DESPESA') return false;
+                if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
+                if (termo) {
+                    const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${l.plano_contas || ''}`.toLowerCase();
+                    if (!txt.includes(termo)) return false;
+                }
+                return true;
+            });
+            gerarPDFGenerico('Relatório de Despesas', filt, 'landscape');
+        }
+        function gerarPDFRelatorio() {
+            const tipo = document.getElementById('filtroTipoRelatorio')?.value || 'todos';
+            const mes = document.getElementById('filtroMesRelatorio')?.value || 'todos';
+            const termo = (document.getElementById('buscaRelatorio')?.value || '').toLowerCase();
+            const filt = lancamentos.filter(l => {
+                if (tipo !== 'todos' && l.tipo !== tipo) return false;
+                if (mes !== 'todos' && !getMesAno(l.data).endsWith(`-${mes}`)) return false;
+                if (termo) {
+                    const txt = `${l.fornecedor || ''} ${l.nf || ''} ${l.observacao || ''} ${l.plano_contas || ''}`.toLowerCase();
+                    if (!txt.includes(termo)) return false;
+                }
+                return true;
+            });
+            gerarPDFGenerico('Relatório Financeiro', filt, 'landscape');
+        }
+
+        async function gerarPDFDRE() {
+            const mes = document.getElementById('filtroMesDRE')?.value || 'todos';
+            const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            const periodo = mes === 'todos' ? 'Todos os Meses' : meses[parseInt(mes) - 1];
+            const filt = lancamentos.filter(l => mes === 'todos' || getMesAno(l.data).endsWith(`-${mes}`));
+            const grupos = {};
+            filt.forEach(l => {
+                const k = l.plano_contas || (l.tipo === 'RECEITA' ? 'Receitas não classificadas' : 'Despesas não classificadas');
+                if (!grupos[k]) grupos[k] = { p: 0, r: 0, tipo: l.tipo };
+                grupos[k].p += parseFloat(l.valor_projetado) || 0;
+                grupos[k].r += parseFloat(l.valor_realizado) || 0;
+            });
+            let tPR = 0, tRR = 0, tPD = 0, tRD = 0;
+            Object.values(grupos).forEach(g => {
+                if (g.tipo === 'RECEITA') { tPR += g.p; tRR += g.r; }
+                else { tPD += g.p; tRD += g.r; }
+            });
+            const lucroP = tPR - tPD;
+            const lucroR = tRR - tRD;
+            const f = v => (parseFloat(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            let linhas = '';
+            linhas += `<tr style="background:#E8F5E9; font-weight:bold;"><td style="padding:8px; border:1px solid #000; text-align:left;">RECEITAS</td><td style="padding:8px; border:1px solid #000; text-align:right;">R$ ${f(tPR)}</td><td style="padding:8px; border:1px solid #000; text-align:right;">R$ ${f(tRR)}</td><td style="padding:8px; border:1px solid #000; text-align:right;">R$ ${f(tRR - tPR)}</td><td style="padding:8px; border:1px solid #000; text-align:center;">${tPR > 0 ? ((tRR / tPR) * 100).toFixed(1) : '100.0'}%</td></tr>`;
+            Object.entries(grupos).filter(([_, g]) => g.tipo === 'RECEITA').forEach(([k, g]) => {
+                linhas += `<tr><td style="padding:6px 8px; border:1px solid #ccc; text-align:left; padding-left:24px;">${escapeHtml(k)}</td><td style="padding:6px 8px; border:1px solid #ccc; text-align:right;">R$ ${f(g.p)}</td><td style="padding:6px 8px; border:1px solid #ccc; text-align:right;">R$ ${f(g.r)}</td><td style="padding:6px 8px; border:1px solid #ccc; text-align:right;">R$ ${f(g.r - g.p)}</td><td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${g.p > 0 ? ((g.r / g.p) * 100).toFixed(1) : '100.0'}%</td></tr>`;
+            });
+            linhas += `<tr style="background:#FFEBEE; font-weight:bold;"><td style="padding:8px; border:1px solid #000; text-align:left;">DESPESAS</td><td style="padding:8px; border:1px solid #000; text-align:right;">R$ ${f(tPD)}</td><td style="padding:8px; border:1px solid #000; text-align:right;">R$ ${f(tRD)}</td><td style="padding:8px; border:1px solid #000; text-align:right;">R$ ${f(tRD - tPD)}</td><td style="padding:8px; border:1px solid #000; text-align:center;">${tPD > 0 ? ((tRD / tPD) * 100).toFixed(1) : '0.0'}%</td></tr>`;
+            Object.entries(grupos).filter(([_, g]) => g.tipo === 'DESPESA').forEach(([k, g]) => {
+                linhas += `<tr><td style="padding:6px 8px; border:1px solid #ccc; text-align:left; padding-left:24px;">${escapeHtml(k)}</td><td style="padding:6px 8px; border:1px solid #ccc; text-align:right;">R$ ${f(g.p)}</td><td style="padding:6px 8px; border:1px solid #ccc; text-align:right;">R$ ${f(g.r)}</td><td style="padding:6px 8px; border:1px solid #ccc; text-align:right;">R$ ${f(g.r - g.p)}</td><td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${g.p > 0 ? ((g.r / g.p) * 100).toFixed(1) : '0.0'}%</td></tr>`;
+            });
+            linhas += `<tr style="background:#FFF8E1; font-weight:bold; border-top:2px solid #000;"><td style="padding:10px 8px; border:1px solid #000; text-align:left; font-size:13px;">RESULTADO (LUCRO/PREJUÍZO)</td><td style="padding:10px 8px; border:1px solid #000; text-align:right;">R$ ${f(lucroP)}</td><td style="padding:10px 8px; border:1px solid #000; text-align:right;">R$ ${f(lucroR)}</td><td style="padding:10px 8px; border:1px solid #000; text-align:right;">R$ ${f(lucroR - lucroP)}</td><td style="padding:10px 8px; border:1px solid #000; text-align:center;">${tPR > 0 ? ((lucroR / tPR) * 100).toFixed(1) : '0.0'}%</td></tr>`;
+
+            const dataEm = new Date().toLocaleString('pt-BR');
+            const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DRE - QNUTRI</title>
+                <style>@page{size:A4 portrait;margin:12mm;} body{font-family:Arial,sans-serif;padding:15px;color:#000;background:#fff;font-size:11px;}
+                h1{text-align:center;font-size:18px;margin:0;} .sub{text-align:center;font-size:11px;margin:4px 0 15px 0;color:#333;}
+                .info{text-align:center;background:#f5f5f5;padding:8px;margin-bottom:15px;font-size:10px;}
+                table{width:100%;border-collapse:collapse;font-size:10px;}
+                thead th{background:#E0E0E0;border:1px solid #000;padding:6px;text-align:center;font-weight:bold;}
+                .footer{text-align:center;font-size:9px;color:#666;margin-top:20px;padding-top:10px;border-top:1px solid #ccc;}</style>
+                </head><body>
+                <h1>DEMONSTRATIVO DE RESULTADOS - DRE</h1>
+                <div class="sub">QNUTRI | Módulo Financeiro</div>
+                <div class="info"><strong>Período:</strong> ${periodo} | <strong>Emissão:</strong> ${dataEm}</div>
+                <table><thead><tr><th style="width:34%;">Descrição</th><th style="width:16%;">Projetado</th><th style="width:16%;">Faturado</th><th style="width:16%;">Diferença</th><th style="width:18%;">% Realizado</th></tr></thead>
+                <tbody>${linhas}</tbody></table>
+                <div class="footer">QNUTRI - Sistema de Gestão Financeira | ${dataEm}</div>
+                </body></html>`;
+
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            const nome = `DRE_QNUTRI_${new Date().toISOString().slice(0,10)}.pdf`;
+            const opt = {
+                margin: [0.3, 0.3, 0.3, 0.3], filename: nome,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, backgroundColor: '#FFFFFF', useCORS: true, logging: false },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            try {
+                mostrarToast('📄 Gerando PDF...', 'info');
+                const blob = await html2pdf().set(opt).from(temp).outputPdf('blob');
+                const url = URL.createObjectURL(blob);
+                const w = window.open(url, '_blank');
+                if (!w) { const a = document.createElement('a'); a.href = url; a.download = nome; a.click(); }
+            } catch (err) { mostrarToast('Erro PDF: ' + err.message, 'error'); }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarDados();
+        });
+    </script>
+</body>
+</html>
