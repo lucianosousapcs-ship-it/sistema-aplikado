@@ -307,42 +307,27 @@
         .solution-card .btn-solution.btn-outline { background: transparent; border: 2px solid #ffd000; color: #ffd000; }
         .solution-card .btn-solution.btn-outline:hover { background: #ffd000; color: #000; }
 
-        /* ===== ESTILOS: ESQUECI A SENHA + CPF + LGPD (EXPANDIDO) ===== */
+        /* ===== MODAIS DE RECUPERAÇÃO / CPF EXPANDIDOS ===== */
         .forgot-password-link { display: block; text-align: center; margin-top: 12px; color: #ffd000; font-size: 0.85rem; text-decoration: none; transition: 0.2s; cursor: pointer; }
         .forgot-password-link:hover { text-decoration: underline; opacity: 0.85; }
 
         .recovery-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
+            display: none; position: fixed; top: 0; left: 0;
             width: 100%; height: 100%;
             background: rgba(0,0,0,0.95);
             z-index: 4500;
-            justify-content: center;
-            align-items: flex-start;
-            overflow-y: auto;
-            padding: 40px 20px;
+            justify-content: center; align-items: flex-start;
+            overflow-y: auto; padding: 40px 20px;
         }
-
         .recovery-content {
-            background: #0a0a0a;
-            padding: 2.6rem 2.8rem;
-            border-radius: 26px;
-            max-width: 640px;
-            width: 100%;
-            border: 2px solid #ffd000;
-            position: relative;
-            margin: auto;
+            background: #0a0a0a; padding: 2.6rem 2.8rem;
+            border-radius: 26px; max-width: 640px; width: 100%;
+            border: 2px solid #ffd000; position: relative; margin: auto;
             box-shadow: 0 25px 60px rgba(0,0,0,0.6);
             animation: modalFadeIn 0.35s ease-out;
         }
-
         #cpfRequiredModal .recovery-content { max-width: 720px; }
-
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: translateY(-12px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes modalFadeIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
 
         .recovery-content h2 { color: #ffd000; font-size: 1.55rem; margin-bottom: 0.5rem; text-align: center; letter-spacing: -0.01em; }
         .recovery-content .subtitle { color: #9ca3af; font-size: 0.9rem; text-align: center; margin-bottom: 1.8rem; line-height: 1.5; }
@@ -902,16 +887,17 @@
             const SUPABASE_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';
             const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            // ===== USUÁRIOS (fallback para usuários que ainda não estão na tabela `usuarios`) =====
+            // ===== USUÁRIOS (config de redirecionamento / tipo de acesso) =====
             const USERS = {
-                'DAVI MACEDO': { initialPassword: '@500*', type: 'select_client', clients: ['ALF', 'QNUTRI'] },
-                'NEILANE BARREIRA': { initialPassword: '@200*', type: 'direct', client: 'QNUTRI' },
-                'ANDRE LUIZ': { initialPassword: '@100*', type: 'direct', client: 'ALF' },
-                'EXPEDITO MACEDO': { initialPassword: '@400*', type: 'select_client', clients: ['ALF', 'QNUTRI'] },
-                'LUCIANO SOUSA': { initialPassword: '@300*', type: 'select_client', clients: ['ALF', 'QNUTRI'] },
-                'QNUTRI': { initialPassword: '963852741', type: 'direct', client: 'QNUTRI', isSpecial: true },
-                'ALF': { initialPassword: '963852741', type: 'direct', client: 'ALF', isSpecial: true },
-                'VM': { initialPassword: '963852741', type: 'direct', client: 'VM', isSpecial: true }
+                'DAVI MACEDO': { type: 'select_client', clients: ['ALF', 'QNUTRI'] },
+                'NEILANE BARREIRA': { type: 'direct', client: 'QNUTRI' },
+                'ANDRE LUIZ': { type: 'direct', client: 'ALF' },
+                'EXPEDITO MACEDO': { type: 'select_client', clients: ['ALF', 'QNUTRI'] },
+                'LUCIANO SOUSA': { type: 'select_client', clients: ['ALF', 'QNUTRI'] },
+                'CARLOS UBIRAJARA': { type: 'direct', client: 'ALF' },
+                'QNUTRI': { type: 'direct', client: 'QNUTRI', isSpecial: true },
+                'ALF': { type: 'direct', client: 'ALF', isSpecial: true },
+                'VM': { type: 'direct', client: 'VM', isSpecial: true }
             };
 
             // ===== UTILITÁRIOS =====
@@ -945,37 +931,39 @@
             }
 
             // ==========================================================================
-            // AUTENTICAÇÃO — AGORA USA A TABELA "usuarios" COM COLUNA "primeiro_acesso"
+            // AUTENTICAÇÃO — USA TABELA "usuarios" (nome, senha, primeiro_acesso)
             // ==========================================================================
             async function getUserPassword(username) {
-                try {
-                    const { data, error } = await supabaseClient
-                        .from('usuarios')
-                        .select('senha, primeiro_acesso')
-                        .eq('nome', username)
-                        .maybeSingle();
+                console.log('🔍 [getUserPassword] Consultando banco para:', username);
 
-                    console.log('[getUserPassword]', { usuarioConsultado: username, data, error });
+                const { data, error, status, statusText } = await supabaseClient
+                    .from('usuarios')
+                    .select('senha, primeiro_acesso')
+                    .eq('nome', username)
+                    .maybeSingle();
 
-                    if (error) {
-                        const err = new Error('SUPABASE_ERROR');
-                        err.supabaseError = error;
-                        err.code = error.code;
-                        err.message = error.message;
-                        throw err;
-                    }
+                console.log('📊 [getUserPassword] Resposta:', { status, statusText, error, data });
 
-                    if (!data) return { exists: false, password: null, primeiroAcesso: false };
-
-                    return {
-                        exists: true,
-                        password: data.senha,
-                        primeiroAcesso: data.primeiro_acesso === true
-                    };
-                } catch (e) {
-                    console.error('❌ Falha getUserPassword:', e);
-                    throw e;
+                if (error) {
+                    const err = new Error(error.message || 'Erro desconhecido do Supabase');
+                    err.code = error.code || status;
+                    err.details = error.details;
+                    err.hint = error.hint;
+                    throw err;
                 }
+
+                if (!data) {
+                    console.warn('⚠️ [getUserPassword] Usuário não encontrado:', username);
+                    return { exists: false, password: null, primeiroAcesso: false };
+                }
+
+                console.log('✅ [getUserPassword] Encontrado. primeiro_acesso =', data.primeiro_acesso);
+
+                return {
+                    exists: true,
+                    password: data.senha,
+                    primeiroAcesso: data.primeiro_acesso === true
+                };
             }
 
             async function saveUserPassword(username, newPassword) {
@@ -1108,100 +1096,86 @@
             let isResettingPassword = false;
 
             // ==========================================================================
-            // LOGIN — consulta tabela "usuarios" (coluna primeiro_acesso)
+            // LOGIN — 100% BASEADO NA TABELA "usuarios"
             // ==========================================================================
             async function handleLogin(username, password) {
                 const rawUser = (username || '').trim();
                 const userKey = rawUser.toUpperCase();
                 const pass = (password || '').trim();
 
-                console.log('━━━ [LOGIN] ━━━');
-                console.log('Usuário digitado:', rawUser);
-                console.log('Usuário normalizado:', userKey);
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('🔐 [LOGIN] Usuário:', userKey);
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-                const userConfig = USERS[userKey];
-                if (!userConfig) {
-                    console.warn('⚠️ Usuário não existe na lista USERS:', userKey);
-                    await registrarLogAcesso(userKey, pass, false);
-                    alert('Usuário ou senha inválidos.');
+                if (!userKey || !pass) {
+                    alert('Preencha usuário e senha.');
                     return false;
                 }
 
-                // 1) Buscar dados na tabela "usuarios"
                 let result;
                 try {
                     result = await getUserPassword(userKey);
                 } catch (err) {
-                    console.error('💥 Erro Supabase:', err);
+                    console.error('💥 [LOGIN] Erro ao consultar Supabase:', err);
                     alert(
-                        '⚠️ Não foi possível conectar ao servidor.\n\n' +
-                        'Código: ' + (err.code || 'desconhecido') + '\n' +
-                        'Mensagem: ' + (err.message || 'sem mensagem') + '\n\n' +
-                        'Verifique a chave do Supabase e as políticas RLS da tabela "usuarios".'
+                        '⚠️ ERRO DE CONEXÃO COM O BANCO DE DADOS\n\n' +
+                        'O sistema não conseguiu consultar a tabela "usuarios".\n\n' +
+                        'Código: ' + (err.code || '?') + '\n' +
+                        'Mensagem: ' + (err.message || '?') + '\n' +
+                        (err.hint ? '\nDica: ' + err.hint : '') + '\n\n' +
+                        'Verifique:\n' +
+                        '1) A SUPABASE_KEY está correta (deve começar com "eyJ...")\n' +
+                        '2) A tabela "usuarios" tem políticas RLS abertas para "anon"\n' +
+                        '3) As colunas "nome", "senha" e "primeiro_acesso" existem'
                     );
                     return false;
                 }
 
-                // 2) Usuários especiais (QNUTRI, ALF, VM)
-                if (userConfig.isSpecial) {
-                    if (pass === userConfig.initialPassword) {
-                        currentUser = userKey;
-                        await registrarLogAcesso(userKey, pass, true, `CLIENT_${userConfig.client}.html`);
-                        window.location.href = `CLIENT_${userConfig.client}.html?user=${encodeURIComponent(userKey)}`;
-                        return true;
-                    }
-                    await registrarLogAcesso(userKey, pass, false);
-                    alert('Usuário ou senha inválidos.');
-                    return false;
-                }
-
-                // 3) Usuário não existe em "usuarios" → fallback para senha inicial do código
                 if (result.exists === false) {
-                    console.log('⚠️ Usuário não existe na tabela usuarios. Verificando senha inicial do código...');
-                    if (pass === userConfig.initialPassword) {
-                        pendingUser = userKey;
-                        currentUser = userKey;
-                        await registrarLogAcesso(userKey, pass, true);
-                        isResettingPassword = false;
-                        showChangePasswordModal(false);
-                        return true;
-                    }
+                    console.warn('❌ [LOGIN] Usuário não cadastrado na tabela usuarios:', userKey);
                     await registrarLogAcesso(userKey, pass, false);
-                    alert('Usuário ou senha inválidos.');
+                    alert('Usuário ou senha inválidos.\n\n(Usuário não encontrado no banco de dados)');
                     return false;
                 }
-
-                // 4) Usuário existe → valida senha
-                console.log('🔐 Verificando senha...', { primeiroAcesso: result.primeiroAcesso });
 
                 if (pass !== result.password) {
-                    console.warn('❌ Senha não confere.');
+                    console.warn('❌ [LOGIN] Senha incorreta para:', userKey);
                     await registrarLogAcesso(userKey, pass, false);
                     alert('Usuário ou senha inválidos.');
                     return false;
                 }
 
                 // ✅ Senha correta
+                console.log('✅ [LOGIN] Senha correta. primeiro_acesso =', result.primeiroAcesso);
                 currentUser = userKey;
                 await registrarLogAcesso(userKey, pass, true);
 
-                // 🎯 Se primeiro_acesso = TRUE → força modal de troca de senha
+                // Usuário especial → redireciona direto sem trocar senha
+                const userConfig = USERS[userKey];
+                if (userConfig?.isSpecial) {
+                    window.location.href = `CLIENT_${userConfig.client}.html?user=${encodeURIComponent(userKey)}`;
+                    return true;
+                }
+
+                // 🎯 primeiro_acesso = TRUE → força troca de senha
                 if (result.primeiroAcesso === true) {
-                    console.log('🔁 primeiro_acesso = TRUE → forçando troca de senha');
+                    console.log('🔁 [LOGIN] Forçando troca de senha (primeiro_acesso = TRUE)');
                     pendingUser = userKey;
                     isResettingPassword = false;
                     showChangePasswordModal(false);
                     return true;
                 }
 
-                // Usuário normal → segue fluxo padrão (verificar CPF)
+                // Usuário normal → verifica CPF
                 const temCpf = await verificarCpfObrigatorio(userKey);
                 if (!temCpf) return true;
 
-                if (userConfig.type === 'select_client') {
+                if (userConfig?.type === 'select_client') {
                     showClientSelectModal();
-                } else if (userConfig.type === 'direct') {
+                } else if (userConfig?.type === 'direct') {
                     window.location.href = `CLIENT_${userConfig.client}.html?user=${encodeURIComponent(userKey)}`;
+                } else {
+                    alert('Usuário autenticado, mas sem configuração de cliente definida.\nContate o administrador.');
                 }
                 return true;
             }
@@ -1229,7 +1203,7 @@
                 });
             });
 
-            // ===== ALTERAÇÃO DE SENHA (primeiro acesso OU reset) =====
+            // ===== ALTERAÇÃO DE SENHA =====
             function showChangePasswordModal(isReset) {
                 isResettingPassword = !!isReset;
                 const modal = document.getElementById('changePasswordModal');
@@ -1290,13 +1264,12 @@
                             return;
                         }
 
-                        // Primeiro acesso → checar CPF
                         const temCpf = await verificarCpfObrigatorio(username);
                         if (!temCpf) return;
 
                         const userConfig = USERS[username];
-                        if (userConfig.type === 'select_client') { currentUser = username; showClientSelectModal(); }
-                        else if (userConfig.type === 'direct') { window.location.href = `CLIENT_${userConfig.client}.html?user=${encodeURIComponent(username)}`; }
+                        if (userConfig?.type === 'select_client') { currentUser = username; showClientSelectModal(); }
+                        else if (userConfig?.type === 'direct') { window.location.href = `CLIENT_${userConfig.client}.html?user=${encodeURIComponent(username)}`; }
                     } else {
                         alert('Erro ao salvar senha. Tente novamente.');
                         this.disabled = false;
@@ -1609,8 +1582,8 @@
                     await registrarLogAcesso(currentUser, '***', true, 'CPF_CADASTRADO');
 
                     const userConfig = USERS[currentUser];
-                    if (userConfig.type === 'select_client') showClientSelectModal();
-                    else if (userConfig.type === 'direct') window.location.href = `CLIENT_${userConfig.client}.html?user=${encodeURIComponent(currentUser)}`;
+                    if (userConfig?.type === 'select_client') showClientSelectModal();
+                    else if (userConfig?.type === 'direct') window.location.href = `CLIENT_${userConfig.client}.html?user=${encodeURIComponent(currentUser)}`;
                 } else {
                     setFeedback('cpfRequiredFeedback', 'Erro ao salvar. Tente novamente.', 'error');
                     btn.disabled = false;
