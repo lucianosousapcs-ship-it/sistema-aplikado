@@ -565,6 +565,7 @@
             gap: 0.7rem;
             justify-content: center;
             margin-bottom: 1.2rem;
+            flex-wrap: wrap;
         }
 
         .client-select-btn {
@@ -585,6 +586,7 @@
             gap: 6px;
             border: 1px solid transparent;
             white-space: nowrap;
+            min-width: 130px;
         }
 
         .client-select-btn.primary {
@@ -615,6 +617,8 @@
             background: transparent;
             color: rgba(255, 255, 255, 0.7);
             border-color: rgba(255, 255, 255, 0.15);
+            flex: 0 0 auto;
+            min-width: 90px;
         }
 
         .client-select-btn.danger:hover {
@@ -655,7 +659,8 @@
             .client-select-content h2 { font-size: 1.15rem; }
             .client-select-content p { font-size: 0.75rem; margin-bottom: 1.4rem; }
             .client-select-buttons { flex-direction: column; gap: 0.6rem; }
-            .client-select-btn { padding: 14px 16px; font-size: 0.85rem; }
+            .client-select-btn { padding: 14px 16px; font-size: 0.85rem; width: 100%; }
+            .client-select-btn.danger { min-width: 100%; }
         }
 
         @media (max-width: 1024px) {
@@ -833,7 +838,6 @@
                 </ul>
             </div>
 
-            <!-- ✅ MÓDULO II: badge agora é "Em Dev" -->
             <div class="module-card" data-aos="fade-up" data-aos-delay="160" data-aos-duration="500">
                 <div class="module-card-header">
                     <div class="module-icon-large">
@@ -894,19 +898,18 @@
         <span class="tooltip-text">Manual do Sistema</span>
     </a>
 
+    <!-- ============================================== -->
+    <!-- MODAL DINÂMICO DE TROCA DE CLIENTE             -->
+    <!-- Os botões são gerados via JS a partir do banco -->
+    <!-- ============================================== -->
     <div id="clientSwitchModal" class="client-select-modal">
         <div class="client-select-content">
             <div class="modal-badge">Sessão Multi-Cliente</div>
             <h2>Alternar <span class="accent">Cliente</span></h2>
             <p>Selecione o ambiente que deseja acessar ou encerre sua sessão.</p>
             <div class="divider-line"></div>
-            <div class="client-select-buttons">
-                <button class="client-select-btn primary" data-client="ALF">
-                    ALF Ferramentas
-                </button>
-                <button class="client-select-btn danger" id="btnSairDefinitivo">
-                    Sair
-                </button>
+            <div class="client-select-buttons" id="clientSwitchButtons">
+                <!-- PREENCHIDO DINAMICAMENTE VIA JS -->
             </div>
             <div class="client-select-footer">
                 Sessão segura • ApliKado © 2026
@@ -926,8 +929,21 @@
         const SUPABASE_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // ===== CONFIGURAÇÃO DO CLIENTE ATUAL =====
+        // ⚠️ ALTERE APENAS ESTA LINHA AO COPIAR PARA OUTRO CLIENTE:
+        //   - CLIENT_QNUTRI.html → 'QNUTRI'
+        //   - CLIENT_ALF.html    → 'ALF'
+        //   - CLIENT_VM.html     → 'VM'
+        const CLIENTE_ATUAL = 'QNUTRI';
+
+        const NOMES_CLIENTES = {
+            'ALF': 'ALF Ferramentas',
+            'QNUTRI': 'QNutri',
+            'VM': 'VM'
+        };
+
         // ==================================================
-        // ✅ RECUPERA USUÁRIO (URL → localStorage como fallback)
+        // RECUPERA USUÁRIO (URL → localStorage como fallback)
         // ==================================================
         const urlParams = new URLSearchParams(window.location.search);
         let usuarioLogado = urlParams.get('user') 
@@ -947,15 +963,10 @@
         }
 
         console.log('═══════════════════════════════════════════');
-        console.log('👤 Usuário logado na QNUTRI:', usuarioLogado || '❌ NÃO IDENTIFICADO');
+        console.log('👤 Usuário logado na ' + CLIENTE_ATUAL + ':', usuarioLogado || '❌ NÃO IDENTIFICADO');
         console.log('═══════════════════════════════════════════');
 
-        const USERS_MULTI_CLIENT = [
-            'DAVI MACEDO',
-            'EXPEDITO MACEDO',
-            'LUCIANO SOUSA'
-        ];
-
+        // Atualiza o subtítulo com o nome do usuário
         if (usuarioLogado) {
             const subtitle = document.querySelector('.welcome-title .subtitle');
             if (subtitle) {
@@ -995,11 +1006,148 @@
         }
 
         // ==================================================
+        // FUNÇÃO: BUSCAR CLIENTES DO USUÁRIO NO BANCO
+        // ==================================================
+        async function buscarClientesDoUsuario(usuario) {
+            if (!usuario) return [];
+            try {
+                const { data, error } = await supabaseClient
+                    .from('usuarios')
+                    .select('tipo_acesso, clientes_permitidos, ativo')
+                    .eq('nome', usuario.toUpperCase().trim())
+                    .maybeSingle();
+
+                if (error) {
+                    console.warn('⚠️ Erro ao buscar clientes:', error.message);
+                    return [];
+                }
+
+                if (!data || data.ativo === false) {
+                    console.warn('⚠️ Usuário não encontrado ou inativo:', usuario);
+                    return [];
+                }
+
+                let clientes = data.clientes_permitidos || [];
+                if (typeof clientes === 'string') {
+                    clientes = clientes.replace(/[{}"\[\]]/g, '').split(',').map(s => s.trim()).filter(Boolean);
+                }
+                clientes = clientes.filter(c => c && c.trim() !== '');
+
+                console.log('📋 Clientes do usuário', usuario, ':', clientes);
+                return clientes;
+            } catch (e) {
+                console.error('Erro ao buscar clientes:', e);
+                return [];
+            }
+        }
+
+        // ==================================================
+        // MODAL DINÂMICO DE TROCA DE CLIENTE
+        // ==================================================
+        const clientSwitchModal = document.getElementById('clientSwitchModal');
+        const clientSwitchButtons = document.getElementById('clientSwitchButtons');
+
+        async function showClientSwitchModal() {
+            console.log('🔄 Abrindo modal de troca de cliente para:', usuarioLogado);
+
+            if (!clientSwitchButtons) {
+                console.error('❌ #clientSwitchButtons não encontrado');
+                return;
+            }
+
+            // Mostra o modal IMEDIATAMENTE com loading
+            clientSwitchModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            clientSwitchButtons.innerHTML = `
+                <div style="grid-column:1/-1;text-align:center;padding:20px;color:rgba(255,255,255,0.5);font-size:12px;">
+                    <i class="fas fa-spinner fa-spin" style="color:#FF8C00;margin-right:6px;"></i> Buscando clientes...
+                </div>`;
+
+            // Busca clientes no banco
+            const clientesPermitidos = await buscarClientesDoUsuario(usuarioLogado);
+
+            // Fallback: se não achou no banco, mostra ALF + QNUTRI
+            const clientes = clientesPermitidos.length > 0 
+                ? clientesPermitidos 
+                : ['ALF', 'QNUTRI'];
+
+            console.log('🎯 Clientes que serão exibidos no modal:', clientes);
+
+            // Filtra o cliente atual (não faz sentido ir para onde já está)
+            const outrosClientes = clientes.filter(c => 
+                c.toUpperCase() !== CLIENTE_ATUAL.toUpperCase()
+            );
+
+            let botoesHtml = '';
+
+            if (outrosClientes.length === 0) {
+                // Usuário só tem acesso ao cliente atual
+                botoesHtml += `
+                    <div style="grid-column:1/-1;text-align:center;padding:16px 8px;color:rgba(255,255,255,0.55);font-size:12.5px;line-height:1.5;">
+                        <i class="fas fa-info-circle" style="color:#FF8C00;margin-right:6px;font-size:15px;"></i>
+                        Você só tem acesso ao cliente <strong style="color:#FF8C00;">${NOMES_CLIENTES[CLIENTE_ATUAL] || CLIENTE_ATUAL}</strong>
+                    </div>`;
+            } else {
+                // Um botão para cada outro cliente
+                outrosClientes.forEach(cliente => {
+                    const nome = NOMES_CLIENTES[cliente] || cliente;
+                    botoesHtml += `<button class="client-select-btn primary" data-client="${cliente}">${nome}</button>`;
+                });
+            }
+
+            // Sempre adiciona o botão "Sair"
+            botoesHtml += `<button class="client-select-btn danger" id="btnSairDefinitivo">Sair</button>`;
+
+            clientSwitchButtons.innerHTML = botoesHtml;
+
+            // ====== REATRIBUI LISTENERS ======
+            clientSwitchButtons.querySelectorAll('.client-select-btn[data-client]').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const client = this.dataset.client;
+                    const user = usuarioLogado || '';
+
+                    console.log('🎯 Trocando para cliente:', client);
+
+                    await registrarLogout(user, `CLIENT_${client}.html`);
+                    hideClientSwitchModal();
+                    window.location.href = `CLIENT_${client}.html?user=${encodeURIComponent(user)}`;
+                });
+            });
+
+            // Botão Sair Definitivo
+            const btnSairDef = clientSwitchButtons.querySelector('#btnSairDefinitivo');
+            if (btnSairDef) {
+                btnSairDef.addEventListener('click', async function() {
+                    await registrarLogout(usuarioLogado, 'index.html');
+                    localStorage.removeItem('alk_user_logado');
+                    hideClientSwitchModal();
+                    window.location.href = 'index.html';
+                });
+            }
+        }
+
+        function hideClientSwitchModal() {
+            clientSwitchModal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // Fechar ao clicar fora
+        clientSwitchModal.addEventListener('click', function(e) {
+            if (e.target === this) hideClientSwitchModal();
+        });
+
+        // Fechar com ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && clientSwitchModal.style.display === 'flex') {
+                hideClientSwitchModal();
+            }
+        });
+
+        // ==================================================
         // FUNÇÃO CENTRAL DE SAIR
         // ==================================================
         async function handleSairClick(e) {
             if (e) e.preventDefault();
-
             console.log('🚪 Clique em Sair. Usuário:', usuarioLogado);
 
             if (!usuarioLogado) {
@@ -1007,17 +1155,8 @@
                 return;
             }
 
-            const isMultiClient = USERS_MULTI_CLIENT.some(
-                u => u.toUpperCase().trim() === usuarioLogado.toUpperCase().trim()
-            );
-
-            if (isMultiClient) {
-                showClientSwitchModal();
-            } else {
-                await registrarLogout(usuarioLogado, 'index.html');
-                localStorage.removeItem('alk_user_logado');
-                window.location.href = 'index.html';
-            }
+            // SEMPRE abre o modal — ele decide dinamicamente o que mostrar
+            showClientSwitchModal();
         }
 
         // ==================================================
@@ -1032,55 +1171,9 @@
         });
 
         // ==================================================
-        // POPUP DE SELEÇÃO DE CLIENTE
-        // ==================================================
-        const clientSwitchModal = document.getElementById('clientSwitchModal');
-        const btnSairDefinitivo = document.getElementById('btnSairDefinitivo');
-
-        function showClientSwitchModal() {
-            clientSwitchModal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
-
-        function hideClientSwitchModal() {
-            clientSwitchModal.style.display = 'none';
-            document.body.style.overflow = '';
-        }
-
-        document.querySelectorAll('.client-select-btn[data-client]').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const client = this.dataset.client;
-                const user = usuarioLogado || '';
-
-                await registrarLogout(user, `CLIENT_${client}.html`);
-
-                hideClientSwitchModal();
-                window.location.href = `CLIENT_${client}.html?user=${encodeURIComponent(user)}`;
-            });
-        });
-
-        btnSairDefinitivo.addEventListener('click', async function() {
-            await registrarLogout(usuarioLogado, 'index.html');
-            localStorage.removeItem('alk_user_logado');
-            hideClientSwitchModal();
-            window.location.href = 'index.html';
-        });
-
-        clientSwitchModal.addEventListener('click', function(e) {
-            if (e.target === this) hideClientSwitchModal();
-        });
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && clientSwitchModal.style.display === 'flex') {
-                hideClientSwitchModal();
-            }
-        });
-
-        // ==================================================
         // BOTÕES DE SAIR
         // ==================================================
         document.getElementById('btnSair').addEventListener('click', handleSairClick);
-
         document.getElementById('btnSairMobile').addEventListener('click', function(e) {
             navMobile.classList.remove('active');
             handleSairClick(e);
@@ -1094,51 +1187,35 @@
             window.location.href = `${arquivo}?user=${encodeURIComponent(user)}`;
         }
 
-        document.getElementById('linkFolhaPonto').addEventListener('click', function(e) {
-            e.preventDefault();
-            navegarParaModulo('MODULOI_QNUTRI.html');
+        // Bind dos links (com verificação de existência)
+        const linkMap = {
+            'linkFolhaPonto': 'MODULOI_QNUTRI.html',
+            'linkControleFerias': 'MODULO1_QFERIAS.html',
+            'linkValeTransporte': 'CONEXOES.html',
+            'linkPagamentoSindicato': 'SID_QNUTRI.html',
+            'linkInssFgts': 'INSS_QNUTRI.html',
+            'linkProjecaoFolha': 'FOLHA_QNUTRI.html',
+            'linkPastaFuncionarios': 'PASTA_QNUTRI.html',
+            'linkMedicinaTrabalho': 'MED_QNUTRI.html',
+            'linkDRE': 'MODULO2_QNUTRI.html'
+        };
+
+        Object.entries(linkMap).forEach(([id, arquivo]) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    navegarParaModulo(arquivo);
+                });
+            } else {
+                console.warn(`⚠️ Elemento #${id} não encontrado no DOM`);
+            }
         });
 
-        document.getElementById('linkControleFerias').addEventListener('click', function(e) {
-            e.preventDefault();
-            navegarParaModulo('MODULO1_QFERIAS.html');
-        });
-
-        document.getElementById('linkValeTransporte').addEventListener('click', function(e) {
-            e.preventDefault();
-            navegarParaModulo('CONEXOES.html');
-        });
-
-        document.getElementById('linkPagamentoSindicato').addEventListener('click', function(e) {
-            e.preventDefault();
-            navegarParaModulo('SID_QNUTRI.html');
-        });
-
-        document.getElementById('linkInssFgts').addEventListener('click', function(e) {
-            e.preventDefault();
-            navegarParaModulo('INSS_QNUTRI.html');
-        });
-
-        document.getElementById('linkProjecaoFolha').addEventListener('click', function(e) {
-            e.preventDefault();
-            navegarParaModulo('FOLHA_QNUTRI.html');
-        });
-
-        document.getElementById('linkPastaFuncionarios').addEventListener('click', function(e) {
-            e.preventDefault();
-            navegarParaModulo('PASTA_QNUTRI.html');
-        });
-
-        document.getElementById('linkMedicinaTrabalho').addEventListener('click', function(e) {
-            e.preventDefault();
-            navegarParaModulo('MED_QNUTRI.html');
-        });
-
-        // ✅ DRE (Módulo II) → acessa direto MODULO2_QNUTRI.html
-        document.getElementById('linkDRE').addEventListener('click', function(e) {
-            e.preventDefault();
-            navegarParaModulo('MODULO2_QNUTRI.html');
-        });
+        // ==================================================
+        // LOG DE INICIALIZAÇÃO
+        // ==================================================
+        console.log('🚀 Página ' + CLIENTE_ATUAL + ' pronta.');
     </script>
 </body>
 </html>
