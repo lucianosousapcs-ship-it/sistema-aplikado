@@ -893,7 +893,8 @@
             async function getUserPassword(username) {
                 try {
                     const { data, error } = await supabaseClient.from('usuarios_senhas').select('senha_definitiva').eq('usuario', username).maybeSingle();
-                    if (error) { console.error(error); return null; }
+                    // Se houver erro (ex: RLS), retorna null. O log de erro ajuda a depurar.
+                    if (error) { console.error('Erro ao buscar senha (getUserPassword):', error); return null; }
                     return data?.senha_definitiva || null;
                 } catch (e) { console.error(e); return null; }
             }
