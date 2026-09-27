@@ -404,7 +404,7 @@
         <div class="mobile-construction-container">
             <button class="close-btn-abs" id="closeConstructionPopup">&times;</button>
             <span class="icon-construction"><i class="fas fa-tools"></i></span>
-            <h2>⚠️ Acesso em Construção</h2>
+            <h2>⚙️ Acesso em Construção</h2>
             <p class="subtitle">Estamos preparando nossa plataforma para dispositivos móveis</p>
             <p class="description">
                 A versão mobile da plataforma Aplikado está em desenvolvimento.<br><br>
@@ -1039,9 +1039,9 @@
                 const userKey = rawUser.toUpperCase();
                 const pass = (password || '').trim();
 
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('═══════════════════════════════════════');
                 console.log('🔐 [LOGIN] Usuário:', userKey);
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('═══════════════════════════════════════');
 
                 if (!userKey || !pass) {
                     alert('Preencha usuário e senha.');
@@ -1088,7 +1088,7 @@
 
                 // ===== PRIMEIRO ACESSO → força troca de senha =====
                 if (result.primeiroAcesso === true) {
-                    console.log('🔁 [LOGIN] Forçando troca de senha (primeiro_acesso = TRUE)');
+                    console.log('🔒 [LOGIN] Forçando troca de senha (primeiro_acesso = TRUE)');
                     pendingUser = userKey;
                     isResettingPassword = false;
                     showChangePasswordModal(false);
@@ -1754,12 +1754,21 @@
 
                             <div style="grid-column: span 2;">
                                 <label style="display:block;color:#d1d5db;font-size:0.8rem;margin-bottom:6px;font-weight:500;">Senha ${isEdit ? '(deixe em branco para manter)' : '* (mín. 6 caracteres)'}</label>
-                                <input type="password" id="usr_senha" value="" placeholder="${isEdit ? '•••••• (não alterar)' : 'Mínimo 6 caracteres'}"
-                                    style="width:100%;padding:12px 14px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;color:#fff;font-size:0.9rem;">
+                                <div style="position:relative;">
+                                    <input type="password" id="usr_senha" value="" placeholder="${isEdit ? '•••••• (não alterar)' : 'Mínimo 6 caracteres'}"
+                                        style="width:100%;padding:12px 14px;padding-right:44px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;color:#fff;font-size:0.9rem;">
+                                    <button type="button" id="usr_toggle_senha_btn" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#9ca3af;cursor:pointer;font-size:1rem;padding:4px;display:flex;align-items:center;justify-content:center;transition:color 0.2s;">
+                                        <i class="fas fa-eye" id="usr_eye_icon"></i>
+                                    </button>
+                                </div>
                                 <div id="usr_senha_err" style="color:#ef4444;font-size:0.72rem;margin-top:4px;display:none;"></div>
-                                <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#9ca3af;font-size:0.75rem;cursor:pointer;">
-                                    <input type="checkbox" id="usr_toggle_senha" style="accent-color:#ffd000;"> Mostrar senha
-                                </label>
+                                ${isEdit ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(255,208,0,0.06);border:1px solid rgba(255,208,0,0.2);border-radius:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                                    <span style="color:#9ca3af;font-size:0.75rem;font-weight:500;">Senha atual:</span>
+                                    <span id="usr_senha_atual_display" style="color:#ffd000;font-size:0.85rem;font-family:monospace;font-weight:600;letter-spacing:1px;">carregando...</span>
+                                    <button type="button" id="usr_toggle_senha_atual_btn" style="background:transparent;border:none;color:#9ca3af;cursor:pointer;font-size:0.85rem;padding:2px 6px;border-radius:4px;transition:0.2s;" title="Mostrar/Ocultar senha atual">
+                                        <i class="fas fa-eye" id="usr_eye_atual_icon"></i>
+                                    </button>
+                                </div>` : ''}
                             </div>
 
                             <div style="grid-column: span 2;">
@@ -1854,9 +1863,76 @@
                 if (cpfInput) cpfInput.addEventListener('input', (e) => { e.target.value = maskCpf(e.target.value); });
                 if (whatsInput) whatsInput.addEventListener('input', (e) => { e.target.value = applyPhoneMask(e.target.value); });
 
-                wrapper.querySelector('#usr_toggle_senha')?.addEventListener('change', (e) => {
-                    wrapper.querySelector('#usr_senha').type = e.target.checked ? 'text' : 'password';
+                // Toggle senha (campo de edição)
+                wrapper.querySelector('#usr_toggle_senha_btn')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const senhaInput = wrapper.querySelector('#usr_senha');
+                    const eyeIcon = wrapper.querySelector('#usr_eye_icon');
+                    if (senhaInput.type === 'password') {
+                        senhaInput.type = 'text';
+                        eyeIcon.classList.remove('fa-eye');
+                        eyeIcon.classList.add('fa-eye-slash');
+                    } else {
+                        senhaInput.type = 'password';
+                        eyeIcon.classList.remove('fa-eye-slash');
+                        eyeIcon.classList.add('fa-eye');
+                    }
                 });
+
+                // Carregar e exibir a senha atual (apenas no modo edição)
+                if (isEdit) {
+                    const senhaDisplay = wrapper.querySelector('#usr_senha_atual_display');
+                    const toggleSenhaAtualBtn = wrapper.querySelector('#usr_toggle_senha_atual_btn');
+                    const eyeAtualIcon = wrapper.querySelector('#usr_eye_atual_icon');
+                    let senhaAtualVisivel = false;
+                    let senhaAtualValor = '';
+
+                    // Buscar a senha atual no banco
+                    (async () => {
+                        try {
+                            const { data, error } = await supabaseClient
+                                .from('usuarios')
+                                .select('senha')
+                                .eq('nome', u.nome)
+                                .maybeSingle();
+
+                            if (error) throw error;
+                            if (data && data.senha) {
+                                senhaAtualValor = data.senha;
+                                senhaDisplay.textContent = '••••••';
+                                senhaDisplay.style.fontSize = '0.85rem';
+                                senhaDisplay.style.letterSpacing = '2px';
+                            } else {
+                                senhaDisplay.textContent = 'não definida';
+                                senhaDisplay.style.color = '#ef4444';
+                                senhaDisplay.style.letterSpacing = 'normal';
+                            }
+                        } catch (err) {
+                            console.error('Erro ao carregar senha atual:', err);
+                            senhaDisplay.textContent = 'erro ao carregar';
+                            senhaDisplay.style.color = '#ef4444';
+                            senhaDisplay.style.letterSpacing = 'normal';
+                        }
+                    })();
+
+                    toggleSenhaAtualBtn?.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (!senhaAtualValor) return;
+                        senhaAtualVisivel = !senhaAtualVisivel;
+                        if (senhaAtualVisivel) {
+                            senhaDisplay.textContent = senhaAtualValor;
+                            senhaDisplay.style.letterSpacing = 'normal';
+                            senhaDisplay.style.fontSize = '0.85rem';
+                            eyeAtualIcon.classList.remove('fa-eye');
+                            eyeAtualIcon.classList.add('fa-eye-slash');
+                        } else {
+                            senhaDisplay.textContent = '••••••';
+                            senhaDisplay.style.letterSpacing = '2px';
+                            eyeAtualIcon.classList.remove('fa-eye-slash');
+                            eyeAtualIcon.classList.add('fa-eye');
+                        }
+                    });
+                }
 
                 const fechar = () => { wrapper.remove(); };
                 wrapper.querySelector('#closeUserModal').onclick = fechar;
