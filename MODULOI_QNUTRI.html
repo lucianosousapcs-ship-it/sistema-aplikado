@@ -378,7 +378,6 @@
         .ponto-kpi .kpi-value { font-size: 15px; font-weight: 800; color: #1a0a00; line-height: 1.1; }
         .ponto-kpi .kpi-sub { font-size: 8.5px; color: #7a3a00; font-weight: 600; }
 
-        /* ===== NOVO LAYOUT DO EDITOR: TABELA + CARTÃO LADO A LADO ===== */
         .editor-wrapper {
             display: flex;
             gap: 16px;
@@ -1286,7 +1285,6 @@
         .cartao-imagem-wrapper .sem-imagem { text-align: center; color: #999; font-size: 12px; padding: 20px; }
         .cartao-imagem-wrapper .sem-imagem i { font-size: 36px; display: block; margin-bottom: 8px; color: #ccc; }
         .cartao-imagem-wrapper .sem-imagem p { font-weight: 600; color: #7a3a00; }
-        /* CORREÇÃO 1 — CSS DO PERÍODO (MÊS / ANO) */
         .editor-periodo-linha {
             display: flex;
             gap: 10px;
@@ -1296,8 +1294,6 @@
         .editor-periodo-linha .form-group.periodo-mes { min-width: 160px; }
         .editor-periodo-linha .form-group.periodo-ano { min-width: 90px; }
 
-/* ======================= FIX DEFINITIVO — MÊS E ANO LADO A LADO ======================= */
-/* Editor de Ponto */
 .editor-periodo-linha,
 .editor-toolbar > .editor-periodo-linha,
 #modalEditor .editor-periodo-linha {
@@ -1308,7 +1304,6 @@
     align-items: flex-end !important;
     width: 100% !important;
 }
-
 .editor-periodo-linha > .form-group,
 #modalEditor .editor-periodo-linha > .form-group {
     display: flex !important;
@@ -1317,21 +1312,17 @@
     width: auto !important;
     flex: 0 0 auto !important;
 }
-
 .editor-periodo-linha > .form-group.periodo-mes,
 #modalEditor .editor-periodo-linha > .form-group.periodo-mes {
     min-width: 180px !important;
     flex: 1 1 auto !important;
 }
-
 .editor-periodo-linha > .form-group.periodo-ano,
 #modalEditor .editor-periodo-linha > .form-group.periodo-ano {
     min-width: 100px !important;
     max-width: 130px !important;
     flex: 0 0 auto !important;
 }
-
-/* Aba Ponto do Modal do Funcionário (ponto-periodo-linha) */
 .ponto-tab-toolbar,
 #aba-modal-ponto .ponto-tab-toolbar {
     display: flex !important;
@@ -1341,7 +1332,6 @@
     align-items: flex-end !important;
     justify-content: space-between !important;
 }
-
 .ponto-periodo-linha,
 #aba-modal-ponto .ponto-periodo-linha {
     display: flex !important;
@@ -1350,7 +1340,6 @@
     gap: 10px !important;
     align-items: flex-end !important;
 }
-
 .ponto-periodo-linha > .form-group,
 #aba-modal-ponto .ponto-periodo-linha > .form-group {
     display: flex !important;
@@ -1359,27 +1348,21 @@
     width: auto !important;
     flex: 0 0 auto !important;
 }
-
 .ponto-periodo-linha > .form-group.periodo-mes,
 #aba-modal-ponto .ponto-periodo-linha > .form-group.periodo-mes {
     min-width: 180px !important;
     flex: 1 1 auto !important;
 }
-
 .ponto-periodo-linha > .form-group.periodo-ano,
 #aba-modal-ponto .ponto-periodo-linha > .form-group.periodo-ano {
     min-width: 100px !important;
     max-width: 130px !important;
     flex: 0 0 auto !important;
 }
-
-/* Garantia de que os labels não quebrem */
 .editor-periodo-linha .form-group label,
 .ponto-periodo-linha .form-group label {
     white-space: nowrap !important;
 }
-
-/* Responsivo: em telas muito pequenas empilha normalmente */
 @media (max-width: 480px) {
     .editor-periodo-linha,
     .ponto-periodo-linha {
@@ -1394,10 +1377,6 @@
         min-width: 0 !important;
     }
 }
-/* ===================== FIM FIX MÊS/ANO LADO A LADO ===================== */
-
-
-
     </style>
 </head>
 <body>
@@ -1825,7 +1804,6 @@
                             <button type="button" class="btn-action btn-secondary btn-sm" onclick="resetZoomCartao()" title="Resetar zoom"><i class="fas fa-undo"></i></button>
                             <input type="file" id="fileInputCartao" accept="image/*" style="display:none;" onchange="handleFileUploadCartao(event)">
                         </div>
-                        <!-- ABA DE CARTÕES (QUINZENAS) -->
                         <div class="editor-cartao-tabs">
                             <button type="button" class="editor-cartao-tab active" data-quinzena="1" onclick="mudarQuinzena(1)">1ª Quinzena</button>
                             <button type="button" class="editor-cartao-tab" data-quinzena="2" onclick="mudarQuinzena(2)">2ª Quinzena</button>
@@ -2349,11 +2327,26 @@
         </div>
     </div>
     <script>
+        // ============================================================
+        // SUPABASE — DOIS PROJETOS
+        //  • supabaseClient  → Projeto do PONTO (dados)
+        //  • supabaseAuth    → Projeto do MÓDULO III (apenas login QNUTRI)
+        // ============================================================
+
+        // Projeto do PONTO (original — NÃO MUDAR)
         const SUPABASE_URL = 'https://avzxplcdutqzlxfievza.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_rkwsOtfEMpic9PsiExxC_w_rzYqZNRs';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
             auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: false }
         });
+
+        // Projeto do MÓDULO III (usado SÓ para login na tabela `usuarios`)
+        const SUPABASE_AUTH_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
+        const SUPABASE_AUTH_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';
+        const supabaseAuth = supabase.createClient(SUPABASE_AUTH_URL, SUPABASE_AUTH_KEY, {
+            auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false }
+        });
+
         const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
         const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
         const JORNADA_PADRAO_MINUTOS = 8 * 60;
@@ -2414,7 +2407,6 @@
         let cartaoDragging = false;
         let cartaoStartX = 0;
         let cartaoStartY = 0;
-        // Variáveis para controle dos cartões (quinzenas)
         let cartaoQuinzenaAtual = 1;
         let cartao1Base64 = null;
         let cartao2Base64 = null;
@@ -2609,31 +2601,51 @@
                 document.getElementById('sidebarToggle').classList.add('collapsed');
             }
         }
+
+        // ============================================================
+        // 🔐 LOGIN — busca na tabela `usuarios` do MÓDULO III
+        // filtrando apenas clientes_permitidos contendo 'QNUTRI' e ativo = true
+        // ============================================================
         async function carregarUsuariosSupabase() {
             const select = document.getElementById('loginUsuario');
             if (select) select.innerHTML = '<option value="">Carregando...</option>';
             try {
-                const { data, error } = await supabaseClient.from('usuarios').select('*').order('nome');
+                const { data, error } = await supabaseAuth
+                    .from('usuarios')
+                    .select('id, nome, senha, ativo, clientes_permitidos, tipo_acesso')
+                    .eq('ativo', true)
+                    .contains('clientes_permitidos', ['QNUTRI'])
+                    .order('nome');
+
                 if (error) throw error;
-                usuariosSupabase = data || [];
+
+                usuariosSupabase = (data || []).map(u => ({
+                    id: u.id,
+                    nome: u.nome,
+                    senha: u.senha,
+                    role: 'user',
+                    foto: null
+                }));
+
                 if (select) {
                     if (usuariosSupabase.length === 0) {
-                        select.innerHTML = '<option value="">⚠️ Nenhum usuário</option>';
+                        select.innerHTML = '<option value="">⚠️ Nenhum usuário QNUTRI ativo</option>';
                     } else {
                         select.innerHTML = '<option value="">-- Selecione --</option>';
                         usuariosSupabase.forEach(u => {
                             const option = document.createElement('option');
                             option.value = u.nome;
-                            option.textContent = `${u.nome} (${ROLE_LABELS[u.role] || u.role})`;
+                            option.textContent = u.nome;
                             select.appendChild(option);
                         });
                     }
                 }
             } catch (error) {
-                console.error('Erro:', error);
+                console.error('Erro ao carregar usuários:', error);
                 if (select) select.innerHTML = `<option value="">❌ Erro: ${error.message}</option>`;
             }
         }
+
         async function fazerLoginSupabase() {
             const select = document.getElementById('loginUsuario');
             const nome = select ? select.value : '';
@@ -2645,14 +2657,19 @@
             btnEntrar.disabled = true;
             btnEntrar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
             try {
-                const { data, error } = await supabaseClient.from('usuarios').select('*').eq('nome', nome).maybeSingle();
-                if (error) throw error;
-                if (data && data.senha === senha) {
-                    usuarioAtual = { id: data.id, nome: data.nome, role: data.role, foto: data.foto || null };
+                const user = usuariosSupabase.find(u => u.nome === nome);
+                if (!user) {
+                    erro.textContent = '❌ Usuário não encontrado ou sem permissão QNUTRI.';
+                    erro.style.display = 'block';
+                    return;
+                }
+                if (user.senha === senha) {
+                    usuarioAtual = { id: user.id, nome: user.nome, role: user.role, foto: user.foto };
                     aplicarSessaoUsuario();
                     mostrarToast('✅ Bem-vindo, ' + nome + '!');
                     erro.style.display = 'none';
                     document.getElementById('loginSenha').value = '';
+                    // A partir daqui usa o supabaseClient (Ponto) normalmente
                     await carregarFuncionarios();
                     await atualizarBadgeCartoes();
                     const badgeErros = document.getElementById('badgeErros');
@@ -2670,6 +2687,7 @@
                 btnEntrar.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
             }
         }
+
         function aplicarSessaoUsuario() {
             if (!usuarioAtual) return;
             document.getElementById('modalLogin').classList.remove('active');
@@ -5383,7 +5401,6 @@
                     </table>
                 </div>`;
         }
-        /* CORREÇÃO 2 — NOVA FUNÇÃO carregarCartoesModal + funções de quinzena */
         let cartoesModalCache = { 1: null, 2: null };
         let quinzenaModalAtual = 1;
         async function carregarCartoesModal(funcionarioId, mes, ano) {
@@ -5455,7 +5472,6 @@
             event.target.value = '';
         }
         async function carregarCartaoNoModal(funcionarioId, mes, ano) {
-            // Mantida para compatibilidade — agora chama carregarCartoesModal
             await carregarCartoesModal(funcionarioId, mes, ano);
         }
         function visualizarCartaoAnexo(funcionarioId) {
@@ -5516,7 +5532,6 @@
             document.getElementById('editorCartaoImg').src = '';
             anexoAtualBase64 = null;
             nomeArquivoAnexo = null;
-            // Reset quinzena
             cartaoQuinzenaAtual = 1;
             cartao1Base64 = null;
             cartao2Base64 = null;
@@ -5531,12 +5546,10 @@
             editorAnoAtual = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
             await inicializarEditorPonto();
         }
-        // Função para trocar a quinzena ativa
         function mudarQuinzena(quinzena) {
             cartaoQuinzenaAtual = quinzena;
             document.querySelectorAll('.editor-cartao-tab').forEach(t => t.classList.remove('active'));
             document.querySelector(`.editor-cartao-tab[data-quinzena="${quinzena}"]`)?.classList.add('active');
-            // Atualizar a visualização do cartão
             const imgEl = document.getElementById('editorCartaoImg');
             const semImg = document.getElementById('editorCartaoView').querySelector('.sem-imagem');
             const base64 = quinzena === 1 ? cartao1Base64 : cartao2Base64;
@@ -5574,7 +5587,6 @@
             pontosPorFuncionario[funcionarioAtual.nome] = dadosExistentes;
             const diasAbonados = await carregarMapaDiasAbonados(funcionarioAtual.id, mes, ano);
             mapaDiasAbonados[`${funcionarioAtual.id}_${mes}_${ano}`] = diasAbonados;
-            // Carregar cartões (quinzenas)
             try {
                 const { data: cartoes, error: cartoesError } = await supabaseClient.from('imagens_cartao').select('*').eq('funcionario_id', funcionarioAtual.id).eq('mes', mes).eq('ano', ano).order('quinzena');
                 if (!cartoesError && cartoes) {
@@ -5585,7 +5597,6 @@
                     });
                 }
             } catch(e) { console.warn('Erro ao carregar cartões:', e); }
-            // Exibir o cartão da quinzena atual
             mudarQuinzena(cartaoQuinzenaAtual);
             const tbody = document.getElementById('editorTbody');
             tbody.innerHTML = '';
@@ -6374,7 +6385,6 @@
                 imgEl.style.display = 'block';
                 const semImg = document.getElementById('editorCartaoView').querySelector('.sem-imagem');
                 if (semImg) semImg.style.display = 'none';
-                // Armazenar na quinzena correta
                 if (cartaoQuinzenaAtual === 1) {
                     cartao1Base64 = base64Data;
                     cartao1Nome = file.name;
@@ -6421,7 +6431,6 @@
             anexoAtualBase64 = null;
             nomeArquivoAnexo = null;
             resetZoomCartao();
-            // Remove do banco
             if (funcionarioAtual) {
                 const mes = document.getElementById('editorMes').value;
                 const ano = parseInt(document.getElementById('editorAno').value) || new Date().getFullYear();
@@ -6826,7 +6835,7 @@
             }, 500);
         }
         function abrirModalPerfis() {
-            if (!usuarioAtual || usuarioAtual.role !== 'admin') { mostrarToast('⚠️ Apenas administradores!', 'warning'); return; }
+            if (!usuarioAtual) { mostrarToast('⚠️ Faça login primeiro!', 'warning'); return; }
             document.getElementById('modalPerfis').classList.add('active');
             renderizarPerfis();
         }
@@ -6834,36 +6843,21 @@
         async function renderizarPerfis() {
             const container = document.getElementById('listaPerfis');
             try {
-                const { data, error } = await supabaseClient.from('usuarios').select('*').order('nome');
+                const { data, error } = await supabaseAuth
+                    .from('usuarios')
+                    .select('id, nome, ativo, clientes_permitidos, tipo_acesso')
+                    .contains('clientes_permitidos', ['QNUTRI'])
+                    .order('nome');
                 if (error) throw error;
-                if (!data || data.length === 0) { container.innerHTML = '<p style="text-align:center;color:#7a3a00;padding:20px;">Nenhum usuário.</p>'; return; }
-                container.innerHTML = data.map(u => `<div style="display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #eee;align-items:center;"><div><strong>${u.nome}</strong> <span style="margin-left:10px;font-size:12px;color:#7a3a00;">${ROLE_LABELS[u.role] || u.role}</span></div><button type="button" class="btn-action btn-danger btn-sm" onclick="excluirPerfilSupabase('${u.id}')"><i class="fas fa-trash"></i></button></div>`).join('');
+                if (!data || data.length === 0) { container.innerHTML = '<p style="text-align:center;color:#7a3a00;padding:20px;">Nenhum usuário QNUTRI.</p>'; return; }
+                container.innerHTML = data.map(u => `<div style="display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #eee;align-items:center;"><div><strong>${u.nome}</strong> <span style="margin-left:10px;font-size:12px;color:#7a3a00;">${u.ativo ? 'Ativo' : 'Inativo'} · ${u.tipo_acesso || 'direct'}</span></div><span style="font-size:11px;color:#999;">Gerenciado no Módulo III</span></div>`).join('');
             } catch (error) { container.innerHTML = `<p style="color:#dc3545;text-align:center;padding:20px;">Erro: ${error.message}</p>`; }
         }
         async function adicionarPerfilSupabase() {
-            const nome = document.getElementById('novoPerfilNome').value.trim();
-            const role = document.getElementById('novoPerfilRole').value;
-            if (!nome) { mostrarToast('⚠️ Digite um nome!', 'warning'); return; }
-            const senha = prompt('Senha:', '1234');
-            if (senha === null) return;
-            try {
-                const { error } = await supabaseClient.from('usuarios').insert({ nome, senha, role });
-                if (error) throw error;
-                mostrarToast('✅ Usuário adicionado!');
-                document.getElementById('novoPerfilNome').value = '';
-                renderizarPerfis();
-                carregarUsuariosSupabase();
-            } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
+            mostrarToast('⚠️ A gestão de usuários é feita no Módulo III (ALF).', 'warning');
         }
         async function excluirPerfilSupabase(id) {
-            if (!confirm('Excluir este usuário?')) return;
-            try {
-                const { error } = await supabaseClient.from('usuarios').delete().eq('id', id);
-                if (error) throw error;
-                mostrarToast('✅ Excluído!');
-                renderizarPerfis();
-                carregarUsuariosSupabase();
-            } catch (error) { mostrarToast('❌ Erro: ' + error.message, 'error'); }
+            mostrarToast('⚠️ A gestão de usuários é feita no Módulo III (ALF).', 'warning');
         }
         function abrirModuloVT(id) { window.open(`CONEXOES.html?funcionario_id=${id}`, '_blank'); }
         function abrirModuloMedicina(id) { window.open(`MED_QNUTRI.html?funcionario_id=${id}`, '_blank'); }
@@ -6943,105 +6937,5 @@
             console.log('✅ Ponto pronto!');
         };
     </script>
-
-<script>
-/* FIX REFORÇO — força mês/ano lado a lado via style inline */
-(function() {
-    function aplicarFlexRowInline(containerSelector, mesSelector, anoSelector) {
-        document.querySelectorAll(containerSelector).forEach(function(container) {
-            container.style.setProperty('display', 'flex', 'important');
-            container.style.setProperty('flex-direction', 'row', 'important');
-            container.style.setProperty('flex-wrap', 'nowrap', 'important');
-            container.style.setProperty('gap', '10px', 'important');
-            container.style.setProperty('align-items', 'flex-end', 'important');
-            container.style.setProperty('width', '100%', 'important');
-
-            var mes = container.querySelector(mesSelector);
-            var ano = container.querySelector(anoSelector);
-
-            if (mes) {
-                mes.style.setProperty('display', 'flex', 'important');
-                mes.style.setProperty('flex-direction', 'column', 'important');
-                mes.style.setProperty('flex', '1 1 auto', 'important');
-                mes.style.setProperty('min-width', '180px', 'important');
-                mes.style.setProperty('width', 'auto', 'important');
-                mes.style.setProperty('margin', '0', 'important');
-            }
-            if (ano) {
-                ano.style.setProperty('display', 'flex', 'important');
-                ano.style.setProperty('flex-direction', 'column', 'important');
-                ano.style.setProperty('flex', '0 0 auto', 'important');
-                ano.style.setProperty('min-width', '100px', 'important');
-                ano.style.setProperty('max-width', '130px', 'important');
-                ano.style.setProperty('width', 'auto', 'important');
-                ano.style.setProperty('margin', '0', 'important');
-            }
-        });
-    }
-
-    function aplicarTodos() {
-        // Editor de Ponto
-        aplicarFlexRowInline(
-            '.editor-periodo-linha',
-            '.form-group.periodo-mes',
-            '.form-group.periodo-ano'
-        );
-        // Aba Ponto dentro do modal do funcionário
-        aplicarFlexRowInline(
-            '.ponto-periodo-linha',
-            '.form-group.periodo-mes',
-            '.form-group.periodo-ano'
-        );
-    }
-
-    // Aplica agora, ao carregar, e depois de qualquer mudança no DOM
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', aplicarTodos);
-    } else {
-        aplicarTodos();
-    }
-
-    // Reaplica quando o modal do editor abrir, quando trocar de aba e a cada 300ms por 5s
-    var intervalId = setInterval(aplicarTodos, 300);
-    setTimeout(function() { clearInterval(intervalId); }, 5000);
-
-    // Observa mudanças no DOM (modais são criados dinamicamente)
-    if (window.MutationObserver) {
-        var observer = new MutationObserver(function() { aplicarTodos(); });
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-
-    // Reaplica ao abrir o Editor e ao trocar para a aba Ponto do modal
-    var _abrirEditor = window.abrirEditorPontoFuncionario;
-    if (typeof _abrirEditor === 'function') {
-        window.abrirEditorPontoFuncionario = function() {
-            var r = _abrirEditor.apply(this, arguments);
-            setTimeout(aplicarTodos, 100);
-            setTimeout(aplicarTodos, 500);
-            return r;
-        };
-    }
-
-    var _carregarPonto = window.carregarPontoNoModal;
-    if (typeof _carregarPonto === 'function') {
-        window.carregarPontoNoModal = function() {
-            var r = _carregarPonto.apply(this, arguments);
-            setTimeout(aplicarTodos, 100);
-            setTimeout(aplicarTodos, 500);
-            return r;
-        };
-    }
-
-    var _trocarAba = window.trocarAbaPasta;
-    if (typeof _trocarAba === 'function') {
-        window.trocarAbaPasta = function() {
-            var r = _trocarAba.apply(this, arguments);
-            setTimeout(aplicarTodos, 100);
-            setTimeout(aplicarTodos, 500);
-            return r;
-        };
-    }
-})();
-</script>
 </body>
 </html>
