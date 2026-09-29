@@ -1361,10 +1361,22 @@
 </div>
 
 <script>
+// ============================================================
+// 🔗 SUPABASE — DOIS PROJETOS
+//  • supabaseClient  → Projeto do MÓDULO 2 (QNUTRI Financeiro)
+//  • supabaseAuth    → Projeto do MÓDULO III (apenas login QNUTRI)
+// ============================================================
+
+// Projeto do MÓDULO 2 (original — NÃO MUDAR — todos os dados ficam aqui)
 const SUPABASE_URL = "https://avzxplcdutqzlxfievza.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_rkwsOtfEMpic9PsiExxC_w_rzYqZNRs";
 
+// Projeto do MÓDULO III (usado SÓ para login na tabela `usuarios`)
+const SUPABASE_AUTH_URL = "https://fxfurmxeizbwufupjppq.supabase.co";
+const SUPABASE_AUTH_KEY = "sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe";
+
 let supabaseClient = null;
+let supabaseAuth = null;
 let lancamentos = [];
 let planosContas = [];
 let usuariosSistema = [];
@@ -1442,12 +1454,28 @@ function montarWatermarkAleatorio() {
     }
 }
 
+// ============================================================
+// 🔐 LOGIN — busca na tabela `usuarios` do MÓDULO III
+// filtrando clientes_permitidos contendo 'QNUTRI' e ativo = true
+// ============================================================
 async function carregarUsuariosSistema() {
-    if (!supabaseClient) return;
+    if (!supabaseAuth) return;
     try {
-        const { data, error } = await supabaseClient.from('usuarios').select('id, nome, role').order('nome');
+        const { data, error } = await supabaseAuth
+            .from('usuarios')
+            .select('id, nome, senha, ativo, clientes_permitidos, tipo_acesso')
+            .eq('ativo', true)
+            .contains('clientes_permitidos', ['QNUTRI'])
+            .order('nome');
         if (error) throw error;
-        usuariosSistema = data || [];
+        usuariosSistema = (data || []).map(u => ({
+            id: u.id,
+            nome: u.nome,
+            senha: u.senha,
+            role: 'user', // role padrão (a tabela do Módulo III não tem essa coluna)
+            tipo_acesso: u.tipo_acesso || 'direct'
+        }));
+        console.log(`✅ ${usuariosSistema.length} usuário(s) QNUTRI carregado(s)`);
     } catch (e) {
         console.warn('Erro ao carregar usuários:', e.message);
         usuariosSistema = [];
@@ -1459,13 +1487,13 @@ function popularSelectLoginInsercao() {
     if (!sel) return;
     sel.innerHTML = '<option value="">Selecione o usuário...</option>';
     if (usuariosSistema.length === 0) {
-        sel.innerHTML = '<option value="">⚠️ Nenhum usuário cadastrado</option>';
+        sel.innerHTML = '<option value="">⚠️ Nenhum usuário QNUTRI cadastrado</option>';
         return;
     }
     usuariosSistema.forEach(u => {
         const opt = document.createElement('option');
         opt.value = u.nome;
-        opt.textContent = `${u.nome} (${(u.role || 'viewer').toUpperCase()})`;
+        opt.textContent = u.nome;
         sel.appendChild(opt);
     });
 }
@@ -1510,15 +1538,19 @@ async function confirmarLoginInsercao(event) {
     btn.disabled = true;
 
     try {
-        const { data, error } = await supabaseClient.from('usuarios').select('id, nome, senha, role').eq('nome', nome).maybeSingle();
-        if (error) throw error;
-        if (!data || data.senha !== senha) {
+        const user = usuariosSistema.find(u => u.nome === nome);
+        if (!user) {
+            erroEl.textContent = '❌ Usuário não encontrado ou sem permissão QNUTRI.';
+            erroEl.classList.add('show');
+            return;
+        }
+        if (user.senha !== senha) {
             erroEl.textContent = '❌ Usuário ou senha incorretos.';
             erroEl.classList.add('show');
             return;
         }
 
-        usuarioLogado = { id: data.id, nome: data.nome, role: data.role };
+        usuarioLogado = { id: user.id, nome: user.nome, role: user.role };
         atualizarBarraUsuario();
 
         if (dadosLancamentoPendente) {
@@ -1830,9 +1862,16 @@ async function carregarDados() {
         if (!supabaseClient) {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
+        if (!supabaseAuth) {
+            supabaseAuth = window.supabase.createClient(SUPABASE_AUTH_URL, SUPABASE_AUTH_KEY, {
+                auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false }
+            });
+        }
+
         await carregarPlanosContas();
         await carregarUsuariosSistema();
 
+        // ✅ Dados SEMPRE do projeto original do Módulo 2 (supabaseClient)
         const { data, error } = await supabaseClient.from('qnutri_lancamentos').select('*').order('data', { ascending: false, nullsFirst: false });
 
         if (error) {
@@ -2652,7 +2691,7 @@ function editarLancamento(id) {
     document.getElementById('lancFornecedor').value = l.fornecedor || '';
     const selPlano = document.getElementById('lancPlano');
     const plano = encontrarPlano(l.plano_contas);
-    const valorPlano = plano ? `${plano.codigo} - ${plano.nome}` : (l.plano_contas || '');
+     const valorPlano = plano ? `${plano.codigo} - ${plano.nome}` : (l.plano_contas || '');
     let encontrou = false;
     for (let i = 0; i < selPlano.options.length; i++) {
         if (selPlano.options[i].value === valorPlano) { selPlano.selectedIndex = i; encontrou = true; break; }
