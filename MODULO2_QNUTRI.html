@@ -1591,7 +1591,6 @@ let planosExpandidosResumo = new Set();
 
 let listasSeparadasContexto = 'geral';
 let listaAtiva = 'receitas';
-// NOVO: filtro de grupo regional aplicado nas listas separadas
 let listasSeparadasGrupoRegional = null;
 
 const FORNECEDORES_COPAGAZ = ['COPAGAZ','COPA','COPA GAZ','MAKEEN (KOSAN)','MAKEEN','LIQUIGÁS','LIQUIGAS'];
@@ -2770,13 +2769,12 @@ function abrirListasSeparadas(contexto, grupoRegional = null) {
 
     const titulos = {
         'geral': grupoRegional ? `Listas Separadas — ${grupoRegional}` : 'Listas Separadas — Receitas e Despesas',
-        'receitas': 'Listas Separadas — Foco em Receitas',
-        'despesas': 'Listas Separadas — Foco em Despesas',
-        'saldo': 'Listas Separadas — Composição do Saldo',
-        'atraso': 'Listas Separadas — Contas em Atraso'
+        'receitas': grupoRegional ? `Listas Separadas — Receitas (${grupoRegional})` : 'Listas Separadas — Foco em Receitas',
+        'despesas': grupoRegional ? `Listas Separadas — Despesas (${grupoRegional})` : 'Listas Separadas — Foco em Despesas',
+        'saldo': grupoRegional ? `Listas Separadas — Saldo (${grupoRegional})` : 'Listas Separadas — Composição do Saldo',
+        'atraso': grupoRegional ? `Listas Separadas — Atraso (${grupoRegional})` : 'Listas Separadas — Contas em Atraso'
     };
-    let titulo = titulos[listasSeparadasContexto] || 'Listas Separadas';
-    if (grupoRegional && listasSeparadasContexto !== 'geral') titulo += ` — ${grupoRegional}`;
+    const titulo = titulos[listasSeparadasContexto] || 'Listas Separadas';
     document.getElementById('listasSeparadasTitulo').textContent = titulo;
 
     document.getElementById('buscaListaSeparada').value = '';
@@ -2818,7 +2816,6 @@ function limparFiltrosListasSeparadas() {
 function getBaseListasSeparadas(tipo) {
     let base = lancamentos.filter(l => l.tipo === tipo);
 
-    // Aplica o grupo regional definido pelo card clicado
     if (listasSeparadasGrupoRegional) {
         base = base.filter(l => getGrupoRegionalLanc(l) === listasSeparadasGrupoRegional);
     }
@@ -2857,54 +2854,146 @@ function aplicarFiltrosListasSeparadas(lista) {
     return filt;
 }
 
+/**
+ * RENDERIZA a lista ativa (Receitas/Despesas)
+ * E adapta os CARDS DE TOTAIS do topo conforme a aba ativa:
+ *
+ * - Aba RECEITAS → cards mostram APENAS dados de receitas
+ *   (Receitas Projetado, Receitas Realizado, Diferença, %, Qtd, Contas em Atraso de Receitas)
+ *
+ * - Aba DESPESAS → cards mostram APENAS dados de despesas
+ *   (Despesas Projetado, Despesas Realizado, Diferença, %, Qtd, Contas em Atraso de Despesas)
+ */
 function renderizarListaAtiva() {
     const tipo = listaAtiva;
     const tipoLanc = tipo === 'receitas' ? 'RECEITA' : 'DESPESA';
+    const isReceita = tipo === 'receitas';
 
-    const base = getBaseListasSeparadas(tipoLanc);
-    const filtrada = aplicarFiltrosListasSeparadas(base);
+    // Bases já filtradas pelo grupo regional definido pelo card clicado
+    const baseRec = getBaseListasSeparadas('RECEITA');
+    const baseDesp = getBaseListasSeparadas('DESPESA');
 
-    document.getElementById('countReceitasTab').textContent = getBaseListasSeparadas('RECEITA').length;
-    document.getElementById('countDespesasTab').textContent = getBaseListasSeparadas('DESPESA').length;
+    // Aplicar filtros de UI (busca, mês, situação, grupo manual)
+    const filtRec = aplicarFiltrosListasSeparadas(baseRec);
+    const filtDesp = aplicarFiltrosListasSeparadas(baseDesp);
 
-    const totRec = getBaseListasSeparadas('RECEITA').reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
-    const totRecProj = getBaseListasSeparadas('RECEITA').reduce((s, l) => s + (parseFloat(l.valor_projetado) || 0), 0);
-    const totDesp = getBaseListasSeparadas('DESPESA').reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
-    const totDespProj = getBaseListasSeparadas('DESPESA').reduce((s, l) => s + (parseFloat(l.valor_projetado) || 0), 0);
-    const saldo = totRec - totDesp;
+    // Contadores das abas
+    document.getElementById('countReceitasTab').textContent = baseRec.length;
+    document.getElementById('countDespesasTab').textContent = baseDesp.length;
 
-    document.getElementById('listasTotaisBar').innerHTML = `
-        <div class="total-box">
-            <h5><i class="fas fa-arrow-up" style="color:#059669;"></i> Receitas (Realizado)</h5>
-            <div class="val positivo">${formatarMoeda(totRec)}</div>
-        </div>
-        <div class="total-box">
-            <h5><i class="fas fa-bullseye" style="color:#0284C7;"></i> Receitas (Projetado)</h5>
-            <div class="val info">${formatarMoeda(totRecProj)}</div>
-        </div>
-        <div class="total-box">
-            <h5><i class="fas fa-arrow-down" style="color:#DC2626;"></i> Despesas (Realizado)</h5>
-            <div class="val negativo">${formatarMoeda(totDesp)}</div>
-        </div>
-        <div class="total-box">
-            <h5><i class="fas fa-bullseye" style="color:#0284C7;"></i> Despesas (Projetado)</h5>
-            <div class="val info">${formatarMoeda(totDespProj)}</div>
-        </div>
-        <div class="total-box">
-            <h5><i class="fas fa-calculator" style="color:#FF6D00;"></i> Saldo Realizado</h5>
-            <div class="val ${saldo >= 0 ? 'positivo' : 'negativo'}">${formatarMoeda(saldo)}</div>
-        </div>
-    `;
+    // ---------------------------------------------------------
+    // ADAPTAÇÃO DOS CARDS CONFORME A ABA ATIVA
+    // ---------------------------------------------------------
+    const labelGrupo = listasSeparadasGrupoRegional ? ` — ${listasSeparadasGrupoRegional}` : '';
 
+    if (isReceita) {
+        // ============ ABA RECEITAS ============
+        const totRec = baseRec.reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
+        const totRecProj = baseRec.reduce((s, l) => s + (parseFloat(l.valor_projetado) || 0), 0);
+        const difRec = totRec - totRecProj;
+        const pctRec = totRecProj > 0 ? ((totRec / totRecProj) * 100) : 100;
+        const qtdRec = baseRec.length;
+
+        // Receitas em atraso (dentro da base já filtrada)
+        const hoje = new Date(); hoje.setHours(0,0,0,0);
+        const atrasoRec = baseRec.filter(l => {
+            if (!l.data) return false;
+            const d = new Date(l.data + 'T00:00:00');
+            if (isNaN(d.getTime())) return false;
+            const sit = (l.situacao || '').toUpperCase();
+            if (sit === 'PAGO' || sit === 'PAGO - MESES ANTERIORES') return false;
+            return d < hoje;
+        });
+        const totalAtrasoRec = atrasoRec.reduce((s, l) => s + (parseFloat(l.valor_realizado) || parseFloat(l.valor_projetado) || 0), 0);
+        const recPagas = baseRec.filter(l => (l.situacao || '').toUpperCase() === 'PAGO' || (l.situacao || '').toUpperCase() === 'PAGO - MESES ANTERIORES').length;
+        const recEmAberto = qtdRec - recPagas;
+
+        document.getElementById('listasTotaisBar').innerHTML = `
+            <div class="total-box">
+                <h5><i class="fas fa-arrow-up" style="color:#059669;"></i> Receitas Realizadas${labelGrupo}</h5>
+                <div class="val positivo">${formatarMoeda(totRec)}</div>
+            </div>
+            <div class="total-box">
+                <h5><i class="fas fa-bullseye" style="color:#0284C7;"></i> Receitas Projetadas${labelGrupo}</h5>
+                <div class="val info">${formatarMoeda(totRecProj)}</div>
+            </div>
+            <div class="total-box">
+                <h5><i class="fas fa-balance-scale" style="color:${difRec >= 0 ? '#059669' : '#DC2626'};"></i> Diferença (Real - Proj)${labelGrupo}</h5>
+                <div class="val ${difRec >= 0 ? 'positivo' : 'negativo'}">${formatarMoeda(difRec)}</div>
+            </div>
+            <div class="total-box">
+                <h5><i class="fas fa-percentage" style="color:#0284C7;"></i> % Realizado${labelGrupo}</h5>
+                <div class="val info">${pctRec.toFixed(1)}%</div>
+            </div>
+            <div class="total-box">
+                <h5><i class="fas fa-hashtag" style="color:#6b3a00;"></i> Qtd Receitas${labelGrupo}</h5>
+                <div class="val">${qtdRec} <span style="font-size:10px;color:#8B5E00;font-weight:600;">(${recPagas} pagas · ${recEmAberto} abertas)</span></div>
+            </div>
+            <div class="total-box">
+                <h5><i class="fas fa-clock" style="color:#D97706;"></i> Receitas em Atraso${labelGrupo}</h5>
+                <div class="val negativo">${formatarMoeda(totalAtrasoRec)}</div>
+            </div>
+        `;
+    } else {
+        // ============ ABA DESPESAS ============
+        const totDesp = baseDesp.reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
+        const totDespProj = baseDesp.reduce((s, l) => s + (parseFloat(l.valor_projetado) || 0), 0);
+        const difDesp = totDesp - totDespProj;
+        const pctDesp = totDespProj > 0 ? ((totDesp / totDespProj) * 100) : 0;
+        const qtdDesp = baseDesp.length;
+
+        const hoje = new Date(); hoje.setHours(0,0,0,0);
+        const atrasoDesp = baseDesp.filter(l => {
+            if (!l.data) return false;
+            const d = new Date(l.data + 'T00:00:00');
+            if (isNaN(d.getTime())) return false;
+            const sit = (l.situacao || '').toUpperCase();
+            if (sit === 'PAGO' || sit === 'PAGO - MESES ANTERIORES') return false;
+            return d < hoje;
+        });
+        const totalAtrasoDesp = atrasoDesp.reduce((s, l) => s + (parseFloat(l.valor_realizado) || parseFloat(l.valor_projetado) || 0), 0);
+        const despPagas = baseDesp.filter(l => (l.situacao || '').toUpperCase() === 'PAGO' || (l.situacao || '').toUpperCase() === 'PAGO - MESES ANTERIORES').length;
+        const despEmAberto = qtdDesp - despPagas;
+
+        document.getElementById('listasTotaisBar').innerHTML = `
+            <div class="total-box">
+                <h5><i class="fas fa-arrow-down" style="color:#DC2626;"></i> Despesas Realizadas${labelGrupo}</h5>
+                <div class="val negativo">${formatarMoeda(totDesp)}</div>
+            </div>
+            <div class="total-box">
+                <h5><i class="fas fa-bullseye" style="color:#0284C7;"></i> Despesas Projetadas${labelGrupo}</h5>
+                <div class="val info">${formatarMoeda(totDespProj)}</div>
+            </div>
+            <div class="total-box">
+                <h5><i class="fas fa-balance-scale" style="color:${difDesp <= 0 ? '#059669' : '#DC2626'};"></i> Diferença (Real - Proj)${labelGrupo}</h5>
+                <div class="val ${difDesp <= 0 ? 'positivo' : 'negativo'}">${formatarMoeda(difDesp)}</div>
+            </div>
+            <div class="total-box">
+                <h5><i class="fas fa-percentage" style="color:#0284C7;"></i> % Realizado${labelGrupo}</h5>
+                <div class="val info">${pctDesp.toFixed(1)}%</div>
+            </div>
+            <div class="total-box">
+                <h5><i class="fas fa-hashtag" style="color:#6b3a00;"></i> Qtd Despesas${labelGrupo}</h5>
+                <div class="val">${qtdDesp} <span style="font-size:10px;color:#8B5E00;font-weight:600;">(${despPagas} pagas · ${despEmAberto} abertas)</span></div>
+            </div>
+            <div class="total-box">
+                <h5><i class="fas fa-clock" style="color:#D97706;"></i> Despesas em Atraso${labelGrupo}</h5>
+                <div class="val negativo">${formatarMoeda(totalAtrasoDesp)}</div>
+            </div>
+        `;
+    }
+
+    // ---------------------------------------------------------
+    // RENDERIZAÇÃO DA TABELA
+    // ---------------------------------------------------------
     const wrapper = document.getElementById('listasTabelaWrapper');
-    const lista = ordenarLista(filtrada, sortConfig.campo, sortConfig.direcao);
+    const lista = ordenarLista(isReceita ? filtRec : filtDesp, sortConfig.campo, sortConfig.direcao);
 
     if (lista.length === 0) {
         wrapper.innerHTML = `<div class="listas-empty"><i class="fas fa-inbox"></i><p>Nenhum lançamento encontrado nesta lista</p></div>`;
         return;
     }
 
-    const isReceita = tipo === 'receitas';
     const corTipo = isReceita ? '#059669' : '#DC2626';
     const labelTipo = isReceita ? 'Receita' : 'Despesa';
     const icone = isReceita ? 'fa-arrow-up' : 'fa-arrow-down';
@@ -2950,14 +3039,18 @@ function renderizarListaAtiva() {
 
     html += `</tbody></table>`;
 
+    const subtituloGrupo = listasSeparadasGrupoRegional ? ` — ${listasSeparadasGrupoRegional}` : '';
+    const totProjLista = lista.reduce((s, l) => s + (parseFloat(l.valor_projetado) || 0), 0);
+    const totRealLista = lista.reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
+
     wrapper.innerHTML = `
         <div style="padding:10px 14px;background:linear-gradient(90deg, ${isReceita ? '#ecfdf5' : '#fef2f2'} 0%, #ffffff 100%);border-bottom:2px solid ${corTipo};display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:3;">
             <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:${corTipo};">
-                <i class="fas ${icone}"></i> LISTA DE ${labelTipo.toUpperCase()}S — ${lista.length} registro(s)
+                <i class="fas ${icone}"></i> LISTA DE ${labelTipo.toUpperCase()}S${subtituloGrupo} — ${lista.length} registro(s)
             </div>
             <div style="display:flex;gap:14px;font-size:11px;font-weight:700;">
-                <span style="color:#0284C7;">Projetado: ${formatarMoeda(lista.reduce((s, l) => s + (parseFloat(l.valor_projetado) || 0), 0))}</span>
-                <span style="color:${corTipo};">Realizado: ${formatarMoeda(lista.reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0))}</span>
+                <span style="color:#0284C7;">Projetado: ${formatarMoeda(totProjLista)}</span>
+                <span style="color:${corTipo};">Realizado: ${formatarMoeda(totRealLista)}</span>
             </div>
         </div>
         ${html}
@@ -3001,7 +3094,8 @@ function exportarExcelListasSeparadas() {
 
     XLSX.utils.book_append_sheet(wb, wsRec, 'Receitas');
     XLSX.utils.book_append_sheet(wb, wsDesp, 'Despesas');
-    salvarExcel(wb, `QNUTRI_ListasSeparadas_${new Date().toISOString().slice(0,10)}.xlsx`);
+    const sufixo = listasSeparadasGrupoRegional ? '_' + listasSeparadasGrupoRegional.replace(/\s+/g,'_') : '';
+    salvarExcel(wb, `QNUTRI_ListasSeparadas${sufixo}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
 /* ============ RENDERIZAÇÃO DAS TELAS ============ */
@@ -3201,7 +3295,6 @@ function renderizarDRE() {
     }
     document.getElementById('theadDRE').innerHTML = theadHtml;
 
-    // total geral para % (modo não ambos)
     const totalGeralR = Object.values(totais).reduce((s,t) => s + t.recR + t.despR, 0);
 
     let html = '';
@@ -3357,7 +3450,6 @@ function renderizarAnalise() {
         return;
     }
 
-    // NOVO: Gráfico mensal Projetado vs Realizado
     const porMes = {};
     for (let m = 1; m <= 12; m++) porMes[String(m).padStart(2,'0')] = { p: 0, r: 0 };
     filt.forEach(l => {
@@ -4648,7 +4740,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 QNUTRI Financeiro - Iniciando...');
     montarWatermarkAleatorio();
 
-    // Restaurar densidade salva
     try {
         if (localStorage.getItem('qnutri_densidade') === 'compacto') {
             document.body.classList.add('modo-compacto');
@@ -4678,13 +4769,11 @@ document.addEventListener('DOMContentLoaded', () => {
     configurarSortTabela('tabelaRelatorio', renderizarRelatorio);
 
     document.addEventListener('keydown', (e) => {
-        // Ctrl+K — Busca Global
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             e.preventDefault();
             abrirBuscaGlobal();
             return;
         }
-        // ESC — Fechar tudo
         if (e.key === 'Escape') {
             const buscaAberta = document.getElementById('buscaGlobalOverlay')?.classList.contains('active');
             if (buscaAberta) { fecharBuscaGlobal(); return; }
@@ -4702,12 +4791,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Fechar busca global clicando fora
     document.getElementById('buscaGlobalOverlay')?.addEventListener('click', (e) => {
         if (e.target.id === 'buscaGlobalOverlay') fecharBuscaGlobal();
     });
 
-    // Drag to scroll no dashboard (apenas quando NÃO estiver em modo grid)
     const vp = document.getElementById('dashboardViewport');
     if (vp) {
         let isDown = false, startX = 0, scrollLeft = 0;
