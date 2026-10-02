@@ -1591,6 +1591,8 @@ let planosExpandidosResumo = new Set();
 
 let listasSeparadasContexto = 'geral';
 let listaAtiva = 'receitas';
+// NOVO: filtro de grupo regional aplicado nas listas separadas
+let listasSeparadasGrupoRegional = null;
 
 const FORNECEDORES_COPAGAZ = ['COPAGAZ','COPA','COPA GAZ','MAKEEN (KOSAN)','MAKEEN','LIQUIGÁS','LIQUIGAS'];
 const GRUPOS_REGIONAIS_FINAIS = ['COPAGAZ', 'SUL FLUMINENSE'];
@@ -2304,7 +2306,7 @@ function atualizarDashboard() {
     const dash = document.getElementById('dashboardContainer');
     dash.innerHTML = `
         <!-- CARD RECEITAS -->
-        <div class="exec-card receita" onclick="abrirListasSeparadas('receitas')" title="Ver listas de Receitas">
+        <div class="exec-card receita" onclick="abrirListasSeparadas('receitas', null)" title="Ver listas de Receitas">
             <div class="exec-card-header">
                 <span class="exec-card-title"><i class="fas fa-arrow-up"></i> Receitas Realizadas</span>
                 <span class="exec-card-hint">ver listas</span>
@@ -2328,7 +2330,7 @@ function atualizarDashboard() {
         </div>
 
         <!-- CARD DESPESAS -->
-        <div class="exec-card despesa" onclick="abrirListasSeparadas('despesas')" title="Ver listas de Despesas">
+        <div class="exec-card despesa" onclick="abrirListasSeparadas('despesas', null)" title="Ver listas de Despesas">
             <div class="exec-card-header">
                 <span class="exec-card-title"><i class="fas fa-arrow-down"></i> Despesas Realizadas</span>
                 <span class="exec-card-hint">ver listas</span>
@@ -2352,7 +2354,7 @@ function atualizarDashboard() {
         </div>
 
         <!-- CARD SALDO -->
-        <div class="exec-card saldo" onclick="abrirListasSeparadas('saldo')" title="Ver composição do Saldo">
+        <div class="exec-card saldo" onclick="abrirListasSeparadas('saldo', null)" title="Ver composição do Saldo">
             <div class="exec-card-header">
                 <span class="exec-card-title"><i class="fas fa-calculator"></i> Saldo Realizado</span>
                 <span class="exec-card-hint">ver listas</span>
@@ -2375,7 +2377,7 @@ function atualizarDashboard() {
         </div>
 
         <!-- CARD ATRASO -->
-        <div class="exec-card atraso" onclick="abrirListasSeparadas('atraso')" title="Ver contas em atraso">
+        <div class="exec-card atraso" onclick="abrirListasSeparadas('atraso', null)" title="Ver contas em atraso">
             <div class="exec-card-header">
                 <span class="exec-card-title"><i class="fas fa-clock"></i> Contas em Atraso</span>
                 <span class="exec-card-hint">ver listas</span>
@@ -2395,7 +2397,7 @@ function atualizarDashboard() {
         </div>
 
         <!-- CARD COPAGAZ -->
-        <div class="exec-card copagaz" onclick="abrirListasSeparadas('geral')" title="Ver listas COPAGAZ">
+        <div class="exec-card copagaz" onclick="abrirListasSeparadas('geral', 'COPAGAZ')" title="Ver listas COPAGAZ">
             <div class="exec-card-header">
                 <span class="exec-card-title"><i class="fas fa-fire"></i> COPAGAZ</span>
                 <span class="exec-card-hint">ver listas</span>
@@ -2416,7 +2418,7 @@ function atualizarDashboard() {
         </div>
 
         <!-- CARD SUL FLUMINENSE -->
-        <div class="exec-card sulflu" onclick="abrirListasSeparadas('geral')" title="Ver listas SUL FLUMINENSE">
+        <div class="exec-card sulflu" onclick="abrirListasSeparadas('geral', 'SUL FLUMINENSE')" title="Ver listas SUL FLUMINENSE">
             <div class="exec-card-header">
                 <span class="exec-card-title"><i class="fas fa-map-marker-alt"></i> SUL FLUMINENSE</span>
                 <span class="exec-card-hint">ver listas</span>
@@ -2761,18 +2763,21 @@ function exportarExcelDetalhamentoResumo() {
 }
 
 /* ============ LISTAS SEPARADAS (RECEITAS / DESPESAS) ============ */
-function abrirListasSeparadas(contexto) {
+function abrirListasSeparadas(contexto, grupoRegional = null) {
     listasSeparadasContexto = contexto || 'geral';
+    listasSeparadasGrupoRegional = grupoRegional || null;
     listaAtiva = 'receitas';
 
-  const titulos = {
-        'geral': 'Listas Separadas — Receitas e Despesas',
+    const titulos = {
+        'geral': grupoRegional ? `Listas Separadas — ${grupoRegional}` : 'Listas Separadas — Receitas e Despesas',
         'receitas': 'Listas Separadas — Foco em Receitas',
         'despesas': 'Listas Separadas — Foco em Despesas',
         'saldo': 'Listas Separadas — Composição do Saldo',
         'atraso': 'Listas Separadas — Contas em Atraso'
     };
-    document.getElementById('listasSeparadasTitulo').textContent = titulos[listasSeparadasContexto] || 'Listas Separadas';
+    let titulo = titulos[listasSeparadasContexto] || 'Listas Separadas';
+    if (grupoRegional && listasSeparadasContexto !== 'geral') titulo += ` — ${grupoRegional}`;
+    document.getElementById('listasSeparadasTitulo').textContent = titulo;
 
     document.getElementById('buscaListaSeparada').value = '';
     document.getElementById('filtroMesLista').value = 'todos';
@@ -2791,6 +2796,7 @@ function abrirListasSeparadas(contexto) {
 
 function fecharPopupListasSeparadas() {
     document.getElementById('popupListasSeparadas').classList.remove('active');
+    listasSeparadasGrupoRegional = null;
 }
 
 function setListaAtiva(tipo) {
@@ -2811,6 +2817,11 @@ function limparFiltrosListasSeparadas() {
 
 function getBaseListasSeparadas(tipo) {
     let base = lancamentos.filter(l => l.tipo === tipo);
+
+    // Aplica o grupo regional definido pelo card clicado
+    if (listasSeparadasGrupoRegional) {
+        base = base.filter(l => getGrupoRegionalLanc(l) === listasSeparadasGrupoRegional);
+    }
 
     if (listasSeparadasContexto === 'atraso') {
         const hoje = new Date(); hoje.setHours(0,0,0,0);
