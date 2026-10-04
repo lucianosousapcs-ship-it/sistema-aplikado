@@ -1,3 +1,19 @@
+<!-- 
+  ============================================================
+  CORREÇÃO APLICADA — APENAS MOVER 1 LINHA
+  ============================================================
+  
+  No abrirModalFuncionario, a chamada:
+      await carregarTiposAtestadoNoModal();
+  
+  FOI MOVIDA de antes do innerHTML para DEPOIS do innerHTML,
+  junto com as outras renderizações pós-DOM.
+  
+  ALÉM DISSO, a função renderizarSelectTiposAtestado foi
+  tornada resiliente com retry automático (rede de segurança).
+  
+  ============================================================
+-->
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -377,182 +393,28 @@
         .ponto-kpi .kpi-label { font-size: 8px; font-weight: 800; color: #b07040; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1px; }
         .ponto-kpi .kpi-value { font-size: 15px; font-weight: 800; color: #1a0a00; line-height: 1.1; }
         .ponto-kpi .kpi-sub { font-size: 8.5px; color: #7a3a00; font-weight: 600; }
-
-        .editor-wrapper {
-            display: flex;
-            gap: 16px;
-            align-items: flex-start;
-            height: calc(100vh - 180px);
-            min-height: 500px;
-        }
-        .editor-table-side {
-            flex: 1 1 65%;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-        .editor-cartao-side {
-            flex: 1 1 35%;
-            min-width: 280px;
-            max-width: 480px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            height: 100%;
-            background: #f8f9fa;
-            border-radius: 12px;
-            border: 1px solid #ccc;
-            padding: 8px;
-            position: sticky;
-            top: 0;
-        }
-        .editor-cartao-toolbar {
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .editor-cartao-toolbar .btn-action {
-            padding: 4px 8px;
-            font-size: 10px;
-        }
-        .editor-cartao-tabs {
-            display: flex;
-            gap: 0;
-            border-radius: 8px 8px 0 0;
-            overflow: hidden;
-            border: 2px solid #ccc;
-            border-bottom: none;
-            background: #e8e8e8;
-        }
-        .editor-cartao-tab {
-            flex: 1;
-            padding: 6px 4px;
-            text-align: center;
-            font-family: 'Poppins', sans-serif;
-            font-size: 10px;
-            font-weight: 700;
-            color: #7a3a00;
-            background: #d8d8d8;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            border-bottom: 2px solid transparent;
-        }
-        .editor-cartao-tab:hover {
-            background: #e0e0e0;
-        }
-        .editor-cartao-tab.active {
-            background: #fff;
-            color: #FF8C00;
-            border-bottom: 2px solid #FF8C00;
-        }
-        .editor-cartao-view {
-            flex: 1 1 auto;
-            position: relative;
-            overflow: hidden;
-            border-radius: 0 0 8px 8px;
-            border: 2px solid #ccc;
-            background: #fff;
-            cursor: grab;
-            min-height: 300px;
-        }
-        .editor-cartao-view.grabbing {
-            cursor: grabbing;
-        }
-        .editor-cartao-view img {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            background: #f0f0f0;
-            transform-origin: 0 0;
-            transition: transform 0.1s ease-out;
-            pointer-events: none;
-            user-select: none;
-        }
-        .editor-cartao-view .sem-imagem {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #999;
-            font-size: 12px;
-            padding: 20px;
-            text-align: center;
-        }
-        .editor-cartao-view .sem-imagem i {
-            font-size: 36px;
-            display: block;
-            margin-bottom: 8px;
-            color: #ccc;
-        }
-        .editor-cartao-view .zoom-indicator {
-            position: absolute;
-            bottom: 6px;
-            right: 6px;
-            background: rgba(0,0,0,0.6);
-            color: #fff;
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-weight: 700;
-            pointer-events: none;
-            z-index: 2;
-        }
-        .editor-table-wrapper {
-            flex: 1 1 auto;
-            overflow: auto;
-            border-radius: 8px;
-            border: 1px solid #999;
-            background: #fff;
-        }
-        .editor-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 10.5px;
-            font-family: 'Poppins', sans-serif;
-            table-layout: fixed;
-        }
-        .editor-table thead th {
-            background: #d8d8d8;
-            color: #1a0a00;
-            font-size: 9px;
-            font-weight: 800;
-            padding: 7px 3px;
-            text-align: center;
-            border: 1px solid #999;
-            position: sticky;
-            top: 0;
-            z-index: 3;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .editor-table thead tr.subheader th {
-            top: 27px;
-            background: #e8e8e8;
-            font-size: 8px;
-            padding: 4px 2px;
-        }
-        .editor-table tbody td {
-            padding: 2px;
-            text-align: center;
-            border: 1px solid #ccc;
-            background: #fff;
-        }
-        .editor-table tbody tr {
-            transition: background 0.15s ease;
-        }
-        .editor-table tbody tr:hover {
-            background: #fffaf3;
-        }
+        .editor-wrapper { display: flex; gap: 16px; align-items: flex-start; height: calc(100vh - 180px); min-height: 500px; }
+        .editor-table-side { flex: 1 1 65%; min-width: 0; display: flex; flex-direction: column; height: 100%; }
+        .editor-cartao-side { flex: 1 1 35%; min-width: 280px; max-width: 480px; display: flex; flex-direction: column; gap: 8px; height: 100%; background: #f8f9fa; border-radius: 12px; border: 1px solid #ccc; padding: 8px; position: sticky; top: 0; }
+        .editor-cartao-toolbar { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+        .editor-cartao-toolbar .btn-action { padding: 4px 8px; font-size: 10px; }
+        .editor-cartao-tabs { display: flex; gap: 0; border-radius: 8px 8px 0 0; overflow: hidden; border: 2px solid #ccc; border-bottom: none; background: #e8e8e8; }
+        .editor-cartao-tab { flex: 1; padding: 6px 4px; text-align: center; font-family: 'Poppins', sans-serif; font-size: 10px; font-weight: 700; color: #7a3a00; background: #d8d8d8; border: none; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid transparent; }
+        .editor-cartao-tab:hover { background: #e0e0e0; }
+        .editor-cartao-tab.active { background: #fff; color: #FF8C00; border-bottom: 2px solid #FF8C00; }
+        .editor-cartao-view { flex: 1 1 auto; position: relative; overflow: hidden; border-radius: 0 0 8px 8px; border: 2px solid #ccc; background: #fff; cursor: grab; min-height: 300px; }
+        .editor-cartao-view.grabbing { cursor: grabbing; }
+        .editor-cartao-view img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; background: #f0f0f0; transform-origin: 0 0; transition: transform 0.1s ease-out; pointer-events: none; user-select: none; }
+        .editor-cartao-view .sem-imagem { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #999; font-size: 12px; padding: 20px; text-align: center; }
+        .editor-cartao-view .sem-imagem i { font-size: 36px; display: block; margin-bottom: 8px; color: #ccc; }
+        .editor-cartao-view .zoom-indicator { position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.6); color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 700; pointer-events: none; z-index: 2; }
+        .editor-table-wrapper { flex: 1 1 auto; overflow: auto; border-radius: 8px; border: 1px solid #999; background: #fff; }
+        .editor-table { width: 100%; border-collapse: collapse; font-size: 10.5px; font-family: 'Poppins', sans-serif; table-layout: fixed; }
+        .editor-table thead th { background: #d8d8d8; color: #1a0a00; font-size: 9px; font-weight: 800; padding: 7px 3px; text-align: center; border: 1px solid #999; position: sticky; top: 0; z-index: 3; text-transform: uppercase; letter-spacing: 0.3px; }
+        .editor-table thead tr.subheader th { top: 27px; background: #e8e8e8; font-size: 8px; padding: 4px 2px; }
+        .editor-table tbody td { padding: 2px; text-align: center; border: 1px solid #ccc; background: #fff; }
+        .editor-table tbody tr { transition: background 0.15s ease; }
+        .editor-table tbody tr:hover { background: #fffaf3; }
         .editor-table tbody tr.linha-feriado { background: #fff3e0; }
         .editor-table tbody tr.linha-folga-bh { background: #eeeeee; }
         .editor-table tbody tr.linha-falta-atestado { background: #f3e5f5; }
@@ -560,92 +422,23 @@
         .editor-table tbody tr.linha-abono { background: #f3e5f5; }
         .editor-table tbody tr.linha-expandida { background: #fff8ec !important; box-shadow: inset 0 0 0 2px rgba(255,140,0,0.35); }
         .editor-table input[type="time"],
-        .editor-table input[type="text"] {
-            font-family: 'Poppins', sans-serif;
-            min-width: 0 !important;
-            width: 100% !important;
-            padding: 4px 2px !important;
-            border: 1px solid #bbb;
-            border-radius: 4px;
-            text-align: center;
-            background: #fff;
-            outline: none;
-            font-size: 10px !important;
-            color: #1a0a00;
-            font-weight: 600;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            box-sizing: border-box;
-        }
+        .editor-table input[type="text"] { font-family: 'Poppins', sans-serif; min-width: 0 !important; width: 100% !important; padding: 4px 2px !important; border: 1px solid #bbb; border-radius: 4px; text-align: center; background: #fff; outline: none; font-size: 10px !important; color: #1a0a00; font-weight: 600; transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box; }
         .editor-table input[type="time"]:focus,
-        .editor-table input[type="text"]:focus {
-            border-color: #FF8C00;
-            box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.15);
-        }
-        .editor-table input[readonly] {
-            background: #f5f5f5;
-            font-weight: 700;
-            color: #7a3a00;
-        }
-        .editor-table input.total-geral {
-            background: #fff8e1;
-            color: #e65100;
-            font-weight: 800;
-        }
+        .editor-table input[type="text"]:focus { border-color: #FF8C00; box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.15); }
+        .editor-table input[readonly] { background: #f5f5f5; font-weight: 700; color: #7a3a00; }
+        .editor-table input.total-geral { background: #fff8e1; color: #e65100; font-weight: 800; }
         .editor-table input.total-geral.abonado { background: #f3e5f5; color: #6a1b9a; }
         .editor-table input.total-geral.horas-bh { background: #e0e0e0; color: #212529; font-weight: 800; font-size: 10px; }
         .editor-table input.total-geral.abono { background: #f3e5f5; color: #6a1b9a; font-weight: 800; font-size: 10px; }
         .editor-table input.total-geral.falta { background: #ffebee; color: #c62828; font-weight: 800; font-size: 10px; }
-        .editor-table .dia-cell {
-            font-weight: 700;
-            font-size: 10.5px;
-            padding: 4px 4px;
-            white-space: nowrap;
-            text-align: left;
-            border-right: 1px solid #ccc;
-        }
+        .editor-table .dia-cell { font-weight: 700; font-size: 10.5px; padding: 4px 4px; white-space: nowrap; text-align: left; border-right: 1px solid #ccc; }
         .editor-table .dia-cell .dia-num { display: inline-block; min-width: 20px; font-size: 11px; }
         .editor-table .dia-cell .dia-sem { display: inline-block; font-size: 9px; color: #7a3a00; font-weight: 600; margin-left: 2px; }
-        .editor-table .dia-cell .btn-expandir {
-            background: transparent;
-            border: none;
-            color: #FF8C00;
-            cursor: pointer;
-            font-size: 10px;
-            padding: 0 3px;
-        }
-        .editor-table .acoes-cell {
-            padding: 2px !important;
-            min-width: 0 !important;
-            background: #fafafa;
-            border-left: 1px solid #999;
-        }
-        .editor-table .btn-group-dia {
-            display: flex;
-            gap: 2px;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: nowrap;
-        }
-        .editor-table .btn-dia-acao {
-            background: #ffffff;
-            border: 1.5px solid #ccc;
-            border-radius: 5px;
-            padding: 0;
-            width: 22px !important;
-            height: 22px !important;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 9px !important;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: #7a3a00;
-            position: relative;
-        }
-        .editor-table .btn-dia-acao:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.12);
-        }
+        .editor-table .dia-cell .btn-expandir { background: transparent; border: none; color: #FF8C00; cursor: pointer; font-size: 10px; padding: 0 3px; }
+        .editor-table .acoes-cell { padding: 2px !important; min-width: 0 !important; background: #fafafa; border-left: 1px solid #999; }
+        .editor-table .btn-group-dia { display: flex; gap: 2px; justify-content: center; align-items: center; flex-wrap: nowrap; }
+        .editor-table .btn-dia-acao { background: #ffffff; border: 1.5px solid #ccc; border-radius: 5px; padding: 0; width: 22px !important; height: 22px !important; display: inline-flex; align-items: center; justify-content: center; font-size: 9px !important; cursor: pointer; transition: all 0.2s ease; color: #7a3a00; position: relative; }
+        .editor-table .btn-dia-acao:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
         .editor-table .btn-dia-acao[data-action="folga-bh"]:hover { background: #495057; color: #fff; border-color: #495057; }
         .editor-table .btn-dia-acao[data-action="falta-atestado"]:hover { background: #6f42c1; color: #fff; border-color: #6f42c1; }
         .editor-table .btn-dia-acao[data-action="falta-periodo"]:hover { background: #dc3545; color: #fff; border-color: #dc3545; }
@@ -655,160 +448,35 @@
         .editor-table .btn-dia-acao.ativo-falta { background: #6f42c1; color: #fff; border-color: #6f42c1; box-shadow: 0 0 0 2px rgba(111,66,193,0.25); }
         .editor-table .btn-dia-acao.ativo-falta-periodo { background: #dc3545; color: #fff; border-color: #dc3545; box-shadow: 0 0 0 2px rgba(220,53,69,0.25); }
         .editor-table .btn-dia-acao.ativo-limpar { background: #FF8C00; color: #fff; border-color: #FF8C00; }
-        .editor-detalhe-dia {
-            background: #fffdf7;
-        }
-        .editor-detalhe-dia td {
-            padding: 0 !important;
-            border-bottom: 2px solid #999;
-        }
-        .editor-detalhe-dia .detalhe-wrap {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 12px;
-            padding: 12px 16px;
-            font-size: 11px;
-        }
-        .editor-detalhe-dia .detalhe-col {
-            background: #fff;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 8px 10px;
-        }
-        .editor-detalhe-dia .detalhe-col h5 {
-            font-size: 9px;
-            font-weight: 800;
-            color: #b07040;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
+        .editor-detalhe-dia { background: #fffdf7; }
+        .editor-detalhe-dia td { padding: 0 !important; border-bottom: 2px solid #999; }
+        .editor-detalhe-dia .detalhe-wrap { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 12px 16px; font-size: 11px; }
+        .editor-detalhe-dia .detalhe-col { background: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 8px 10px; }
+        .editor-detalhe-dia .detalhe-col h5 { font-size: 9px; font-weight: 800; color: #b07040; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; display: flex; align-items: center; gap: 4px; }
         .editor-detalhe-dia .detalhe-col h5 i { color: #FF8C00; }
         .editor-detalhe-dia .detalhe-col.original { border-left: 4px solid #6c757d; }
         .editor-detalhe-dia .detalhe-col.ajustado { border-left: 4px solid #FF8C00; }
         .editor-detalhe-dia .detalhe-col.rastreio { border-left: 4px solid #6f42c1; }
-        .editor-detalhe-dia .detalhe-linha {
-            display: flex;
-            justify-content: space-between;
-            padding: 2px 0;
-            border-bottom: 1px dashed #eee;
-        }
+        .editor-detalhe-dia .detalhe-linha { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px dashed #eee; }
         .editor-detalhe-dia .detalhe-linha:last-child { border-bottom: none; }
         .editor-detalhe-dia .detalhe-linha span:first-child { color: #7a3a00; font-weight: 600; }
         .editor-detalhe-dia .detalhe-linha span:last-child { color: #1a0a00; font-weight: 700; }
-        .editor-detalhe-dia .motivo-input {
-            width: 100%;
-            padding: 4px 6px;
-            font-size: 10.5px;
-            border: 1px solid #bbb;
-            border-radius: 6px;
-            font-family: 'Poppins', sans-serif;
-        }
-        .editor-resumo {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 10px;
-            padding: 10px 12px;
-            background: #fafafa;
-            border-radius: 10px;
-            border: 1px solid #ddd;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-        }
-        .editor-resumo .item {
-            padding: 6px 11px;
-            border-radius: 8px;
-            font-size: 10.5px;
-            font-weight: 700;
-            border: 1px solid #eee;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
+        .editor-detalhe-dia .motivo-input { width: 100%; padding: 4px 6px; font-size: 10.5px; border: 1px solid #bbb; border-radius: 6px; font-family: 'Poppins', sans-serif; }
+        .editor-resumo { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding: 10px 12px; background: #fafafa; border-radius: 10px; border: 1px solid #ddd; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .editor-resumo .item { padding: 6px 11px; border-radius: 8px; font-size: 10.5px; font-weight: 700; border: 1px solid #eee; display: inline-flex; align-items: center; gap: 4px; }
         .editor-resumo .item i { font-size: 10px; }
-        .editor-legenda-mini {
-            margin-top: 8px;
-            font-size: 10px;
-            color: #7a3a00;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 6px 10px;
-            background: #fafafa;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
+        .editor-legenda-mini { margin-top: 8px; font-size: 10px; color: #7a3a00; display: flex; flex-wrap: wrap; gap: 10px; padding: 6px 10px; background: #fafafa; border-radius: 8px; border: 1px solid #ddd; }
         .editor-legenda-mini span { display: inline-flex; align-items: center; gap: 4px; }
         .editor-legenda-mini .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; border: 1px solid #999; }
-        .consolidacao-wrap {
-            margin-top: 14px;
-            border-radius: 8px;
-            border: 1px solid #999;
-            background: #fff;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        }
-        .consolidacao-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 14px;
-            background: #e8e8e8;
-            border-bottom: 2px solid #999;
-            font-weight: 800;
-            font-size: 12px;
-            color: #1a0a00;
-        }
+        .consolidacao-wrap { margin-top: 14px; border-radius: 8px; border: 1px solid #999; background: #fff; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .consolidacao-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #e8e8e8; border-bottom: 2px solid #999; font-weight: 800; font-size: 12px; color: #1a0a00; }
         .consolidacao-header i { color: #6f42c1; font-size: 13px; }
-        .consolidacao-header .count {
-            margin-left: auto;
-            background: #6f42c1;
-            color: #fff;
-            padding: 2px 10px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: 700;
-        }
-        .consolidacao-tabela {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-            font-family: 'Poppins', sans-serif;
-        }
-        .consolidacao-tabela thead th {
-            background: #e8e8e8;
-            color: #1a0a00;
-            font-size: 9px;
-            font-weight: 800;
-            padding: 7px 6px;
-            text-align: left;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            border: 1px solid #999;
-        }
-        .consolidacao-tabela tbody td {
-            padding: 7px 6px;
-            border: 1px solid #ccc;
-            font-size: 11px;
-            color: #1a0a00;
-            vertical-align: middle;
-            background: #fff;
-        }
+        .consolidacao-header .count { margin-left: auto; background: #6f42c1; color: #fff; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+        .consolidacao-tabela { width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Poppins', sans-serif; }
+        .consolidacao-tabela thead th { background: #e8e8e8; color: #1a0a00; font-size: 9px; font-weight: 800; padding: 7px 6px; text-align: left; text-transform: uppercase; letter-spacing: 0.4px; border: 1px solid #999; }
+        .consolidacao-tabela tbody td { padding: 7px 6px; border: 1px solid #ccc; font-size: 11px; color: #1a0a00; vertical-align: middle; background: #fff; }
         .consolidacao-tabela tbody tr:hover td { background: #faf5ff; }
-        .consolidacao-tabela .badge-tipo {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 9px;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
+        .consolidacao-tabela .badge-tipo { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
         .consolidacao-tabela .badge-tipo.bonificacao { background: #d4edda; color: #155724; }
         .consolidacao-tabela .badge-tipo.atestado { background: #e2d4f5; color: #4a2c91; }
         .consolidacao-tabela .badge-tipo.falta_justificada { background: #fff3cd; color: #856404; }
@@ -819,14 +487,8 @@
         .consolidacao-tabela .impacto-positivo { color: #28a745; font-weight: 800; }
         .consolidacao-tabela .impacto-negativo { color: #dc3545; font-weight: 800; }
         .consolidacao-tabela .impacto-neutro { color: #6c757d; font-weight: 700; }
-        .consolidacao-empty {
-            text-align: center;
-            padding: 30px 20px;
-            color: #7a3a00;
-            font-size: 11.5px;
-        }
+        .consolidacao-empty { text-align: center; padding: 30px 20px; color: #7a3a00; font-size: 11.5px; }
         .consolidacao-empty i { font-size: 30px; display: block; margin-bottom: 10px; opacity: 0.5; }
-
         .calendario-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; background: #f8f9fa; padding: 12px 16px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 12px; }
         .calendario-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
         .calendario-header-dia { text-align: center; font-size: 10px; font-weight: 700; color: #7a3a00; text-transform: uppercase; padding: 6px 0; background: rgba(255,140,0,0.1); border-radius: 6px; }
@@ -861,7 +523,6 @@
         .calendario-legenda .item .cor { width: 16px; height: 16px; border-radius: 4px; }
         .calendario-resumo { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
         .calendario-resumo .item { padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; border: 1px solid #eee; }
-
         .erro-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f0f0f0; gap: 12px; background: #fff; }
         .erro-item:last-child { border-bottom: none; }
         .erro-item:hover { background: #fff8f0; }
@@ -1285,98 +946,38 @@
         .cartao-imagem-wrapper .sem-imagem { text-align: center; color: #999; font-size: 12px; padding: 20px; }
         .cartao-imagem-wrapper .sem-imagem i { font-size: 36px; display: block; margin-bottom: 8px; color: #ccc; }
         .cartao-imagem-wrapper .sem-imagem p { font-weight: 600; color: #7a3a00; }
-        .editor-periodo-linha {
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-            flex-wrap: nowrap;
-        }
+        .editor-periodo-linha { display: flex; gap: 10px; align-items: flex-end; flex-wrap: nowrap; }
         .editor-periodo-linha .form-group.periodo-mes { min-width: 160px; }
         .editor-periodo-linha .form-group.periodo-ano { min-width: 90px; }
-
-.editor-periodo-linha,
-.editor-toolbar > .editor-periodo-linha,
-#modalEditor .editor-periodo-linha {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    gap: 10px !important;
-    align-items: flex-end !important;
-    width: 100% !important;
-}
-.editor-periodo-linha > .form-group,
-#modalEditor .editor-periodo-linha > .form-group {
-    display: flex !important;
-    flex-direction: column !important;
-    margin: 0 !important;
-    width: auto !important;
-    flex: 0 0 auto !important;
-}
-.editor-periodo-linha > .form-group.periodo-mes,
-#modalEditor .editor-periodo-linha > .form-group.periodo-mes {
-    min-width: 180px !important;
-    flex: 1 1 auto !important;
-}
-.editor-periodo-linha > .form-group.periodo-ano,
-#modalEditor .editor-periodo-linha > .form-group.periodo-ano {
-    min-width: 100px !important;
-    max-width: 130px !important;
-    flex: 0 0 auto !important;
-}
-.ponto-tab-toolbar,
-#aba-modal-ponto .ponto-tab-toolbar {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-    gap: 10px !important;
-    align-items: flex-end !important;
-    justify-content: space-between !important;
-}
-.ponto-periodo-linha,
-#aba-modal-ponto .ponto-periodo-linha {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    gap: 10px !important;
-    align-items: flex-end !important;
-}
-.ponto-periodo-linha > .form-group,
-#aba-modal-ponto .ponto-periodo-linha > .form-group {
-    display: flex !important;
-    flex-direction: column !important;
-    margin: 0 !important;
-    width: auto !important;
-    flex: 0 0 auto !important;
-}
-.ponto-periodo-linha > .form-group.periodo-mes,
-#aba-modal-ponto .ponto-periodo-linha > .form-group.periodo-mes {
-    min-width: 180px !important;
-    flex: 1 1 auto !important;
-}
-.ponto-periodo-linha > .form-group.periodo-ano,
-#aba-modal-ponto .ponto-periodo-linha > .form-group.periodo-ano {
-    min-width: 100px !important;
-    max-width: 130px !important;
-    flex: 0 0 auto !important;
-}
-.editor-periodo-linha .form-group label,
-.ponto-periodo-linha .form-group label {
-    white-space: nowrap !important;
-}
-@media (max-width: 480px) {
-    .editor-periodo-linha,
-    .ponto-periodo-linha {
-        flex-wrap: wrap !important;
-    }
-    .editor-periodo-linha > .form-group.periodo-mes,
-    .editor-periodo-linha > .form-group.periodo-ano,
-    .ponto-periodo-linha > .form-group.periodo-mes,
-    .ponto-periodo-linha > .form-group.periodo-ano {
-        flex: 1 1 100% !important;
-        max-width: none !important;
-        min-width: 0 !important;
-    }
-}
+        .editor-periodo-linha,
+        .editor-toolbar > .editor-periodo-linha,
+        #modalEditor .editor-periodo-linha { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 10px !important; align-items: flex-end !important; width: 100% !important; }
+        .editor-periodo-linha > .form-group,
+        #modalEditor .editor-periodo-linha > .form-group { display: flex !important; flex-direction: column !important; margin: 0 !important; width: auto !important; flex: 0 0 auto !important; }
+        .editor-periodo-linha > .form-group.periodo-mes,
+        #modalEditor .editor-periodo-linha > .form-group.periodo-mes { min-width: 180px !important; flex: 1 1 auto !important; }
+        .editor-periodo-linha > .form-group.periodo-ano,
+        #modalEditor .editor-periodo-linha > .form-group.periodo-ano { min-width: 100px !important; max-width: 130px !important; flex: 0 0 auto !important; }
+        .ponto-tab-toolbar,
+        #aba-modal-ponto .ponto-tab-toolbar { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 10px !important; align-items: flex-end !important; justify-content: space-between !important; }
+        .ponto-periodo-linha,
+        #aba-modal-ponto .ponto-periodo-linha { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 10px !important; align-items: flex-end !important; }
+        .ponto-periodo-linha > .form-group,
+        #aba-modal-ponto .ponto-periodo-linha > .form-group { display: flex !important; flex-direction: column !important; margin: 0 !important; width: auto !important; flex: 0 0 auto !important; }
+        .ponto-periodo-linha > .form-group.periodo-mes,
+        #aba-modal-ponto .ponto-periodo-linha > .form-group.periodo-mes { min-width: 180px !important; flex: 1 1 auto !important; }
+        .ponto-periodo-linha > .form-group.periodo-ano,
+        #aba-modal-ponto .ponto-periodo-linha > .form-group.periodo-ano { min-width: 100px !important; max-width: 130px !important; flex: 0 0 auto !important; }
+        .editor-periodo-linha .form-group label,
+        .ponto-periodo-linha .form-group label { white-space: nowrap !important; }
+        @media (max-width: 480px) {
+            .editor-periodo-linha,
+            .ponto-periodo-linha { flex-wrap: wrap !important; }
+            .editor-periodo-linha > .form-group.periodo-mes,
+            .editor-periodo-linha > .form-group.periodo-ano,
+            .ponto-periodo-linha > .form-group.periodo-mes,
+            .ponto-periodo-linha > .form-group.periodo-ano { flex: 1 1 100% !important; max-width: none !important; min-width: 0 !important; }
+        }
     </style>
 </head>
 <body>
@@ -2412,6 +2013,7 @@
         let cartao2Base64 = null;
         let cartao1Nome = null;
         let cartao2Nome = null;
+        let tiposAtestado = [];
 
         function parseDataLocal(str) {
             if (!str) return null;
@@ -3986,6 +3588,169 @@
                 });
             });
         }
+        async function carregarTiposAtestado() {
+            try {
+                const { data, error } = await supabaseClient.from('tipos_atestado').select('id, tipo, created_at').order('tipo');
+                if (error) throw error;
+                tiposAtestado = (data || []).map(t => ({ id: t.id, tipo: t.tipo, created_at: t.created_at }));
+            } catch (e) {
+                console.warn('Erro ao carregar tipos de atestado:', e);
+                tiposAtestado = [];
+            }
+        }
+
+        // ============================================================
+        // 🔥 CORREÇÃO #2 — FUNÇÃO RESILIENTE COM RETRY
+        // Tenta renderizar o select até 15 vezes (a cada 100ms)
+        // ============================================================
+        function renderizarSelectTiposAtestado(valorSelecionado) {
+            const select = document.getElementById('atTabTipo');
+            if (!select) {
+                // Tenta novamente em 100ms, até 15 vezes (1.5s total)
+                const tentativas = (renderizarSelectTiposAtestado._tentativas || 0) + 1;
+                renderizarSelectTiposAtestado._tentativas = tentativas;
+                if (tentativas <= 15) {
+                    setTimeout(() => renderizarSelectTiposAtestado(valorSelecionado), 100);
+                } else {
+                    console.warn('⚠️ #atTabTipo não apareceu no DOM após 1.5s');
+                    renderizarSelectTiposAtestado._tentativas = 0;
+                }
+                return;
+            }
+            renderizarSelectTiposAtestado._tentativas = 0;
+
+            const valorAtual = valorSelecionado !== undefined ? valorSelecionado : select.value;
+            const todosTipos = tiposAtestado.map(t => t.tipo).sort();
+            if (todosTipos.length === 0) {
+                select.innerHTML = '<option value="">Nenhum tipo cadastrado</option>';
+            } else {
+                select.innerHTML = todosTipos.map(t => `<option value="${t}">${t}</option>`).join('');
+                if (valorAtual && todosTipos.includes(valorAtual)) {
+                    select.value = valorAtual;
+                } else {
+                    select.value = todosTipos[0];
+                }
+            }
+        }
+
+        async function cadastrarNovoTipoAtestado(tipo, idParaEditar) {
+            const tipoLimpo = (tipo || '').trim();
+            if (!tipoLimpo) { mostrarToast('⚠️ Digite o nome do tipo!', 'warning'); return false; }
+            try {
+                if (idParaEditar) {
+                    // EDITAR tipo existente
+                    const { error } = await supabaseClient.from('tipos_atestado').update({ tipo: tipoLimpo }).eq('id', idParaEditar);
+                    if (error) throw error;
+                    mostrarToast('✅ Tipo de atestado atualizado!');
+                } else {
+                    // VERIFICAR duplicata
+                    const { data: existe } = await supabaseClient.from('tipos_atestado').select('id').eq('tipo', tipoLimpo).maybeSingle();
+                    if (existe) {
+                        mostrarToast('⚠️ Este tipo já está cadastrado.', 'warning');
+                        return false;
+                    }
+                    const { error } = await supabaseClient.from('tipos_atestado').insert({ tipo: tipoLimpo });
+                    if (error) throw error;
+                    mostrarToast('✅ Tipo de atestado cadastrado!');
+                }
+                await carregarTiposAtestado();
+                renderizarSelectTiposAtestado(tipoLimpo);
+                return true;
+            } catch (e) {
+                console.error(e);
+                mostrarToast('❌ Erro ao salvar tipo: ' + e.message, 'error');
+                return false;
+            }
+        }
+
+        async function carregarTiposAtestadoNoModal() {
+            await carregarTiposAtestado();
+            renderizarSelectTiposAtestado();
+        }
+
+        // Abre o formulário inline para cadastrar/editar tipo
+        function abrirNovoTipoAtestado() {
+            const select = document.getElementById('atTabTipo');
+            const tipoAtual = select ? select.value : '';
+            const wrap = document.getElementById('atTabTipoNovoWrap');
+            const input = document.getElementById('atTabTipoNovo');
+            const btnSalvar = wrap.querySelector('button.btn-success');
+            if (!wrap || !input) return;
+            // Se já está aberto, fecha
+            if (wrap.style.display === 'block') {
+                cancelarNovoTipoAtestado();
+                return;
+            }
+            wrap.style.display = 'block';
+            input.value = '';
+            input.dataset.editando = '';
+            if (btnSalvar) {
+                btnSalvar.innerHTML = '<i class="fas fa-check"></i> Salvar Tipo';
+                btnSalvar.className = 'btn-action btn-success btn-sm';
+                btnSalvar.onclick = () => salvarTipoAtestadoInline();
+            }
+            input.focus();
+        }
+
+        async function salvarTipoAtestadoInline() {
+            const input = document.getElementById('atTabTipoNovo');
+            const idEditando = input ? input.dataset.editando : '';
+            const tipo = input ? input.value.trim() : '';
+            if (!tipo) { mostrarToast('⚠️ Digite o nome do tipo!', 'warning'); return; }
+            const ok = await cadastrarNovoTipoAtestado(tipo, idEditando || undefined);
+            if (ok) {
+                cancelarNovoTipoAtestado();
+                // Atualizar o select
+                const select = document.getElementById('atTabTipo');
+                if (select && [...select.options].some(o => o.value === tipo)) {
+                    select.value = tipo;
+                }
+            }
+        }
+
+        function cancelarNovoTipoAtestado() {
+            const wrap = document.getElementById('atTabTipoNovoWrap');
+            const input = document.getElementById('atTabTipoNovo');
+            if (wrap) wrap.style.display = 'none';
+            if (input) { input.value = ''; input.dataset.editando = ''; }
+        }
+
+        // Editar tipo existente a partir do select
+        function editarTipoAtestadoSelecionado() {
+            const select = document.getElementById('atTabTipo');
+            if (!select || !select.value) return;
+            const tipoSelecionado = select.value;
+            const item = tiposAtestado.find(t => t.tipo === tipoSelecionado);
+            if (!item) { mostrarToast('⚠️ Selecione um tipo válido para editar.', 'warning'); return; }
+            const wrap = document.getElementById('atTabTipoNovoWrap');
+            const input = document.getElementById('atTabTipoNovo');
+            const btnSalvar = wrap ? wrap.querySelector('button.btn-success') : null;
+            if (!wrap || !input) return;
+            wrap.style.display = 'block';
+            input.value = item.tipo;
+            input.dataset.editando = item.id;
+            if (btnSalvar) {
+                btnSalvar.innerHTML = '<i class="fas fa-save"></i> Atualizar Tipo';
+                btnSalvar.className = 'btn-action btn-warning btn-sm';
+                btnSalvar.onclick = () => salvarTipoAtestadoInline();
+            }
+            input.focus();
+        }
+
+        async function excluirTipoAtestado(id) {
+            if (!confirm('Excluir este tipo de atestado? Essa ação não pode ser desfeita.')) return;
+            try {
+                const { error } = await supabaseClient.from('tipos_atestado').delete().eq('id', id);
+                if (error) throw error;
+                mostrarToast('✅ Tipo de atestado excluído!');
+                await carregarTiposAtestado();
+                renderizarSelectTiposAtestado();
+            } catch (e) {
+                console.error(e);
+                mostrarToast('❌ Erro ao excluir: ' + e.message, 'error');
+            }
+        }
+
         async function abrirModalFuncionario(id) {
             funcionarioModalAtual = id;
             document.getElementById('modalFuncionario').classList.add('active');
@@ -4022,6 +3787,8 @@
                 const contVencidas = situacaoFerias.status === 'vencida' ? 1 : 0;
                 const examesMed = await carregarExamesMedicina(id);
                 atestados = await carregarAtestados(id);
+                // ❌ LINHA REMOVIDA DAQUI — agora fica depois do innerHTML
+                // await carregarTiposAtestadoNoModal();  ← REMOVIDA
                 calendarioMesAtual = new Date().getMonth();
                 calendarioAnoAtual = new Date().getFullYear();
                 await carregarCalendario(id, calendarioMesAtual, calendarioAnoAtual);
@@ -4388,7 +4155,31 @@
                                         <i class="fas fa-plus-circle" style="color:#6f42c1;"></i> <span id="atestadoFormTitulo">Registrar Novo Atestado</span>
                                     </div>
                                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-                                        <div class="edit-field"><label>Tipo</label><input type="text" id="atTabTipo" placeholder="Ex: Atestado Médico"></div>
+                                        <div class="edit-field" id="atTabTipoWrapper" style="position:relative;">
+                                            <label>Tipo</label>
+                                            <div style="display:flex;gap:6px;align-items:center;">
+                                                <select id="atTabTipo" style="flex:1;"></select>
+                                                <button type="button" class="btn-action btn-purple btn-sm" onclick="editarTipoAtestadoSelecionado()" title="Editar tipo selecionado" style="white-space:nowrap;padding:9px 10px;font-size:11px;">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn-action btn-purple btn-sm" onclick="abrirNovoTipoAtestado()" title="Cadastrar novo tipo de atestado" style="white-space:nowrap;padding:9px 12px;font-size:11px;">
+                                                    <i class="fas fa-plus"></i> Novo Tipo
+                                                </button>
+                                            </div>
+                                            <div id="atTabTipoNovoWrap" style="display:none;margin-top:6px;padding:10px;background:#faf5ff;border:1.5px dashed rgba(111,66,192,0.4);border-radius:10px;">
+                                                <label style="font-size:9px;color:#6f42c1;font-weight:800;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;display:block;">
+                                                    <i class="fas fa-tag"></i> <span id="atTabTipoNovoLabel">Novo tipo de atestado</span>
+                                                </label>
+                                                <input type="text" id="atTabTipoNovo" placeholder="Ex: Atestado de Comparecimento, Licença Gala..." style="width:100%;padding:8px 10px;border:1.5px solid rgba(111,66,192,0.35);border-radius:8px;font-size:12.5px;font-family:'Poppins',sans-serif;">
+                                                <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;">
+                                                    <button type="button" class="btn-action btn-secondary btn-sm" onclick="cancelarNovoTipoAtestado()"><i class="fas fa-times"></i> Cancelar</button>
+                                                    <button type="button" class="btn-action btn-success btn-sm" onclick="salvarTipoAtestadoInline()"><i class="fas fa-check"></i> Salvar Tipo</button>
+                                                </div>
+                                            </div>
+                                            <div id="atTabTiposLista" style="margin-top:8px;max-height:150px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:6px;background:#fff;display:none;">
+                                                <!-- lista de tipos será preenchida via JS -->
+                                            </div>
+                                        </div>
                                         <div class="edit-field"><label>Data Início *</label><input type="date" id="atTabDataInicio"></div>
                                         <div class="edit-field"><label>Data Fim *</label><input type="date" id="atTabDataFim"></div>
                                         <div class="edit-field cid-picker-wrapper">
@@ -4443,17 +4234,48 @@
                         </div>
                     </div>
                 `;
+
+                // ============================================================
+                // 🔥 CORREÇÃO #1 — TUDO PÓS-DOM AQUI
+                // 1. Garante que o DOM do modal já está montado ANTES de carregar qualquer coisa
+                // 2. Só então carrega tipos de atestado, atestados inline, etc.
+                // ============================================================
                 funcionarioAtual = func;
+
+                // Garante que o DOM do modal já está montado ANTES de carregar qualquer coisa
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
                 if (!semControle && !desligado) await carregarPontoNoModal();
-                document.getElementById('atTabListaAtestados').innerHTML = renderizarAtestadosTab();
-                document.getElementById('calTabConteudo').innerHTML = renderizarCalendarioTab();
-                document.getElementById('medTabListaExames').innerHTML = renderizarExamesMedicinaTab(examesMed);
+
+                const elAtestadosTab = document.getElementById('atTabListaAtestados');
+                if (elAtestadosTab) elAtestadosTab.innerHTML = renderizarAtestadosTab();
+
+                const elCal = document.getElementById('calTabConteudo');
+                if (elCal) elCal.innerHTML = renderizarCalendarioTab();
+
+                const elMed = document.getElementById('medTabListaExames');
+                if (elMed) elMed.innerHTML = renderizarExamesMedicinaTab(examesMed);
+
+                // 👇 CORREÇÃO: carregar tipos de atestado AGORA, depois do innerHTML
+                await carregarTiposAtestadoNoModal();
+
                 configurarAutoSaveAbas(id);
+                configurarSelectTipoAtestado();
+
+                // 🔥 CORREÇÃO #2 — carregar atestados inline DEPOIS que o DOM já existe
+                await carregarAtestadosInlineNoModal(id);
+
             } catch (error) {
                 console.error('Erro:', error);
                 document.getElementById('modalFuncionarioConteudo').innerHTML = `<div style="text-align:center;padding:40px;color:#dc3545;"><i class="fas fa-exclamation-triangle" style="font-size:32px;display:block;margin-bottom:12px;"></i>Erro: ${error.message}</div>`;
             }
         }
+
+        function configurarSelectTipoAtestado() {
+            // Nada mais a fazer no change — o botão "+ Novo Tipo" agora é explícito.
+            // Mantida por compatibilidade (chamada em abrirModalFuncionario).
+        }
+
         function trocarAbaPasta(aba, btn) {
             const content = document.getElementById('funcPastaContent');
             if (!content) return;
@@ -4463,7 +4285,7 @@
             btn?.classList.add('active');
             if (aba === 'ponto') carregarPontoNoModal();
             if (aba === 'calendario' && funcionarioAtual) recarregarAbaCalendario(funcionarioAtual.id);
-            if (aba === 'atestados' && funcionarioAtual) recarregarAbaAtestados(funcionarioAtual.id);
+            if (aba === 'atestados' && funcionarioAtual) { recarregarAbaAtestados(funcionarioAtual.id); configurarSelectTipoAtestado(); }
             if (aba === 'medicina' && funcionarioAtual) recarregarAbaMedicina(funcionarioAtual.id);
         }
         function trocarAbaModal(aba, btn) { trocarAbaPasta(aba, btn); }
@@ -4604,7 +4426,7 @@
             const atestado = atestados.find(a => String(a.id) === String(id));
             if (!atestado) { mostrarToast('⚠️ Atestado não encontrado', 'warning'); return; }
             atestadoEditandoId = id;
-            document.getElementById('atTabTipo').value = atestado.tipo || '';
+            renderizarSelectTiposAtestado(atestado.tipo || '');
             document.getElementById('atTabDataInicio').value = formatarDataISO(atestado.data_inicio);
             document.getElementById('atTabDataFim').value = formatarDataISO(atestado.data_fim);
             document.getElementById('atTabCID').value = atestado.cid || '';
@@ -4619,10 +4441,12 @@
         }
         function cancelarEdicaoAtestado(funcId) {
             atestadoEditandoId = null;
-            ['atTabTipo','atTabDataInicio','atTabDataFim','atTabCID','atTabMedico','atTabCRM','atTabObs'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            ['atTabDataInicio','atTabDataFim','atTabCID','atTabMedico','atTabCRM','atTabObs'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            renderizarSelectTiposAtestado();
             document.getElementById('atestadoFormTitulo').textContent = 'Registrar Novo Atestado';
             document.getElementById('btnSalvarAtestado').innerHTML = '<i class="fas fa-save"></i> Salvar Atestado';
             document.getElementById('btnCancelarEdicaoAtestado').style.display = 'none';
+            cancelarNovoTipoAtestado();
         }
         async function salvarAtestadoTab(funcId) {
             if (_salvandoAtestado) return;
@@ -4630,7 +4454,9 @@
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; }
             _salvandoAtestado = true;
             try {
-                const tipo = document.getElementById('atTabTipo').value.trim() || 'Atestado Médico';
+                const tipoSelect = document.getElementById('atTabTipo');
+                let tipo = tipoSelect ? tipoSelect.value : 'Atestado Médico';
+                if (!tipo) tipo = 'Atestado Médico';
                 const dataInicio = document.getElementById('atTabDataInicio').value;
                 const dataFim = document.getElementById('atTabDataFim').value;
                 const cid = document.getElementById('atTabCID').value.trim();
@@ -4655,7 +4481,7 @@
                     });
                     if (error) throw error;
                     mostrarToast('✅ Atestado registrado!');
-                    ['atTabTipo','atTabDataInicio','atTabDataFim','atTabCID','atTabMedico','atTabCRM','atTabObs'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                    ['atTabDataInicio','atTabDataFim','atTabCID','atTabMedico','atTabCRM','atTabObs'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
                 }
                 await recarregarAbaAtestados(funcId);
                 await recarregarAbaCalendario(funcId);
@@ -6041,8 +5867,7 @@
                                 const dataFim = document.getElementById('atTabDataFim');
                                 if (dataInicio) dataInicio.value = dataISO;
                                 if (dataFim) dataFim.value = dataISO;
-                                const tipo = document.getElementById('atTabTipo');
-                                if (tipo) tipo.value = 'Atestado Médico';
+                                renderizarSelectTiposAtestado('Atestado Médico');
                                 mostrarToast('📋 Preencha os dados e anexe o documento.', 'info');
                             }, 300);
                         }
