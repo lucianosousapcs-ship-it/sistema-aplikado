@@ -40,9 +40,7 @@
   --purple-soft:#f5f3ff;
   --gradient-accent:linear-gradient(135deg,#FF8F00 0%,#FF6D00 50%,#E65100 100%);
   --gradient-header:linear-gradient(135deg,#FF8F00 0%,#FF6D00 50%,#E65100 100%);
-  --gradient-sidebar:linear-gradient(165deg,#FFB74D 0%,#FF8F00 40%,#E65100 100%);
-  --sidebar-w:230px;
-  --filter-sidebar-w:260px;
+  --gradient-nav:linear-gradient(135deg,#FF8F00 0%,#FF6D00 50%,#E65100 100%);
   --radius-sm:6px;
   --radius-md:8px;
   --radius-lg:12px;
@@ -60,6 +58,7 @@
   --shadow-xl:0 20px 48px rgba(200,80,0,.28);
   --transition-fast:.15s ease;
   --transition-base:.22s ease;
+  --filter-sidebar-w:200px;
 }
 
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -72,99 +71,130 @@ body{
   -webkit-font-smoothing:antialiased;
   line-height:1.4;
 }
-.app{display:flex;height:100vh;width:100vw;overflow:hidden;}
+.app{display:flex;flex-direction:column;height:100vh;width:100vw;overflow:hidden;}
 
 /* ============================================================
-   SIDEBAR
+   TOP NAVIGATION
    ============================================================ */
-.sidebar{
-  width:var(--sidebar-w);
-  background:var(--gradient-sidebar);
-  display:flex;flex-direction:column;flex-shrink:0;
-  border-right:1px solid rgba(255,255,255,.35);
-  position:relative;overflow:hidden;
-  box-shadow:6px 0 28px rgba(200,80,0,.30);
-  z-index:20;
+.top-nav{
+  background:linear-gradient(90deg,#fff 0%,#FFF8E1 100%);
+  border-bottom:2px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:8px 22px;
+  flex-shrink:0;
+  box-shadow:0 2px 12px rgba(255,109,0,.08);
+  position:relative;
+  z-index:100;
 }
-.sidebar-watermark{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
-.sidebar-watermark span{
-  position:absolute;font-weight:800;letter-spacing:5px;
-  color:rgba(255,255,255,.16);white-space:nowrap;line-height:1;
+.top-nav::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
+  background:var(--gradient-header);
 }
-@keyframes wanderA{0%{transform:translate(-120%,-10%) rotate(-18deg);}25%{transform:translate(60%,40%) rotate(8deg);}50%{transform:translate(-40%,90%) rotate(-25deg);}75%{transform:translate(80%,20%) rotate(15deg);}100%{transform:translate(-120%,-10%) rotate(-18deg);}}
-@keyframes wanderB{0%{transform:translate(100%,20%) rotate(12deg);}25%{transform:translate(-50%,-20%) rotate(-20deg);}50%{transform:translate(40%,80%) rotate(5deg);}75%{transform:translate(-70%,40%) rotate(-10deg);}100%{transform:translate(100%,20%) rotate(12deg);}}
-@keyframes wanderC{0%{transform:translate(-30%,100%) rotate(-5deg);}33%{transform:translate(70%,-30%) rotate(20deg);}66%{transform:translate(-90%,30%) rotate(-15deg);}100%{transform:translate(-30%,100%) rotate(-5deg);}}
-@keyframes wanderD{0%{transform:translate(60%,-60%) rotate(25deg);}50%{transform:translate(-60%,60%) rotate(-25deg);}100%{transform:translate(60%,-60%) rotate(25deg);}}
-.sidebar::after{
-  content:'';position:absolute;width:340px;height:340px;border-radius:50%;
-  background:radial-gradient(circle,rgba(255,255,255,.30) 0%,transparent 70%);
-  bottom:-150px;right:-150px;pointer-events:none;z-index:0;
+.nav-brand{
+  display:flex;align-items:center;gap:12px;
+  font-weight:800;color:var(--text-primary);
+  font-size:15px;letter-spacing:1px;
+  margin-right:20px;
 }
-.sidebar::before{
-  content:'';position:absolute;width:220px;height:220px;border-radius:50%;
-  background:radial-gradient(circle,rgba(255,255,255,.22) 0%,transparent 70%);
-  top:-90px;left:-90px;pointer-events:none;z-index:0;
+.nav-brand i{color:var(--accent);font-size:18px;}
+.nav-brand small{
+  font-size:9px;font-weight:700;color:var(--text-secondary);
+  text-transform:uppercase;letter-spacing:.8px;
+  display:block;
 }
-.sidebar>*:not(.sidebar-watermark){position:relative;z-index:1;}
-.sidebar-brand{
-  padding:20px 18px 18px;
-  border-bottom:1px solid rgba(255,255,255,.30);
+.nav-links{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
 }
-.sidebar-brand .brand-text{
-  font-size:17px;font-weight:800;color:#000;
-  letter-spacing:1.5px;line-height:1.1;
+.nav-pill{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:8px 16px;border-radius:20px;
+  font-size:11.5px;font-weight:600;
+  font-family:inherit;cursor:pointer;
+  border:1px solid transparent;
+  background:transparent;color:var(--text-secondary);
+  transition:all var(--transition-fast);
+  white-space:nowrap;
+  text-decoration:none;
 }
-.sidebar-brand .brand-text small{
-  display:block;font-size:9px;font-weight:700;
-  color:#000;margin-top:5px;letter-spacing:.9px;text-transform:uppercase;
+.nav-pill:hover{
+  background:#FFF3E0;color:var(--accent-dark);
+  border-color:var(--border);
 }
-.sidebar-section-title{
-  font-size:8px;text-transform:uppercase;letter-spacing:1.2px;
-  color:rgba(74,34,0,.75);font-weight:700;padding:16px 18px 5px;
+.nav-pill.active{
+  background:var(--gradient-header);color:#fff;
+  box-shadow:0 4px 14px rgba(255,109,0,.30);
+  border-color:#E65100;
 }
-.sidebar-nav{flex:1;padding:4px 8px;overflow-y:auto;}
-.sidebar-nav::-webkit-scrollbar{width:4px;}
-.sidebar-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.55);border-radius:2px;}
-.nav-item{
-  display:flex;align-items:center;gap:10px;
-  padding:9px 11px;border-radius:8px;
-  color:#000 !important;
-  font-size:12px;font-weight:500;cursor:pointer;
-  transition:all .18s;margin-bottom:2px;
-  border:none;background:transparent;width:100%;text-align:left;
-  font-family:inherit;text-decoration:none;
-}
-.nav-item:hover{background:rgba(255,255,255,.35);transform:translateX(3px);}
-.nav-item.active{
-  background:#fff;font-weight:700;
-  box-shadow:inset 4px 0 0 #BF360C,0 4px 12px rgba(120,50,0,.20);
-}
-.nav-item i{width:16px;font-size:12px;text-align:center;color:inherit !important;}
-.nav-item.active i{color:#BF360C !important;}
-.nav-item .nav-count{
-  margin-left:auto;background:rgba(255,255,255,.55);
-  color:#000 !important;font-size:9px;font-weight:700;
-  padding:3px 8px;border-radius:12px;
-}
-.nav-item.active .nav-count{background:#BF360C;color:#fff !important;}
-.sidebar-footer{
-  padding:10px 8px;border-top:1px solid rgba(255,255,255,.30);
-  display:flex;flex-direction:column;gap:2px;
-}
-.sidebar-user-info{
-  padding:10px 12px;margin:6px 8px 0;border-radius:10px;
-  background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.22);
-  display:flex;align-items:center;gap:8px;color:#fff;
-  font-size:11px;font-weight:600;
-}
-.sidebar-user-info .user-role-badge{
-  margin-left:auto;background:#BF360C;color:#fff;
-  font-size:7px;font-weight:800;padding:3px 7px;border-radius:8px;
-  text-transform:uppercase;
+.nav-actions{
+  display:flex;align-items:center;gap:8px;
 }
 
 /* ============================================================
-   MAIN
+   LETREIRO (DASHBOARD)
+   ============================================================ */
+.dashboard-viewport{
+  width:100%;overflow:hidden;flex-shrink:0;
+  background:#FFF8E1;
+  border-bottom:1px solid #FFE0B2;
+  padding:10px 0;
+  position:relative;
+  box-shadow:inset 0 -1px 0 rgba(255,109,0,.10);
+}
+.dashboard-track{
+  display:flex;flex-wrap:nowrap;gap:0;
+  padding:0 22px;white-space:nowrap;width:max-content;
+  animation:scrollDashboard 60s linear infinite;
+  align-items:center;
+}
+.dashboard-track:hover{animation-play-state:paused;}
+@keyframes scrollDashboard{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+
+.letreiro-item{
+  flex:0 0 auto;
+  display:inline-flex;align-items:center;gap:10px;
+  padding:6px 22px;
+  font-size:13px;font-weight:700;
+  color:var(--text-primary);
+  border-right:1px solid rgba(255,109,0,.15);
+  white-space:nowrap;
+  cursor:pointer;
+  transition:all .2s;
+  border-radius:8px;
+}
+.letreiro-item:last-child{border-right:none;}
+.letreiro-item:hover{background:rgba(255,255,255,.60);}
+.letreiro-item i{font-size:14px;color:var(--accent);width:18px;text-align:center;}
+.letreiro-item .letreiro-label{
+  font-size:9.5px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.6px;color:#8B5E00;
+  background:#fff;
+  padding:2px 8px;border-radius:5px;
+  border:1px solid #FFE0B2;
+  box-shadow:0 1px 2px rgba(0,0,0,.03);
+}
+.letreiro-item .letreiro-valor{
+  font-variant-numeric:tabular-nums;font-weight:900;
+  color:#000;
+  letter-spacing:-.3px;
+  font-size:14px;
+}
+.letreiro-item .letreiro-valor.positivo{color:#059669;}
+.letreiro-item .letreiro-valor.negativo{color:#DC2626;}
+.letreiro-item .letreiro-valor.liquigas{color:#7C3AED;}
+.letreiro-item .letreiro-valor.sulflu{color:#0284C7;}
+.letreiro-item .letreiro-sep{color:#FFB74D;font-weight:800;margin:0 2px;}
+.letreiro-item .letreiro-sub{
+  font-size:10px;font-weight:600;color:#8B5E00;
+  margin-left:2px;
+  background:#FFF3E0;
+  padding:2px 8px;border-radius:5px;
+  border:1px solid #FFE0B2;
+}
+
+/* ============================================================
+   MAIN CONTENT
    ============================================================ */
 .main{
   flex:1;display:flex;flex-direction:column;overflow:hidden;
@@ -176,10 +206,6 @@ body{
   padding:10px 22px;display:flex;align-items:center;
   justify-content:space-between;gap:12px;flex-shrink:0;
   position:relative;box-shadow:0 2px 12px rgba(255,109,0,.08);
-}
-.topbar::before{
-  content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
-  background:var(--gradient-header);
 }
 .topbar-title h1{
   font-size:17px;font-weight:700;color:var(--text-primary);
@@ -219,63 +245,6 @@ body{
 .btn-icon-top.active{background:var(--gradient-header);color:#fff;border-color:#E65100;}
 
 /* ============================================================
-   LETREIRO
-   ============================================================ */
-.dashboard-viewport{
-  width:100%;overflow:hidden;flex-shrink:0;
-  background:linear-gradient(90deg,#FFF8E1 0%,#FFECB3 50%,#FFE0B2 100%);
-  border-bottom:2px solid #FFB74D;
-  box-shadow:0 4px 16px rgba(255,109,0,.12);
-  padding:8px 0;position:relative;
-}
-.dashboard-track{
-  display:flex;flex-wrap:nowrap;gap:0;
-  padding:0 22px;white-space:nowrap;width:max-content;
-  animation:scrollDashboard 60s linear infinite;
-  align-items:center;
-}
-.dashboard-track:hover{animation-play-state:paused;}
-@keyframes scrollDashboard{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
-
-.letreiro-item{
-  flex:0 0 auto;
-  display:inline-flex;align-items:center;gap:10px;
-  padding:8px 20px;
-  font-size:14px;font-weight:800;
-  color:#000;
-  border-right:2px solid rgba(255,109,0,.30);
-  white-space:nowrap;
-  letter-spacing:.3px;
-  cursor:pointer;
-  transition:all .2s;
-  border-radius:8px;
-  text-shadow:0 1px 0 rgba(255,255,255,.6);
-}
-.letreiro-item:hover{background:rgba(255,255,255,.70);transform:scale(1.03);}
-.letreiro-item:last-child{border-right:none;}
-.letreiro-item i{font-size:14px;color:#E65100;width:18px;text-align:center;}
-.letreiro-item .letreiro-label{
-  font-size:10.5px;font-weight:900;text-transform:uppercase;
-  letter-spacing:.8px;color:#000;
-  background:rgba(255,255,255,.65);
-  padding:2px 8px;border-radius:6px;
-  border:1px solid rgba(0,0,0,.08);
-}
-.letreiro-item .letreiro-valor{
-  font-variant-numeric:tabular-nums;font-weight:900;
-  color:#000;
-  letter-spacing:-.3px;
-}
-.letreiro-item .letreiro-sep{color:#E65100;font-weight:800;margin:0 2px;}
-.letreiro-item .letreiro-sub{
-  font-size:10px;font-weight:700;color:#000;
-  margin-left:2px;
-  background:rgba(255,255,255,.55);
-  padding:2px 8px;border-radius:6px;
-  border:1px solid rgba(0,0,0,.06);
-}
-
-/* ============================================================
    CONTENT LAYOUT
    ============================================================ */
 .content-layout{flex:1;display:flex;overflow:hidden;min-height:0;}
@@ -294,23 +263,23 @@ body{
 }
 .filter-sidebar::-webkit-scrollbar{width:6px;}
 .filter-sidebar::-webkit-scrollbar-thumb{background:#ffb74d;border-radius:3px;}
-.filter-sidebar-inner{padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
+.filter-sidebar-inner{padding:10px 10px;display:flex;flex-direction:column;gap:8px;}
 .filter-section{
   background:rgba(255,255,255,.55);
-  border:1px solid #FFE0B2;border-radius:10px;padding:12px;
+  border:1px solid #FFE0B2;border-radius:10px;padding:8px;
 }
 .filter-section-title{
-  font-size:10px;font-weight:800;text-transform:uppercase;
-  letter-spacing:.8px;color:#8B5E00;margin-bottom:10px;
+  font-size:9.5px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.8px;color:#8B5E00;margin-bottom:8px;
   display:flex;align-items:center;gap:6px;
 }
-.filter-section-title i{color:var(--accent);font-size:11px;}
+.filter-section-title i{color:var(--accent);font-size:10px;}
 .filter-sidebar .search-box{position:relative;width:100%;}
 .filter-sidebar .search-box input{
-  width:100%;padding:7px 10px 7px 30px;
+  width:100%;padding:6px 8px 6px 26px;
   background:#fff;border:1px solid #e0e0e0;
   border-radius:6px;color:var(--text-primary);
-  font-size:11.5px;font-family:inherit;font-weight:500;outline:none;
+  font-size:10.5px;font-family:inherit;font-weight:500;outline:none;
   transition:all var(--transition-fast);
 }
 .filter-sidebar .search-box input:focus{
@@ -318,14 +287,14 @@ body{
 }
 .filter-sidebar .search-box::before{
   content:'\f002';font-family:'Font Awesome 6 Free';font-weight:900;
-  position:absolute;left:11px;top:50%;transform:translateY(-50%);
-  color:#bbb;font-size:11px;pointer-events:none;
+  position:absolute;left:8px;top:50%;transform:translateY(-50%);
+  color:#bbb;font-size:10px;pointer-events:none;
 }
-.ms-wrap{position:relative;width:100%;margin-bottom:8px;}
+.ms-wrap{position:relative;width:100%;margin-bottom:6px;}
 .ms-trigger{
-  width:100%;padding:7px 10px;background:#fff;
+  width:100%;padding:6px 8px;background:#fff;
   border:1px solid #e0e0e0;border-radius:6px;
-  color:#333;font-size:11.5px;font-family:inherit;
+  color:#333;font-size:10.5px;font-family:inherit;
   font-weight:500;cursor:pointer;display:flex;align-items:center;
   justify-content:space-between;gap:8px;text-align:left;
   transition:all var(--transition-fast);
@@ -345,53 +314,53 @@ body{
 .ms-wrap.open .ms-panel{display:block;}
 .ms-search{
   width:100%;padding:5px 8px;border:1px solid #eee;
-  border-radius:5px;font-size:11px;
+  border-radius:5px;font-size:10.5px;
   font-family:inherit;margin-bottom:5px;outline:none;
 }
 .ms-search:focus{border-color:var(--accent);}
 .ms-list{max-height:160px;overflow-y:auto;}
 .ms-item{
-  display:flex;align-items:center;gap:8px;padding:6px 8px;
+  display:flex;align-items:center;gap:8px;padding:5px 8px;
   border-radius:5px;cursor:pointer;
-  font-size:11px;font-weight:500;color:#333;
+  font-size:10.5px;font-weight:500;color:#333;
   transition:background var(--transition-fast);
 }
 .ms-item:hover{background:#FFF3E0;}
 .ms-item input[type="checkbox"]{accent-color:var(--accent);cursor:pointer;}
 .ms-item.all{
   font-weight:700;color:#8B5E00;
-  border-bottom:1px solid #FFE0B2;margin-bottom:3px;padding-bottom:7px;
+  border-bottom:1px solid #FFE0B2;margin-bottom:3px;padding-bottom:6px;
 }
 .ms-footer{
   display:flex;justify-content:flex-end;gap:6px;
   padding-top:6px;border-top:1px solid #FFE0B2;margin-top:4px;
 }
 .ms-footer button{
-  padding:4px 10px;font-size:10px;font-weight:700;
+  padding:4px 10px;font-size:9.5px;font-weight:700;
   border-radius:5px;cursor:pointer;font-family:inherit;
   border:1px solid #FFCC80;background:#fff;color:#8B5E00;
   transition:all var(--transition-fast);
 }
 .ms-footer button:hover{background:#FFF8E1;}
 .ms-footer button.apply{background:var(--gradient-header);color:#fff;border-color:#E65100;}
-.filter-sidebar .btn{width:100%;justify-content:center;padding:8px 12px;font-size:11.5px;margin-bottom:6px;}
+.filter-sidebar .btn{width:100%;justify-content:center;padding:7px 10px;font-size:10.5px;margin-bottom:5px;}
 
 /* ============================================================
-   SEGMENTED CONTROL
+   SEGMENTED CONTROL MODERNO
    ============================================================ */
 .segmented-control{
   display:inline-flex;
-  background:#FFF3E0;
+  background:linear-gradient(180deg,#FFF8E1 0%,#FFF3E0 100%);
   border:1px solid #FFE0B2;
-  border-radius:9px;
+  border-radius:11px;
   padding:3px;
   gap:3px;
-  box-shadow:0 1px 4px rgba(255,109,0,.06);
+  box-shadow:0 1px 3px rgba(255,109,0,.06), inset 0 1px 0 rgba(255,255,255,.8);
 }
 .segmented-btn{
-  padding:6px 14px;
+  padding:7px 15px;
   border:none;
-  border-radius:7px;
+  border-radius:8px;
   font-family:inherit;
   font-size:11px;
   font-weight:700;
@@ -404,15 +373,17 @@ body{
   transition:all var(--transition-base);
   letter-spacing:.2px;
   white-space:nowrap;
+  position:relative;
 }
 .segmented-btn:hover:not(.active){
   color:#E65100;
-  background:rgba(255,255,255,.7);
+  background:rgba(255,255,255,.85);
+  transform:translateY(-1px);
 }
 .segmented-btn.active{
   background:linear-gradient(135deg,#FF8F00 0%,#FF6D00 100%);
   color:#fff;
-  box-shadow:0 3px 10px rgba(255,109,0,.30);
+  box-shadow:0 3px 10px rgba(255,109,0,.30), inset 0 1px 0 rgba(255,255,255,.2);
 }
 .segmented-btn i{font-size:10px;}
 
@@ -535,11 +506,11 @@ table tfoot td{
   border-top:2px solid #FF8F00 !important;
   font-weight:800 !important;color:#4a2200 !important;
   z-index:4;padding:10px !important;font-variant-numeric:tabular-nums;
-  font-size:11.5px;
+  font-size:11.5px;white-space:nowrap;
 }
 .cell-plano{color:#059669 !important;font-weight:700;}
 .cell-cadastro-inicial{
-  color:#7C3AED !important;font-weight:600;font-style:italic;
+  color:#7C3AED !important;font-weight:600;
   background:#F5F3FF !important;
 }
 .cell-money{
@@ -787,15 +758,17 @@ table tfoot td{
 .busca-global-empty i{font-size:28px;color:#FFCC80;display:block;margin-bottom:10px;}
 
 /* ============================================================
-   RESULTADOS EXECUTIVOS — LAYOUT ELEGANTE
+   RESULTADOS EXECUTIVOS — LAYOUT COM SIDEBAR RETRÁTIL
    ============================================================ */
 #popupResultadosExecutivos .modal-content{
-  max-width:100vw !important;width:100% !important;
-  height:100vh;max-height:100vh;
+  max-width:95vw !important;width:95vw !important;
+  height:92vh !important;max-height:92vh !important;
   padding:0 !important;border-top:none;
-  background:#FFFBF5;border-radius:0;
+  background:#FFFBF5;border-radius:14px;
   overflow:hidden;display:flex;flex-direction:column;
-  animation:none;
+  animation:modalPop .25s cubic-bezier(.34,1.56,.64,1) !important;
+  border:1.5px solid #FFB74D !important;
+  border-top:4px solid var(--accent) !important;
 }
 .exec-modal-header{
   background:linear-gradient(135deg,#FF8F00 0%,#FF6D00 50%,#E65100 100%);
@@ -809,7 +782,7 @@ table tfoot td{
   background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%);
   pointer-events:none;
 }
-.exec-modal-title{display:flex;align-items:center;gap:12px;color:#fff;position:relative;z-index:1;}
+.exec-modal-title{display:flex;align-items:center;gap:12px;color:#000;position:relative;z-index:1;}
 .exec-modal-title-icon{
   width:36px;height:36px;border-radius:10px;
   background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;
@@ -821,163 +794,231 @@ table tfoot td{
 .exec-modal-actions{display:flex;gap:8px;align-items:center;position:relative;z-index:1;}
 .exec-modal-actions .btn-excel{
   background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);
-  color:#fff;font-weight:700;padding:6px 12px;
+  color:#000;font-weight:700;padding:6px 12px;
   border-radius:8px;font-size:11px;
   transition:all var(--transition-fast);
 }
 .exec-modal-actions .btn-excel:hover{background:rgba(255,255,255,.25);transform:translateY(-1px);}
 .exec-modal-actions .modal-close{
-  background:rgba(255,255,255,.10);color:#fff;
+  background:rgba(255,255,255,.10);color:#000;
   border-radius:8px;width:32px;height:32px;
   font-size:13px;border:1px solid rgba(255,255,255,.20);
   display:flex;align-items:center;justify-content:center;
 }
-.exec-modal-actions .modal-close:hover{background:var(--danger);border-color:var(--danger);}
+.exec-modal-actions .modal-close:hover{background:var(--danger);border-color:var(--danger);color:#fff;}
 
-/* Cards de resumo executivo — refinados */
-.exec-summary-row{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
-  padding:12px 22px;
-  background:linear-gradient(180deg,#FFF8E1 0%,#FFFBF5 100%);
-  border-bottom:1px solid #FFE0B2;flex-shrink:0;
+/* --- LAYOUT COM SIDEBAR RETRÁTIL --- */
+.exec-layout{
+  display:flex;
+  flex:1;
+  min-height:0;
+  overflow:hidden;
+  position:relative;
+  width:100%;
 }
-.exec-summary-card{
-  background:#fff;border:1px solid #FFE0B2;
-  border-radius:10px;padding:10px 14px;
-  display:flex;flex-direction:column;gap:2px;
-  position:relative;overflow:hidden;
-  transition:all var(--transition-fast);min-height:0;
+
+/* Sidebar de filtros do Executivo */
+.exec-sidebar{
+  width:270px;
+  background:linear-gradient(180deg,#FFF8E1 0%,#FFFBF5 100%);
+  border-right:1.5px solid #FFE0B2;
+  display:flex;
+  flex-direction:column;
+  overflow-y:auto;
+  padding:12px 10px;
+  gap:10px;
+  flex-shrink:0;
+  transition:width var(--transition-base), padding var(--transition-base), opacity var(--transition-base), border-width var(--transition-base);
+  z-index:20;
+  opacity:1;
+  pointer-events:auto;
+}
+.exec-sidebar.collapsed{
+  width:0 !important;
+  padding:0 !important;
+  border-right:none !important;
+  overflow:hidden !important;
+  opacity:0 !important;
+  pointer-events:none !important;
+}
+.exec-sidebar::-webkit-scrollbar{width:6px;}
+.exec-sidebar::-webkit-scrollbar-thumb{background:#FFB74D;border-radius:3px;}
+
+.exec-sidebar .filter-group{
+  background:#fff;
+  border:1px solid #FFE0B2;
+  border-radius:10px;
+  padding:10px 10px 8px;
   box-shadow:0 1px 4px rgba(255,109,0,.04);
 }
-.exec-summary-card:hover{
-  box-shadow:0 6px 16px rgba(255,109,0,.10);
+.exec-sidebar .filter-group-title{
+  font-size:9.5px;
+  font-weight:800;
+  color:#8B5E00;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.exec-sidebar .filter-group-title i{color:var(--accent);font-size:10px;}
+
+.exec-sidebar .ms-wrap{width:100%;margin-bottom:0;position:relative;}
+.exec-sidebar .ms-trigger{
+  width:100%;padding:6px 8px;background:#FFF8E1;
+  border:1px solid #FFE0B2;border-radius:6px;
+  color:#6b3a00;font-size:10.5px;font-family:inherit;
+  font-weight:500;cursor:pointer;display:flex;align-items:center;
+  justify-content:space-between;gap:8px;text-align:left;
+  transition:all var(--transition-fast);
+}
+.exec-sidebar .ms-trigger:hover{border-color:#FFB74D;background:#fff;}
+.exec-sidebar .ms-wrap.open .ms-trigger{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,109,0,.08);}
+.exec-sidebar .ms-panel{
+  display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;
+  background:#fff;border:1.5px solid #FFCC80;
+  border-radius:8px;box-shadow:0 12px 32px rgba(255,109,0,.18);
+  z-index:200;max-height:250px;overflow:hidden;padding:6px;
+}
+.exec-sidebar .ms-wrap.open .ms-panel{display:block;}
+.exec-sidebar .ms-list{max-height:170px;overflow-y:auto;}
+
+.exec-sidebar .segmented-control{
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+  background:transparent;
+  border:none;
+  padding:0;
+  box-shadow:none;
+}
+.exec-sidebar .segmented-btn{
+  flex:1 1 auto;
+  min-width:60px;
+  padding:6px 8px;
+  font-size:10px;
+  border-radius:6px;
+  border:1px solid #FFE0B2;
+  background:#fff;
+  color:#8B5E00;
+  text-align:center;
+  justify-content:center;
+  transition:all var(--transition-fast);
+}
+.exec-sidebar .segmented-btn:hover:not(.active){
+  background:#FFF8E1;
   border-color:#FFCC80;
-  transform:translateY(-1px);
 }
-.exec-summary-card::before{
-  content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
-  background:#FFB74D;
-  border-radius:0 4px 4px 0;
-}
-.exec-summary-card.total::before{background:linear-gradient(180deg,#8B5E00,#6b3a00);}
-.exec-summary-card.proj::before{background:linear-gradient(180deg,#0284C7,#0369a1);}
-.exec-summary-card.real::before{background:linear-gradient(180deg,#059669,#047857);}
-.exec-summary-card.diff::before{background:linear-gradient(180deg,#DC2626,#b91c1c);}
-.exec-summary-card .lbl{
-  font-size:8.5px;font-weight:800;color:#8B5E00;
-  text-transform:uppercase;letter-spacing:.5px;
-  display:flex;align-items:center;gap:5px;
-}
-.exec-summary-card .lbl i{font-size:9.5px;}
-.exec-summary-card .val{
-  font-size:15px;font-weight:800;
-  font-variant-numeric:tabular-nums;letter-spacing:.2px;line-height:1.15;
-  color:#1a0f00;
-}
-.exec-summary-card .val.proj{color:#0284C7;}
-.exec-summary-card .val.real{color:#059669;}
-.exec-summary-card .val.diff.pos{color:#047857;}
-.exec-summary-card .val.diff.neg{color:#B91C1C;}
-.exec-summary-card .sub{
-  font-size:9px;font-weight:600;color:#8B5E00;opacity:.85;line-height:1.2;
+.exec-sidebar .segmented-btn.active{
+  background:var(--gradient-header);
+  color:#fff;
+  border-color:#E65100;
+  box-shadow:0 2px 8px rgba(255,109,0,.20);
 }
 
-/* Filtros executivos — mais alinhados */
-.exec-filters-bar{
-  padding:10px 22px;
-  background:linear-gradient(180deg,#FFFBF5 0%,#FFF8E1 100%);
-  border-bottom:2px solid #FFE0B2;
-  display:flex;flex-wrap:nowrap;gap:10px;align-items:center;
-  flex-shrink:0;overflow:visible;position:relative;z-index:50;
+.exec-sidebar .search-box{position:relative;width:100%;}
+.exec-sidebar .search-box input{
+  width:100%;padding:6px 8px 6px 26px;
+  background:#fff;border:1px solid #FFE0B2;
+  border-radius:6px;color:var(--text-primary);
+  font-size:10.5px;font-family:inherit;font-weight:500;outline:none;
+  transition:all var(--transition-fast);
 }
-.exec-filters-bar.hidden{display:none !important;}
-.exec-filters-bar .ms-wrap{
-  flex:0 0 auto;min-width:170px;max-width:210px;
-  margin-bottom:0;position:relative;
+.exec-sidebar .search-box input:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,109,0,.08);
 }
-.exec-filters-bar .search-box{
-  position:relative;flex:1 1 auto;min-width:200px;max-width:380px;
-}
-.exec-filters-bar .search-box input{
-  width:100%;padding:6px 10px 6px 30px;
-  background:#fff;border:1px solid #FFCC80;
-  border-radius:7px;font-size:11px;
-  font-family:inherit;font-weight:500;color:var(--text-primary);
-  outline:none;transition:all var(--transition-fast);height:30px;
-}
-.exec-filters-bar .search-box input:focus{
-  border-color:var(--accent);box-shadow:0 0 0 2px rgba(255,109,0,.10);
-}
-.exec-filters-bar .search-box::before{
+.exec-sidebar .search-box::before{
   content:'\f002';font-family:'Font Awesome 6 Free';font-weight:900;
-  position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  position:absolute;left:8px;top:50%;transform:translateY(-50%);
   color:#bbb;font-size:10px;pointer-events:none;
 }
 
-#popupResultadosExecutivos .ms-wrap{position:relative;}
-#popupResultadosExecutivos .ms-panel{
-  z-index:1100;display:none;position:absolute;
-  top:calc(100% + 4px);left:0;min-width:240px;max-height:280px;
-  overflow-y:auto;background:#fff;
-  border:1.5px solid #FFCC80;border-radius:10px;
-  box-shadow:0 16px 40px rgba(255,109,0,.15);padding:8px;
+/* Seletor de meses compacto na sidebar */
+.exec-sidebar .mes-selector-vertical{
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
 }
-#popupResultadosExecutivos .ms-wrap.open .ms-panel{display:block;}
-#popupResultadosExecutivos .ms-trigger{
-  background:#fff;border:1px solid #FFCC80;
-  border-radius:7px;padding:6px 10px;
-  font-size:11px;height:30px;
-  display:flex;align-items:center;justify-content:space-between;
-  cursor:pointer;transition:all var(--transition-fast);
-  color:#6b3a00;font-weight:500;
-}
-#popupResultadosExecutivos .ms-trigger:hover{
-  border-color:var(--accent);background:#FFF8E1;
-}
-#popupResultadosExecutivos .ms-wrap.open .ms-trigger{
-  border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,109,0,.08);
+.exec-sidebar .mes-chip{
+  padding:4px 8px;
+  border:1px solid #FFE0B2;
+  border-radius:5px;
+  font-family:inherit;
+  font-size:9.5px;
+  font-weight:700;
+  cursor:pointer;
   background:#fff;
+  color:#8B5E00;
+  transition:all var(--transition-fast);
+  white-space:nowrap;
+  flex:1 1 auto;
+  text-align:center;
 }
-#popupResultadosExecutivos .ms-caret{font-size:9px;color:#bbb;transition:transform var(--transition-fast);}
-#popupResultadosExecutivos .ms-wrap.open .ms-caret{transform:rotate(180deg);}
-#popupResultadosExecutivos .ms-item{
-  display:flex;align-items:center;gap:8px;padding:7px 9px;
-  border-radius:6px;cursor:pointer;
-  font-size:11.5px;font-weight:500;color:#6b3a00;
-  transition:background var(--transition-fast);
+.exec-sidebar .mes-chip:hover{background:#FFF8E1;border-color:#FFCC80;}
+.exec-sidebar .mes-chip.active{
+  background:var(--gradient-header);
+  color:#fff;
+  border-color:#E65100;
+  box-shadow:0 2px 6px rgba(255,109,0,.20);
 }
-#popupResultadosExecutivos .ms-item:hover{background:#FFF3E0;}
-#popupResultadosExecutivos .ms-item.all{
-  font-weight:700;color:#8B5E00;
-  border-bottom:1px solid #FFE0B2;margin-bottom:4px;padding-bottom:8px;
+.exec-sidebar .mes-chip.todos{
+  background:#FFF3E0;border-color:#FFB74D;color:#6b3a00;
 }
-#popupResultadosExecutivos .ms-item input[type="checkbox"]{
-  accent-color:var(--accent);cursor:pointer;width:14px;height:14px;
+.exec-sidebar .mes-chip.todos.active{
+  background:linear-gradient(135deg,#8B5E00 0%,#6b3a00 100%);
+  color:#fff;border-color:#6b3a00;
 }
-#popupResultadosExecutivos .ms-search{
-  width:100%;padding:6px 9px;border:1px solid #FFCC80;
-  border-radius:6px;font-size:11px;font-family:inherit;margin-bottom:6px;outline:none;
+.exec-sidebar .mes-actions{
+  display:flex;
+  gap:4px;
+  margin-top:6px;
 }
-#popupResultadosExecutivos .ms-search:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(255,109,0,.08);}
-#popupResultadosExecutivos .ms-list{max-height:180px;overflow-y:auto;}
-#popupResultadosExecutivos .ms-footer{
-  display:flex;justify-content:flex-end;gap:6px;
-  padding-top:7px;border-top:1px solid #FFE0B2;margin-top:5px;
+.exec-sidebar .mes-actions button{
+  flex:1;
+  padding:4px 6px;
+  border:1px solid #FFE0B2;
+  border-radius:5px;
+  font-family:inherit;
+  font-size:9px;
+  font-weight:700;
+  cursor:pointer;
+  background:#fff;
+  color:#8B5E00;
+  transition:all var(--transition-fast);
 }
-#popupResultadosExecutivos .ms-footer button{
-  padding:5px 12px;font-size:10.5px;font-weight:700;
-  border-radius:6px;cursor:pointer;font-family:inherit;
-  border:1px solid #FFCC80;background:#fff;color:#8B5E00;
-}
-#popupResultadosExecutivos .ms-footer button:hover{background:#FFF8E1;}
-#popupResultadosExecutivos .ms-footer button.apply{
-  background:var(--gradient-header);color:#fff;border-color:#E65100;
+.exec-sidebar .mes-actions button:hover{background:#FFF8E1;border-color:#FFCC80;}
+
+/* Área principal do Executivo (tabela) */
+.exec-main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  min-height:0;
+  overflow:hidden;
+  background:#FFFBF5;
+  width:100%;
 }
 
-/* Toggle de pivô — mais refinado */
+/* Cards de resumo removidos */
+.exec-summary-row{ display:none !important; }
+
+/* Barra superior: toggle + meses inline */
+.exec-top-bar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  padding:10px 22px 8px;
+  background:#FFFBF5;
+  flex-shrink:0;
+  flex-wrap:wrap;
+}
+
+/* Toggle de pivô */
 .exec-toggle-wrap{
-  display:flex;justify-content:center;padding:12px 22px 0;
-  background:#FFFBF5;flex-shrink:0;
+  display:flex;justify-content:center;
 }
 .exec-toggle{
   display:inline-flex;background:#FFF3E0;
@@ -1002,38 +1043,150 @@ table tfoot td{
   padding:1px 8px;border-radius:9px;font-weight:800;
 }
 .exec-toggle-btn.active .tab-count{background:rgba(255,255,255,.25);color:#fff;}
-.exec-toggle-btn.receitas.active{background:linear-gradient(135deg,#059669 0%,#047857 100%);box-shadow:0 4px 14px rgba(5,150,105,.35);}
-.exec-toggle-btn.despesas.active{background:linear-gradient(135deg,#DC2626 0%,#B91C1C 100%);box-shadow:0 4px 14px rgba(220,38,38,.35);}
+.exec-toggle-btn.receitas.active{background:var(--gradient-header);box-shadow:0 4px 14px rgba(255,109,0,.35);}
+.exec-toggle-btn.despesas.active{background:var(--gradient-header);box-shadow:0 4px 14px rgba(255,109,0,.35);}
 .exec-toggle-btn.consolidado.active{background:var(--gradient-header);box-shadow:0 4px 14px rgba(255,109,0,.35);}
 
+/* Seletor de meses inline (ao lado do toggle) */
+.exec-meses-inline{
+  display:none;
+  align-items:center;
+  gap:6px;
+  background:#FFF8E1;
+  border:1px solid #FFE0B2;
+  border-radius:10px;
+  padding:5px 10px;
+  flex-wrap:wrap;
+}
+.exec-meses-inline.visible{display:flex;}
+.exec-meses-inline .mes-inline-label{
+  font-size:9.5px;
+  font-weight:800;
+  color:#8B5E00;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  margin-right:4px;
+}
+.exec-meses-inline .mes-chip{
+  padding:4px 8px;
+  border:1px solid #FFE0B2;
+  border-radius:5px;
+  font-family:inherit;
+  font-size:9.5px;
+  font-weight:700;
+  cursor:pointer;
+  background:#fff;
+  color:#8B5E00;
+  transition:all var(--transition-fast);
+  white-space:nowrap;
+}
+.exec-meses-inline .mes-chip:hover{background:#FFF8E1;border-color:#FFCC80;}
+.exec-meses-inline .mes-chip.active{
+  background:var(--gradient-header);
+  color:#fff;
+  border-color:#E65100;
+  box-shadow:0 2px 6px rgba(255,109,0,.20);
+}
+.exec-meses-inline .mes-chip.todos{
+  background:#FFF3E0;border-color:#FFB74D;color:#6b3a00;
+}
+.exec-meses-inline .mes-chip.todos.active{
+  background:linear-gradient(135deg,#8B5E00 0%,#6b3a00 100%);
+  color:#fff;border-color:#6b3a00;
+}
+.exec-meses-inline .mes-actions{
+  display:flex;
+  gap:4px;
+  margin-left:4px;
+}
+.exec-meses-inline .mes-actions button{
+  padding:4px 8px;
+  border:1px solid #FFE0B2;
+  border-radius:5px;
+  font-family:inherit;
+  font-size:9px;
+  font-weight:700;
+  cursor:pointer;
+  background:#fff;
+  color:#8B5E00;
+  transition:all var(--transition-fast);
+}
+.exec-meses-inline .mes-actions button:hover{background:#FFF8E1;border-color:#FFCC80;}
+
+/* ============================================================
+   SUB-ABAS MODERNIZADAS — BOTÕES LADO A LADO, SEM ÍCONES
+   ============================================================ */
 .exec-pivot-subtabs{
-  display:flex;gap:6px;padding:10px 22px;
-  background:#FFFBF5;border-bottom:1px solid #FFE0B2;
-  flex-wrap:wrap;flex-shrink:0;
+  display:flex;
+  gap:6px;
+  padding:10px 22px 6px;
+  background:#FFFBF5;
+  border-bottom:1px solid #FFE0B2;
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  flex-shrink:0;
+  justify-content:center;
+  scrollbar-width:thin;
 }
 .exec-pivot-subtabs.hidden{display:none !important;}
 .exec-pivot-subtab{
-  padding:7px 15px;border:1px solid #FFE0B2;
-  border-radius:8px;font-family:inherit;
-  font-size:11.5px;font-weight:700;cursor:pointer;
-  background:#fff;color:#8B5E00;
-  display:inline-flex;align-items:center;gap:7px;
-  transition:all var(--transition-fast);
+  padding:8px 20px;
+  border:1.5px solid #FFE0B2;
+  border-radius:22px;
+  font-family:inherit;
+  font-size:11.5px;
+  font-weight:700;
+  cursor:pointer;
+  background:#fff;
+  color:#8B5E00;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  letter-spacing:.3px;
+  transition:all var(--transition-base);
+  box-shadow:0 1px 3px rgba(255,109,0,.06);
+  position:relative;
+  white-space:nowrap;
 }
 .exec-pivot-subtab:hover:not(.active){
-  color:#E65100;background:#FFF8E1;border-color:#FFCC80;
+  color:#E65100;
+  background:#FFF8E1;
+  border-color:#FFCC80;
+  transform:translateY(-1px);
+  box-shadow:0 3px 8px rgba(255,109,0,.12);
 }
 .exec-pivot-subtab.active{
-  background:var(--gradient-header);color:#fff;
-  border-color:#E65100;box-shadow:0 3px 10px rgba(255,109,0,.25);
+  background:linear-gradient(135deg,#FF8F00 0%,#FF6D00 50%,#E65100 100%);
+  color:#fff;
+  border-color:#E65100;
+  box-shadow:0 4px 14px rgba(255,109,0,.35), inset 0 1px 0 rgba(255,255,255,.2);
+  transform:translateY(-1px);
 }
-.exec-pivot-subtab i{font-size:10px;}
+.exec-pivot-subtab.active::after{
+  content:'';
+  position:absolute;
+  bottom:-7px;
+  left:50%;
+  transform:translateX(-50%);
+  width:24px;
+  height:3px;
+  border-radius:2px;
+  background:linear-gradient(90deg,#FF8F00,#E65100);
+}
 .exec-pivot-subtab.oculto{display:none;}
 
 #execPivotWrapper{
-  flex:1;overflow-y:auto;overflow-x:hidden;
-  padding:12px 22px 22px;background:#FFFBF5;
-  min-height:0;display:flex;flex-direction:column;
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:8px 14px 12px;
+  background:#FFFBF5;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  width:100%;
+  max-height:100%;
 }
 #execPivotWrapper::-webkit-scrollbar{width:8px;}
 #execPivotWrapper::-webkit-scrollbar-thumb{
@@ -1041,36 +1194,45 @@ table tfoot td{
 }
 
 /* ============================================================
-   TABELA PIVOT — REFINADA
+   TABELA PIVOT — COMPACTA VERTICALMENTE
    ============================================================ */
 .pivot-table{
-  width:100%;border-collapse:separate;border-spacing:0;
-  font-size:11px;background:#fff;
-  border-radius:12px;overflow:hidden;
-  border:1.5px solid #FFB74D;box-shadow:0 6px 24px rgba(255,109,0,.12);
-  margin:0 auto;table-layout:fixed;min-width:0;
+  width:100%;
+  max-width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:11px;
+  background:#fff;
+  border-radius:12px;
+  overflow:hidden;
+  border:1.5px solid #FFB74D;
+  box-shadow:0 6px 24px rgba(255,109,0,.12);
+  margin:0 auto;
+  table-layout:fixed;
+  min-width:0;
 }
 .pivot-table thead th{
   background:linear-gradient(180deg,#ffe082 0%,#ffcc80 100%);
   color:#6b3a00;font-size:9.5px;font-weight:800;
   text-transform:uppercase;letter-spacing:.4px;
-  padding:10px 8px;text-align:left;
+  padding:6px 8px;text-align:left;
   border-bottom:2px solid #FFB74D;position:sticky;top:0;z-index:3;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.pivot-table thead th:nth-child(1){width:28%;padding-left:12px;}
+.pivot-table thead th:nth-child(1){width:30%;padding-left:12px;}
 .pivot-table thead th:nth-child(2){width:13%;text-align:right;}
 .pivot-table thead th:nth-child(3){width:13%;text-align:right;}
 .pivot-table thead th:nth-child(4){width:13%;text-align:right;}
-.pivot-table thead th:nth-child(5){width:23%;text-align:right;}
-.pivot-table thead th:nth-child(6){width:10%;text-align:center;}
+.pivot-table thead th:nth-child(5){width:22%;text-align:right;}
+.pivot-table thead th:nth-child(6){width:9%;text-align:center;}
 .pivot-table thead th.right{text-align:right;}
 .pivot-table thead th.center{text-align:center;}
 .pivot-table tbody td{
-  padding:9px 8px;border-bottom:1px solid #FFF3E0;
-  font-size:11px;font-weight:500;color:#000;
+  padding:5px 8px;border-bottom:1px solid #FFF3E0;
+  font-size:11px;font-weight:400;color:#000;
   background:#fff;transition:background var(--transition-fast);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  line-height:1.2;
 }
 .pivot-table tbody td:nth-child(1){padding-left:12px;}
 .pivot-table tbody tr:nth-child(even) td{background:#fff8e6;}
@@ -1081,14 +1243,14 @@ table tfoot td{
 }
 .pivot-table tbody td.right{text-align:right;font-variant-numeric:tabular-nums;}
 .pivot-table tbody td.center{text-align:center;}
-.pivot-table tbody td.positivo{color:#047857;font-weight:700;}
-.pivot-table tbody td.negativo{color:#B91C1C;font-weight:700;}
-.pivot-table tbody td.primary{color:#6b3a00;font-weight:700;}
-.pivot-table tbody td.pivot-indent{padding-left:12px;font-weight:700;}
+.pivot-table tbody td.positivo{color:#047857;font-weight:400;}
+.pivot-table tbody td.negativo{color:#B91C1C;font-weight:400;}
+.pivot-table tbody td.primary{color:#6b3a00;font-weight:400;}
+.pivot-table tbody td.pivot-indent{padding-left:12px;font-weight:400;}
 .pivot-table tfoot td{
   background:linear-gradient(180deg,#FFE0B2 0%,#FFCC80 100%) !important;
-  font-weight:800;color:#4a2200;
-  padding:10px 8px;border-top:2px solid #FF8F00;
+  font-weight:400;color:#4a2200;
+  padding:6px 8px;border-top:2px solid #FF8F00;
   font-variant-numeric:tabular-nums;position:sticky;bottom:0;
   z-index:3;font-size:11.5px;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis;
@@ -1107,29 +1269,31 @@ table tfoot td{
 }
 .pivot-table .qtd-badge{
   display:inline-block;background:#FFF3E0;
-  color:#6b3a00;font-size:10px;font-weight:800;
-  padding:2px 9px;border-radius:10px;border:1px solid #FFCC80;
+  color:#6b3a00;font-size:10px;font-weight:400;
+  padding:1px 8px;border-radius:10px;border:1px solid #FFCC80;
 }
 .pivot-table .conta-codigo{
   display:inline-block;
   background:linear-gradient(135deg,#FFE082,#FFCC80);
-  color:#6b3a00;font-size:9px;font-weight:800;
+  color:#6b3a00;font-size:9px;font-weight:400;
   padding:2px 6px;border-radius:5px;
   border:1px solid #FFB74D;margin-right:6px;
   font-variant-numeric:tabular-nums;letter-spacing:.2px;
 }
-.pivot-table .conta-nome{font-weight:700;color:#1a0f00;font-size:11.5px;}
+.pivot-table .conta-nome{font-weight:400;color:#000;font-size:11.5px;}
 
 /* ============================================================
    DETALHAMENTO
    ============================================================ */
 #popupDetalheExec .modal-content{
-  max-width:100vw !important;width:100% !important;
-  height:100vh;max-height:100vh;
+  max-width:95vw !important;width:95vw !important;
+  height:auto !important;max-height:92vh !important;
   padding:0 !important;border:none;
-  background:#FFFBF5;border-radius:0;
+  background:#FFFBF5;border-radius:14px;
   overflow:hidden;display:flex;flex-direction:column;
-  animation:none;
+  animation:modalPop .25s cubic-bezier(.34,1.56,.64,1) !important;
+  border:1.5px solid #FFB74D !important;
+  border-top:4px solid var(--accent) !important;
 }
 .det-exec-header{
   background:linear-gradient(135deg,#FF8F00 0%,#FF6D00 50%,#E65100 100%);
@@ -1147,42 +1311,43 @@ table tfoot td{
   background:rgba(255,255,255,.15);
   border:1px solid rgba(255,255,255,.20);
   display:flex;align-items:center;justify-content:center;
-  font-size:19px;color:#fff;flex-shrink:0;
+  font-size:19px;color:#000;flex-shrink:0;
   backdrop-filter:blur(6px);z-index:1;
 }
 .det-exec-header-info{flex:1;min-width:0;z-index:1;}
 .det-exec-titulo{
-  font-size:15px;font-weight:800;color:#fff;
+  font-size:15px;font-weight:400;color:#000;
   display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;
   text-shadow:0 2px 6px rgba(0,0,0,.15);line-height:1.2;
 }
 .det-exec-titulo span:first-child{
-  font-size:11px;font-weight:700;opacity:.80;
+  font-size:11px;font-weight:400;opacity:.80;
   text-transform:uppercase;letter-spacing:.8px;
 }
 .det-exec-subtitulo{
   display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  margin-top:5px;font-size:11px;font-weight:600;
-  color:rgba(255,255,255,.85);
+  margin-top:5px;font-size:11px;font-weight:400;
+  color:rgba(0,0,0,.85);
 }
 .det-exec-subtitulo .chip{
   background:rgba(255,255,255,.12);
   border:1px solid rgba(255,255,255,.20);
   padding:2px 10px;border-radius:10px;
-  font-size:10px;font-weight:700;
+  font-size:10px;font-weight:400;
   display:inline-flex;align-items:center;gap:5px;
   backdrop-filter:blur(4px);
+  color:#000;
 }
 .det-exec-close{
   width:34px;height:34px;border-radius:10px;
   background:rgba(255,255,255,.10);
   border:1px solid rgba(255,255,255,.20);
-  color:#fff;font-size:15px;cursor:pointer;
+  color:#000;font-size:15px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   transition:all var(--transition-fast);flex-shrink:0;z-index:1;
   font-family:inherit;
 }
-.det-exec-close:hover{background:var(--danger);border-color:var(--danger);transform:rotate(90deg);}
+.det-exec-close:hover{background:var(--danger);border-color:var(--danger);color:#fff;transform:rotate(90deg);}
 
 .det-exec-kpis{
   display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
@@ -1221,11 +1386,11 @@ table tfoot td{
 .det-exec-kpi.qtd  .det-exec-kpi-icon{background:#F5F3FF;color:#7C3AED;}
 .det-exec-kpi-info{display:flex;flex-direction:column;gap:2px;min-width:0;}
 .det-exec-kpi-lbl{
-  font-size:9.5px;font-weight:800;color:#8B5E00;
+  font-size:9.5px;font-weight:400;color:#8B5E00;
   text-transform:uppercase;letter-spacing:.5px;
 }
 .det-exec-kpi-val{
-  font-size:19px;font-weight:800;
+  font-size:19px;font-weight:400;
   font-variant-numeric:tabular-nums;letter-spacing:.3px;line-height:1.1;
 }
 .det-exec-kpi.proj .det-exec-kpi-val{color:#0284C7;}
@@ -1254,7 +1419,7 @@ table tfoot td{
 }
 .det-exec-tabela thead th{
   background:linear-gradient(180deg,#ffe082 0%,#ffcc80 100%);
-  color:#6b3a00;font-size:9.5px;font-weight:800;
+  color:#6b3a00;font-size:9.5px;font-weight:400;
   text-transform:uppercase;letter-spacing:.4px;
   padding:10px 8px;text-align:left;
   border-bottom:2px solid #FFB74D;border-right:1px solid #FFE0B2;
@@ -1279,7 +1444,7 @@ table tfoot td{
 .det-exec-tabela tbody td{
   padding:9px 8px;border-bottom:1px solid #FFF3E0;
   border-right:1px solid #FFFDF7;
-  font-size:11.5px;font-weight:500;color:#000;
+  font-size:11.5px;font-weight:400;color:#000;
   background:#fff8e6;white-space:nowrap;vertical-align:middle;
   overflow:hidden;text-overflow:ellipsis;
 }
@@ -1288,7 +1453,7 @@ table tfoot td{
 .det-exec-tabela tbody tr.tipo-rec td:first-child{box-shadow:inset 4px 0 0 #059669;}
 .det-exec-tabela tbody tr.tipo-desp td:first-child{box-shadow:inset 4px 0 0 #DC2626;}
 .det-exec-tabela tbody td.right{
-  text-align:right;font-variant-numeric:tabular-nums;font-weight:700;
+  text-align:right;font-variant-numeric:tabular-nums;font-weight:400;
 }
 .det-exec-tabela tbody td.right.real{color:#059669;}
 .det-exec-tabela tbody td.right.desvio-pos{color:#047857;}
@@ -1304,7 +1469,7 @@ table tfoot td{
 .det-exec-tabela tr.tipo-desp .td-icon{background:#FCEBEB;color:#B91C1C;}
 
 .det-exec-tabela .tag{
-  font-size:9.5px;font-weight:700;padding:2px 8px;
+  font-size:9.5px;font-weight:400;padding:2px 8px;
   border-radius:6px;background:#FFF3E0;
   border:1px solid #FFCC80;color:#6b3a00;
   display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
@@ -1318,7 +1483,7 @@ table tfoot td{
 
 .det-exec-tabela tfoot td{
   background:linear-gradient(180deg,#FFE0B2 0%,#FFCC80 100%) !important;
-  font-weight:800;color:#4a2200;
+  font-weight:400;color:#4a2200;
   padding:12px 8px;border-top:2px solid #FF8F00;
   font-variant-numeric:tabular-nums;font-size:12px;
   white-space:nowrap;
@@ -1346,7 +1511,7 @@ table tfoot td{
 }
 .dre-bloco-header{
   background:linear-gradient(135deg,#FF8F00 0%,#FF6D00 100%);
-  color:#fff;padding:12px 18px;font-size:11.5px;font-weight:700;
+  color:#000;padding:12px 18px;font-size:11.5px;font-weight:400;
   text-transform:uppercase;letter-spacing:.6px;
   display:flex;align-items:center;gap:8px;
   position:relative;overflow:hidden;
@@ -1371,7 +1536,7 @@ table tfoot td{
 .dre-bloco table{width:100%;min-width:0 !important;font-size:11.5px;border-collapse:separate;border-spacing:0;}
 .dre-bloco table thead th{
   background:linear-gradient(180deg,#ffe082 0%,#ffcc80 100%) !important;
-  color:#6b3a00 !important;font-size:9.5px !important;font-weight:800 !important;
+  color:#6b3a00 !important;font-size:9.5px !important;font-weight:400 !important;
   text-transform:uppercase;letter-spacing:.4px;
   padding:9px 12px !important;border-bottom:2px solid #FFB74D !important;
   border-right:1px solid #FFE0B2 !important;cursor:default !important;
@@ -1383,7 +1548,7 @@ table tfoot td{
 .dre-bloco table tbody td{
   padding:8px 12px !important;border-bottom:1px solid #FFF3E0 !important;
   border-right:1px solid #FFFDF7 !important;
-  font-size:11.5px !important;font-weight:500;
+  font-size:11.5px !important;font-weight:400;
   white-space:normal !important;background:#fff !important;
   color:#000;position:static !important;
 }
@@ -1391,32 +1556,32 @@ table tfoot td{
 .dre-bloco table tbody tr:hover td{background:#FFE0B2 !important;}
 .dre-bloco table tbody td.num{
   text-align:right;font-variant-numeric:tabular-nums;
-  font-weight:700;color:#1a0f00;white-space:nowrap !important;
+  font-weight:400;color:#000;white-space:nowrap !important;
 }
 .dre-bloco table tbody td.pct{
   text-align:right;font-variant-numeric:tabular-nums;
-  font-weight:600;color:#8B5E00;white-space:nowrap !important;
+  font-weight:400;color:#8B5E00;white-space:nowrap !important;
 }
 .dre-bloco table tbody td.positivo{color:#047857 !important;}
 .dre-bloco table tbody td.negativo{color:#B91C1C !important;}
 .dre-bloco table tbody tr.total td{
   background:linear-gradient(180deg,#FFE0B2 0%,#FFCC80 100%) !important;
-  font-weight:800 !important;color:#4a2200 !important;
+  font-weight:400 !important;color:#4a2200 !important;
   border-top:2px solid #FF8F00 !important;border-bottom:none !important;
 }
 .dre-bloco table tbody tr.destaque td{
   background:#FFF3E0 !important;
-  font-weight:700 !important;color:#6b3a00 !important;
+  font-weight:400 !important;color:#6b3a00 !important;
   border-top:1px solid #FFCC80 !important;
 }
 .dre-bloco table tbody tr.destaque-verde td{
   background:#E8F5EE !important;
-  font-weight:700 !important;color:#065F46 !important;
+  font-weight:400 !important;color:#065F46 !important;
   border-top:1px solid #A7F3D0 !important;
 }
 .dre-bloco table tbody tr.destaque-vermelho td{
   background:#FCEBEB !important;
-  font-weight:700 !important;color:#991B1B !important;
+  font-weight:400 !important;color:#991B1B !important;
   border-top:1px solid #FECACA !important;
 }
 .dre-bloco table tbody tr.clicavel{cursor:pointer;}
@@ -1425,7 +1590,7 @@ table tfoot td{
   box-shadow:inset 3px 0 0 #FF6D00;
 }
 .dre-titulo-principal{
-  text-align:center;font-size:16px;font-weight:800;
+  text-align:center;font-size:16px;font-weight:400;
   color:#6b3a00;letter-spacing:1px;padding:10px 0;
   text-transform:uppercase;border-bottom:2px solid #FF8F00;
   margin-bottom:16px;
@@ -1439,15 +1604,17 @@ table tfoot td{
 }
 
 /* ============================================================
-   MODAL DRE MÊS A MÊS
+   MODAL DRE MÊS A MÊS (POPUP)
    ============================================================ */
 #popupDRE .modal-content{
-  max-width:100vw !important;width:100% !important;
-  height:100vh;max-height:100vh;
+  max-width:95vw !important;width:95vw !important;
+  height:auto !important;max-height:92vh !important;
   padding:0 !important;border-top:none;
-  background:#FFFBF5;border-radius:0;
+  background:#FFFBF5;border-radius:14px;
   overflow:hidden;display:flex;flex-direction:column;
-  animation:none;
+  animation:modalPop .25s cubic-bezier(.34,1.56,.64,1) !important;
+  border:1.5px solid #FFB74D !important;
+  border-top:4px solid var(--accent) !important;
 }
 .dre-modal-header{
   background:linear-gradient(135deg,#FF8F00 0%,#FF6D00 50%,#E65100 100%);
@@ -1461,30 +1628,30 @@ table tfoot td{
   background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%);
   pointer-events:none;
 }
-.dre-modal-title{display:flex;align-items:center;gap:12px;color:#fff;position:relative;z-index:1;}
+.dre-modal-title{display:flex;align-items:center;gap:12px;color:#000;position:relative;z-index:1;}
 .dre-modal-title-icon{
   width:36px;height:36px;border-radius:8px;
   background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;
   font-size:16px;border:1px solid rgba(255,255,255,.20);
 }
-.dre-modal-title-text h2{font-size:14px;font-weight:800;letter-spacing:.2px;line-height:1.1;}
-.dre-modal-title-text p{font-size:10px;font-weight:500;opacity:.75;margin-top:2px;}
+.dre-modal-title-text h2{font-size:14px;font-weight:400;letter-spacing:.2px;line-height:1.1;}
+.dre-modal-title-text p{font-size:10px;font-weight:400;opacity:.75;margin-top:2px;}
 .dre-modal-actions{display:flex;gap:8px;align-items:center;position:relative;z-index:1;}
 .dre-modal-actions .btn-excel{
   background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);
-  color:#fff;font-weight:700;padding:6px 12px;
+  color:#000;font-weight:400;padding:6px 12px;
   border-radius:7px;font-size:11px;
   transition:all var(--transition-fast);font-family:inherit;cursor:pointer;
 }
 .dre-modal-actions .btn-excel:hover{background:rgba(255,255,255,.25);transform:translateY(-1px);}
 .dre-modal-actions .modal-close{
-  background:rgba(255,255,255,.10);color:#fff;
+  background:rgba(255,255,255,.10);color:#000;
   border-radius:7px;width:30px;height:30px;
   font-size:13px;border:1px solid rgba(255,255,255,.20);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
   font-family:inherit;transition:all var(--transition-fast);
 }
-.dre-modal-actions .modal-close:hover{background:var(--danger);border-color:var(--danger);}
+.dre-modal-actions .modal-close:hover{background:var(--danger);border-color:var(--danger);color:#fff;}
 .dre-modal-filters{
   padding:10px 22px;background:#FFFBF5;
   border-bottom:1px solid #FFE0B2;
@@ -1527,7 +1694,7 @@ table tfoot td{
 }
 .dre-tabela-mensal thead th{
   background:linear-gradient(180deg,#FF8F00 0%,#FF6D00 100%);
-  color:#fff;font-size:10px;font-weight:800;
+  color:#fff;font-size:10px;font-weight:400;
   text-transform:uppercase;letter-spacing:.4px;
   padding:11px 8px;text-align:right;
   border-right:1px solid rgba(255,255,255,.08);
@@ -1540,20 +1707,20 @@ table tfoot td{
 }
 .dre-tabela-mensal thead th:last-child{border-right:none;}
 .dre-tabela-mensal thead th .mes-sub{
-  display:block;font-size:8.5px;font-weight:500;
+  display:block;font-size:8.5px;font-weight:400;
   opacity:.65;text-transform:none;letter-spacing:.2px;
   margin-top:1px;
 }
 .dre-tabela-mensal tbody td{
   padding:9px 8px;border-bottom:1px solid #FFF3E0;
   border-right:1px solid #FFFDF7;
-  font-size:11.5px;font-weight:600;color:#000;
+  font-size:11.5px;font-weight:400;color:#000;
   background:#fff8e6;text-align:right;
   font-variant-numeric:tabular-nums;white-space:nowrap;
 }
 .dre-tabela-mensal tbody td:first-child{
   text-align:left;padding-left:16px;
-  font-weight:700;color:#1a0f00;
+  font-weight:400;color:#000;
   position:sticky;left:0;z-index:2;
   background:#fff8e6;
   overflow:hidden;text-overflow:ellipsis;
@@ -1565,55 +1732,55 @@ table tfoot td{
 .dre-tabela-mensal tbody tr:hover td:first-child{background:#FFE0B2 !important;}
 .dre-tabela-mensal tbody td.num.clicavel{cursor:pointer;}
 .dre-tabela-mensal tbody td.num.clicavel:hover{
-  background:#FFD54F !important;color:#4a2200;font-weight:800;
+  background:#FFD54F !important;color:#4a2200;font-weight:400;
 }
 .dre-tabela-mensal tbody td.positivo{color:#047857;}
 .dre-tabela-mensal tbody td.negativo{color:#B91C1C;}
 .dre-tabela-mensal tbody tr.total-mes td{
   background:linear-gradient(180deg,#FFE0B2 0%,#FFCC80 100%) !important;
-  font-weight:800;color:#4a2200;
+  font-weight:400;color:#4a2200;
   border-top:2px solid #FF8F00;
 }
 .dre-tabela-mensal tbody tr.total-mes td:first-child{background:linear-gradient(180deg,#FFE0B2 0%,#FFCC80 100%) !important;}
 .dre-tabela-mensal .conta-codigo-mini{
   display:inline-block;
   background:linear-gradient(135deg,#FFE082,#FFCC80);
-  color:#6b3a00;font-size:9px;font-weight:800;
+  color:#6b3a00;font-size:9px;font-weight:400;
   padding:1px 5px;border-radius:4px;
   margin-right:6px;font-variant-numeric:tabular-nums;
   border:1px solid #FFB74D;
 }
 .dre-tabela-mensal .valor-vazio{
-  color:#ccc;font-weight:500;font-style:italic;
+  color:#ccc;font-weight:400;
 }
 .dre-mes-vazio{
   text-align:center;padding:40px 20px;color:#8B5E00;
 }
 .dre-mes-vazio i{font-size:32px;color:#FFCC80;display:block;margin-bottom:12px;}
-.dre-mes-vazio p{font-size:13px;font-weight:600;}
+.dre-mes-vazio p{font-size:13px;font-weight:400;}
 .dre-tabela-mensal tbody tr.dre-bloco-receita td:first-child{
-  background:#E8F5EE !important;color:#065F46 !important;font-weight:800 !important;
+  background:#E8F5EE !important;color:#065F46 !important;font-weight:400 !important;
   border-left:4px solid #059669;
 }
 .dre-tabela-mensal tbody tr.dre-bloco-receita td{
   background:#F0FDF4 !important;
 }
 .dre-tabela-mensal tbody tr.dre-bloco-custo-var td:first-child{
-  background:#FEF3C7 !important;color:#92400E !important;font-weight:800 !important;
+  background:#FEF3C7 !important;color:#92400E !important;font-weight:400 !important;
   border-left:4px solid #D97706;
 }
 .dre-tabela-mensal tbody tr.dre-bloco-custo-var td{
   background:#FFFBEB !important;
 }
 .dre-tabela-mensal tbody tr.dre-bloco-custo-fixo td:first-child{
-  background:#FEE2E2 !important;color:#991B1B !important;font-weight:800 !important;
+  background:#FEE2E2 !important;color:#991B1B !important;font-weight:400 !important;
   border-left:4px solid #DC2626;
 }
 .dre-tabela-mensal tbody tr.dre-bloco-custo-fixo td{
   background:#FEF2F2 !important;
 }
 .dre-tabela-mensal tbody tr.dre-bloco-outras td:first-child{
-  background:#F5F3FF !important;color:#5B21B6 !important;font-weight:800 !important;
+  background:#F5F3FF !important;color:#5B21B6 !important;font-weight:400 !important;
   border-left:4px solid #7C3AED;
 }
 .dre-tabela-mensal tbody tr.dre-bloco-outras td{
@@ -1621,7 +1788,7 @@ table tfoot td{
 }
 .dre-tabela-mensal tbody tr.dre-subtotal td{
   background:linear-gradient(180deg,#FFE0B2 0%,#FFCC80 100%) !important;
-  font-weight:800 !important;color:#4a2200 !important;
+  font-weight:400 !important;color:#4a2200 !important;
   border-top:2px solid #FF8F00 !important;
   border-bottom:2px solid #FF8F00 !important;
   font-size:12px !important;
@@ -1632,7 +1799,7 @@ table tfoot td{
 }
 .dre-tabela-mensal tbody tr.dre-resultado td{
   background:linear-gradient(135deg,#E8F5EE 0%,#D1FAE5 100%) !important;
-  font-weight:800 !important;color:#065F46 !important;
+  font-weight:400 !important;color:#065F46 !important;
   border-top:2px solid #059669 !important;
   border-bottom:2px solid #059669 !important;
   font-size:12.5px !important;
@@ -1653,15 +1820,17 @@ table tfoot td{
 }
 
 /* ============================================================
-   ANÁLISE DE DESVIOS
+   ANÁLISE DE DESVIOS (POPUP)
    ============================================================ */
 #popupDesvios .modal-content{
-  max-width:100vw !important;width:100% !important;
-  height:100vh;max-height:100vh;
+  max-width:95vw !important;width:95vw !important;
+  height:auto !important;max-height:92vh !important;
   padding:0 !important;border-top:none;
-  background:#FFFBF5;border-radius:0;
+  background:#FFFBF5;border-radius:14px;
   overflow:hidden;display:flex;flex-direction:column;
-  animation:none;
+  animation:modalPop .25s cubic-bezier(.34,1.56,.64,1) !important;
+  border:1.5px solid #FFB74D !important;
+  border-top:4px solid var(--accent) !important;
 }
 .desvios-modal-header{
   background:linear-gradient(135deg,#FF8F00 0%,#FF6D00 50%,#E65100 100%);
@@ -1675,29 +1844,29 @@ table tfoot td{
   background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%);
   pointer-events:none;
 }
-.desvios-modal-title{display:flex;align-items:center;gap:12px;color:#fff;position:relative;z-index:1;}
+.desvios-modal-title{display:flex;align-items:center;gap:12px;color:#000;position:relative;z-index:1;}
 .desvios-modal-title-icon{
   width:36px;height:36px;border-radius:8px;
   background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;
   font-size:16px;border:1px solid rgba(255,255,255,.20);
 }
-.desvios-modal-title-text h2{font-size:14px;font-weight:800;letter-spacing:.2px;line-height:1.1;}
-.desvios-modal-title-text p{font-size:10px;font-weight:500;opacity:.75;margin-top:2px;}
+.desvios-modal-title-text h2{font-size:14px;font-weight:400;letter-spacing:.2px;line-height:1.1;}
+.desvios-modal-title-text p{font-size:10px;font-weight:400;opacity:.75;margin-top:2px;}
 .desvios-modal-actions{display:flex;gap:8px;align-items:center;position:relative;z-index:1;}
 .desvios-modal-actions .btn-excel{
   background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);
-  color:#fff;font-weight:700;padding:6px 12px;
+  color:#000;font-weight:400;padding:6px 12px;
   border-radius:7px;font-size:11px;font-family:inherit;cursor:pointer;
 }
 .desvios-modal-actions .btn-excel:hover{background:rgba(255,255,255,.25);}
 .desvios-modal-actions .modal-close{
-  background:rgba(255,255,255,.10);color:#fff;
+  background:rgba(255,255,255,.10);color:#000;
   border-radius:7px;width:30px;height:30px;
   font-size:13px;border:1px solid rgba(255,255,255,.20);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
   font-family:inherit;
 }
-.desvios-modal-actions .modal-close:hover{background:var(--danger);border-color:var(--danger);}
+.desvios-modal-actions .modal-close:hover{background:var(--danger);border-color:var(--danger);color:#fff;}
 .desvios-filters{
   padding:10px 22px;background:#FFFBF5;
   border-bottom:1px solid #FFE0B2;
@@ -1751,16 +1920,16 @@ table tfoot td{
 .desvios-summary-card.atencao::before{background:#D97706;}
 .desvios-summary-card.ok::before{background:#059669;}
 .desvios-summary-card .lbl{
-  font-size:9px;font-weight:800;color:#8B5E00;
+  font-size:9px;font-weight:400;color:#8B5E00;
   text-transform:uppercase;letter-spacing:.4px;
   display:flex;align-items:center;gap:5px;margin-bottom:4px;
 }
 .desvios-summary-card .val{
-  font-size:19px;font-weight:800;color:#1a0f00;
+  font-size:19px;font-weight:400;color:#000;
   font-variant-numeric:tabular-nums;line-height:1.1;
 }
 .desvios-summary-card .sub{
-  font-size:9.5px;font-weight:600;color:#8B5E00;margin-top:3px;
+  font-size:9.5px;font-weight:400;color:#8B5E00;margin-top:3px;
 }
 .desvios-tabela{
   width:100%;border-collapse:separate;border-spacing:0;
@@ -1772,7 +1941,7 @@ table tfoot td{
 }
 .desvios-tabela thead th{
   background:linear-gradient(180deg,#FF8F00 0%,#FF6D00 100%);
-  color:#fff;font-size:10px;font-weight:800;
+  color:#fff;font-size:10px;font-weight:400;
   text-transform:uppercase;letter-spacing:.4px;
   padding:11px 8px;text-align:left;
   white-space:nowrap;position:sticky;top:0;z-index:3;
@@ -1781,7 +1950,7 @@ table tfoot td{
 .desvios-tabela thead th.center{text-align:center;}
 .desvios-tabela tbody td{
   padding:9px 8px;border-bottom:1px solid #FFF3E0;
-  font-size:11.5px;font-weight:500;color:#000;
+  font-size:11.5px;font-weight:400;color:#000;
   background:#fff8e6;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis;
 }
@@ -1791,20 +1960,20 @@ table tfoot td{
   background:#FFE0B2 !important;
   box-shadow:inset 3px 0 0 #FF6D00;
 }
-.desvios-tabela tbody td.right{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;}
+.desvios-tabela tbody td.right{text-align:right;font-variant-numeric:tabular-nums;font-weight:400;}
 .desvios-tabela tbody td.center{text-align:center;}
 .desvios-tabela tbody td.positivo{color:#047857;}
 .desvios-tabela tbody td.negativo{color:#B91C1C;}
 .desvios-tabela .conta-codigo-mini{
   display:inline-block;
   background:linear-gradient(135deg,#FFE082,#FFCC80);
-  color:#6b3a00;font-size:9px;font-weight:800;padding:1px 5px;border-radius:4px;
+  color:#6b3a00;font-size:9px;font-weight:400;padding:1px 5px;border-radius:4px;
   margin-right:5px;font-variant-numeric:tabular-nums;
   border:1px solid #FFB74D;
 }
 .desvios-tabela .qtd-badge{
   display:inline-block;background:#FFF3E0;color:#6b3a00;
-  font-size:10px;font-weight:800;padding:1px 7px;border-radius:9px;
+  font-size:10px;font-weight:400;padding:1px 7px;border-radius:9px;
   border:1px solid #FFCC80;
 }
 .desvios-tabela .bar-wrap{
@@ -1817,7 +1986,7 @@ table tfoot td{
 .desvios-tabela .bar.pos{background:#059669;}
 .desvios-tabela tfoot td{
   background:linear-gradient(180deg,#FFE0B2 0%,#FFCC80 100%) !important;
-  font-weight:800;color:#4a2200;
+  font-weight:400;color:#4a2200;
   padding:12px 8px;border-top:2px solid #FF8F00;
   font-variant-numeric:tabular-nums;font-size:12px;
 }
@@ -1831,7 +2000,7 @@ table tfoot td{
 .desvios-tab{
   padding:7px 15px;border:1px solid #FFE0B2;
   border-radius:8px;font-family:inherit;
-  font-size:11.5px;font-weight:700;cursor:pointer;
+  font-size:11.5px;font-weight:400;cursor:pointer;
   background:#fff;color:#8B5E00;
   display:inline-flex;align-items:center;gap:7px;
   transition:all var(--transition-fast);
@@ -1851,14 +2020,14 @@ table tfoot td{
   border-bottom:1px solid #FFE0B2;flex-shrink:0;
 }
 .mes-selector .mes-label{
-  font-size:9.5px;font-weight:800;color:#8B5E00;
+  font-size:9.5px;font-weight:400;color:#8B5E00;
   text-transform:uppercase;letter-spacing:.5px;
   margin-right:8px;display:flex;align-items:center;gap:5px;
 }
 .mes-selector .mes-chip{
   padding:5px 12px;border:1px solid #FFE0B2;
   border-radius:7px;font-family:inherit;font-size:10.5px;
-  font-weight:700;cursor:pointer;background:#fff;color:#8B5E00;
+  font-weight:400;cursor:pointer;background:#fff;color:#8B5E00;
   transition:all var(--transition-fast);white-space:nowrap;
 }
 .mes-selector .mes-chip:hover{background:#FFF8E1;border-color:#FFCC80;}
@@ -1879,19 +2048,19 @@ table tfoot td{
 .mes-selector .mes-actions button{
   padding:5px 10px;border:1px solid #FFE0B2;
   border-radius:6px;font-family:inherit;font-size:9.5px;
-  font-weight:700;cursor:pointer;background:#fff;color:#8B5E00;
+  font-weight:400;cursor:pointer;background:#fff;color:#8B5E00;
   transition:all var(--transition-fast);
 }
 .mes-selector .mes-actions button:hover{background:#FFF8E1;}
 
 /* ============================================================
-   POPUP PDF — JANELA COMPACTA (NÃO TELA CHEIA)
+   POPUP PDF — JANELA EXPANDIDA EM MODO PAISAGEM
    ============================================================ */
 #popupPDF .modal-content{
-  max-width:1100px !important;
-  width:92vw !important;
-  height:auto !important;
-  max-height:92vh !important;
+  max-width:98vw !important;
+  width:98vw !important;
+  height:94vh !important;
+  max-height:94vh !important;
   padding:0 !important;
   border:1.5px solid #FFB74D !important;
   border-top:4px solid var(--accent) !important;
@@ -1906,11 +2075,11 @@ table tfoot td{
 .pdf-modal-header{
   background:#ffffff;
   border-bottom:2px solid #e0e0e0;
-  padding:14px 20px;
+  padding:12px 20px;
   display:flex;align-items:center;justify-content:space-between;
   gap:12px;flex-shrink:0;
 }
-.pdf-modal-title{display:flex;align-items:center;gap:12px;color:#1a0f00;}
+.pdf-modal-title{display:flex;align-items:center;gap:12px;color:#000;}
 .pdf-modal-title-icon{
   width:38px;height:38px;border-radius:10px;
   background:linear-gradient(135deg,#B91C1C,#7F1D1D);
@@ -1918,13 +2087,13 @@ table tfoot td{
   font-size:17px;color:#fff;
   box-shadow:0 3px 10px rgba(185,28,28,.30);
 }
-.pdf-modal-title-text h2{font-size:15px;font-weight:800;color:#1a0f00;line-height:1.15;letter-spacing:.2px;}
-.pdf-modal-title-text p{font-size:10.5px;color:#8B5E00;font-weight:600;margin-top:2px;}
+.pdf-modal-title-text h2{font-size:15px;font-weight:400;color:#000;line-height:1.15;letter-spacing:.2px;}
+.pdf-modal-title-text p{font-size:10.5px;color:#8B5E00;font-weight:400;margin-top:2px;}
 .pdf-modal-actions{display:flex;gap:8px;align-items:center;}
 .pdf-modal-actions .btn-voltar{
   background:#f5f5f5;border:1px solid #ddd;color:#555;
   padding:7px 14px;border-radius:8px;font-family:inherit;
-  font-size:11.5px;font-weight:700;cursor:pointer;
+  font-size:11.5px;font-weight:400;cursor:pointer;
   display:inline-flex;align-items:center;gap:6px;
   transition:all var(--transition-fast);
 }
@@ -1933,7 +2102,7 @@ table tfoot td{
   background:linear-gradient(135deg,#B91C1C,#7F1D1D);
   color:#fff;border:none;
   padding:7px 14px;border-radius:8px;font-family:inherit;
-  font-size:11.5px;font-weight:700;cursor:pointer;
+  font-size:11.5px;font-weight:400;cursor:pointer;
   display:inline-flex;align-items:center;gap:6px;
   box-shadow:0 3px 10px rgba(185,28,28,.30);
   transition:all var(--transition-fast);
@@ -1949,7 +2118,7 @@ table tfoot td{
 .pdf-modal-actions .modal-close:hover{background:var(--danger);color:#fff;border-color:var(--danger);transform:rotate(90deg);}
 .pdf-modal-body{
   flex:1;overflow:auto;background:#fafafa;min-height:0;
-  padding:16px 18px;
+  padding:14px 16px;
 }
 .pdf-modal-body::-webkit-scrollbar{width:8px;height:8px;}
 .pdf-modal-body::-webkit-scrollbar-thumb{
@@ -1960,16 +2129,17 @@ table tfoot td{
 #pdfContainer{
   background:#ffffff;
   border-radius:8px;
-  padding:20px 24px;
+  padding:18px 20px;
   border:1px solid #ddd;
   box-shadow:0 2px 10px rgba(0,0,0,.06);
-  overflow:auto;
-  max-height:100%;
+  overflow-x: auto;  /* Permite rolagem horizontal se necessário */
+  overflow-y: visible;
+  max-height: none;
+  width: 100%;
 }
 
 /* ============================================================
-   ESTILOS DO PDF GERADO — FUNDO BRANCO, TÍTULOS CINZA CLARO,
-   FONTES MAIORES, COLUNAS ESTREITAS
+   ESTILOS DO PDF GERADO — SEM SCROLL HORIZONTAL
    ============================================================ */
 #pdfContainer .pdf-doc-header{
   text-align:center;
@@ -1978,12 +2148,12 @@ table tfoot td{
   margin-bottom:16px;
 }
 #pdfContainer .pdf-doc-header h1{
-  font-size:17px;font-weight:800;color:#000;
+  font-size:17px;font-weight:400;color:#000;
   text-transform:uppercase;letter-spacing:1.2px;
   margin-bottom:5px;font-family:'Inter',sans-serif;
 }
 #pdfContainer .pdf-doc-header .subtitulo{
-  font-size:11px;color:#000;font-weight:600;
+  font-size:11px;color:#000;font-weight:400;
   text-transform:uppercase;letter-spacing:0.8px;
 }
 #pdfContainer .pdf-doc-header .meta-info{
@@ -1994,38 +2164,42 @@ table tfoot td{
 
 #pdfContainer .pdf-tabela{
   width:100%;
+  max-width:100%;
   border-collapse:collapse;
-  font-size:11px;
+  font-size:10px;
   color:#000;background:#fff;
   border:1px solid #333;margin-bottom:16px;
   font-family:'Inter',sans-serif;
   table-layout:fixed;
+  word-break:break-word;
 }
 #pdfContainer .pdf-tabela thead th{
   background:#e8e8e8;
   color:#000;
-  font-size:10px;
-  font-weight:800;
-  padding:6px 7px;
+  font-size:9px;
+  font-weight:600;
+  padding:5px 4px;
   text-align:left;
   text-transform:uppercase;
-  letter-spacing:0.3px;
+  letter-spacing:0.2px;
   border:1px solid #333;
   word-wrap:break-word;
   overflow-wrap:break-word;
+  hyphens:auto;
 }
 #pdfContainer .pdf-tabela thead th.right{text-align:right;}
 #pdfContainer .pdf-tabela thead th.center{text-align:center;}
 
 #pdfContainer .pdf-tabela tbody td{
-  padding:5px 7px;
+  padding:4px 4px;
   border:1px solid #333;
-  font-size:10.5px;
+  font-size:9.5px;
   color:#000;background:#fff;
   vertical-align:top;
   word-wrap:break-word;
   overflow-wrap:break-word;
-  line-height:1.35;
+  hyphens:auto;
+  line-height:1.3;
 }
 #pdfContainer .pdf-tabela tbody tr:nth-child(even) td{background:#f7f7f7;}
 #pdfContainer .pdf-tabela tbody td.right{
@@ -2035,31 +2209,32 @@ table tfoot td{
 
 #pdfContainer .pdf-tabela tfoot td{
   background:#d8d8d8;
-  color:#000;font-weight:800;
-  padding:6px 7px;border:1px solid #333;
-  font-size:11px;
+  color:#000;font-weight:600;
+  padding:5px 4px;border:1px solid #333;
+  font-size:10px;
   font-variant-numeric:tabular-nums;
 }
 #pdfContainer .pdf-tabela tfoot td.right{text-align:right;}
 #pdfContainer .pdf-tabela tfoot td.center{text-align:center;}
 
-/* LARGURAS ESPECÍFICAS PARA LANÇAMENTOS */
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c0{width:60px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c1{width:55px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c2{width:55px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c3{width:55px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c4{width:75px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c5{width:120px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c6{width:100px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c7{width:70px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c8{width:75px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c9{width:75px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c10{width:75px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c11{width:75px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c12{width:75px;}
-#pdfContainer .pdf-tabela.tbl-lancamentos col.c13{width:60px;}
+/* ============================================================
+   COLUNAS DO PDF DE LANÇAMENTOS — AJUSTADAS PARA NÃO HAVER SCROLL
+   ============================================================ */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c0{width:6%;}   /* Vencimento */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c1{width:4.5%;} /* Pago em */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c2{width:4.5%;} /* NF */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c3{width:4.5%;} /* Tipo */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c4{width:6%;}   /* Grupo */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c5{width:14%;}  /* Fornecedor */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c6{width:12%;}  /* Plano */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c7{width:9%;}   /* Cadastro Inicial */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c8{width:7.5%;} /* Projetado */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c9{width:7.5%;} /* Realizado */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c10{width:7.5%;} /* Diferença */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c11{width:7.5%;} /* Situação */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c12{width:5.5%;} /* Usuário */
+#pdfContainer .pdf-tabela.tbl-lancamentos col.c13{width:3.5%;} /* Banco */
 
-/* LARGURAS PADRÃO PARA PIVOT */
 #pdfContainer .pdf-tabela.tbl-pivot col.p0{width:35%;}
 #pdfContainer .pdf-tabela.tbl-pivot col.p1{width:15%;}
 #pdfContainer .pdf-tabela.tbl-pivot col.p2{width:15%;}
@@ -2074,7 +2249,7 @@ table tfoot td{
 }
 
 #pdfContainer .pdf-secao-titulo{
-  font-size:12px;font-weight:800;
+  font-size:12px;font-weight:400;
   text-transform:uppercase;letter-spacing:0.8px;
   color:#000;background:#e8e8e8;
   padding:7px 10px;margin:14px 0 8px 0;
@@ -2083,7 +2258,7 @@ table tfoot td{
 }
 
 #pdfContainer .pdf-unidade-header{
-  font-size:13px;font-weight:800;
+  font-size:13px;font-weight:400;
   text-transform:uppercase;letter-spacing:1px;
   color:#000;background:#d8d8d8;
   padding:8px 12px;margin:18px 0 10px 0;
@@ -2095,7 +2270,7 @@ table tfoot td{
 #pdfContainer .pdf-unidade-header .count{
   background:#fff;color:#000;
   padding:2px 10px;border-radius:10px;
-  font-size:10.5px;font-weight:700;
+  font-size:10.5px;font-weight:400;
   border:1px solid #666;
 }
 #pdfContainer .pdf-bloco-func{
@@ -2118,20 +2293,61 @@ table tfoot td{
 }
 #pdfContainer .pdf-resumo-func .item:last-child{border-right:none;}
 #pdfContainer .pdf-resumo-func .item .label{
-  font-size:9.5px;font-weight:700;
+  font-size:9.5px;font-weight:400;
   text-transform:uppercase;letter-spacing:0.4px;
   color:#000;display:block;margin-bottom:2px;
 }
 #pdfContainer .pdf-resumo-func .item .value{
-  font-size:13px;font-weight:800;color:#000;
+  font-size:13px;font-weight:400;color:#000;
 }
 #pdfContainer .pdf-linha-header-func td{
   background:#e8e8e8 !important;
-  font-weight:800;text-align:left;
+  font-weight:400;text-align:left;
   padding:6px 8px !important;
   font-size:11px;text-transform:uppercase;
   letter-spacing:0.4px;color:#000;
   border:1px solid #333 !important;
+}
+
+/* ============================================================
+   LOADING OVERLAY PARA GERAÇÃO DE PDF
+   ============================================================ */
+.pdf-loading-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(4px);
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  z-index:100;
+  border-radius:14px;
+}
+.pdf-loading-overlay.active{display:flex;}
+.pdf-loading-overlay .spinner{
+  width:48px;height:48px;
+  border:4px solid #FFE0B2;
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin 0.9s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.pdf-loading-overlay .loading-text{
+  font-family:'Inter',sans-serif;
+  font-size:14px;
+  font-weight:700;
+  color:#6b3a00;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.pdf-loading-overlay .loading-sub{
+  font-size:11px;
+  font-weight:500;
+  color:#8B5E00;
+  opacity:.8;
 }
 
 /* ============================================================
@@ -2140,31 +2356,26 @@ table tfoot td{
 @media (max-width:1100px){
   .dre-consolidado-wrapper{grid-template-columns:1fr;}
   .det-exec-kpis{grid-template-columns:repeat(2,1fr);}
-  .exec-summary-row{grid-template-columns:repeat(2,1fr);}
   .desvios-summary{grid-template-columns:repeat(2,1fr);}
+  .nav-links{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;}
+  .nav-pill{flex-shrink:0;}
 }
 @media (max-width:900px){
-  .sidebar{width:60px;}
-  .sidebar-brand .brand-text{font-size:11px;}
-  .sidebar-brand .brand-text small{display:none;}
-  .nav-item span:not(.nav-count){display:none;}
-  .nav-item{justify-content:center;padding:10px;}
-  .nav-item .nav-count{position:absolute;top:2px;right:2px;font-size:7px;padding:1px 4px;}
-  .filter-sidebar{position:absolute;left:0;top:0;bottom:0;z-index:100;box-shadow:var(--shadow-lg);}
+  .top-nav{flex-direction:column;align-items:stretch;gap:8px;padding:8px 12px;}
+  .nav-brand{margin-right:0;justify-content:center;}
+  .nav-links{justify-content:center;}
+  .nav-actions{justify-content:center;flex-wrap:wrap;}
   .content{padding:8px 12px 12px;}
-  .topbar{padding:8px 12px;}
-  .topbar-title h1{font-size:13px;}
-  .exec-filters-bar{flex-wrap:wrap;}
-  .exec-filters-bar .ms-wrap{min-width:140px;}
+  .topbar{padding:8px 12px;flex-direction:column;align-items:stretch;gap:8px;}
+  .topbar-actions{justify-content:center;flex-wrap:wrap;}
   .exec-modal-title-text p{display:none;}
 }
 @media (max-width:700px){
   .det-exec-kpis{grid-template-columns:1fr;}
-  .exec-summary-row{grid-template-columns:1fr;}
   .desvios-summary{grid-template-columns:1fr;}
   .pivot-table{font-size:10px;}
   .pivot-table thead th{font-size:8px;padding:6px 4px;}
-  .pivot-table tbody td{padding:6px 4px;font-size:10px;}
+  .pivot-table tbody td{padding:4px 4px;font-size:10px;}
   .det-exec-tabela{min-width:760px;}
   .dre-consolidado-wrapper{grid-template-columns:1fr;}
 }
@@ -2173,104 +2384,116 @@ table tfoot td{
 <body>
 
 <div class="app">
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-watermark" id="sidebarWatermark" aria-hidden="true"></div>
-    <div class="sidebar-brand">
-      <div class="brand-text">QNUTRI<small>Módulo Financeiro</small></div>
+  <!-- TOP NAVIGATION -->
+  <header class="top-nav">
+    <div class="nav-brand">
+      <i class="fas fa-leaf"></i>
+      <div>
+        QNUTRI
+        <small>Módulo Financeiro</small>
+      </div>
     </div>
-    <div class="sidebar-section-title">Navegação</div>
-    <nav class="sidebar-nav">
-      <button class="nav-item active" data-tab="lancamentos" onclick="switchTab('lancamentos')"><i class="fas fa-list"></i><span>Lançamentos</span><span class="nav-count" id="navCountLanc">0</span></button>
-      <button class="nav-item" onclick="abrirModalPlanoContas()"><i class="fas fa-sitemap"></i><span>Plano de Contas</span></button>
-      <button class="nav-item" onclick="abrirDRE()"><i class="fas fa-table"></i><span>DRE</span></button>
-      <div class="sidebar-section-title" style="padding:16px 18px 5px;">Ferramentas</div>
-      <button class="nav-item" onclick="abrirResultadosExecutivos()"><i class="fas fa-chart-bar"></i><span>Resumo Executivo</span></button>
-      <button class="nav-item" onclick="abrirAnaliseDesvios()"><i class="fas fa-exclamation-triangle"></i><span>Análise de Desvios</span></button>
+    <nav class="nav-links">
+      <button class="nav-pill active" data-tab="lancamentos" onclick="switchTab('lancamentos')">
+        Lançamentos
+        <span style="background:rgba(255,255,255,.25);font-size:9px;padding:1px 6px;border-radius:10px;font-weight:800;" id="navCountLanc">0</span>
+      </button>
+      <button class="nav-pill" onclick="abrirModalPlanoContas()">
+        Plano de Contas
+      </button>
+      <button class="nav-pill" onclick="abrirDRE()">
+        DRE
+      </button>
+      <button class="nav-pill" onclick="abrirResultadosExecutivos()">
+        Resumo Executivo
+      </button>
+      <button class="nav-pill" onclick="abrirAnaliseDesvios()">
+        Desvios
+      </button>
     </nav>
-    <div class="sidebar-user-info" id="sidebarUserInfo" style="display:none;">
-      <i class="fas fa-user-circle"></i><span id="sidebarUserName">—</span>
-      <span class="user-role-badge" id="sidebarUserRole">VIEWER</span>
+    <div class="nav-actions">
+      <button class="btn-icon-top" onclick="abrirBuscaGlobal()" title="Busca Global (Ctrl+K)"><i class="fas fa-search"></i></button>
+      <button class="btn-icon-top" onclick="toggleDensidade()" title="Alternar densidade"><i class="fas fa-list-ul"></i></button>
+      <button class="btn-icon-top" onclick="carregarDados()" title="Recarregar"><i class="fas fa-sync"></i></button>
+      <a href="CLIENT_QNUTRI.html" class="btn-icon-top" title="Voltar" style="text-decoration:none;color:inherit;"><i class="fas fa-arrow-left"></i></a>
     </div>
-    <div class="sidebar-footer">
-      <a class="nav-item" href="CLIENT_QNUTRI.html"><i class="fas fa-arrow-left"></i><span>Voltar</span></a>
-      <button class="nav-item" onclick="carregarDados()"><i class="fas fa-sync"></i><span>Recarregar</span></button>
+  </header>
+
+  <!-- LETREIRO -->
+  <div class="dashboard-viewport" id="dashboardViewport">
+    <div class="dashboard-track" id="dashboardContainer"></div>
+  </div>
+
+  <!-- TOPBAR CONTEXTUAL -->
+  <div class="topbar">
+    <div class="topbar-title">
+      <h1 id="topbarTitle"><i class="fas fa-chart-line"></i> Visão Geral</h1>
+      <p id="topbarSubtitle">Todos os lançamentos financeiros</p>
     </div>
-  </aside>
-
-  <div class="main">
-    <div class="topbar">
-      <div class="topbar-title">
-        <h1 id="topbarTitle"><i class="fas fa-chart-line"></i> Visão Geral</h1>
-        <p id="topbarSubtitle">Todos os lançamentos financeiros</p>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn-icon-top" id="btnBuscaGlobal" onclick="abrirBuscaGlobal()" title="Busca Global (Ctrl+K)"><i class="fas fa-search"></i></button>
-        <button class="btn-icon-top" id="btnDensidade" onclick="toggleDensidade()" title="Alternar densidade"><i class="fas fa-list-ul"></i></button>
-        <button class="btn-toggle-filters" id="btnToggleFilters" onclick="toggleFilterSidebar()"><i class="fas fa-sliders-h" id="btnToggleFiltersIcon"></i><span id="btnToggleFiltersText">Filtros</span></button>
-        <button class="btn btn-outline" onclick="carregarDados()"><i class="fas fa-sync"></i> Atualizar</button>
-      </div>
+    <div class="topbar-actions">
+      <button class="btn-toggle-filters" id="btnToggleFilters" onclick="toggleFilterSidebar()">
+        <i class="fas fa-sliders-h" id="btnToggleFiltersIcon"></i>
+        <span id="btnToggleFiltersText">Filtros</span>
+      </button>
+      <button class="btn btn-outline" onclick="carregarDados()"><i class="fas fa-sync"></i> Atualizar</button>
     </div>
+  </div>
 
-    <div class="dashboard-viewport" id="dashboardViewport">
-      <div class="dashboard-track" id="dashboardContainer"></div>
-    </div>
-
-    <div class="content-layout">
-      <aside class="filter-sidebar collapsed" id="filterSidebar">
-        <div class="filter-sidebar-inner">
-          <div class="filter-section" id="filtrosLancamentos">
-            <div class="filter-section-title"><i class="fas fa-filter"></i> Filtros — Lançamentos</div>
-            <div class="search-box" style="margin-bottom:8px;"><input type="text" id="buscaLancamentos" placeholder="Buscar fornecedor, NF..." oninput="renderizarLancamentos()"></div>
-            <div class="ms-wrap" id="msTipoLanc"></div>
-            <div class="ms-wrap" id="msMesLanc"></div>
-            <div class="ms-wrap" id="msGrupoLanc"></div>
-            <div class="ms-wrap" id="msPlanoLanc"></div>
-            <div class="ms-wrap" id="msCadastroInicialLanc"></div>
-            <div class="ms-wrap" id="msSituacaoLanc"></div>
-            <button class="btn btn-outline" onclick="limparFiltrosLancamentos()" style="margin-top:4px;"><i class="fas fa-eraser"></i> Limpar Filtros</button>
-          </div>
-
-          <div class="filter-section" id="acoesLancamentos">
-            <div class="filter-section-title"><i class="fas fa-bolt"></i> Ações Rápidas</div>
-            <button class="btn btn-success" onclick="abrirPopupLancamento('RECEITA')"><i class="fas fa-plus"></i> Nova Receita</button>
-            <button class="btn btn-danger" onclick="abrirPopupLancamento('DESPESA')"><i class="fas fa-plus"></i> Nova Despesa</button>
-            <button class="btn btn-excel" onclick="exportarExcelLancamentos()"><i class="fas fa-file-excel"></i> Exportar Excel</button>
-            <button class="btn btn-pdf" onclick="exportarPDFLancamentos()"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
-          </div>
+  <div class="content-layout">
+    <aside class="filter-sidebar collapsed" id="filterSidebar">
+      <div class="filter-sidebar-inner">
+        <div class="filter-section" id="filtrosLancamentos">
+          <div class="filter-section-title"><i class="fas fa-filter"></i> Filtros — Lançamentos</div>
+          <div class="search-box" style="margin-bottom:8px;"><input type="text" id="buscaLancamentos" placeholder="Buscar fornecedor, NF..." oninput="renderizarLancamentos()"></div>
+          <div class="ms-wrap" id="msTipoLanc"></div>
+          <div class="ms-wrap" id="msMesLanc"></div>
+          <div class="ms-wrap" id="msGrupoLanc"></div>
+          <div class="ms-wrap" id="msPlanoLanc"></div>
+          <div class="ms-wrap" id="msCadastroInicialLanc"></div>
+          <div class="ms-wrap" id="msSituacaoLanc"></div>
+          <button class="btn btn-outline" onclick="limparFiltrosLancamentos()" style="margin-top:4px;"><i class="fas fa-eraser"></i> Limpar Filtros</button>
         </div>
-      </aside>
 
-      <div class="content">
-        <div id="alertErro" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-left:3px solid #DC2626;padding:10px 14px;border-radius:8px;font-size:11px;color:#7F1D1D;font-weight:600;margin-bottom:10px;"><strong>Atenção:</strong> <span id="alertErroMsg"></span></div>
+        <div class="filter-section" id="acoesLancamentos">
+          <div class="filter-section-title"><i class="fas fa-bolt"></i> Ações Rápidas</div>
+          <button class="btn btn-success" onclick="abrirPopupLancamento('RECEITA')"><i class="fas fa-plus"></i> Nova Receita</button>
+          <button class="btn btn-danger" onclick="abrirPopupLancamento('DESPESA')"><i class="fas fa-plus"></i> Nova Despesa</button>
+          <button class="btn btn-excel" onclick="exportarExcelLancamentos()"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+          <button class="btn btn-pdf" onclick="exportarPDFLancamentos()"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+        </div>
+      </div>
+    </aside>
 
-        <div id="tab-lancamentos" class="tab-content active">
-          <div class="table-card">
-            <div class="table-card-header"><h3><i class="fas fa-list"></i> Todos os Lançamentos</h3></div>
-            <div class="table-wrapper">
-              <table id="tabelaLancamentos">
-                <thead>
-                  <tr>
-                    <th class="th-acoes">AÇÕES<span class="th-sub">opções</span></th>
-                    <th data-sort="data">Vencimento <span class="sort-icon">↕</span></th>
-                    <th data-sort="pago_em">Pago em <span class="sort-icon">↕</span></th>
-                    <th data-sort="nf">Nota Fiscal <span class="sort-icon">↕</span></th>
-                    <th data-sort="tipo">Tipo <span class="sort-icon">↕</span></th>
-                    <th data-sort="categoria">Grupo/Regional <span class="sort-icon">↕</span></th>
-                    <th data-sort="fornecedor">Fornecedor / Cliente <span class="sort-icon">↕</span></th>
-                    <th data-sort="plano_contas">Plano de Contas <span class="sort-icon">↕</span></th>
-                    <th data-sort="cadastro_inicial">Cadastro Inicial (ANTIGO) <span class="sort-icon">↕</span></th>
-                    <th data-sort="valor_projetado" style="text-align:right;">Valor Projetado <span class="sort-icon">↕</span></th>
-                    <th data-sort="valor_realizado" style="text-align:right;">Valor Realizado <span class="sort-icon">↕</span></th>
-                    <th style="text-align:right;">Diferença</th>
-                    <th data-sort="situacao">Situação <span class="sort-icon">↕</span></th>
-                    <th data-sort="usuario_insercao">Usuário <span class="sort-icon">↕</span></th>
-                    <th data-sort="banco">Banco <span class="sort-icon">↕</span></th>
-                  </tr>
-                </thead>
-                <tbody id="corpoLancamentos"></tbody>
-                <tfoot id="footLancamentos"></tfoot>
-              </table>
-            </div>
+    <div class="content">
+      <div id="alertErro" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-left:3px solid #DC2626;padding:10px 14px;border-radius:8px;font-size:11px;color:#7F1D1D;font-weight:600;margin-bottom:10px;"><strong>Atenção:</strong> <span id="alertErroMsg"></span></div>
+
+      <div id="tab-lancamentos" class="tab-content active">
+        <div class="table-card">
+          <div class="table-card-header"><h3><i class="fas fa-list"></i> Todos os Lançamentos</h3></div>
+          <div class="table-wrapper">
+            <table id="tabelaLancamentos">
+              <thead>
+                <tr>
+                  <th class="th-acoes">AÇÕES<span class="th-sub">opções</span></th>
+                  <th data-sort="data">Vencimento <span class="sort-icon">↕</span></th>
+                  <th data-sort="pago_em">Pago em <span class="sort-icon">↕</span></th>
+                  <th data-sort="nf">Nota Fiscal <span class="sort-icon">↕</span></th>
+                  <th data-sort="tipo">Tipo <span class="sort-icon">↕</span></th>
+                  <th data-sort="categoria">Grupo/Regional <span class="sort-icon">↕</span></th>
+                  <th data-sort="fornecedor">Fornecedor / Cliente <span class="sort-icon">↕</span></th>
+                  <th data-sort="plano_contas">Plano de Contas <span class="sort-icon">↕</span></th>
+                  <th data-sort="cadastro_inicial">Cadastro Inicial (ANTIGO) <span class="sort-icon">↕</span></th>
+                  <th data-sort="valor_projetado" style="text-align:right;">Valor Projetado <span class="sort-icon">↕</span></th>
+                  <th data-sort="valor_realizado" style="text-align:right;">Valor Realizado <span class="sort-icon">↕</span></th>
+                  <th style="text-align:right;">Diferença</th>
+                  <th data-sort="situacao">Situação <span class="sort-icon">↕</span></th>
+                  <th data-sort="usuario_insercao">Usuário <span class="sort-icon">↕</span></th>
+                  <th data-sort="banco">Banco <span class="sort-icon">↕</span></th>
+                </tr>
+              </thead>
+              <tbody id="corpoLancamentos"></tbody>
+              <tfoot id="footLancamentos"></tfoot>
+            </table>
           </div>
         </div>
       </div>
@@ -2296,91 +2519,111 @@ table tfoot td{
         <button class="btn-voltar" onclick="fecharResultadosExecutivos()"><i class="fas fa-arrow-left"></i> Voltar</button>
         <button class="btn btn-excel" onclick="exportarExcelResultadosExecutivos()"><i class="fas fa-file-excel"></i> Exportar Excel</button>
         <button class="btn btn-pdf" onclick="exportarPDFResultadosExecutivos()"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+        <button class="btn-icon-top" onclick="toggleExecFiltros()" title="Mostrar/ocultar filtros" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#000;width:32px;height:32px;"><i class="fas fa-filter" id="btnToggleExecFiltrosIcon"></i></button>
         <button class="modal-close" onclick="fecharResultadosExecutivos()" title="Fechar">✕</button>
       </div>
     </div>
 
-    <div class="exec-summary-row" id="execSummaryRow"></div>
+    <!-- LAYOUT: Sidebar + Main -->
+    <div class="exec-layout">
+      <!-- Sidebar de Filtros -->
+      <aside class="exec-sidebar" id="execSidebar">
+        <div class="filter-group">
+          <div class="filter-group-title"><i class="fas fa-filter"></i> Situação</div>
+          <div class="ms-wrap" id="msExecSituacao"></div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-title"><i class="fas fa-layer-group"></i> Grupo / Regional</div>
+          <div class="segmented-control" id="segExecGrupo" style="display:flex;flex-wrap:wrap;gap:4px;background:transparent;border:none;padding:0;box-shadow:none;"></div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-title"><i class="fas fa-tag"></i> Tipo</div>
+          <div class="ms-wrap" id="msExecTipo"></div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-title"><i class="fas fa-search"></i> Buscar</div>
+          <div class="search-box">
+            <input type="text" id="buscaExecResultados" placeholder="Fornecedor, NF, plano..." oninput="renderizarResultadosExecutivos()">
+          </div>
+        </div>
+        <div class="filter-group" id="mesSelectorExecResumoGroup" style="display:none;">
+          <div class="filter-group-title"><i class="fas fa-calendar-alt"></i> Meses</div>
+          <div class="mes-selector-vertical" id="mesSelectorExecResumo">
+            <button class="mes-chip todos" data-mes="__ALL__" onclick="toggleMesExecResumo('__ALL__')">Todos</button>
+            <button class="mes-chip" data-mes="01" onclick="toggleMesExecResumo('01')">Jan</button>
+            <button class="mes-chip" data-mes="02" onclick="toggleMesExecResumo('02')">Fev</button>
+            <button class="mes-chip" data-mes="03" onclick="toggleMesExecResumo('03')">Mar</button>
+            <button class="mes-chip" data-mes="04" onclick="toggleMesExecResumo('04')">Abr</button>
+            <button class="mes-chip" data-mes="05" onclick="toggleMesExecResumo('05')">Mai</button>
+            <button class="mes-chip" data-mes="06" onclick="toggleMesExecResumo('06')">Jun</button>
+            <button class="mes-chip" data-mes="07" onclick="toggleMesExecResumo('07')">Jul</button>
+            <button class="mes-chip" data-mes="08" onclick="toggleMesExecResumo('08')">Ago</button>
+            <button class="mes-chip" data-mes="09" onclick="toggleMesExecResumo('09')">Set</button>
+            <button class="mes-chip" data-mes="10" onclick="toggleMesExecResumo('10')">Out</button>
+            <button class="mes-chip" data-mes="11" onclick="toggleMesExecResumo('11')">Nov</button>
+            <button class="mes-chip" data-mes="12" onclick="toggleMesExecResumo('12')">Dez</button>
+          </div>
+          <div class="mes-actions">
+            <button onclick="selecionarTodosMesesExecResumo()">Todos</button>
+            <button onclick="limparMesesExecResumo()">Limpar</button>
+          </div>
+        </div>
+        <div class="filter-group" id="filtroRecebimentoSituacoesGroup" style="display:none;">
+          <div class="filter-group-title"><i class="fas fa-hand-holding-usd"></i> Recebimentos</div>
+          <div class="ms-wrap" id="msRecebimentoSituacoes"></div>
+        </div>
+      </aside>
 
-    <div class="exec-filters-bar" id="execFiltersBar">
-      <div class="ms-wrap" id="msExecSituacao"></div>
-      <div class="segmented-control" id="segExecGrupo"></div>
-      <div class="ms-wrap" id="msExecTipo"></div>
-      <div class="search-box">
-        <input type="text" id="buscaExecResultados" placeholder="Buscar fornecedor, NF, plano..." oninput="renderizarResultadosExecutivos()">
-      </div>
+      <!-- Área Principal -->
+      <main class="exec-main" id="execMainArea">
+        <div class="exec-top-bar">
+          <div class="exec-toggle-wrap">
+            <div class="exec-toggle">
+              <button class="exec-toggle-btn receitas" data-pivot="receitas" onclick="setExecPivotMain('receitas')">
+                Receitas <span class="tab-count" id="tabCountReceitas">0</span>
+              </button>
+              <button class="exec-toggle-btn despesas active" data-pivot="despesas" onclick="setExecPivotMain('despesas')">
+                Despesas <span class="tab-count" id="tabCountDespesas">0</span>
+              </button>
+              <button class="exec-toggle-btn consolidado" data-pivot="consolidado" onclick="setExecPivotMain('consolidado')">
+                Consolidado
+              </button>
+            </div>
+          </div>
+
+          <!-- Seletor de meses inline: aparece ao lado do toggle no modo Consolidado -->
+          <div class="exec-meses-inline" id="execMesesConsolidadoInline">
+            <span class="mes-inline-label"><i class="fas fa-calendar-alt"></i> Meses:</span>
+            <button class="mes-chip todos" data-mes="__ALL__" onclick="toggleMesConsolidadoInline('__ALL__')">Todos</button>
+            <button class="mes-chip" data-mes="01" onclick="toggleMesConsolidadoInline('01')">Jan</button>
+            <button class="mes-chip" data-mes="02" onclick="toggleMesConsolidadoInline('02')">Fev</button>
+            <button class="mes-chip" data-mes="03" onclick="toggleMesConsolidadoInline('03')">Mar</button>
+            <button class="mes-chip" data-mes="04" onclick="toggleMesConsolidadoInline('04')">Abr</button>
+            <button class="mes-chip" data-mes="05" onclick="toggleMesConsolidadoInline('05')">Mai</button>
+            <button class="mes-chip" data-mes="06" onclick="toggleMesConsolidadoInline('06')">Jun</button>
+            <button class="mes-chip" data-mes="07" onclick="toggleMesConsolidadoInline('07')">Jul</button>
+            <button class="mes-chip" data-mes="08" onclick="toggleMesConsolidadoInline('08')">Ago</button>
+            <button class="mes-chip" data-mes="09" onclick="toggleMesConsolidadoInline('09')">Set</button>
+            <button class="mes-chip" data-mes="10" onclick="toggleMesConsolidadoInline('10')">Out</button>
+            <button class="mes-chip" data-mes="11" onclick="toggleMesConsolidadoInline('11')">Nov</button>
+            <button class="mes-chip" data-mes="12" onclick="toggleMesConsolidadoInline('12')">Dez</button>
+            <div class="mes-actions">
+              <button onclick="selecionarTodosMesesConsolidadoInline()">Todos</button>
+              <button onclick="limparMesesConsolidadoInline()">Limpar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="exec-pivot-subtabs" id="execPivotSubtabs">
+          <button class="exec-pivot-subtab active" data-sub="conta" onclick="setExecPivotSub('conta')">Por Conta</button>
+          <button class="exec-pivot-subtab" data-sub="cliente" onclick="setExecPivotSub('cliente')">Por Cliente/Fornecedor</button>
+          <button class="exec-pivot-subtab" data-sub="grupo" onclick="setExecPivotSub('grupo')">Por Grupo/Regional</button>
+          <button class="exec-pivot-subtab" data-sub="situacao" onclick="setExecPivotSub('situacao')">Por Situação</button>
+        </div>
+
+        <div id="execPivotWrapper"></div>
+      </main>
     </div>
-
-    <!-- FILTRO DE MESES PARA RECEITAS E DESPESAS -->
-    <div class="mes-selector" id="mesSelectorExecResumo" style="display:none;">
-      <span class="mes-label"><i class="fas fa-calendar-alt"></i> Meses:</span>
-      <button class="mes-chip todos" data-mes="__ALL__" onclick="toggleMesExecResumo('__ALL__')">Todos</button>
-      <button class="mes-chip" data-mes="01" onclick="toggleMesExecResumo('01')">Jan</button>
-      <button class="mes-chip" data-mes="02" onclick="toggleMesExecResumo('02')">Fev</button>
-      <button class="mes-chip" data-mes="03" onclick="toggleMesExecResumo('03')">Mar</button>
-      <button class="mes-chip" data-mes="04" onclick="toggleMesExecResumo('04')">Abr</button>
-      <button class="mes-chip" data-mes="05" onclick="toggleMesExecResumo('05')">Mai</button>
-      <button class="mes-chip" data-mes="06" onclick="toggleMesExecResumo('06')">Jun</button>
-      <button class="mes-chip" data-mes="07" onclick="toggleMesExecResumo('07')">Jul</button>
-      <button class="mes-chip" data-mes="08" onclick="toggleMesExecResumo('08')">Ago</button>
-      <button class="mes-chip" data-mes="09" onclick="toggleMesExecResumo('09')">Set</button>
-      <button class="mes-chip" data-mes="10" onclick="toggleMesExecResumo('10')">Out</button>
-      <button class="mes-chip" data-mes="11" onclick="toggleMesExecResumo('11')">Nov</button>
-      <button class="mes-chip" data-mes="12" onclick="toggleMesExecResumo('12')">Dez</button>
-      <div class="mes-actions">
-        <button onclick="selecionarTodosMesesExecResumo()">Todos</button>
-        <button onclick="limparMesesExecResumo()">Limpar</button>
-      </div>
-    </div>
-
-    <div class="mes-selector" id="filtroRecebimentoSituacoes" style="display:none;">
-      <span class="mes-label"><i class="fas fa-filter"></i> Recebimentos (Situações):</span>
-      <div class="ms-wrap" id="msRecebimentoSituacoes" style="min-width:220px;max-width:280px;margin-bottom:0;"></div>
-    </div>
-
-    <div class="mes-selector" id="mesSelectorConsolidado" style="display:none;">
-      <span class="mes-label"><i class="fas fa-calendar-alt"></i> Meses:</span>
-      <button class="mes-chip todos active" data-mes="__ALL__" onclick="toggleMesConsolidado('__ALL__')">Todos</button>
-      <button class="mes-chip" data-mes="01" onclick="toggleMesConsolidado('01')">Jan</button>
-      <button class="mes-chip" data-mes="02" onclick="toggleMesConsolidado('02')">Fev</button>
-      <button class="mes-chip" data-mes="03" onclick="toggleMesConsolidado('03')">Mar</button>
-      <button class="mes-chip" data-mes="04" onclick="toggleMesConsolidado('04')">Abr</button>
-      <button class="mes-chip" data-mes="05" onclick="toggleMesConsolidado('05')">Mai</button>
-      <button class="mes-chip" data-mes="06" onclick="toggleMesConsolidado('06')">Jun</button>
-      <button class="mes-chip" data-mes="07" onclick="toggleMesConsolidado('07')">Jul</button>
-      <button class="mes-chip" data-mes="08" onclick="toggleMesConsolidado('08')">Ago</button>
-      <button class="mes-chip" data-mes="09" onclick="toggleMesConsolidado('09')">Set</button>
-      <button class="mes-chip" data-mes="10" onclick="toggleMesConsolidado('10')">Out</button>
-      <button class="mes-chip" data-mes="11" onclick="toggleMesConsolidado('11')">Nov</button>
-      <button class="mes-chip" data-mes="12" onclick="toggleMesConsolidado('12')">Dez</button>
-      <div class="mes-actions">
-        <button onclick="selecionarTodosMesesConsolidado()">Todos</button>
-        <button onclick="limparMesesConsolidado()">Limpar</button>
-      </div>
-    </div>
-
-    <div class="exec-toggle-wrap">
-      <div class="exec-toggle">
-        <button class="exec-toggle-btn receitas" data-pivot="receitas" onclick="setExecPivotMain('receitas')">
-          <i class="fas fa-arrow-up"></i> Receitas <span class="tab-count" id="tabCountReceitas">0</span>
-        </button>
-        <button class="exec-toggle-btn despesas active" data-pivot="despesas" onclick="setExecPivotMain('despesas')">
-          <i class="fas fa-arrow-down"></i> Despesas <span class="tab-count" id="tabCountDespesas">0</span>
-        </button>
-        <button class="exec-toggle-btn consolidado" data-pivot="consolidado" onclick="setExecPivotMain('consolidado')">
-          <i class="fas fa-chart-pie"></i> Consolidado
-        </button>
-      </div>
-    </div>
-
-    <div class="exec-pivot-subtabs" id="execPivotSubtabs">
-      <button class="exec-pivot-subtab active" data-sub="conta" onclick="setExecPivotSub('conta')"><i class="fas fa-sitemap"></i> Por Conta</button>
-      <button class="exec-pivot-subtab" data-sub="cliente" onclick="setExecPivotSub('cliente')"><i class="fas fa-users"></i> Por Cliente/Fornecedor</button>
-      <button class="exec-pivot-subtab" data-sub="grupo" onclick="setExecPivotSub('grupo')"><i class="fas fa-layer-group"></i> Por Grupo/Regional</button>
-      <button class="exec-pivot-subtab" data-sub="situacao" onclick="setExecPivotSub('situacao')"><i class="fas fa-tasks"></i> Por Situação</button>
-    </div>
-
-    <div id="execPivotWrapper"></div>
   </div>
 </div>
 
@@ -2435,10 +2678,10 @@ table tfoot td{
     </div>
 
     <div class="desvios-tabs">
-      <button class="desvios-tab active" data-dv="todos" onclick="setDesvioTab('todos')"><i class="fas fa-list"></i> Todos</button>
-      <button class="desvios-tab" data-dv="critico" onclick="setDesvioTab('critico')"><i class="fas fa-fire"></i> Críticos ≥20%</button>
-      <button class="desvios-tab" data-dv="atencao" onclick="setDesvioTab('atencao')"><i class="fas fa-exclamation-circle"></i> Atenção 10–20%</button>
-      <button class="desvios-tab" data-dv="ok" onclick="setDesvioTab('ok')"><i class="fas fa-check-circle"></i> Dentro do esperado</button>
+      <button class="desvios-tab active" data-dv="todos" onclick="setDesvioTab('todos')">Todos</button>
+      <button class="desvios-tab" data-dv="critico" onclick="setDesvioTab('critico')">Críticos ≥20%</button>
+      <button class="desvios-tab" data-dv="atencao" onclick="setDesvioTab('atencao')">Atenção 10–20%</button>
+      <button class="desvios-tab" data-dv="ok" onclick="setDesvioTab('ok')">Dentro do esperado</button>
     </div>
 
     <div class="desvios-filters">
@@ -2555,7 +2798,7 @@ table tfoot td{
         <div class="det-exec-titulo" id="detExecTitulo"><span>Detalhamento</span></div>
         <div class="det-exec-subtitulo" id="detExecSubtitulo"></div>
       </div>
-      <button class="btn-voltar" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);" onclick="fecharDetalheExec()"><i class="fas fa-arrow-left" style="color:#fff;"></i> Voltar</button>
+      <button class="btn-voltar" style="background:rgba(255,255,255,.15);color:#000;border:1px solid rgba(255,255,255,.25);" onclick="fecharDetalheExec()"><i class="fas fa-arrow-left" style="color:#000;"></i> Voltar</button>
       <button class="btn btn-pdf" onclick="exportarPDFDetalheExec()"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
       <button class="det-exec-close" onclick="fecharDetalheExec()" title="Fechar">✕</button>
     </div>
@@ -2626,7 +2869,12 @@ table tfoot td{
 
 <!-- MODAL PDF -->
 <div id="popupPDF" class="modal-overlay">
-  <div class="modal-content">
+  <div class="modal-content" style="position:relative;">
+    <div class="pdf-loading-overlay" id="pdfLoadingOverlay">
+      <div class="spinner"></div>
+      <div class="loading-text"><i class="fas fa-file-pdf"></i> Gerando PDF...</div>
+      <div class="loading-sub">Aguarde, estamos preparando o documento</div>
+    </div>
     <div class="pdf-modal-header">
       <div class="pdf-modal-title">
         <div class="pdf-modal-title-icon"><i class="fas fa-file-pdf"></i></div>
@@ -2642,9 +2890,7 @@ table tfoot td{
       </div>
     </div>
     <div class="pdf-modal-body">
-      <div id="pdfContainer">
-        <!-- conteúdo do PDF será injetado aqui -->
-      </div>
+      <div id="pdfContainer"></div>
     </div>
   </div>
 </div>
@@ -2664,10 +2910,8 @@ let sortConfig={campo:'data',direcao:'desc'};
 let ultimoDetalhe={titulo:'',lista:[]};
 let popoverAbertoId=null;
 
-// Histórico de popups para botão voltar
 let popupHistory=[];
 
-// PDF
 let pdfHTMLAtual = '';
 let pdfNomeArquivo = '';
 
@@ -2889,22 +3133,6 @@ function criarMultiSelect(containerId,opcoes,selecionados,onChange,labelVazio='T
   });
 }
 
-function montarWatermarkAleatorio(){
-  const c=document.getElementById('sidebarWatermark');if(!c)return;
-  c.innerHTML='';
-  const anims=['wanderA','wanderB','wanderC','wanderD'];
-  for(let i=0;i<14;i++){
-    const s=document.createElement('span');s.textContent='QNUTRI';
-    const dur=18+Math.random()*22;
-    s.style.left=(Math.random()*100)+'%';
-    s.style.top=(Math.random()*100)+'%';
-    s.style.fontSize=(30*(0.7+Math.random()*0.9))+'px';
-    s.style.color=`rgba(255,255,255,${0.10+Math.random()*0.14})`;
-    s.style.animation=`${anims[i%4]} ${dur}s ease-in-out ${-Math.random()*dur}s infinite`;
-    c.appendChild(s);
-  }
-}
-
 function mostrarSkeleton(){
   document.querySelectorAll('tbody[id^="corpo"]').forEach(tb=>{
     const cols=tb.closest('table')?.querySelectorAll('thead th').length||15;
@@ -2998,7 +3226,8 @@ function renderizarTudo(){
 }
 
 function atualizarContadoresSidebar(){
-  document.getElementById('navCountLanc').textContent=lancamentos.length;
+  const el = document.getElementById('navCountLanc');
+  if(el) el.textContent=lancamentos.length;
 }
 
 function atualizarDashboard(){
@@ -3165,11 +3394,11 @@ function renderizarTotaisTabela(footId,lista,colsAntes,colsDepois){
   const totR=lista.reduce((s,l)=>s+(parseFloat(l.valor_realizado)||0),0);
   const totD=totR-totP;
   foot.innerHTML=`<tr>
-    <td colspan="${colsAntes}" style="text-align:right;">TOTAIS (${lista.length} registros)</td>
-    <td class="cell-money info" style="text-align:right;">${formatarMoeda(totP)}</td>
-    <td class="cell-money ${totR>=0?'positivo':'negativo'}" style="text-align:right;">${formatarMoeda(totR)}</td>
-    <td class="cell-money ${totD>=0?'positivo':'negativo'}" style="text-align:right;">${formatarMoeda(totD)}</td>
-    <td colspan="${colsDepois}"></td></tr>`;
+    <td colspan="${colsAntes}" style="text-align:right;white-space:nowrap;">TOTAIS (${lista.length} registros)</td>
+    <td class="cell-money info" style="text-align:right;white-space:nowrap;">${formatarMoeda(totP)}</td>
+    <td class="cell-money ${totR>=0?'positivo':'negativo'}" style="text-align:right;white-space:nowrap;">${formatarMoeda(totR)}</td>
+    <td class="cell-money ${totD>=0?'positivo':'negativo'}" style="text-align:right;white-space:nowrap;">${formatarMoeda(totD)}</td>
+    <td colspan="${colsDepois}" style="white-space:nowrap;"></td></tr>`;
 }
 
 function renderizarLancamentos(){
@@ -3365,10 +3594,10 @@ function abrirDetalheExec(chave, itens, headerLabel, headerIcon, tipoPrincipal){
 
   tfootEl.innerHTML = `
     <tr>
-      <td colspan="7" style="text-align:right;">TOTAIS (${itens.length} registros)</td>
-      <td class="right">${formatarMoeda(totP)}</td>
-      <td class="right">${formatarMoeda(totR)}</td>
-      <td class="right ${totD >= 0 ? 'desvio-pos' : 'desvio-neg'}">${formatarMoeda(totD)}</td>
+      <td colspan="7" style="text-align:right;white-space:nowrap;">TOTAIS (${itens.length} registros)</td>
+      <td class="right" style="white-space:nowrap;">${formatarMoeda(totP)}</td>
+      <td class="right" style="white-space:nowrap;">${formatarMoeda(totR)}</td>
+      <td class="right ${totD >= 0 ? 'desvio-pos' : 'desvio-neg'}" style="white-space:nowrap;">${formatarMoeda(totD)}</td>
     </tr>`;
 
   pushPopupHistory('popupDetalheExec', fecharDetalheExec);
@@ -3513,7 +3742,7 @@ const TAB_TITLES={
 };
 function switchTab(tab){
   fecharActionPopover();
-  document.querySelectorAll('.nav-item[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.nav-pill[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
   document.getElementById(`tab-${tab}`).classList.add('active');
   const secoes={
@@ -3603,7 +3832,7 @@ function exportarExcelGenerico(lista,aba,arquivoPrefixo){
 function exportarExcelLancamentos(){exportarExcelGenerico(lancamentos,'Lançamentos','Lancamentos');}
 
 // ============================================================
-// PDF — GERAÇÃO COM FUNDO BRANCO
+// PDF — GERAÇÃO COM FUNDO BRANCO E PRIMEIRA COLUNA REDUZIDA
 // ============================================================
 
 function gerarTabelaPDF(lista, titulo) {
@@ -3630,11 +3859,11 @@ function gerarTabelaPDF(lista, titulo) {
       </colgroup>
       <thead>
         <tr>
-          <th>Vencimento</th>
-          <th>Pago em</th>
+          <th>Venc.</th>
+          <th>Pago</th>
           <th>NF</th>
           <th>Tipo</th>
-          <th>Grupo/Regional</th>
+          <th>Grupo</th>
           <th>Fornecedor / Cliente</th>
           <th>Plano de Contas</th>
           <th>Cadastro Inicial</th>
@@ -4057,24 +4286,31 @@ function abrirPopupPDF(htmlConteudo, titulo, nomeArquivo) {
 
 function fecharPopupPDF() {
   document.getElementById('popupPDF').classList.remove('active');
+  document.getElementById('pdfLoadingOverlay').classList.remove('active');
 }
 
 function baixarPDFPopup() {
   const elemento = document.getElementById('pdfContainer');
+  const loadingOverlay = document.getElementById('pdfLoadingOverlay');
   if (!elemento || !elemento.innerHTML.trim()) {
     mostrarToast('Nada para gerar PDF.', 'warning');
     return;
   }
 
+  // Mostrar overlay de loading
+  loadingOverlay.classList.add('active');
+  mostrarToast('Gerando PDF... aguarde', 'info');
+
   const opt = {
     margin: [5, 5, 5, 5],
     filename: pdfNomeArquivo || `QNUTRI_Documento_${new Date().toISOString().slice(0, 10)}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
+    image: { type: 'jpeg', quality: 0.95 },
     html2canvas: {
-      scale: 3,
+      scale: 1.5,            // Reduzido de 3 para 1.5 para acelerar a geração
       useCORS: true,
       logging: false,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      removeContainer: true   // Ajuda a limpar o DOM temporário
     },
     jsPDF: {
       unit: 'mm',
@@ -4085,12 +4321,16 @@ function baixarPDFPopup() {
     pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
   };
 
-  mostrarToast('Gerando PDF...', 'info');
-  html2pdf().set(opt).from(elemento).save().then(() => {
-    mostrarToast('PDF gerado com sucesso!', 'success');
-  }).catch(err => {
-    mostrarToast('Erro ao gerar PDF: ' + err.message, 'error');
-  });
+  // Pequeno delay para o overlay renderizar antes do processamento pesado
+  setTimeout(() => {
+    html2pdf().set(opt).from(elemento).save().then(() => {
+      loadingOverlay.classList.remove('active');
+      mostrarToast('PDF gerado com sucesso!', 'success');
+    }).catch(err => {
+      loadingOverlay.classList.remove('active');
+      mostrarToast('Erro ao gerar PDF: ' + err.message, 'error');
+    });
+  }, 100);
 }
 
 function exportarPDFLancamentos() {
@@ -4260,54 +4500,100 @@ function exportarPDFDetalheExec() {
 // ============================================================
 let execPivotMain='despesas';
 let execPivotSub='conta';
-let execSituacoes=[];
+let execSituacoes=['PAGO', 'PAGO - MESES ANTERIORES'];
 let execGrupo='';
 let execTipos=[];
-let execMesesConsolidado=['08'];          // AGOSTO como padrão no Consolidado
-let execMesesResumo=['08'];               // AGOSTO como padrão em Receitas/Despesas
+let execMesesConsolidado=[];
+let execMesesResumo=[];
 let execRecebimentoSituacoes=['PAGO', 'PAGO - MESES ANTERIORES'];
+let execSidebarAberta = false;
+
+// ---------- helpers de mês ----------
+function getMesAnteriorVigenteNum(){
+  const hoje = new Date();
+  const mes = hoje.getMonth();
+  if(mes === 0) return '12';
+  return String(mes).padStart(2,'0');
+}
+
+function getLabelMesPorNumero(mesNum){
+  const idx = parseInt(mesNum, 10) - 1;
+  if(idx < 0 || idx > 11) return '';
+  return MESES_NOMES[idx];
+}
 
 function abrirResultadosExecutivos(){
+  if (!lancamentos || lancamentos.length === 0) {
+    mostrarToast('Carregando dados...', 'info');
+    carregarDados().then(() => {
+      setTimeout(() => abrirResultadosExecutivos(), 500);
+    });
+    return;
+  }
+  
   pushPopupHistory('popupResultadosExecutivos', fecharResultadosExecutivos);
   document.getElementById('popupResultadosExecutivos').classList.add('active');
-  execSituacoes=[];
+  execSituacoes=['PAGO', 'PAGO - MESES ANTERIORES'];
   execGrupo='';
   execTipos=[];
   execPivotMain='despesas';
   execPivotSub='conta';
-  // Inicializa ambos com Agosto selecionado
-  execMesesConsolidado=['08'];
-  execMesesResumo=['08'];
+  execMesesConsolidado=[ getMesAnteriorVigenteNum() ];
+  execMesesResumo=[ getMesAnteriorVigenteNum() ];
   execRecebimentoSituacoes=['PAGO', 'PAGO - MESES ANTERIORES'];
+  execSidebarAberta = false;
 
   document.querySelectorAll('.exec-toggle-btn').forEach(b=>b.classList.toggle('active',b.dataset.pivot==='despesas'));
   document.querySelectorAll('.exec-pivot-subtab').forEach(b=>b.classList.toggle('active',b.dataset.sub==='conta'));
   atualizarSubAbasVisiveis();
   atualizarDestaqueFiltros();
   atualizarMesSelectorVisibilidade();
+  atualizarSidebarExec();
 
-  // Atualiza chips dos dois seletores de mês
   atualizarChipsMesExecResumo();
-  atualizarChipsMesConsolidado();
+  atualizarChipsMesConsolidadoInline();
 
   montarFiltrosExec();
   renderizarResultadosExecutivos();
 }
 function fecharResultadosExecutivos(){document.getElementById('popupResultadosExecutivos').classList.remove('active');}
 
+function toggleExecFiltros(){
+  execSidebarAberta = !execSidebarAberta;
+  atualizarSidebarExec();
+}
+
+function atualizarSidebarExec(){
+  const sidebar = document.getElementById('execSidebar');
+  if (!sidebar) return;
+  if (execSidebarAberta) {
+    sidebar.classList.remove('collapsed');
+    sidebar.style.display = '';
+    sidebar.style.width = '';
+    sidebar.style.opacity = '';
+    sidebar.style.pointerEvents = '';
+  } else {
+    sidebar.classList.add('collapsed');
+  }
+}
+
 function atualizarMesSelectorVisibilidade(){
-  const selMesResumo = document.getElementById('mesSelectorExecResumo');
-  const selMesConsolidado = document.getElementById('mesSelectorConsolidado');
-  const selSit = document.getElementById('filtroRecebimentoSituacoes');
+  const groupResumo = document.getElementById('mesSelectorExecResumoGroup');
+  const groupReceb = document.getElementById('filtroRecebimentoSituacoesGroup');
+  const inlineConsolidado = document.getElementById('execMesesConsolidadoInline');
   const isConsolidado = (execPivotMain === 'consolidado');
   const isResumo = (execPivotMain === 'receitas' || execPivotMain === 'despesas');
 
-  if(selMesResumo) selMesResumo.style.display = isResumo ? 'flex' : 'none';
-  if(selMesConsolidado) selMesConsolidado.style.display = isConsolidado ? 'flex' : 'none';
-  if(selSit) selSit.style.display = isConsolidado ? 'flex' : 'none';
+  if(groupResumo) groupResumo.style.display = isResumo ? 'block' : 'none';
+  if(groupReceb) groupReceb.style.display = isConsolidado ? 'block' : 'none';
+  if(inlineConsolidado){
+    if(isConsolidado) inlineConsolidado.classList.add('visible');
+    else inlineConsolidado.classList.remove('visible');
+  }
 
   if(isConsolidado){
     montarFiltroRecebimentoSituacoes();
+    atualizarChipsMesConsolidadoInline();
   }
   if(isResumo){
     atualizarChipsMesExecResumo();
@@ -4327,7 +4613,6 @@ function montarFiltroRecebimentoSituacoes(){
   );
 }
 
-// --- Lógica dos chips de mês para Receitas/Despesas ---
 function toggleMesExecResumo(mes){
   const chips = document.querySelectorAll('#mesSelectorExecResumo .mes-chip');
   const chipTodos = document.querySelector('#mesSelectorExecResumo .mes-chip.todos');
@@ -4382,10 +4667,10 @@ function atualizarChipsMesExecResumo(){
   if(execMesesResumo.length === 0 && chipTodos) chipTodos.classList.add('active');
 }
 
-// --- Lógica dos chips de mês para Consolidado ---
-function toggleMesConsolidado(mes){
-  const chips = document.querySelectorAll('#mesSelectorConsolidado .mes-chip');
-  const chipTodos = document.querySelector('#mesSelectorConsolidado .mes-chip.todos');
+// ----- Seletor de meses inline (Consolidado) -----
+function toggleMesConsolidadoInline(mes){
+  const chips = document.querySelectorAll('#execMesesConsolidadoInline .mes-chip');
+  const chipTodos = document.querySelector('#execMesesConsolidadoInline .mes-chip.todos');
   
   if(mes === '__ALL__'){
     execMesesConsolidado = [];
@@ -4403,30 +4688,30 @@ function toggleMesConsolidado(mes){
     }
   });
   
-  if(execMesesConsolidado.length === 0) chipTodos.classList.add('active');
+  if(execMesesConsolidado.length === 0 && chipTodos) chipTodos.classList.add('active');
   renderizarResultadosExecutivos();
 }
 
-function selecionarTodosMesesConsolidado(){
+function selecionarTodosMesesConsolidadoInline(){
   execMesesConsolidado = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-  document.querySelectorAll('#mesSelectorConsolidado .mes-chip').forEach(chip => {
+  document.querySelectorAll('#execMesesConsolidadoInline .mes-chip').forEach(chip => {
     chip.classList.toggle('active', true);
   });
   renderizarResultadosExecutivos();
 }
 
-function limparMesesConsolidado(){
+function limparMesesConsolidadoInline(){
   execMesesConsolidado = [];
-  document.querySelectorAll('#mesSelectorConsolidado .mes-chip').forEach(chip => {
+  document.querySelectorAll('#execMesesConsolidadoInline .mes-chip').forEach(chip => {
     chip.classList.toggle('active', chip.classList.contains('todos'));
   });
   renderizarResultadosExecutivos();
 }
 
-function atualizarChipsMesConsolidado(){
-  const chips = document.querySelectorAll('#mesSelectorConsolidado .mes-chip');
+function atualizarChipsMesConsolidadoInline(){
+  const chips = document.querySelectorAll('#execMesesConsolidadoInline .mes-chip');
   if(!chips.length) return;
-  const chipTodos = document.querySelector('#mesSelectorConsolidado .mes-chip.todos');
+  const chipTodos = document.querySelector('#execMesesConsolidadoInline .mes-chip.todos');
   chips.forEach(chip => {
     if(chip.classList.contains('todos')){
       chip.classList.toggle('active', execMesesConsolidado.length === 0 || execMesesConsolidado.length === 12);
@@ -4445,11 +4730,11 @@ function atualizarSubAbasVisiveis(){
   const subConta = document.querySelector('.exec-pivot-subtab[data-sub="conta"]');
 
   if (execPivotMain === 'consolidado') {
-    subtabs.style.display = 'none';
+    if (subtabs) subtabs.style.display = 'none';
     atualizarMesSelectorVisibilidade();
     return;
   }
-  subtabs.style.display = 'flex';
+  if (subtabs) subtabs.style.display = 'flex';
   atualizarMesSelectorVisibilidade();
 
   if (execPivotMain === 'despesas') {
@@ -4471,7 +4756,7 @@ function atualizarSubAbasVisiveis(){
 
 function atualizarDestaqueFiltros(){
   const segGrupo = document.getElementById('segExecGrupo');
-  if (segGrupo) segGrupo.style.opacity = '1';
+  if (segGrupo) segGrupo.style.opacity = '';
 }
 
 function setExecPivotMain(pivot){
@@ -4485,14 +4770,13 @@ function setExecPivotMain(pivot){
     document.querySelectorAll('.exec-pivot-subtab').forEach(b => b.classList.toggle('active', b.dataset.sub === 'cliente'));
   }
   if (pivot === 'consolidado') {
-    // Mantém Agosto ou o que o usuário já selecionou
     if(!execMesesConsolidado || execMesesConsolidado.length === 0){
-      execMesesConsolidado = ['08'];
+      execMesesConsolidado = [ getMesAnteriorVigenteNum() ];
     }
     if(!execRecebimentoSituacoes || execRecebimentoSituacoes.length === 0){
       execRecebimentoSituacoes = ['PAGO', 'PAGO - MESES ANTERIORES'];
     }
-    atualizarChipsMesConsolidado();
+    atualizarChipsMesConsolidadoInline();
   }
   document.querySelectorAll('.exec-toggle-btn').forEach(b=>b.classList.toggle('active',b.dataset.pivot===pivot));
   atualizarSubAbasVisiveis();
@@ -4517,6 +4801,7 @@ function montarFiltrosExec(){
   }, 'Todos', true);
   criarMultiSelect('msExecTipo',['RECEITA','DESPESA'],
     execTipos,(sel)=>{execTipos=sel;renderizarResultadosExecutivos();},'Todos Tipos');
+  setTimeout(()=>{ setMsSelecionados('msExecSituacao', execSituacoes); }, 0);
 }
 
 function getBaseExec(){
@@ -4635,8 +4920,7 @@ function renderizarConsolidadoDRE(){
   const pctDRE = (v) => totalDRE > 0 ? (v / totalDRE) * 100 : 0;
   const pctReceb = (v) => totalRecebimentos > 0 ? (v / totalRecebimentos) * 100 : 0;
 
-  let html = `<div class="dre-titulo-principal"><i class="fas fa-chart-pie"></i>Consolidado</div>`;
-  html += `<div class="dre-consolidado-wrapper">`;
+  let html = `<div class="dre-consolidado-wrapper">`;
 
   html += `<div class="dre-col">`;
   html += `
@@ -4768,49 +5052,17 @@ function destacarContaDRE(conta, blocoOrigem){
 
 function renderizarResultadosExecutivos(){
   if(execPivotMain === 'consolidado'){
-    document.getElementById('execSummaryRow').style.display = 'none';
-    document.getElementById('execFiltersBar').classList.add('hidden');
-    document.getElementById('execPivotWrapper').style.padding = '10px 22px 22px';
+    document.getElementById('execPivotWrapper').style.padding = '10px 16px 16px';
     atualizarMesSelectorVisibilidade();
     renderizarConsolidadoDRE();
     return;
   }
-  document.getElementById('execSummaryRow').style.display = 'grid';
-  document.getElementById('execFiltersBar').classList.remove('hidden');
   atualizarMesSelectorVisibilidade();
 
   const base=getBaseExec();
 
   document.getElementById('tabCountReceitas').textContent = lancamentos.filter(l=>l.tipo==='RECEITA').length;
   document.getElementById('tabCountDespesas').textContent = lancamentos.filter(l=>l.tipo==='DESPESA').length;
-
-  const totalP = base.reduce((s,l)=>s+(parseFloat(l.valor_projetado)||0),0);
-  const totalR = base.reduce((s,l)=>s+(parseFloat(l.valor_realizado)||0),0);
-  const totalD = totalR - totalP;
-  const pctReal = totalP !== 0 ? ((totalR/totalP)*100) : 0;
-  const pctDesvio = totalP !== 0 ? ((totalD/Math.abs(totalP))*100) : 0;
-  const corDesvio = totalD >= 0 ? 'pos' : 'neg';
-  document.getElementById('execSummaryRow').innerHTML = `
-    <div class="exec-summary-card total">
-      <div class="lbl"><i class="fas fa-database"></i> ${execPivotMain==='receitas'?'Receitas':'Despesas'} — Registros</div>
-      <div class="val">${base.length}</div>
-      <div class="sub">lançamentos no filtro atual</div>
-    </div>
-    <div class="exec-summary-card proj">
-      <div class="lbl"><i class="fas fa-bullseye"></i> Total Projetado</div>
-      <div class="val proj">${formatarMoeda(totalP)}</div>
-      <div class="sub">soma dos valores projetados</div>
-    </div>
-    <div class="exec-summary-card real">
-      <div class="lbl"><i class="fas fa-money-bill-wave"></i> Total Realizado</div>
-      <div class="val real">${formatarMoeda(totalR)}</div>
-      <div class="sub">${pctReal.toFixed(1)}% do projetado</div>
-    </div>
-    <div class="exec-summary-card diff">
-      <div class="lbl"><i class="fas fa-chart-line"></i> Diferença (Real − Proj)</div>
-      <div class="val diff ${corDesvio}">${formatarMoeda(totalD)}</div>
-      <div class="sub">${pctDesvio>=0?'+':''}${pctDesvio.toFixed(1)}% de desvio</div>
-    </div>`;
 
   const wrapper=document.getElementById('execPivotWrapper');
 
@@ -4843,7 +5095,28 @@ function renderizarResultadosExecutivos(){
 
   const corPrincipal = execPivotMain==='receitas' ? '#059669' : '#DC2626';
 
-  let html = `<table class="pivot-table">
+  const totalP = arr.reduce((s,a)=>s+a.totalP,0);
+  const totalR = arr.reduce((s,a)=>s+a.totalR,0);
+  const totalD = arr.reduce((s,a)=>s+a.totalD,0);
+
+  let html = '';
+  if(execMesesResumo.length === 1){
+    const mesNum = execMesesResumo[0];
+    const mesLabel = getLabelMesPorNumero(mesNum);
+    html += `<div style="text-align:center;font-size:12px;font-weight:700;color:#6b3a00;padding:6px 0 10px 0;letter-spacing:.4px;">
+      Informe do mês: <span style="background:#FFF3E0;border:1px solid #FFCC80;padding:3px 12px;border-radius:12px;">${mesLabel}</span>
+    </div>`;
+  } else if(execMesesResumo.length > 1){
+    html += `<div style="text-align:center;font-size:12px;font-weight:700;color:#6b3a00;padding:6px 0 10px 0;letter-spacing:.4px;">
+      Informe dos meses: <span style="background:#FFF3E0;border:1px solid #FFCC80;padding:3px 12px;border-radius:12px;">${execMesesResumo.map(m=>MESES_CURTO[parseInt(m,10)-1]).join(', ')}</span>
+    </div>`;
+  } else {
+    html += `<div style="text-align:center;font-size:12px;font-weight:700;color:#6b3a00;padding:6px 0 10px 0;letter-spacing:.4px;">
+      Informe de todos os meses
+    </div>`;
+  }
+
+  html += `<table class="pivot-table">
     <thead><tr>
       <th>${labelCol}</th>
       <th class="right">Projetado</th>
@@ -5180,7 +5453,7 @@ function renderizarDRE(){
     const g = grupos[gKey];
     if(!g || g.contas.length === 0) return;
 
-    html += `<tr class="${g.cls}"><td colspan="${meses.length+1}" style="text-align:left;padding-left:14px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;">${escapeHtml(g.label)}</td></tr>`;
+    html += `<tr class="${g.cls}"><td colspan="${meses.length+1}" style="text-align:left;padding-left:14px;font-weight:400;text-transform:uppercase;letter-spacing:.6px;">${escapeHtml(g.label)}</td></tr>`;
 
     g.contas.forEach(conta=>{
       const plano=encontrarPlano(conta);
@@ -5692,7 +5965,6 @@ function toggleFilterSidebar(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   console.log('🚀 QNUTRI Financeiro — iniciando');
-  montarWatermarkAleatorio();
   try{
     if(localStorage.getItem('qnutri_densidade')==='compacto'){
       document.body.classList.add('modo-compacto');
