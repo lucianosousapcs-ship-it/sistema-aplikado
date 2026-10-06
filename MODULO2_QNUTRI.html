@@ -2649,6 +2649,7 @@ table tfoot td{
     <div class="dre-modal-filters">
       <div class="segmented-control" id="segDreGrupo"></div>
       <div class="segmented-control" id="segDreTipo"></div>
+      <div class="ms-wrap" id="msDreSituacao" style="min-width:200px;max-width:260px;"></div>
       <div class="search-box">
         <input type="text" id="buscaDRE" placeholder="Buscar fornecedor, NF, conta..." oninput="renderizarDRE()">
       </div>
@@ -5322,12 +5323,14 @@ function exportarExcelConsolidadoDRE(){
 // ============================================================
 let dreGrupo='';
 let dreTipo='';
+let dreSituacoes=[];
 
 function abrirDRE(){
   pushPopupHistory('popupDRE', fecharDRE);
   document.getElementById('popupDRE').classList.add('active');
   dreGrupo='';
   dreTipo='';
+  dreSituacoes=[];
   montarFiltrosDRE();
   renderizarDRE();
 }
@@ -5340,6 +5343,11 @@ function montarFiltrosDRE(){
   criarSegmentedControl('segDreTipo', ['RECEITA','DESPESA'], dreTipo, (sel)=>{
     dreTipo=sel; renderizarDRE();
   }, 'Todos', true);
+  criarMultiSelect('msDreSituacao',
+    ['PAGO','NÃO PAGO','PENDENTE MESES ANTERIORES','PAGO - MESES ANTERIORES'],
+    dreSituacoes,
+    (sel)=>{ dreSituacoes=sel; renderizarDRE(); },
+    'Todas as Situações');
 }
 
 function getBaseDRE(){
@@ -5347,6 +5355,7 @@ function getBaseDRE(){
   return lancamentos.filter(l=>{
     if(dreGrupo && getGrupoRegionalLanc(l)!==dreGrupo)return false;
     if(dreTipo && l.tipo!==dreTipo)return false;
+    if(dreSituacoes.length>0 && !dreSituacoes.includes((l.situacao||'').toUpperCase())) return false;
     if(termo){
       const txt=`${l.fornecedor||''} ${l.nf||''} ${getPlanoLabel(l.plano_contas)} ${l.cadastro_inicial||''}`.toLowerCase();
       if(!txt.includes(termo))return false;
