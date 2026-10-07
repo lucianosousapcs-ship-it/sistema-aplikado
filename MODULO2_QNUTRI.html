@@ -191,6 +191,15 @@ body{
   font-size:10px;font-weight:500;color:#a8a29e;letter-spacing:.3px;
 }
 
+/* Cards do letreiro com duplo clique — feedback visual */
+.letreiro-item[ondblclick]:not([ondblclick="return false;"]){cursor:pointer;}
+.letreiro-item[ondblclick]:not([ondblclick="return false;"]):hover{
+  background:rgba(234,88,12,.10) !important;
+}
+.letreiro-item[ondblclick]:not([ondblclick="return false;"]):active{
+  transform:scale(.98);
+}
+
 /* ============================================================
    MAIN CONTENT
    ============================================================ */
@@ -606,9 +615,7 @@ table tfoot td.cell-money.info,
 .modal-overlay{
   display:none;position:fixed;inset:0;
   background:rgba(40,30,20,.45);
-  /* REMOVIDO backdrop-filter:blur(4px) — causava lentidão no clique */
   z-index:2000;align-items:center;justify-content:center;padding:20px;
-  /* Garante que não haja transição residual */
   transition:none !important;
 }
 .modal-overlay.active{display:flex;}
@@ -620,8 +627,6 @@ table tfoot td.cell-money.info,
   overflow-y:auto;padding:24px 26px;
   border:1px solid var(--border-strong);border-top:3px solid var(--accent);
   display:flex;flex-direction:column;
-  /* REMOVIDA animation:modalPop — agora abre instantaneamente */
-  /* Garante que transform residual não atrapalhe */
   transform:none !important;
   will-change:auto;
 }
@@ -640,7 +645,6 @@ table tfoot td.cell-money.info,
 }
 .modal-header h2 i{color:var(--accent);font-size:14px;}
 
-/* BOTÃO FECHAR — RÁPIDO, SEM ROTAÇÃO, CLIQUE INSTANTÂNEO */
 .modal-close,
 .exec-modal-actions .modal-close,
 .det-exec-close,
@@ -650,9 +654,7 @@ table tfoot td.cell-money.info,
   display:flex;align-items:center;justify-content:center;
   cursor:pointer;border-radius:8px;
   font-family:inherit;font-size:13px;
-  /* SEM transition em transform — apenas background e cor */
   transition:background .08s ease, color .08s ease, border-color .08s ease;
-  /* Garante que o clique seja capturado imediatamente */
   pointer-events:auto !important;
   z-index:10;
   position:relative;
@@ -2208,6 +2210,7 @@ table tfoot td.cell-money.info,
         <i class="fas fa-sliders-h" id="btnToggleFiltersIcon"></i>
         <span id="btnToggleFiltersText">Filtros</span>
       </button>
+      <button class="btn btn-outline" onclick="abrirConfigColunasPDF()"><i class="fas fa-columns"></i> Colunas PDF</button>
       <button class="btn btn-outline" onclick="carregarDados()"><i class="fas fa-sync"></i> Atualizar</button>
     </div>
   </div>
@@ -2231,6 +2234,7 @@ table tfoot td.cell-money.info,
           <div class="filter-section-title"><i class="fas fa-bolt"></i> Ações Rápidas</div>
           <button class="btn btn-success" onclick="abrirPopupLancamento('RECEITA')"><i class="fas fa-plus"></i> Nova Receita</button>
           <button class="btn btn-danger" onclick="abrirPopupLancamento('DESPESA')"><i class="fas fa-plus"></i> Nova Despesa</button>
+          <button class="btn btn-primary" onclick="abrirPopupColarExcel()"><i class="fas fa-paste"></i> Colar do Excel (Importar)</button>
           <button class="btn btn-excel" onclick="exportarExcelLancamentos()"><i class="fas fa-file-excel"></i> Exportar Excel</button>
           <button class="btn btn-pdf" onclick="exportarPDFLancamentos()"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
           <button class="btn btn-outline" onclick="abrirConfigColunasPDF()"><i class="fas fa-columns"></i> Configurar Colunas PDF</button>
@@ -2245,7 +2249,6 @@ table tfoot td.cell-money.info,
         <div class="table-card">
           <div class="table-card-header">
             <h3><i class="fas fa-list"></i> Todos os Lançamentos</h3>
-            <button class="btn btn-outline" style="font-size:10.5px;padding:5px 10px;" onclick="abrirConfigColunasPDF()" title="Configurar colunas do PDF"><i class="fas fa-columns"></i> Colunas PDF</button>
           </div>
           <div class="table-wrapper">
             <table id="tabelaLancamentos">
@@ -2534,6 +2537,7 @@ table tfoot td.cell-money.info,
       </div>
       <div class="form-row">
         <div class="form-group"><label><i class="fas fa-info-circle"></i> Situação</label><select id="lancSituacao"><option value="">Selecione...</option><option value="PAGO">PAGO</option><option value="NÃO PAGO">NÃO PAGO</option><option value="PENDENTE MESES ANTERIORES">PENDENTE MESES ANTERIORES</option><option value="PAGO - MESES ANTERIORES">PAGO - MESES ANTERIORES</option></select></div>
+        <div class="form-group"><label><i class="fas fa-calendar-plus"></i> Mês de Competência</label><select id="lancMesCompetencia"><option value="">Selecione...</option><option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label><i class="fas fa-bullseye"></i> Valor Projetado (R$)</label><input type="number" id="lancProjetado" step="0.01" value="0"></div>
@@ -2683,6 +2687,31 @@ table tfoot td.cell-money.info,
 
     <div class="pdf-modal-body">
       <div id="pdfContainer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- POPUP PARA COLAR DADOS DO EXCEL -->
+<div id="popupColarExcel" class="modal-overlay">
+  <div class="modal-content compact" style="max-width:900px;">
+    <div class="modal-header">
+      <h2><i class="fas fa-paste"></i> Colar Dados do Excel</h2>
+      <button class="modal-close" onclick="fecharPopupColarExcel()">✕</button>
+    </div>
+    <div style="margin-bottom:12px;">
+      <p style="font-size:11.5px;color:var(--text-secondary);margin-bottom:10px;font-weight:500;">
+        <i class="fas fa-info-circle" style="color:var(--accent);"></i>
+        Cole os dados do Excel (colunas separadas por TAB). A primeira linha deve conter os cabeçalhos.
+      </p>
+      <div style="background:#f5f0ea;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px;font-size:10.5px;color:var(--text-secondary);">
+        <strong>Colunas esperadas (qualquer ordem):</strong><br>
+        Data | Pago em | NF | Tipo | Grupo/Regional | Fornecedor | Plano de Contas | Cadastro Inicial | Projetado | Realizado | Situação | Banco | Observação | Mês de Competência
+      </div>
+      <textarea id="textoColarExcel" style="width:100%;min-height:200px;padding:10px;border:1px solid var(--border-strong);border-radius:8px;font-family:monospace;font-size:11px;resize:vertical;background:#fff;" placeholder="Cole aqui os dados copiados do Excel..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="fecharPopupColarExcel()"><i class="fas fa-times"></i> Cancelar</button>
+      <button class="btn btn-primary" onclick="processarColarExcel()"><i class="fas fa-check"></i> Importar Dados</button>
     </div>
   </div>
 </div>
@@ -3065,43 +3094,43 @@ function atualizarDashboard(){
   const dataAtual = new Date().toLocaleDateString('pt-BR');
 
   document.getElementById('dashboardContainer').innerHTML=`
-    <div class="letreiro-item destaque-status destaque-saudacao" onclick="return false;" style="cursor:default;">
+    <div class="letreiro-item destaque-status destaque-saudacao" style="cursor:default;">
       <span class="letreiro-label"><i class="fas ${sauda.icone}" style="margin-right:5px;"></i>${sauda.texto}</span>
       <span class="letreiro-valor" style="color:#f97316;">Bem-vindo(a) ao Módulo Financeiro QNUTRI</span>
       <span class="letreiro-sep">|</span>
       <span class="letreiro-sub">${horaAtual} · ${dataAtual}</span>
     </div>
-    <div class="letreiro-item" onclick="abrirDetalheLetreiro('RECEITA')">
+    <div class="letreiro-item" ondblclick="abrirDetalheLetreiro('RECEITA')" title="Duplo clique para detalhar">
       <span class="letreiro-label">Receitas</span>
       <span class="letreiro-valor positivo">${formatarMoeda(totRec)}</span>
       <span class="letreiro-sep">|</span>
       <span class="letreiro-sub">${qtdRec} lanç · Proj: ${formatarMoeda(recProj)}</span>
     </div>
-    <div class="letreiro-item" onclick="abrirDetalheLetreiro('DESPESA')">
+    <div class="letreiro-item" ondblclick="abrirDetalheLetreiro('DESPESA')" title="Duplo clique para detalhar">
       <span class="letreiro-label">Despesas</span>
       <span class="letreiro-valor negativo">${formatarMoeda(totDesp)}</span>
       <span class="letreiro-sep">|</span>
       <span class="letreiro-sub">${qtdDesp} lanç · Proj: ${formatarMoeda(despProj)}</span>
     </div>
-    <div class="letreiro-item" onclick="abrirDetalheLetreiro('SALDO')">
+    <div class="letreiro-item" ondblclick="abrirDetalheLetreiro('SALDO')" title="Duplo clique para detalhar">
       <span class="letreiro-label">Saldo</span>
       <span class="letreiro-valor ${saldo>=0?'positivo':'negativo'}">${formatarMoeda(saldo)}</span>
       <span class="letreiro-sep">|</span>
       <span class="letreiro-sub">Rec ${formatarMoeda(totRec)} · Desp ${formatarMoeda(totDesp)}</span>
     </div>
-    <div class="letreiro-item destaque-status destaque-atraso" onclick="abrirDetalheLetreiro('ATRASO')">
+    <div class="letreiro-item destaque-status destaque-atraso" ondblclick="abrirDetalheLetreiro('ATRASO')" title="Duplo clique para detalhar">
       <span class="letreiro-label"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i>Em Atraso</span>
       <span class="letreiro-valor negativo">Rc ${formatarMoeda(totAtRec)} · Dp ${formatarMoeda(totAtDesp)}</span>
       <span class="letreiro-sep">|</span>
       <span class="letreiro-sub">${atRec.length} rec · ${atDesp.length} desp</span>
     </div>
-    <div class="letreiro-item destaque-status destaque-liquigas" onclick="abrirDetalheLetreiro('LIQUIGÁS')">
+    <div class="letreiro-item destaque-status destaque-liquigas" ondblclick="abrirDetalheLetreiro('LIQUIGÁS')" title="Duplo clique para detalhar">
       <span class="letreiro-label"><i class="fas fa-fire" style="margin-right:4px;"></i>LIQUIGÁS</span>
       <span class="letreiro-valor liquigas">Rec ${formatarMoeda(liqRec)} · Desp ${formatarMoeda(liqDesp)}</span>
       <span class="letreiro-sep">|</span>
       <span class="letreiro-sub">Resultado: ${formatarMoeda(liqRec-liqDesp)}</span>
     </div>
-    <div class="letreiro-item destaque-status destaque-sulflu" onclick="abrirDetalheLetreiro('SUL FLUMINENSE')">
+    <div class="letreiro-item destaque-status destaque-sulflu" ondblclick="abrirDetalheLetreiro('SUL FLUMINENSE')" title="Duplo clique para detalhar">
       <span class="letreiro-label"><i class="fas fa-map-marker-alt" style="margin-right:4px;"></i>SUL FLUMINENSE</span>
       <span class="letreiro-valor sulflu">Rec ${formatarMoeda(sulRec)} · Desp ${formatarMoeda(sulDesp)}</span>
       <span class="letreiro-sep">|</span>
@@ -3463,6 +3492,7 @@ function abrirPopupLancamentoInterno(tipo,categoria='SUL FLUMINENSE',idEdicao=nu
     document.getElementById('lancFornecedor').value='';
     document.getElementById('lancPlano').value='';
     document.getElementById('lancSituacao').value='';
+    document.getElementById('lancMesCompetencia').value='';
     document.getElementById('lancProjetado').value='0';
     document.getElementById('lancRealizado').value='0';
     document.getElementById('lancBanco').value='';
@@ -3488,6 +3518,7 @@ function editarLancamento(id){
   for(let i=0;i<sel.options.length;i++){if(sel.options[i].value===val){sel.selectedIndex=i;found=true;break;}}
   if(!found&&val){const o=document.createElement('option');o.value=val;o.textContent=val;sel.appendChild(o);sel.value=val;}
   document.getElementById('lancSituacao').value=l.situacao||'';
+  document.getElementById('lancMesCompetencia').value=l.mes_competencia||'';
   document.getElementById('lancProjetado').value=l.valor_projetado||0;
   document.getElementById('lancRealizado').value=l.valor_realizado||0;
   document.getElementById('lancBanco').value=l.banco||'';
@@ -3517,6 +3548,7 @@ async function salvarLancamento(e){
     valor_projetado:parseFloat(document.getElementById('lancProjetado').value)||0,
     valor_realizado:parseFloat(document.getElementById('lancRealizado').value)||0,
     situacao:document.getElementById('lancSituacao').value||null,
+    mes_competencia:document.getElementById('lancMesCompetencia').value||null,
     banco:document.getElementById('lancBanco').value||null,
     observacao:document.getElementById('lancObservacao').value.trim()||null,
     usuario_insercao:usuarioLogado?.nome||null
@@ -5298,6 +5330,125 @@ function toggleFilterSidebar(){
   if(t)t.textContent=col?'Exibir':'Filtros';
 }
 
+// ============================================================
+// FUNÇÕES PARA COLAR DADOS DO EXCEL
+// ============================================================
+function abrirPopupColarExcel() {
+  pushPopupHistory('popupColarExcel', fecharPopupColarExcel);
+  document.getElementById('popupColarExcel').classList.add('active');
+  document.getElementById('textoColarExcel').value = '';
+  setTimeout(() => document.getElementById('textoColarExcel').focus(), 200);
+}
+
+function fecharPopupColarExcel() {
+  document.getElementById('popupColarExcel').classList.remove('active');
+}
+
+function processarColarExcel() {
+  const texto = document.getElementById('textoColarExcel').value.trim();
+  if (!texto) {
+    mostrarToast('Cole os dados do Excel primeiro.', 'warning');
+    return;
+  }
+
+  const linhas = texto.split(/\r?\n/).filter(l => l.trim());
+  if (linhas.length < 2) {
+    mostrarToast('Dados insuficientes. Inclua o cabeçalho e pelo menos uma linha.', 'warning');
+    return;
+  }
+
+  const cabecalho = linhas[0].split('\t').map(h => h.trim().toLowerCase());
+  const dados = [];
+
+  for (let i = 1; i < linhas.length; i++) {
+    const colunas = linhas[i].split('\t').map(c => c.trim());
+    if (colunas.length === 0 || colunas.every(c => !c)) continue;
+
+    const obj = {};
+    cabecalho.forEach((h, idx) => {
+      const valor = colunas[idx] || '';
+      if (h.includes('data') && !h.includes('pago') && !h.includes('venc')) obj.data = valor;
+      else if (h.includes('pago em') || h === 'pago') obj.pago_em = valor;
+      else if (h === 'nf' || h.includes('nota')) obj.nf = valor;
+      else if (h === 'tipo') obj.tipo = valor.toUpperCase();
+      else if (h.includes('grupo') || h.includes('regional') || h === 'categoria') obj.categoria = valor.toUpperCase();
+      else if (h.includes('fornecedor') || h.includes('cliente')) obj.fornecedor = valor;
+      else if (h.includes('plano') || h.includes('conta')) obj.plano_contas = valor;
+      else if (h.includes('cadastro') || h.includes('antigo')) obj.cadastro_inicial = valor;
+      else if (h.includes('projetado')) obj.valor_projetado = valor;
+      else if (h.includes('realizado')) obj.valor_realizado = valor;
+      else if (h.includes('situa')) obj.situacao = valor.toUpperCase();
+      else if (h.includes('banco')) obj.banco = valor;
+      else if (h.includes('observa')) obj.observacao = valor;
+      else if (h.includes('compet') || h.includes('mês') || h.includes('mes')) obj.mes_competencia = valor;
+    });
+
+    if (!obj.tipo || (obj.tipo !== 'RECEITA' && obj.tipo !== 'DESPESA')) {
+      mostrarToast(`Linha ${i + 1}: Tipo inválido. Use RECEITA ou DESPESA.`, 'error');
+      return;
+    }
+    if (!obj.data) {
+      mostrarToast(`Linha ${i + 1}: Data de Vencimento é obrigatória.`, 'error');
+      return;
+    }
+    if (!obj.fornecedor) {
+      mostrarToast(`Linha ${i + 1}: Fornecedor/Cliente é obrigatório.`, 'error');
+      return;
+    }
+    if (!obj.plano_contas) {
+      mostrarToast(`Linha ${i + 1}: Plano de Contas é obrigatório.`, 'error');
+      return;
+    }
+
+    if (obj.data.includes('/')) {
+      const [d, m, a] = obj.data.split('/');
+      obj.data = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+
+    if (obj.valor_projetado) {
+      obj.valor_projetado = String(obj.valor_projetado).replace(/\./g, '').replace(',', '.');
+      obj.valor_projetado = parseFloat(obj.valor_projetado) || 0;
+    } else {
+      obj.valor_projetado = 0;
+    }
+    if (obj.valor_realizado) {
+      obj.valor_realizado = String(obj.valor_realizado).replace(/\./g, '').replace(',', '.');
+      obj.valor_realizado = parseFloat(obj.valor_realizado) || 0;
+    } else {
+      obj.valor_realizado = 0;
+    }
+
+    if (!obj.categoria) {
+      obj.categoria = 'SUL FLUMINENSE';
+    }
+
+    obj.usuario_insercao = usuarioLogado?.nome || 'Importação Excel';
+
+    dados.push(obj);
+  }
+
+  if (dados.length === 0) {
+    mostrarToast('Nenhum dado válido para importar.', 'warning');
+    return;
+  }
+
+  supabaseClient
+    .from('qnutri_lancamentos')
+    .insert(dados)
+    .then(({ error }) => {
+      if (error) throw error;
+      mostrarToast(`${dados.length} lançamento(s) importado(s) com sucesso!`, 'success');
+      fecharPopupColarExcel();
+      carregarDados();
+    })
+    .catch(err => {
+      mostrarToast('Erro ao importar: ' + err.message, 'error');
+    });
+}
+
+// ============================================================
+// INICIALIZAÇÃO
+// ============================================================
 document.addEventListener('DOMContentLoaded',()=>{
   console.log('🚀 QNUTRI Financeiro — iniciando');
   try{ if(localStorage.getItem('qnutri_densidade')==='compacto'){ document.body.classList.add('modo-compacto'); document.getElementById('btnDensidade')?.classList.add('active'); } }catch(e){}
@@ -5332,6 +5483,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       fecharAnaliseDesvios();
       fecharPopupPDF();
       fecharConfigColunasPDF();
+      fecharPopupColarExcel();
       voltarAbaAnterior();
     }
   });
@@ -5341,6 +5493,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('popupDesvios')?.addEventListener('click',e=>{if(e.target.id==='popupDesvios')fecharAnaliseDesvios();});
   document.getElementById('popupPDF')?.addEventListener('click',e=>{if(e.target.id==='popupPDF')fecharPopupPDF();});
   document.getElementById('popupConfigColunas')?.addEventListener('click',e=>{if(e.target.id==='popupConfigColunas')fecharConfigColunasPDF();});
+  document.getElementById('popupColarExcel')?.addEventListener('click',e=>{if(e.target.id==='popupColarExcel')fecharPopupColarExcel();});
 });
 </script>
 </body>
