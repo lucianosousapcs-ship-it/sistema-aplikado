@@ -553,7 +553,7 @@
         }
         @keyframes bannerPulseRed {
             0%, 100% { box-shadow: 0 8px 32px rgba(239, 68, 68, 0.5), 0 0 60px rgba(239, 68, 68, 0.3); }
-            50% { box-shadow: 0 8px 40px rgba(239, 68, 68, 0.8), 0 0 80px rgba(239, 68, 68, 0.5); }
+            50% { box-shadow: 0 8px 40px rgba(239, 68, 68, 0.8), 0 0 80px rgba(239, 68, 68, 0.4); }
         }
         .banner-sangrias-desatualizadas .banner-icon {
             font-size: 22px;
@@ -1611,6 +1611,7 @@
                 <button class="modal-tab active" onclick="switchPopupTab('receitas', this)">Receitas</button>
                 <button class="modal-tab" onclick="switchPopupTab('despesas', this)">Despesas</button>
                 <button class="modal-tab" onclick="switchPopupTab('sangrias', this)">Sangrias</button>
+                <button class="modal-tab" onclick="switchPopupTab('receitasalik', this)">Receitas Alik</button>
             </div>
             <div id="popup-tab-receitas" class="tab-content active">
                 <div class="filters-row">
@@ -1769,6 +1770,65 @@
                         <span>Valor Total: <strong id="valorTotalSelecionadoSangriaPopup">R$ 0,00</strong></span>
                     </div>
                     <button class="btn btn-success btn-sm" onclick="salvarPlanosSangriasPopup()">Salvar Planos</button>
+                </div>
+            </div>
+            <!-- NOVA ABA RECEITAS ALIK -->
+            <div id="popup-tab-receitasalik" class="tab-content">
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <label>Busca</label>
+                        <input type="text" id="buscaReceitasAlik" placeholder="Cliente, valor..." oninput="filtrarReceitasAlik()">
+                    </div>
+                    <div class="filter-group">
+                        <label>Data Inicio</label>
+                        <input type="date" id="dataInicioReceitasAlik" onchange="filtrarReceitasAlik()">
+                    </div>
+                    <div class="filter-group">
+                        <label>Data Fim</label>
+                        <input type="date" id="dataFimReceitasAlik" onchange="filtrarReceitasAlik()">
+                    </div>
+                    <div class="filter-group">
+                        <label>Tipo</label>
+                        <select id="tipoReceitasAlik" onchange="filtrarReceitasAlik()">
+                            <option value="TODOS">Todos</option>
+                            <option value="RECEITA">Receita</option>
+                            <option value="DESPESA">Despesa</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select id="statusReceitasAlik" onchange="filtrarReceitasAlik()">
+                            <option value="TODOS">Todos</option>
+                            <option value="ATIVO">Ativo</option>
+                            <option value="INATIVO">Inativo</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-outline btn-sm" onclick="limparFiltrosReceitasAlik()">Limpar</button>
+                    </div>
+                </div>
+                <div class="data-table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Nº</th>
+                                <th>Tipo</th>
+                                <th>Cliente/Fornecedor</th>
+                                <th>Total Nota (R$)</th>
+                                <th>Plano de Contas</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaReceitasAlikBody"></tbody>
+                    </table>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap; gap:8px;">
+                    <div style="display:flex; gap:16px; font-size:12px; color:var(--text-muted);">
+                        <span>Registros: <strong id="totalReceitasAlik">0</strong></span>
+                        <span>Valor Total: <strong id="valorTotalReceitasAlik">R$ 0,00</strong></span>
+                    </div>
+                    <button class="btn btn-success btn-sm" onclick="atualizarReceitasAlik()">Atualizar Dados</button>
                 </div>
             </div>
         </div>
@@ -2479,6 +2539,7 @@
         let receitasDataReais = [];
         let despesasDataReais = [];
         let contasExtrasData = [];
+        let receitasAlikData = [];
         let vendasData = [];
         let comprasData = [];
         let todasSaidasPorData = {};
@@ -2518,6 +2579,12 @@
         let dataAtualizacaoSangrias = null;
         let dataAtualizacaoLancamentos = null;
         let bannerSangriasFechadoManualmente = false;
+
+        let filtroBuscaReceitasAlik = '';
+        let filtroDataInicioReceitasAlik = '';
+        let filtroDataFimReceitasAlik = '';
+        let filtroTipoReceitasAlik = 'TODOS';
+        let filtroStatusReceitasAlik = 'TODOS';
 
         const STORAGE_KEY_PLANOS_RECEITAS = 'planos_receitas_personalizados';
         const STORAGE_KEY_PLANOS_DESPESAS = 'planos_despesas_personalizados';
@@ -2704,6 +2771,13 @@
                 for (const s of contasExtrasData) {
                     if (extrairMes(s.dt_pagto) === mes && planoCorresponde(s.plano, identificador)) {
                         total += Number(s.valor) || 0;
+                    }
+                }
+            }
+            if (typeof receitasAlikData !== 'undefined') {
+                for (const a of receitasAlikData) {
+                    if (extrairMes(a.data) === mes && planoCorresponde(a.plano_contas, identificador)) {
+                        total += Number(a.total_nota) || 0;
                     }
                 }
             }
@@ -3279,6 +3353,25 @@
                             });
                         }
                     }
+                    if (typeof receitasAlikData !== 'undefined') {
+                        const alikFiltradas = receitasAlikData.filter(a => {
+                            const d = parseDataBr(a.data);
+                            return d && d >= new Date(dataInicio) && d <= new Date(dataFim);
+                        });
+                        const alikFiltradas2 = alikFiltradas.filter(a => {
+                            const p = a.plano_contas || '';
+                            return p === identificador || p === nomeConta || p.includes(codConta);
+                        });
+                        alikFiltradas2.forEach(a => {
+                            registros.push({
+                                data: a.data || '01/01/2000',
+                                tipo: 'RECEITA ALIK',
+                                desc: `${a.cliente_fornecedor || 'Cliente'} - ${a.numero || 'Movimento'}`,
+                                valor: Number(a.total_nota || 0),
+                                cor: '#3B82F6'
+                            });
+                        });
+                    }
                 }
                 registros.sort((a, b) => {
                     const da = parseDataBr(a.data), db = parseDataBr(b.data);
@@ -3466,6 +3559,132 @@
                 console.log('Dados reais carregados:', receitasDataReais.length, 'receitas,', despesasDataReais.length, 'despesas');
                 await gerarDREComSupabase();
             } catch (e) { console.error('Erro ao carregar dados reais:', e); }
+        }
+
+        // ============================================================
+        // RECEITAS ALIK (movimentos_extra)
+        // ============================================================
+        async function carregarReceitasAlik() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('movimentos_extra')
+                    .select('*')
+                    .order('data', { ascending: false });
+                if (error) throw error;
+                receitasAlikData = (data || []).map(item => ({
+                    id: item.id,
+                    numero: item.numero || '',
+                    data: item.data || '',
+                    nf_fiscal: item.nf_fiscal || '',
+                    tipo: item.tipo || '',
+                    pedido: item.pedido || '',
+                    cliente_fornecedor: item.cliente_fornecedor || 'NAO INFORMADO',
+                    total_nota: Number(item.total_nota || 0),
+                    plano_contas: item.plano_contas || '',
+                    status: item.status || 'ATIVO',
+                    cond_pag: item.cond_pag || ''
+                }));
+                console.log('Receitas Alik carregadas:', receitasAlikData.length);
+                renderizarTabelaReceitasAlik();
+                await gerarDREComSupabase();
+            } catch (e) {
+                console.error('Erro ao carregar receitas Alik:', e);
+                receitasAlikData = [];
+            }
+        }
+
+        function renderizarTabelaReceitasAlik() {
+            let filtradas = [...receitasAlikData];
+            if (filtroBuscaReceitasAlik) {
+                const b = filtroBuscaReceitasAlik.toLowerCase();
+                filtradas = filtradas.filter(r =>
+                    r.cliente_fornecedor.toLowerCase().includes(b) ||
+                    r.numero.toLowerCase().includes(b) ||
+                    r.nf_fiscal.toLowerCase().includes(b)
+                );
+            }
+            if (filtroDataInicioReceitasAlik) {
+                filtradas = filtradas.filter(r => {
+                    const d = parseDataBr(r.data);
+                    return d && d >= new Date(filtroDataInicioReceitasAlik);
+                });
+            }
+            if (filtroDataFimReceitasAlik) {
+                filtradas = filtradas.filter(r => {
+                    const d = parseDataBr(r.data);
+                    return d && d <= new Date(filtroDataFimReceitasAlik);
+                });
+            }
+            if (filtroTipoReceitasAlik !== 'TODOS') {
+                filtradas = filtradas.filter(r => {
+                    const t = (r.tipo || '').toUpperCase();
+                    return (filtroTipoReceitasAlik === 'RECEITA' && (t.includes('RECEITA') || t.includes('VENDA'))) ||
+                           (filtroTipoReceitasAlik === 'DESPESA' && (t.includes('DESPESA') || t.includes('COMPRA')));
+                });
+            }
+            if (filtroStatusReceitasAlik !== 'TODOS') {
+                filtradas = filtradas.filter(r => r.status === filtroStatusReceitasAlik);
+            }
+            filtradas.sort((a, b) => {
+                const da = parseDataBr(a.data), db = parseDataBr(b.data);
+                return db - da;
+            });
+            const tbody = document.getElementById('tabelaReceitasAlikBody');
+            if (!tbody) return;
+            if (filtradas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted);">Nenhum registro encontrado</td></tr>';
+                document.getElementById('totalReceitasAlik').innerText = '0';
+                document.getElementById('valorTotalReceitasAlik').innerHTML = 'R$ 0,00';
+                return;
+            }
+            let html = '';
+            let totalValor = 0;
+            for (const r of filtradas) {
+                totalValor += r.total_nota;
+                const tipoLabel = r.tipo || '-';
+                const statusLabel = r.status || 'ATIVO';
+                const statusColor = statusLabel === 'ATIVO' ? 'var(--accent-green)' : 'var(--accent-red)';
+                html += `<tr>
+                            <td>${formatarDataExibicao(r.data)}</td>
+                            <td>${escapeHtml(r.numero)}</td>
+                            <td>${escapeHtml(tipoLabel)}</td>
+                            <td>${escapeHtml(r.cliente_fornecedor)}</td>
+                            <td style="color:var(--accent-green); font-weight:600;">R$ ${formatMoneySimple(r.total_nota)}</td>
+                            <td>${escapeHtml(r.plano_contas || '(não definido)')}</td>
+                            <td style="color:${statusColor}; font-weight:600;">${statusLabel}</td>
+                        </tr>`;
+            }
+            tbody.innerHTML = html;
+            document.getElementById('totalReceitasAlik').innerText = filtradas.length;
+            document.getElementById('valorTotalReceitasAlik').innerHTML = `R$ ${formatMoneySimple(totalValor)}`;
+        }
+
+        function filtrarReceitasAlik() {
+            filtroBuscaReceitasAlik = document.getElementById('buscaReceitasAlik')?.value || '';
+            filtroDataInicioReceitasAlik = document.getElementById('dataInicioReceitasAlik')?.value || '';
+            filtroDataFimReceitasAlik = document.getElementById('dataFimReceitasAlik')?.value || '';
+            filtroTipoReceitasAlik = document.getElementById('tipoReceitasAlik')?.value || 'TODOS';
+            filtroStatusReceitasAlik = document.getElementById('statusReceitasAlik')?.value || 'TODOS';
+            renderizarTabelaReceitasAlik();
+        }
+
+        function limparFiltrosReceitasAlik() {
+            document.getElementById('buscaReceitasAlik').value = '';
+            document.getElementById('dataInicioReceitasAlik').value = '';
+            document.getElementById('dataFimReceitasAlik').value = '';
+            document.getElementById('tipoReceitasAlik').value = 'TODOS';
+            document.getElementById('statusReceitasAlik').value = 'TODOS';
+            filtroBuscaReceitasAlik = '';
+            filtroDataInicioReceitasAlik = '';
+            filtroDataFimReceitasAlik = '';
+            filtroTipoReceitasAlik = 'TODOS';
+            filtroStatusReceitasAlik = 'TODOS';
+            renderizarTabelaReceitasAlik();
+        }
+
+        async function atualizarReceitasAlik() {
+            await carregarReceitasAlik();
+            alert('Dados de Receitas Alik atualizados com sucesso!');
         }
 
         async function carregarContasExtras() {
@@ -3842,6 +4061,9 @@
                     await supabaseClient.from('contas_extras').update({ plano: s.plano }).eq('id', s.id);
                 }
                 renderizarSangriasPopup();
+            } else if (aba.id === 'popup-tab-receitasalik') {
+                alert('Esta aba não possui planos de conversão automáticos. Os dados são integrados diretamente ao DRE.');
+                return;
             }
             alert(`Atualizados: ${atualizados}, Ignorados: ${ignorados}`);
             await gerarDREComSupabase();
@@ -4104,9 +4326,6 @@
             document.getElementById('totalRegistrosCompras').innerText = filtradas.length;
         }
 
-        // ============================================================
-        // ✅ CORRIGIDO: SEMPRE busca do Supabase
-        // ============================================================
         async function atualizarCardSangriasCompras() {
             const el = document.getElementById('totalSangriasCompras');
             if (!el) return;
@@ -4155,9 +4374,6 @@
             atualizarTabelaCompras();
         }
 
-        // ============================================================
-        // ✅ CORRIGIDO: recarrega sangrias também
-        // ============================================================
         async function atualizarTelaCompras() {
             await carregarCompras();
             await carregarContasExtras();
@@ -4581,7 +4797,7 @@
             fecharTodosModais();
             document.getElementById('modalLancamentos').classList.add('active');
             if (receitasDataReais.length === 0) carregarDadosReaisLancamentos();
-            else { renderizarTabelaReceitas(); renderizarTabelaDespesas(); renderizarSangriasPopup(); }
+            else { renderizarTabelaReceitas(); renderizarTabelaDespesas(); renderizarSangriasPopup(); renderizarTabelaReceitasAlik(); }
         }
         function fecharModalLancamentos() { document.getElementById('modalLancamentos').classList.remove('active'); }
 
@@ -4673,6 +4889,10 @@
             document.getElementById('popup-tab-' + tab).classList.add('active');
             if (tab === 'sangrias' && contasExtrasData.length === 0) carregarContasExtras().then(() => renderizarSangriasPopup());
             else if (tab === 'sangrias') renderizarSangriasPopup();
+            else if (tab === 'receitasalik') {
+                if (receitasAlikData.length === 0) carregarReceitasAlik();
+                else renderizarTabelaReceitasAlik();
+            }
         }
 
         function fecharTodosModais() {
@@ -6089,6 +6309,7 @@
                 const { data: vendas } = await supabaseClient.from('vendas_alf').select('updated_at').order('updated_at', { ascending: false }).limit(1);
                 const { data: compras } = await supabaseClient.from('dados_m2').select('updated_at').order('updated_at', { ascending: false }).limit(1);
                 const { data: sangrias } = await supabaseClient.from('contas_extras').select('data_atualizacao').order('data_atualizacao', { ascending: false }).limit(1);
+                const { data: movExtra } = await supabaseClient.from('movimentos_extra').select('updated_at').order('updated_at', { ascending: false }).limit(1);
                 
                 let maisRecente = null;
                 if (vendas && vendas[0]?.updated_at) maisRecente = new Date(vendas[0].updated_at);
@@ -6098,6 +6319,10 @@
                 }
                 if (sangrias && sangrias[0]?.data_atualizacao) {
                     const d = new Date(sangrias[0].data_atualizacao);
+                    if (!maisRecente || d > maisRecente) maisRecente = d;
+                }
+                if (movExtra && movExtra[0]?.updated_at) {
+                    const d = new Date(movExtra[0].updated_at);
                     if (!maisRecente || d > maisRecente) maisRecente = d;
                 }
                 if (maisRecente) {
@@ -6287,20 +6512,18 @@
             try {
                 atualizarLoading(10, 'Carregando preferências...');
                 carregarPreferenciaTema();
-                const savedBar = localStorage.getItem('command_bar_visivel');
-                if (savedBar !== null) {
-                    barVisible = savedBar === 'true';
-                    const bar = document.getElementById('commandBar');
-                    if (bar) {
-                        bar.classList.toggle('hidden', !barVisible);
-                        const toggle = document.getElementById('toggleCmdBar');
-                        if (toggle) toggle.innerHTML = barVisible ? '▼' : '▲';
-                    }
-                    if (barVisible) {
-                        const restoreEl = document.getElementById('restoreCmdBar');
-                        if (restoreEl) restoreEl.remove();
-                    }
+                // FORÇA a barra de comandos a ficar visível
+                barVisible = true;
+                localStorage.setItem('command_bar_visivel', 'true');
+                const bar = document.getElementById('commandBar');
+                if (bar) {
+                    bar.classList.remove('hidden');
+                    const toggle = document.getElementById('toggleCmdBar');
+                    if (toggle) toggle.innerHTML = '▼';
                 }
+                const restoreEl = document.getElementById('restoreCmdBar');
+                if (restoreEl) restoreEl.remove();
+
                 atualizarLoading(20, 'Carregando Plano de contas...');
                 carregarPlanoContas();
                 await carregarRegrasConversaoSupabase();
@@ -6308,6 +6531,8 @@
                 await carregarPlanoContasSupabase();
                 atualizarLoading(50, 'Carregando Lançamentos...');
                 await carregarDadosReaisLancamentos();
+                atualizarLoading(60, 'Carregando Receitas Alik...');
+                await carregarReceitasAlik();
                 atualizarLoading(65, 'Carregando Sangrias (Contas extras)...');
                 await carregarContasExtras();
                 
