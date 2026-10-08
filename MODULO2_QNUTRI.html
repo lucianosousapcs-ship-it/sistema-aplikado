@@ -610,7 +610,7 @@ table tfoot td.cell-money.info,
 .action-popover .pop-divider{height:1px;background:var(--border);margin:3px 5px;}
 
 /* ============================================================
-   MODAIS — SEM ANIMAÇÃO, SEM BLUR, FECHAMENTO INSTANTÂNEO
+   MODAIS
    ============================================================ */
 .modal-overlay{
   display:none;position:fixed;inset:0;
@@ -1477,6 +1477,10 @@ table tfoot td.cell-money.info,
   background:#fff7ed !important;
   box-shadow:inset 3px 0 0 var(--accent);
 }
+.dre-bloco table tbody tr.hover-destaque td{
+  background:#fed7aa !important;
+  box-shadow:inset 3px 0 0 var(--accent);
+}
 .dre-bloco table tbody td:first-child,
 .dre-bloco table thead th:first-child{
   width:28%;max-width:220px;
@@ -2187,6 +2191,7 @@ table tfoot td.cell-money.info,
       <button class="nav-pill" onclick="abrirDRE()">DRE</button>
       <button class="nav-pill" onclick="abrirResultadosExecutivos()">Resumo Executivo</button>
       <button class="nav-pill" onclick="abrirAnaliseDesvios()">Desvios</button>
+      <button class="nav-pill" onclick="abrirModalContasNaoExibidas()" style="background:#fef3e2;border-color:#f0d9b8;color:#8f6a0a;"><i class="fas fa-eye-slash"></i> Contas Não Exibidas</button>
     </nav>
     <div class="nav-actions">
       <button class="btn-icon-top" onclick="abrirBuscaGlobal()" title="Busca Global (Ctrl+K)"><i class="fas fa-search"></i></button>
@@ -2302,6 +2307,44 @@ table tfoot td.cell-money.info,
       <div>
         <button class="btn-outline" onclick="fecharConfigColunasPDF()">Fechar</button>
         <button class="apply" onclick="aplicarConfigColunasPDF()"><i class="fas fa-check"></i> Aplicar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POPUP: CONTAS NÃO EXIBIDAS -->
+<div id="popupContasNaoExibidas" class="modal-overlay">
+  <div class="modal-content" style="max-width:1100px;width:95vw;max-height:92vh;padding:0;overflow:hidden;display:flex;flex-direction:column;">
+    <div style="background:linear-gradient(135deg,#ea580c 0%,#c2410c 50%,#9a3412 100%);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:12px;color:#fff;">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid rgba(255,255,255,.18);">
+          <i class="fas fa-eye-slash"></i>
+        </div>
+        <div>
+          <h2 style="font-size:14px;font-weight:700;letter-spacing:.2px;line-height:1.1;">Contas Não Exibidas nas Telas</h2>
+          <p style="font-size:10px;font-weight:500;opacity:.75;margin-top:2px;">Contas presentes nos lançamentos que não estão aparecendo nas telas de Lançamentos, Receitas, Despesas e Consolidado</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-excel" onclick="exportarExcelContasNaoExibidas()" style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);color:#fff;font-weight:600;padding:6px 12px;border-radius:7px;font-size:11px;"><i class="fas fa-file-excel"></i> Excel</button>
+        <button class="modal-close" onclick="fecharModalContasNaoExibidas()" style="background:rgba(255,255,255,.08);color:#fff;border-radius:7px;width:32px;height:32px;border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;">✕</button>
+      </div>
+    </div>
+    <div style="padding:12px 22px;background:#faf8f5;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px;align-items:center;flex-shrink:0;">
+      <div class="search-box" style="position:relative;flex:1 1 auto;min-width:200px;max-width:360px;">
+        <input type="text" id="buscaContasNaoExibidas" placeholder="Buscar conta, código..." oninput="renderizarContasNaoExibidas()" style="width:100%;padding:6px 10px 6px 30px;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:inherit;color:var(--text-primary);outline:none;height:30px;">
+        <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#c0b8ac;font-size:10px;pointer-events:none;"></i>
+      </div>
+      <div class="segmented-control" id="segContasNaoExibidasTipo" style="display:inline-flex;background:linear-gradient(180deg,#faf8f5 0%,#f5f0ea 100%);border:1px solid var(--border);border-radius:10px;padding:3px;gap:3px;">
+        <button class="segmented-btn active" data-value="__ALL__" onclick="filtrarContasNaoExibidasTipo('')" style="padding:7px 16px;border:none;border-radius:7px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;background:var(--gradient-header);color:#fff;box-shadow:0 2px 8px rgba(194,65,12,.20);"><i class="fas fa-globe"></i> Todos</button>
+        <button class="segmented-btn" data-value="RECEITA" onclick="filtrarContasNaoExibidasTipo('RECEITA')" style="padding:7px 16px;border:none;border-radius:7px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-secondary);"><i class="fas fa-arrow-up"></i> Receitas</button>
+        <button class="segmented-btn" data-value="DESPESA" onclick="filtrarContasNaoExibidasTipo('DESPESA')" style="padding:7px 16px;border:none;border-radius:7px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-secondary);"><i class="fas fa-arrow-down"></i> Despesas</button>
+      </div>
+      <div style="margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:600;" id="contadorContasNaoExibidas"></div>
+    </div>
+    <div id="contasNaoExibidasWrapper" style="flex:1;overflow:auto;padding:14px 22px 22px;background:#faf8f5;min-height:0;">
+      <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;font-weight:600;">
+        <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Carregando contas...
       </div>
     </div>
   </div>
@@ -2806,13 +2849,71 @@ function aplicarGrupoRegionalEmLancamentos(lista){return lista.map(l=>({...l,_gr
 
 function getPlanoCodigo(valor){if(!valor)return'';const s=String(valor).trim();if(s.includes(' - '))return s.split(' - ')[0].trim();if(/^[\d.]+$/.test(s))return s;return'';}
 function getPlanoNome(valor){if(!valor)return'';const s=String(valor).trim();if(s.includes(' - '))return s.split(' - ').slice(1).join(' - ').trim();if(!/^[\d.]+$/.test(s))return s;return'';}
+
+// ============================================================
+// ALIASES DE CONTAS (UNIFICAÇÃO DE NOMES EQUIVALENTES)
+// ============================================================
+const ALIASES_CONTA = {
+  'COMPRA MERCADORIAS': 'COMPRA MERCADORIA',
+  'COMPRA DE MERCADORIA': 'COMPRA MERCADORIA',
+  'COMPRA DE MERCADORIAS': 'COMPRA MERCADORIA',
+  'COMPRAS DE MERCADORIA': 'COMPRA MERCADORIA',
+  'COMPRAS DE MERCADORIAS': 'COMPRA MERCADORIA',
+  'COMPRA MERCADORIA ': 'COMPRA MERCADORIA',
+  'CMV': 'COMPRA MERCADORIA',
+  'CUSTO MERCADORIA': 'COMPRA MERCADORIA',
+  'CUSTO DE MERCADORIA': 'COMPRA MERCADORIA',
+  'CUSTO DAS MERCADORIAS': 'COMPRA MERCADORIA',
+  'CUSTO MERCADORIAS VENDIDAS': 'COMPRA MERCADORIA',
+  'CUSTO DAS MERCADORIAS VENDIDAS': 'COMPRA MERCADORIA'
+};
+
+function aplicarAliasConta(nomeNormalizado){
+  if(!nomeNormalizado) return nomeNormalizado;
+  return ALIASES_CONTA[nomeNormalizado] || nomeNormalizado;
+}
+
+// ============================================================
+// LOCALIZAÇÃO DE PLANO DE CONTAS
+// ============================================================
 function encontrarPlano(valor){
-  if(!valor)return null;
-  const cn=normalizarCodigo(getPlanoCodigo(valor));const nn=normalizarTexto(getPlanoNome(valor));
-  if(cn){const p=planosContas.find(x=>normalizarCodigo(x.codigo)===cn);if(p)return p;}
-  if(nn){const p=planosContas.find(x=>normalizarTexto(x.nome)===nn);if(p)return p;}
+  if(!valor) return null;
+
+  const codigo = getPlanoCodigo(valor);
+  const nome = getPlanoNome(valor);
+  const cn = normalizarCodigo(codigo);
+  const nn = normalizarNome(nome);
+
+  if(cn){
+    const p = planosContas.find(x => normalizarCodigo(x.codigo) === cn);
+    if(p) return p;
+  }
+
+  if(nn){
+    const p = planosContas.find(x => normalizarNome(x.nome) === nn);
+    if(p) return p;
+
+    const nomeAlias = aplicarAliasConta(nn);
+    if(nomeAlias !== nn){
+      const p2 = planosContas.find(x => aplicarAliasConta(normalizarNome(x.nome)) === nomeAlias);
+      if(p2) return p2;
+    }
+  }
+
+  const inteiro = normalizarNome(valor);
+  if(inteiro){
+    const p = planosContas.find(x => normalizarNome(x.nome) === inteiro);
+    if(p) return p;
+    const inteiroAlias = aplicarAliasConta(inteiro);
+    if(inteiroAlias !== inteiro){
+      const p2 = planosContas.find(x => aplicarAliasConta(normalizarNome(x.nome)) === inteiroAlias);
+      if(p2) return p2;
+    }
+  }
+
   return null;
 }
+
 function getPlanoLabel(valor){
   if(!valor)return'';
   const p=encontrarPlano(valor);
@@ -2827,6 +2928,50 @@ function getChavePlano(valor,tipo){
   if(!s)return tipo==='RECEITA'?'RECEBIMENTOS':'OUTROS';
   if(s.includes(' - '))return s.split(' - ').slice(1).join(' - ').trim();
   return s;
+}
+
+function chaveCanonicaConta(valor, tipo){
+  const p = encontrarPlano(valor);
+  if (p && p.nome) {
+    const n = normalizarNome(p.nome);
+    return aplicarAliasConta(n);
+  }
+
+  const s = String(valor || '').trim();
+  let n = '';
+  if (s.includes(' - ')) {
+    n = normalizarNome(s.split(' - ').slice(1).join(' - ').trim());
+  } else {
+    n = normalizarNome(s);
+  }
+
+  if (!n) return tipo === 'RECEITA' ? 'RECEBIMENTOS' : 'OUTROS';
+  return aplicarAliasConta(n);
+}
+
+const ALIASES_CMV = [
+  'COMPRA MERCADORIA','COMPRA MERCADORIAS','COMPRA DE MERCADORIA','COMPRA DE MERCADORIAS',
+  'COMPRAS DE MERCADORIA','COMPRAS DE MERCADORIAS','CMV','CUSTO MERCADORIA','CUSTO DE MERCADORIA',
+  'CUSTO DAS MERCADORIAS','CUSTO MERCADORIAS VENDIDAS','CUSTO DAS MERCADORIAS VENDIDAS'
+];
+
+function somaPorAliases(mapa, aliasesCanonicos){
+  const alvos = new Set();
+  aliasesCanonicos.forEach(k => {
+    const key = normalizarNome(k);
+    alvos.add(aplicarAliasConta(key));
+    alvos.add(key);
+  });
+
+  let total = 0;
+  Object.keys(mapa).forEach(chaveMapa => {
+    const chaveNormalizada = normalizarNome(chaveMapa);
+    const chaveCanonica = aplicarAliasConta(chaveNormalizada);
+    if (alvos.has(chaveCanonica) || alvos.has(chaveNormalizada)) {
+      total += mapa[chaveMapa].realizado || 0;
+    }
+  });
+  return total;
 }
 
 function classificarContaDRE(nomeConta, tipoLancamento){
@@ -3008,6 +3153,9 @@ function popularSelectsGrupoRegional(){
   if(Array.from(sel.options).some(o=>o.value===va))sel.value=va;
 }
 
+// ============================================================
+// CARREGAR DADOS COM PAGINAÇÃO
+// ============================================================
 async function carregarDados(){
   const alertBox=document.getElementById('alertErro');
   if(alertBox)alertBox.style.display='none';
@@ -3015,13 +3163,48 @@ async function carregarDados(){
   try{
     if(!supabaseClient)supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
     await carregarPlanosContas();
-    const {data,error}=await supabaseClient.from('qnutri_lancamentos').select('*').order('data',{ascending:false,nullsFirst:false});
-    if(error){
-      mostrarToast('Erro: '+error.message,'error');
-      if(alertBox){document.getElementById('alertErroMsg').textContent=error.message;alertBox.style.display='block';}
+
+    let todos = [];
+    const PAGE_SIZE = 1000;
+    let pagina = 0;
+    let continuar = true;
+    let erroCarregamento = null;
+
+    while (continuar) {
+      const { data, error } = await supabaseClient
+        .from('qnutri_lancamentos')
+        .select('*')
+        .order('data', { ascending: false, nullsFirst: false })
+        .range(pagina * PAGE_SIZE, (pagina + 1) * PAGE_SIZE - 1);
+
+      if (error) {
+        erroCarregamento = error;
+        break;
+      }
+
+      if (data && data.length > 0) {
+        todos = todos.concat(data);
+        pagina++;
+        if (data.length < PAGE_SIZE) {
+          continuar = false;
+        }
+      } else {
+        continuar = false;
+      }
+
+      if (pagina > 50) {
+        continuar = false;
+        console.warn('Limite de segurança de paginação atingido (50 páginas).');
+      }
+    }
+
+    if (erroCarregamento) {
+      mostrarToast('Erro: '+erroCarregamento.message,'error');
+      if(alertBox){document.getElementById('alertErroMsg').textContent=erroCarregamento.message;alertBox.style.display='block';}
       lancamentos=[];renderizarTudo();return;
     }
-    lancamentos=aplicarGrupoRegionalEmLancamentos(data||[]);
+
+    lancamentos = aplicarGrupoRegionalEmLancamentos(todos);
     popularSelectsGrupoRegional();
     atualizarFiltrosDinamicos();
     renderizarTudo();
@@ -3677,6 +3860,207 @@ function exportarExcelPlanoContas(){
   XLSX.writeFile(wb,`QNUTRI_PlanoContas_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
+// ============================================================
+// CONTAS NÃO EXIBIDAS
+// ============================================================
+function obterContasExibidas() {
+  const contasExibidas = new Set();
+  lancamentos.forEach(l => {
+    const plano = getPlanoLabel(l.plano_contas);
+    if (plano) contasExibidas.add(plano);
+  });
+  return contasExibidas;
+}
+
+function obterContasNaoExibidas() {
+  const contasExibidas = obterContasExibidas();
+  const contasTodos = new Set();
+
+  planosContas.forEach(p => {
+    contasTodos.add(p.nome);
+  });
+
+  lancamentos.forEach(l => {
+    const plano = getPlanoLabel(l.plano_contas);
+    if (plano) contasTodos.add(plano);
+  });
+
+  const naoExibidas = [];
+  contasTodos.forEach(conta => {
+    if (!contasExibidas.has(conta)) {
+      const plano = planosContas.find(p => p.nome === conta);
+      const codigo = plano ? plano.codigo : (lancamentos.find(l => getPlanoLabel(l.plano_contas) === conta)?.plano_contas || '');
+      naoExibidas.push({
+        conta: conta,
+        codigo: codigo,
+        tipo: plano ? plano.tipo : 'DESCONHECIDO',
+        grupo: plano ? plano.grupo : '',
+        ativo: plano ? plano.ativo !== false : null,
+        origem: plano ? 'Plano de Contas' : 'Lançamentos'
+      });
+    }
+  });
+
+  naoExibidas.sort((a, b) => {
+    const ca = normalizarCodigo(a.codigo);
+    const cb = normalizarCodigo(b.codigo);
+    return ca.localeCompare(cb, undefined, { numeric: true });
+  });
+
+  return naoExibidas;
+}
+
+let contasNaoExibidasCache = [];
+let filtroContasNaoExibidasTipo = '';
+
+function abrirModalContasNaoExibidas() {
+  pushPopupHistory('popupContasNaoExibidas', fecharModalContasNaoExibidas);
+  document.getElementById('popupContasNaoExibidas').classList.add('active');
+  contasNaoExibidasCache = obterContasNaoExibidas();
+  filtroContasNaoExibidasTipo = '';
+  document.querySelectorAll('#segContasNaoExibidasTipo .segmented-btn').forEach(btn => {
+    const isTodos = btn.dataset.value === '__ALL__';
+    btn.style.background = isTodos ? 'var(--gradient-header)' : 'transparent';
+    btn.style.color = isTodos ? '#fff' : 'var(--text-secondary)';
+    btn.style.boxShadow = isTodos ? '0 2px 8px rgba(194,65,12,.20)' : 'none';
+  });
+  document.getElementById('buscaContasNaoExibidas').value = '';
+  renderizarContasNaoExibidas();
+}
+
+function fecharModalContasNaoExibidas() {
+  document.getElementById('popupContasNaoExibidas').classList.remove('active');
+}
+
+function filtrarContasNaoExibidasTipo(tipo) {
+  filtroContasNaoExibidasTipo = tipo;
+  document.querySelectorAll('#segContasNaoExibidasTipo .segmented-btn').forEach(btn => {
+    const ativo = btn.dataset.value === (tipo || '__ALL__');
+    btn.style.background = ativo ? 'var(--gradient-header)' : 'transparent';
+    btn.style.color = ativo ? '#fff' : 'var(--text-secondary)';
+    btn.style.boxShadow = ativo ? '0 2px 8px rgba(194,65,12,.20)' : 'none';
+  });
+  renderizarContasNaoExibidas();
+}
+
+function renderizarContasNaoExibidas() {
+  const wrapper = document.getElementById('contasNaoExibidasWrapper');
+  const contador = document.getElementById('contadorContasNaoExibidas');
+  const termo = (document.getElementById('buscaContasNaoExibidas')?.value || '').toLowerCase().trim();
+
+  let lista = contasNaoExibidasCache;
+
+  if (filtroContasNaoExibidasTipo) {
+    lista = lista.filter(c => c.tipo === filtroContasNaoExibidasTipo);
+  }
+
+  if (termo) {
+    lista = lista.filter(c =>
+      c.conta.toLowerCase().includes(termo) ||
+      c.codigo.toLowerCase().includes(termo) ||
+      c.grupo.toLowerCase().includes(termo)
+    );
+  }
+
+  if (contador) {
+    contador.textContent = `${lista.length} conta(s) não exibida(s) de ${contasNaoExibidasCache.length} total`;
+  }
+
+  if (lista.length === 0) {
+    wrapper.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);padding:40px 20px;">
+        <i class="fas fa-check-circle" style="font-size:48px;color:var(--success);margin-bottom:16px;"></i>
+        <p style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">Nenhuma conta não exibida encontrada</p>
+        <p style="font-size:12px;color:var(--text-muted);">Todas as contas do plano de contas estão sendo exibidas nas telas.</p>
+      </div>`;
+    return;
+  }
+
+  let html = `<table style="width:100%;border-collapse:separate;border-spacing:0;font-size:11.5px;background:#f5f5f5;border:1px solid var(--border-strong);border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(120,80,20,.05);table-layout:fixed;">
+    <thead>
+      <tr>
+        <th style="background:linear-gradient(180deg,#ea580c 0%,#c2410c 100%);color:#fff;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:11px 10px;text-align:left;white-space:nowrap;position:sticky;top:0;z-index:3;">Código</th>
+        <th style="background:linear-gradient(180deg,#ea580c 0%,#c2410c 100%);color:#fff;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:11px 10px;text-align:left;white-space:nowrap;position:sticky;top:0;z-index:3;">Conta / Plano de Contas</th>
+        <th style="background:linear-gradient(180deg,#ea580c 0%,#c2410c 100%);color:#fff;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:11px 10px;text-align:left;white-space:nowrap;position:sticky;top:0;z-index:3;">Tipo</th>
+        <th style="background:linear-gradient(180deg,#ea580c 0%,#c2410c 100%);color:#fff;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:11px 10px;text-align:left;white-space:nowrap;position:sticky;top:0;z-index:3;">Grupo</th>
+        <th style="background:linear-gradient(180deg,#ea580c 0%,#c2410c 100%);color:#fff;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:11px 10px;text-align:center;white-space:nowrap;position:sticky;top:0;z-index:3;">Ativo</th>
+        <th style="background:linear-gradient(180deg,#ea580c 0%,#c2410c 100%);color:#fff;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:11px 10px;text-align:center;white-space:nowrap;position:sticky;top:0;z-index:3;">Origem</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  lista.forEach((c, idx) => {
+    const tipoBadge = c.tipo === 'RECEITA'
+      ? '<span style="background:#e6f5ee;color:#0a5e3a;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:600;border:1px solid #a7d9c0;">RECEITA</span>'
+      : c.tipo === 'DESPESA'
+      ? '<span style="background:#fdeaea;color:#8f2626;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:600;border:1px solid #f0c0c0;">DESPESA</span>'
+      : '<span style="background:#fef3e2;color:#8f6a0a;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:600;border:1px solid #f0d9b8;">DESCONHECIDO</span>';
+
+    const ativoBadge = c.ativo === true
+      ? '<span style="background:#e6f5ee;color:#0a5e3a;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:600;border:1px solid #a7d9c0;">Sim</span>'
+      : c.ativo === false
+      ? '<span style="background:#fdeaea;color:#8f2626;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:600;border:1px solid #f0c0c0;">Não</span>'
+      : '<span style="background:#f5f0ea;color:#8a7e72;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:600;">—</span>';
+
+    const origemBadge = c.origem === 'Plano de Contas'
+      ? '<span style="background:#e8f1f8;color:#14557a;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:600;border:1px solid #b8d8f0;">Plano de Contas</span>'
+      : '<span style="background:#f3eefa;color:#553080;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:600;border:1px solid #d8c8f0;">Lançamentos</span>';
+
+    const bgRow = idx % 2 === 0 ? '#f5f5f5' : '#ececec';
+
+    html += `<tr style="background:${bgRow};">
+      <td style="padding:9px 10px;border-bottom:1px solid #e0ddd8;border-right:1px solid #ececec;font-size:11.5px;color:var(--text-primary);white-space:nowrap;font-weight:600;">${escapeHtml(c.codigo || '—')}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid #e0ddd8;border-right:1px solid #ececec;font-size:11.5px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeAttr(c.conta)}">${escapeHtml(c.conta)}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid #e0ddd8;border-right:1px solid #ececec;font-size:11.5px;">${tipoBadge}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid #e0ddd8;border-right:1px solid #ececec;font-size:11.5px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.grupo || '—')}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid #e0ddd8;border-right:1px solid #ececec;font-size:11.5px;text-align:center;">${ativoBadge}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid #e0ddd8;font-size:11.5px;text-align:center;">${origemBadge}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  wrapper.innerHTML = html;
+}
+
+function exportarExcelContasNaoExibidas() {
+  const lista = contasNaoExibidasCache.filter(c => {
+    if (filtroContasNaoExibidasTipo && c.tipo !== filtroContasNaoExibidasTipo) return false;
+    const termo = (document.getElementById('buscaContasNaoExibidas')?.value || '').toLowerCase().trim();
+    if (termo) {
+      return c.conta.toLowerCase().includes(termo) || c.codigo.toLowerCase().includes(termo) || c.grupo.toLowerCase().includes(termo);
+    }
+    return true;
+  });
+
+  if (lista.length === 0) {
+    mostrarToast('Nenhuma conta para exportar.', 'warning');
+    return;
+  }
+
+  const rows = [
+    ['Contas Não Exibidas nas Telas'],
+    [],
+    ['Código', 'Conta / Plano de Contas', 'Tipo', 'Grupo', 'Ativo', 'Origem']
+  ];
+
+  lista.forEach(c => {
+    rows.push([
+      c.codigo || '',
+      c.conta,
+      c.tipo,
+      c.grupo || '',
+      c.ativo === true ? 'Sim' : c.ativo === false ? 'Não' : '—',
+      c.origem
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 14 }, { wch: 40 }, { wch: 14 }, { wch: 22 }, { wch: 10 }, { wch: 18 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Contas Não Exibidas');
+  XLSX.writeFile(wb, `QNUTRI_ContasNaoExibidas_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
 function montarDadosLancamentosExcel(lista){
   const header=['Data','Pago em','NF','Tipo','Grupo/Regional','Fornecedor/Cliente','Plano de Contas','Cadastro Inicial (ANTIGO)','Projetado (R$)','Realizado (R$)','Diferença (R$)','Situação','Usuário','Banco','Observação'];
   const rows=[header];
@@ -3984,7 +4368,7 @@ function gerarTabelaPDFPivotComColunas(dados, titulo, labelCol, selecionadas) {
   const totalQtd = dados.reduce((s,d)=>s+d.qtd,0);
 
   const extratores = {
-    chave: d => d.chave,
+    chave: d => d.label || d.chave,
     projetado: d => formatarMoeda(d.totalP),
     realizado: d => formatarMoeda(d.totalR),
     diferenca: d => formatarMoeda(d.totalD),
@@ -4053,7 +4437,7 @@ function gerarTabelaPDFDesviosComColunas(dados, selecionadas) {
   const totQ = dados.reduce((s,d)=>s+d.qtd,0);
 
   const extratores = {
-    conta: d => d.chave,
+    conta: d => d.label || d.chave,
     projetado: d => formatarMoeda(d.proj),
     realizado: d => formatarMoeda(d.real),
     desvio: d => formatarMoeda(d.diff),
@@ -4156,11 +4540,13 @@ function gerarTabelaPDFConsolidado(selecionadas) {
   const mostrarProjetado = sel['projetado'] !== false;
   const mostrarRealizado = sel['realizado'] !== false;
 
+  // ✅ FILTRO DE SITUAÇÃO APLICADO AQUI (mesmo critério das abas Despesas/Receitas)
   const baseFiltro = lancamentos.filter(l => {
     if (execMesesConsolidado.length > 0) {
       const mm = getMes(l.data);
       if (!mm || !execMesesConsolidado.includes(mm)) return false;
     }
+    if (execSituacoes.length > 0 && !execSituacoes.includes((l.situacao || '').toUpperCase())) return false;
     if (termo) {
       const txt = `${l.fornecedor || ''} ${l.nf || ''} ${getPlanoLabel(l.plano_contas)} ${l.cadastro_inicial || ''}`.toLowerCase();
       if (!txt.includes(termo)) return false;
@@ -4170,32 +4556,43 @@ function gerarTabelaPDFConsolidado(selecionadas) {
 
   const despesasSulFlu = baseFiltro.filter(l => l.tipo === 'DESPESA' && getGrupoRegionalLanc(l) === 'SUL FLUMINENSE');
   const agrupSulFlu = agruparPorPlanoContas(despesasSulFlu);
-  const contasSulFlu = Object.keys(agrupSulFlu).filter(c => agrupSulFlu[c].realizado !== 0 || agrupSulFlu[c].projetado !== 0).sort();
+  const chavesSulFlu = Object.keys(agrupSulFlu).filter(c => agrupSulFlu[c].realizado !== 0 || agrupSulFlu[c].projetado !== 0)
+    .sort((a,b)=>{
+      const ca = agrupSulFlu[a].codigo || '';
+      const cb = agrupSulFlu[b].codigo || '';
+      return ca.localeCompare(cb, undefined, { numeric: true });
+    });
   let totProjSulFlu = 0, totRealSulFlu = 0;
-  const linhasSulFlu = contasSulFlu.map(conta => {
-    const d = agrupSulFlu[conta] || { projetado: 0, realizado: 0, qtd: 0 };
+  const linhasSulFlu = chavesSulFlu.map(chave => {
+    const d = agrupSulFlu[chave];
     totProjSulFlu += d.projetado; totRealSulFlu += d.realizado;
-    return { conta, ...d };
+    return { conta: d.label, codigo: d.codigo, chave, ...d };
   });
 
   const despesasLiquigas = baseFiltro.filter(l => l.tipo === 'DESPESA' && getGrupoRegionalLanc(l) === 'LIQUIGÁS');
   const agrupLiquigas = agruparPorPlanoContas(despesasLiquigas);
-  const contasLiquigas = Object.keys(agrupLiquigas).filter(c => agrupLiquigas[c].realizado !== 0 || agrupLiquigas[c].projetado !== 0).sort();
+  const chavesLiquigas = Object.keys(agrupLiquigas).filter(c => agrupLiquigas[c].realizado !== 0 || agrupLiquigas[c].projetado !== 0)
+    .sort((a,b)=>{
+      const ca = agrupLiquigas[a].codigo || '';
+      const cb = agrupLiquigas[b].codigo || '';
+      return ca.localeCompare(cb, undefined, { numeric: true });
+    });
   let totProjLiquigas = 0, totRealLiquigas = 0;
-  const linhasLiquigas = contasLiquigas.map(conta => {
-    const d = agrupLiquigas[conta] || { projetado: 0, realizado: 0, qtd: 0 };
+  const linhasLiquigas = chavesLiquigas.map(chave => {
+    const d = agrupLiquigas[chave];
     totProjLiquigas += d.projetado; totRealLiquigas += d.realizado;
-    return { conta, ...d };
+    return { conta: d.label, codigo: d.codigo, chave, ...d };
   });
 
   const todasDespesas = baseFiltro.filter(l => l.tipo === 'DESPESA');
   const agrupGeral = agruparPorPlanoContas(todasDespesas);
-  const contasDRE = Object.keys(agrupGeral).filter(c => agrupGeral[c].realizado !== 0).sort((a, b) => agrupGeral[b].realizado - agrupGeral[a].realizado);
+  const chavesDRE = Object.keys(agrupGeral).filter(c => agrupGeral[c].realizado !== 0)
+    .sort((a, b) => agrupGeral[b].realizado - agrupGeral[a].realizado);
   let totalDRE = 0;
-  const linhasDRE = contasDRE.map(conta => {
-    const d = agrupGeral[conta] || { projetado: 0, realizado: 0, qtd: 0 };
+  const linhasDRE = chavesDRE.map(chave => {
+    const d = agrupGeral[chave];
     totalDRE += d.realizado;
-    return { conta, ...d, valor: d.realizado };
+    return { conta: d.label, codigo: d.codigo, chave, valor: d.realizado };
   });
 
   const baseRecebimentos = lancamentos.filter(l => {
@@ -4212,7 +4609,7 @@ function gerarTabelaPDFConsolidado(selecionadas) {
   const receitasLiquigas = baseRecebimentos.filter(l => getGrupoRegionalLanc(l) === 'LIQUIGÁS').reduce((s, l) => s + (parseFloat(l.valor_realizado) || 0), 0);
   const totalRecebimentos = receitasSulFlu + receitasLiquigas;
 
-  const cmv = agrupGeral['COMPRA MERCADORIA']?.realizado || 0;
+  const cmv = somaPorAliases(agrupGeral, ALIASES_CMV);
   const cpv = totalDRE - cmv;
   const resultadoGerencial = totalRecebimentos - totalDRE;
 
@@ -4392,7 +4789,7 @@ function exportarPDFResultadosExecutivos() {
   const base = getBaseExec();
   if (!base.length) { mostrarToast('Nada para exportar.', 'warning'); return; }
   let agrupador, labelCol;
-  if (execPivotSub === 'conta') { agrupador = (l) => getPlanoLabel(l.plano_contas) || 'SEM PLANO'; labelCol = 'Plano de Contas'; }
+  if (execPivotSub === 'conta') { agrupador = (l) => chaveCanonicaConta(l.plano_contas, l.tipo); labelCol = 'Plano de Contas'; }
   else if (execPivotSub === 'cliente') { agrupador = (l) => l.fornecedor || 'SEM FORNECEDOR'; labelCol = 'Cliente/Fornecedor'; }
   else if (execPivotSub === 'grupo') { agrupador = (l) => getGrupoRegionalLanc(l); labelCol = 'Grupo/Regional'; }
   else { agrupador = (l) => (l.situacao || 'SEM SITUAÇÃO').toUpperCase(); labelCol = 'Situação'; }
@@ -4402,7 +4799,9 @@ function exportarPDFResultadosExecutivos() {
     const p = parseFloat(l.valor_projetado) || 0;
     const r = parseFloat(l.valor_realizado) || 0;
     const d = r - p;
-    if (!mapa[chave]) mapa[chave] = { totalP: 0, totalR: 0, totalD: 0, qtd: 0 };
+    const pl = encontrarPlano(l.plano_contas);
+    const label = (pl && pl.nome) ? pl.nome : (getPlanoLabel(l.plano_contas) || chave);
+    if (!mapa[chave]) mapa[chave] = { totalP: 0, totalR: 0, totalD: 0, qtd: 0, label };
     mapa[chave].totalP += p;
     mapa[chave].totalR += r;
     mapa[chave].totalD += d;
@@ -4429,8 +4828,11 @@ function exportarPDFDesvios() {
   if (!base.length) { mostrarToast('Nada para exportar.', 'warning'); return; }
   const mapa = {};
   base.forEach(l => {
-    const chave = getPlanoLabel(l.plano_contas) || getChavePlano(l.plano_contas, l.tipo);
-    if (!mapa[chave]) mapa[chave] = { proj: 0, real: 0, diff: 0, qtd: 0 };
+    const chave = chaveCanonicaConta(l.plano_contas, l.tipo);
+    if (!mapa[chave]) {
+      const pl = encontrarPlano(l.plano_contas);
+      mapa[chave] = { proj: 0, real: 0, diff: 0, qtd: 0, label: (pl && pl.nome) ? pl.nome : (getPlanoLabel(l.plano_contas) || chave) };
+    }
     const p = parseFloat(l.valor_projetado) || 0;
     const r = parseFloat(l.valor_realizado) || 0;
     mapa[chave].proj += p;
@@ -4708,7 +5110,7 @@ function getBaseExec(){
   return lancamentos.filter(l=>{
     if(execPivotMain!=='consolidado' && l.tipo!==tipoPrincipal)return false;
     if(execSituacoes.length>0&&!execSituacoes.includes((l.situacao||'').toUpperCase()))return false;
-    if(execGrupo && getGrupoRegionalLanc(l)!==execGrupo)return false;
+    if(execGrupo && getGrupoRegionalLanc(l)!==execGrupo) return false;
     if(execTipos.length>0&&!execTipos.includes(l.tipo))return false;
     if(execPivotMain === 'consolidado'){
       if(execMesesConsolidado.length > 0){ const mm = getMes(l.data); if(!mm || !execMesesConsolidado.includes(mm)) return false; }
@@ -4726,38 +5128,76 @@ function getBaseExec(){
 function agruparPorPlanoContas(lista){
   const mapa = {};
   lista.forEach(l=>{
-    const ch = getPlanoLabel(l.plano_contas) || getChavePlano(l.plano_contas, l.tipo);
-    if(!mapa[ch]) mapa[ch] = { projetado:0, realizado:0, qtd:0 };
-    mapa[ch].projetado += parseFloat(l.valor_projetado)||0;
-    mapa[ch].realizado += parseFloat(l.valor_realizado)||0;
-    mapa[ch].qtd += 1;
+    const chave = chaveCanonicaConta(l.plano_contas, l.tipo);
+    if(!mapa[chave]){
+      const p = encontrarPlano(l.plano_contas);
+      mapa[chave] = {
+        projetado: 0, realizado: 0, qtd: 0,
+        label: (p && p.nome) ? p.nome : (getPlanoLabel(l.plano_contas) || chave),
+        codigo: (p && p.codigo) ? p.codigo : (getPlanoCodigo(l.plano_contas) || '')
+      };
+    }
+    mapa[chave].projetado += parseFloat(l.valor_projetado) || 0;
+    mapa[chave].realizado += parseFloat(l.valor_realizado) || 0;
+    mapa[chave].qtd      += 1;
   });
   return mapa;
 }
 
+// ============================================================
+// CONSOLIDADO DRE — FILTRO DE SITUAÇÃO APLICADO (CORREÇÃO)
+// ============================================================
 function renderizarConsolidadoDRE(){
   const wrapper = document.getElementById('execPivotWrapper');
   const termo=(document.getElementById('buscaExecResultados')?.value||'').toLowerCase();
+
+  // ✅ CORREÇÃO: aplica execSituacoes igual às abas Despesas/Receitas
   const baseFiltro = lancamentos.filter(l=>{
     if(execMesesConsolidado.length > 0){ const mm = getMes(l.data); if(!mm || !execMesesConsolidado.includes(mm)) return false; }
+    if(execSituacoes.length>0 && !execSituacoes.includes((l.situacao||'').toUpperCase())) return false;
     if(termo){ const txt=`${l.fornecedor||''} ${l.nf||''} ${getPlanoLabel(l.plano_contas)} ${l.cadastro_inicial||''}`.toLowerCase(); if(!txt.includes(termo))return false; }
     return true;
   });
+
   const despesasSulFlu = baseFiltro.filter(l=>l.tipo==='DESPESA' && getGrupoRegionalLanc(l)==='SUL FLUMINENSE');
   const agrupSulFlu = agruparPorPlanoContas(despesasSulFlu);
-  const contasSulFlu = Object.keys(agrupSulFlu).filter(c => agrupSulFlu[c].realizado !== 0 || agrupSulFlu[c].projetado !== 0).sort();
+  const chavesSulFlu = Object.keys(agrupSulFlu).filter(c => agrupSulFlu[c].realizado !== 0 || agrupSulFlu[c].projetado !== 0)
+    .sort((a,b)=>{
+      const ca = agrupSulFlu[a].codigo || '';
+      const cb = agrupSulFlu[b].codigo || '';
+      return ca.localeCompare(cb, undefined, { numeric: true });
+    });
   let totProjSulFlu = 0, totRealSulFlu = 0;
-  let linhasSulFlu = contasSulFlu.map(conta=>{ const d = agrupSulFlu[conta] || { projetado:0, realizado:0, qtd:0 }; totProjSulFlu += d.projetado; totRealSulFlu += d.realizado; return { conta, ...d }; });
+  const linhasSulFlu = chavesSulFlu.map(chave=>{
+    const d = agrupSulFlu[chave];
+    totProjSulFlu += d.projetado; totRealSulFlu += d.realizado;
+    return { conta: d.label, codigo: d.codigo, chave, projetado: d.projetado, realizado: d.realizado };
+  });
   const despesasLiquigas = baseFiltro.filter(l=>l.tipo==='DESPESA' && getGrupoRegionalLanc(l)==='LIQUIGÁS');
   const agrupLiquigas = agruparPorPlanoContas(despesasLiquigas);
-  const contasLiquigas = Object.keys(agrupLiquigas).filter(c => agrupLiquigas[c].realizado !== 0 || agrupLiquigas[c].projetado !== 0).sort();
+  const chavesLiquigas = Object.keys(agrupLiquigas).filter(c => agrupLiquigas[c].realizado !== 0 || agrupLiquigas[c].projetado !== 0)
+    .sort((a,b)=>{
+      const ca = agrupLiquigas[a].codigo || '';
+      const cb = agrupLiquigas[b].codigo || '';
+      return ca.localeCompare(cb, undefined, { numeric: true });
+    });
   let totProjLiquigas = 0, totRealLiquigas = 0;
-  let linhasLiquigas = contasLiquigas.map(conta=>{ const d = agrupLiquigas[conta] || { projetado:0, realizado:0, qtd:0 }; totProjLiquigas += d.projetado; totRealLiquigas += d.realizado; return { conta, ...d }; });
+  const linhasLiquigas = chavesLiquigas.map(chave=>{
+    const d = agrupLiquigas[chave];
+    totProjLiquigas += d.projetado; totRealLiquigas += d.realizado;
+    return { conta: d.label, codigo: d.codigo, chave, projetado: d.projetado, realizado: d.realizado };
+  });
   const todasDespesas = baseFiltro.filter(l=>l.tipo==='DESPESA');
   const agrupGeral = agruparPorPlanoContas(todasDespesas);
-  const contasDRE = Object.keys(agrupGeral).filter(c => agrupGeral[c].realizado !== 0).sort((a,b)=> agrupGeral[b].realizado - agrupGeral[a].realizado);
+  const chavesDRE = Object.keys(agrupGeral).filter(c => agrupGeral[c].realizado !== 0)
+    .sort((a,b)=> agrupGeral[b].realizado - agrupGeral[a].realizado);
   let totalDRE = 0;
-  const linhasDRE = contasDRE.map(conta=>{ const d = agrupGeral[conta] || { projetado:0, realizado:0, qtd:0 }; const valor = d.realizado; totalDRE += valor; return { conta, ...d, valor }; });
+  const linhasDRE = chavesDRE.map(chave=>{
+    const d = agrupGeral[chave];
+    const valor = d.realizado;
+    totalDRE += valor;
+    return { conta: d.label, codigo: d.codigo, chave, valor };
+  });
   const baseRecebimentos = lancamentos.filter(l=>{
     if(l.tipo !== 'RECEITA') return false;
     if(execMesesConsolidado.length > 0){ const mm = getMes(l.data); if(!mm || !execMesesConsolidado.includes(mm)) return false; }
@@ -4767,7 +5207,7 @@ function renderizarConsolidadoDRE(){
   const receitasSulFlu = baseRecebimentos.filter(l => getGrupoRegionalLanc(l)==='SUL FLUMINENSE').reduce((s,l)=>s+(parseFloat(l.valor_realizado)||0),0);
   const receitasLiquigas = baseRecebimentos.filter(l => getGrupoRegionalLanc(l)==='LIQUIGÁS').reduce((s,l)=>s+(parseFloat(l.valor_realizado)||0),0);
   const totalRecebimentos = receitasSulFlu + receitasLiquigas;
-  const cmv = agrupGeral['COMPRA MERCADORIA']?.realizado || 0;
+  const cmv = somaPorAliases(agrupGeral, ALIASES_CMV);
   const cpv = totalDRE - cmv;
   const resultadoGerencial = totalRecebimentos - totalDRE;
   const ebitdaAjustado = resultadoGerencial;
@@ -4776,15 +5216,15 @@ function renderizarConsolidadoDRE(){
   let html = `<div class="dre-consolidado-wrapper">`;
   html += `<div class="dre-col">`;
   html += `<div class="dre-bloco"><div class="dre-bloco-header">SUL FLUMINENSE</div><table><thead><tr><th>Contas</th><th class="num">Projetado</th><th class="num">Realizado</th></tr></thead><tbody>`;
-  linhasSulFlu.forEach(linha=>{ if(linha.projetado === 0 && linha.realizado === 0) return; html += `<tr class="clicavel" data-conta="${escapeAttr(linha.conta)}" data-bloco="sulflu" onclick="destacarContaDRE('${escapeAttr(linha.conta)}','sulflu')"><td>${escapeHtml(linha.conta)}</td><td class="num">${formatarMoeda(linha.projetado)}</td><td class="num">${formatarMoeda(linha.realizado)}</td></tr>`; });
+  linhasSulFlu.forEach(linha=>{ if(linha.projetado === 0 && linha.realizado === 0) return; html += `<tr class="clicavel" data-chave="${escapeAttr(linha.chave)}" data-bloco="sulflu" onclick="destacarContaDRE('${escapeAttr(linha.chave)}','sulflu')"><td>${escapeHtml(linha.conta)}</td><td class="num">${formatarMoeda(linha.projetado)}</td><td class="num">${formatarMoeda(linha.realizado)}</td></tr>`; });
   html += `<tr class="total"><td>Total</td><td class="num">${formatarMoeda(totProjSulFlu)}</td><td class="num">${formatarMoeda(totRealSulFlu)}</td></tr></tbody></table></div>`;
   html += `<div class="dre-bloco"><div class="dre-bloco-header liquigas">LIQUIGÁS</div><table><thead><tr><th>Rótulos de Linha</th><th class="num">Projetado</th><th class="num">Realizado</th></tr></thead><tbody>`;
-  linhasLiquigas.forEach(linha=>{ if(linha.projetado === 0 && linha.realizado === 0) return; html += `<tr class="clicavel" data-conta="${escapeAttr(linha.conta)}" data-bloco="liquigas" onclick="destacarContaDRE('${escapeAttr(linha.conta)}','liquigas')"><td>${escapeHtml(linha.conta)}</td><td class="num">${formatarMoeda(linha.projetado)}</td><td class="num">${formatarMoeda(linha.realizado)}</td></tr>`; });
+  linhasLiquigas.forEach(linha=>{ if(linha.projetado === 0 && linha.realizado === 0) return; html += `<tr class="clicavel" data-chave="${escapeAttr(linha.chave)}" data-bloco="liquigas" onclick="destacarContaDRE('${escapeAttr(linha.chave)}','liquigas')"><td>${escapeHtml(linha.conta)}</td><td class="num">${formatarMoeda(linha.projetado)}</td><td class="num">${formatarMoeda(linha.realizado)}</td></tr>`; });
   html += `<tr class="total"><td>Total Geral</td><td class="num">${formatarMoeda(totProjLiquigas)}</td><td class="num">${formatarMoeda(totRealLiquigas)}</td></tr></tbody></table></div>`;
   html += `</div>`;
   html += `<div class="dre-col">`;
   html += `<div class="dre-bloco"><div class="dre-bloco-header dre">Consolidado</div><table><thead><tr><th>Conta</th><th class="num">Valor</th><th class="pct">% CT</th></tr></thead><tbody>`;
-  linhasDRE.forEach(linha=>{ if(linha.valor === 0) return; html += `<tr class="clicavel" data-conta="${escapeAttr(linha.conta)}" data-bloco="dre" onclick="destacarContaDRE('${escapeAttr(linha.conta)}','dre')"><td>${escapeHtml(linha.conta)}</td><td class="num">${formatarMoeda(linha.valor)}</td><td class="pct">${formatarPct(pctDRE(linha.valor))}</td></tr>`; });
+  linhasDRE.forEach(linha=>{ if(linha.valor === 0) return; html += `<tr class="clicavel" data-chave="${escapeAttr(linha.chave)}" data-bloco="dre" onclick="destacarContaDRE('${escapeAttr(linha.chave)}','dre')"><td>${escapeHtml(linha.conta)}</td><td class="num">${formatarMoeda(linha.valor)}</td><td class="pct">${formatarPct(pctDRE(linha.valor))}</td></tr>`; });
   html += `<tr class="total"><td>Total</td><td class="num">${formatarMoeda(totalDRE)}</td><td class="pct">100,00%</td></tr></tbody></table></div>`;
   html += `<div class="dre-bloco"><div class="dre-bloco-header recebimentos">Recebimentos do Mês</div><table><thead><tr><th>Descrição</th><th class="num">Valor</th><th class="pct">%</th></tr></thead><tbody><tr><td>SUL FLUMINENSE - Recebimento Mês</td><td class="num">${formatarMoeda(receitasSulFlu)}</td><td class="pct">${formatarPct(pctReceb(receitasSulFlu))}</td></tr><tr><td>LIQUIGÁS - Recebimento Mês</td><td class="num">${formatarMoeda(receitasLiquigas)}</td><td class="pct">${formatarPct(pctReceb(receitasLiquigas))}</td></tr><tr class="destaque"><td>Total - Recebimento Mês</td><td class="num">${formatarMoeda(totalRecebimentos)}</td><td class="pct">100,00%</td></tr></tbody></table></div>`;
   html += `<div class="dre-bloco"><div class="dre-bloco-header resultado">Resultado Gerencial</div><table><tbody><tr class="destaque-verde"><td><strong>Resultado Gerencial (CAIXA)</strong></td><td class="num">${formatarMoeda(resultadoGerencial)}</td><td class="pct">${formatarPct(pctReceb(resultadoGerencial))}</td></tr></tbody></table></div>`;
@@ -4793,14 +5233,15 @@ function renderizarConsolidadoDRE(){
   wrapper.innerHTML = html;
 }
 
-function destacarContaDRE(conta, blocoOrigem){
+function destacarContaDRE(chaveCanonica, blocoOrigem){
   const wrapper = document.getElementById('execPivotWrapper');
-  wrapper.querySelectorAll('.dre-bloco table tbody tr.hover-destaque').forEach(tr=>tr.classList.remove('hover-destaque'));
-  const linhaClicada = wrapper.querySelector(`tr.clicavel[data-conta="${CSS.escape(conta)}"][data-bloco="${blocoOrigem}"]`);
-  if(linhaClicada) linhaClicada.classList.add('hover-destaque');
-  const linhasCorrespondentes = wrapper.querySelectorAll(`tr.clicavel[data-conta="${CSS.escape(conta)}"]`);
-  linhasCorrespondentes.forEach(tr=>tr.classList.add('hover-destaque'));
-  if(blocoOrigem !== 'dre'){ const linhaDRE = wrapper.querySelector(`tr.clicavel[data-conta="${CSS.escape(conta)}"][data-bloco="dre"]`); if(linhaDRE) linhaDRE.scrollIntoView({behavior:'smooth', block:'center'}); }
+  wrapper.querySelectorAll('tr.hover-destaque').forEach(tr=>tr.classList.remove('hover-destaque'));
+  const linhas = wrapper.querySelectorAll(`tr.clicavel[data-chave="${CSS.escape(chaveCanonica)}"]`);
+  linhas.forEach(tr=>tr.classList.add('hover-destaque'));
+  if (blocoOrigem !== 'dre') {
+    const linhaDRE = wrapper.querySelector(`tr.clicavel[data-chave="${CSS.escape(chaveCanonica)}"][data-bloco="dre"]`);
+    if (linhaDRE) linhaDRE.scrollIntoView({ behavior:'smooth', block:'center' });
+  }
 }
 
 function renderizarResultadosExecutivos(){
@@ -4816,7 +5257,7 @@ function renderizarResultadosExecutivos(){
   document.getElementById('tabCountDespesas').textContent = lancamentos.filter(l=>l.tipo==='DESPESA').length;
   const wrapper=document.getElementById('execPivotWrapper');
   let agrupador, labelCol;
-  if(execPivotSub==='conta'){ agrupador=(l)=>getPlanoLabel(l.plano_contas)||'SEM PLANO'; labelCol='Plano de Contas'; }
+  if(execPivotSub==='conta'){ agrupador=(l)=>chaveCanonicaConta(l.plano_contas, l.tipo); labelCol='Plano de Contas'; }
   else if(execPivotSub==='cliente'){ agrupador=(l)=>l.fornecedor||'SEM FORNECEDOR'; labelCol='Cliente/Fornecedor'; }
   else if(execPivotSub==='grupo'){ agrupador=(l)=>getGrupoRegionalLanc(l); labelCol='Grupo/Regional'; }
   else { agrupador=(l)=>(l.situacao||'SEM SITUAÇÃO').toUpperCase(); labelCol='Situação'; }
@@ -4826,7 +5267,10 @@ function renderizarResultadosExecutivos(){
     const p = parseFloat(l.valor_projetado)||0;
     const r = parseFloat(l.valor_realizado)||0;
     const d = r-p;
-    if(!mapa[chave]) mapa[chave] = { totalP:0, totalR:0, totalD:0, qtd:0, itens:[] };
+    const pl = encontrarPlano(l.plano_contas);
+    const label = (pl && pl.nome) ? pl.nome : (getPlanoLabel(l.plano_contas) || chave);
+    const codigo = (pl && pl.codigo) ? pl.codigo : (getPlanoCodigo(l.plano_contas) || '');
+    if(!mapa[chave]) mapa[chave] = { totalP:0, totalR:0, totalD:0, qtd:0, itens:[], label, codigo };
     mapa[chave].totalP += p;
     mapa[chave].totalR += r;
     mapa[chave].totalD += d;
@@ -4859,13 +5303,10 @@ function renderizarResultadosExecutivos(){
     const barWidth = Math.min(40, Math.max(3, pct * 0.40));
     let labelExibicao;
     if(execPivotSub==='conta'){
-      const primeiroItem = a.itens[0];
-      const plano = encontrarPlano(primeiroItem?.plano_contas);
-      const codigo = plano?.codigo || getPlanoCodigo(primeiroItem?.plano_contas) || '';
-      const nome = a.chave;
-      if(codigo){ labelExibicao = `<span class="conta-codigo">${escapeHtml(codigo)}</span><span class="conta-nome">${escapeHtml(nome)}</span>`; }
-      else { labelExibicao = `<span class="conta-nome">${escapeHtml(nome)}</span>`; }
-    } else { labelExibicao = escapeHtml(a.chave); }
+      const codigo = a.codigo || '';
+      if(codigo){ labelExibicao = `<span class="conta-codigo">${escapeHtml(codigo)}</span><span class="conta-nome">${escapeHtml(a.label)}</span>`; }
+      else { labelExibicao = `<span class="conta-nome">${escapeHtml(a.label)}</span>`; }
+    } else { labelExibicao = escapeHtml(a.label); }
     const idx = arr.indexOf(a);
     html += `<tr onclick="abrirDetalheExecPorIndice(${idx})"><td class="pivot-indent">${labelExibicao}</td><td class="right primary">${formatarMoeda(a.totalP)}</td><td class="right" style="color:${corPrincipal};font-weight:700;">${formatarMoeda(a.totalR)}</td><td class="right ${corD}">${formatarMoeda(a.totalD)}</td><td class="right"><div class="pct-bar-wrap"><div class="pct-bar" style="width:${barWidth}px;"></div><span style="color:var(--text-muted);font-weight:600;font-size:11px;">${pct.toFixed(2)}%</span></div></td><td class="center"><span class="qtd-badge">${a.qtd}</span></td></tr>`;
   });
@@ -4885,8 +5326,8 @@ function abrirDetalheExecPorIndice(idx){
   const headerIcon = isPorConta ? 'fa-sitemap' : (isPorCliente ? 'fa-building' : (execPivotSub==='grupo' ? 'fa-layer-group' : 'fa-tasks'));
   const headerLabel = isPorConta ? 'Plano de Contas' : (isPorCliente ? 'Cliente/Fornecedor' : (execPivotSub==='grupo' ? 'Grupo/Regional' : 'Situação'));
   window.__detalheExecItens = grupo.itens;
-  window.__detalheExecChave = grupo.chave;
-  abrirDetalheExec(grupo.chave, grupo.itens, headerLabel, headerIcon, tipoPrincipal);
+  window.__detalheExecChave = grupo.label || grupo.chave;
+  abrirDetalheExec(grupo.label || grupo.chave, grupo.itens, headerLabel, headerIcon, tipoPrincipal);
 }
 
 function exportarExcelResultadosExecutivos(){
@@ -4894,7 +5335,7 @@ function exportarExcelResultadosExecutivos(){
   const base=getBaseExec();
   if(!base.length){mostrarToast('Nada para exportar.','warning');return;}
   let agrupador, labelCol;
-  if(execPivotSub==='conta'){ agrupador=(l)=>{const p=encontrarPlano(l.plano_contas); if(p&&p.codigo)return `${p.codigo} - ${p.nome}`; return getPlanoLabel(l.plano_contas)||'SEM PLANO';}; labelCol='Plano de Contas'; }
+  if(execPivotSub==='conta'){ agrupador=(l)=>chaveCanonicaConta(l.plano_contas, l.tipo); labelCol='Plano de Contas'; }
   else if(execPivotSub==='cliente'){ agrupador=(l)=>l.fornecedor||'SEM FORNECEDOR'; labelCol='Cliente/Fornecedor'; }
   else if(execPivotSub==='grupo'){ agrupador=(l)=>getGrupoRegionalLanc(l); labelCol='Grupo/Regional'; }
   else { agrupador=(l)=>(l.situacao||'SEM SITUAÇÃO').toUpperCase(); labelCol='Situação'; }
@@ -4904,7 +5345,9 @@ function exportarExcelResultadosExecutivos(){
     const p = parseFloat(l.valor_projetado)||0;
     const r = parseFloat(l.valor_realizado)||0;
     const d = r-p;
-    if(!mapa[chave]) mapa[chave] = { totalP:0, totalR:0, totalD:0, qtd:0 };
+    const pl = encontrarPlano(l.plano_contas);
+    const label = (pl && pl.nome) ? pl.nome : (getPlanoLabel(l.plano_contas) || chave);
+    if(!mapa[chave]) mapa[chave] = { totalP:0, totalR:0, totalD:0, qtd:0, label };
     mapa[chave].totalP += p; mapa[chave].totalR += r; mapa[chave].totalD += d; mapa[chave].qtd += 1;
   });
   const arr = Object.entries(mapa).map(([chave,dados])=>({chave,...dados})).sort((a,b)=>b.totalR-a.totalR);
@@ -4913,7 +5356,7 @@ function exportarExcelResultadosExecutivos(){
   const totalD = arr.reduce((s,a)=>s+a.totalD,0);
   const totalQtd = arr.reduce((s,a)=>s+a.qtd,0);
   const rows=[['Resultados Executivos — '+(execPivotMain==='receitas'?'Receitas':'Despesas')+' — Por '+labelCol],[],[labelCol,'Soma de Projetado','Soma de Realizado','Soma de Diferença','% do Total','Qtd']];
-  arr.forEach(a=>{ const pct = totalR>0?(a.totalR/totalR)*100:0; rows.push([a.chave,formatarValorExcel(a.totalP),formatarValorExcel(a.totalR),formatarValorExcel(a.totalD),pct.toFixed(2)+'%',a.qtd]); });
+  arr.forEach(a=>{ const pct = totalR>0?(a.totalR/totalR)*100:0; rows.push([a.label,formatarValorExcel(a.totalP),formatarValorExcel(a.totalR),formatarValorExcel(a.totalD),pct.toFixed(2)+'%',a.qtd]); });
   rows.push(['TOTAL GERAL',formatarValorExcel(totalP),formatarValorExcel(totalR),formatarValorExcel(totalD),'100,00%',totalQtd]);
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:44},{wch:18},{wch:18},{wch:18},{wch:12},{wch:8}];
@@ -4922,41 +5365,50 @@ function exportarExcelResultadosExecutivos(){
   XLSX.writeFile(wb,`QNUTRI_ResultadosExecutivos_${execPivotMain}_${execPivotSub}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
+// ============================================================
+// EXCEL CONSOLIDADO — FILTRO DE SITUAÇÃO APLICADO (CORREÇÃO)
+// ============================================================
 function exportarExcelConsolidadoDRE(){
   const termo=(document.getElementById('buscaExecResultados')?.value||'').toLowerCase();
+
+  // ✅ CORREÇÃO: aplica execSituacoes
   const baseFiltro = lancamentos.filter(l=>{
     if(execMesesConsolidado.length > 0){ const mm = getMes(l.data); if(!mm || !execMesesConsolidado.includes(mm)) return false; }
+    if(execSituacoes.length>0 && !execSituacoes.includes((l.situacao||'').toUpperCase())) return false;
     if(termo){ const txt=`${l.fornecedor||''} ${l.nf||''} ${getPlanoLabel(l.plano_contas)} ${l.cadastro_inicial||''}`.toLowerCase(); if(!txt.includes(termo))return false; }
     return true;
   });
   const wb=XLSX.utils.book_new();
   const despesasSulFlu = baseFiltro.filter(l=>l.tipo==='DESPESA' && getGrupoRegionalLanc(l)==='SUL FLUMINENSE');
   const agrupSulFlu = agruparPorPlanoContas(despesasSulFlu);
-  const contasSulFlu = Object.keys(agrupSulFlu).filter(c => agrupSulFlu[c].realizado !== 0 || agrupSulFlu[c].projetado !== 0).sort();
+  const chavesSulFlu = Object.keys(agrupSulFlu).filter(c => agrupSulFlu[c].realizado !== 0 || agrupSulFlu[c].projetado !== 0)
+    .sort((a,b)=>{ const ca = agrupSulFlu[a].codigo || ''; const cb = agrupSulFlu[b].codigo || ''; return ca.localeCompare(cb, undefined, { numeric: true }); });
   const rowsSulFlu = [['Contas','Soma de PROJETADO','Soma de REALIZADO']];
   let totProjSulFlu=0, totRealSulFlu=0;
-  contasSulFlu.forEach(conta=>{ const d = agrupSulFlu[conta] || {projetado:0,realizado:0}; if(d.projetado===0 && d.realizado===0) return; totProjSulFlu += d.projetado; totRealSulFlu += d.realizado; rowsSulFlu.push([conta, formatarValorExcel(d.projetado), formatarValorExcel(d.realizado)]); });
+  chavesSulFlu.forEach(chave=>{ const d = agrupSulFlu[chave]; if(d.projetado===0 && d.realizado===0) return; totProjSulFlu += d.projetado; totRealSulFlu += d.realizado; rowsSulFlu.push([d.label, formatarValorExcel(d.projetado), formatarValorExcel(d.realizado)]); });
   rowsSulFlu.push(['Total', formatarValorExcel(totProjSulFlu), formatarValorExcel(totRealSulFlu)]);
   const wsSulFlu=XLSX.utils.aoa_to_sheet(rowsSulFlu);
   wsSulFlu['!cols']=[{wch:32},{wch:18},{wch:18}];
   XLSX.utils.book_append_sheet(wb, wsSulFlu, 'SUL FLUMINENSE');
   const despesasLiquigas = baseFiltro.filter(l=>l.tipo==='DESPESA' && getGrupoRegionalLanc(l)==='LIQUIGÁS');
   const agrupLiquigas = agruparPorPlanoContas(despesasLiquigas);
-  const contasLiquigas = Object.keys(agrupLiquigas).filter(c => agrupLiquigas[c].realizado !== 0 || agrupLiquigas[c].projetado !== 0).sort();
+  const chavesLiquigas = Object.keys(agrupLiquigas).filter(c => agrupLiquigas[c].realizado !== 0 || agrupLiquigas[c].projetado !== 0)
+    .sort((a,b)=>{ const ca = agrupLiquigas[a].codigo || ''; const cb = agrupLiquigas[b].codigo || ''; return ca.localeCompare(cb, undefined, { numeric: true }); });
   const rowsLiquigas = [['Rótulos de Linha','Soma de PROJETADO','Soma de REALIZADO']];
   let totProjLiquigas=0, totRealLiquigas=0;
-  contasLiquigas.forEach(conta=>{ const d = agrupLiquigas[conta] || {projetado:0,realizado:0}; if(d.projetado===0 && d.realizado===0) return; totProjLiquigas += d.projetado; totRealLiquigas += d.realizado; rowsLiquigas.push([conta, formatarValorExcel(d.projetado), formatarValorExcel(d.realizado)]); });
+  chavesLiquigas.forEach(chave=>{ const d = agrupLiquigas[chave]; if(d.projetado===0 && d.realizado===0) return; totProjLiquigas += d.projetado; totRealLiquigas += d.realizado; rowsLiquigas.push([d.label, formatarValorExcel(d.projetado), formatarValorExcel(d.realizado)]); });
   rowsLiquigas.push(['Total Geral', formatarValorExcel(totProjLiquigas), formatarValorExcel(totRealLiquigas)]);
   const wsLiquigas=XLSX.utils.aoa_to_sheet(rowsLiquigas);
   wsLiquigas['!cols']=[{wch:32},{wch:18},{wch:18}];
   XLSX.utils.book_append_sheet(wb, wsLiquigas, 'LIQUIGAS');
   const todasDespesas = baseFiltro.filter(l=>l.tipo==='DESPESA');
   const agrupGeral = agruparPorPlanoContas(todasDespesas);
-  const contasDRE = Object.keys(agrupGeral).filter(c => agrupGeral[c].realizado !== 0).sort((a,b)=> agrupGeral[b].realizado - agrupGeral[a].realizado);
+  const chavesDRE = Object.keys(agrupGeral).filter(c => agrupGeral[c].realizado !== 0)
+    .sort((a,b)=> agrupGeral[b].realizado - agrupGeral[a].realizado);
   let totalDRE = 0;
-  const linhasDRE = contasDRE.map(conta=>{ const d = agrupGeral[conta] || {projetado:0,realizado:0}; totalDRE += d.realizado; return {conta, valor:d.realizado}; });
+  const linhasDRE = chavesDRE.map(chave=>{ const d = agrupGeral[chave]; totalDRE += d.realizado; return {label:d.label, valor:d.realizado}; });
   const rowsDRE = [['Conta','Valor','% CT']];
-  linhasDRE.forEach(l=>{ rowsDRE.push([l.conta, formatarValorExcel(l.valor), ((l.valor/totalDRE)*100).toFixed(2)+'%']); });
+  linhasDRE.forEach(l=>{ rowsDRE.push([l.label, formatarValorExcel(l.valor), ((l.valor/totalDRE)*100).toFixed(2)+'%']); });
   rowsDRE.push(['Total', formatarValorExcel(totalDRE), '100,00%']);
   const wsDRE=XLSX.utils.aoa_to_sheet(rowsDRE);
   wsDRE['!cols']=[{wch:32},{wch:18},{wch:12}];
@@ -4970,7 +5422,7 @@ function exportarExcelConsolidadoDRE(){
   const receitasSulFlu = baseRecebimentos.filter(l=>getGrupoRegionalLanc(l)==='SUL FLUMINENSE').reduce((s,l)=>s+(parseFloat(l.valor_realizado)||0),0);
   const receitasLiquigas = baseRecebimentos.filter(l=>getGrupoRegionalLanc(l)==='LIQUIGÁS').reduce((s,l)=>s+(parseFloat(l.valor_realizado)||0),0);
   const totalRecebimentos = receitasSulFlu + receitasLiquigas;
-  const cmv = agrupGeral['COMPRA MERCADORIA']?.realizado || 0;
+  const cmv = somaPorAliases(agrupGeral, ALIASES_CMV);
   const cpv = totalDRE - cmv;
   const resultadoGerencial = totalRecebimentos - totalDRE;
   const rowsRec = [['Descrição','Valor','%'],['SUL FLUMINENSE - Recebimento Mês', formatarValorExcel(receitasSulFlu), ((receitasSulFlu/totalRecebimentos)*100).toFixed(2)+'%'],['LIQUIGÁS - Recebimento Mês', formatarValorExcel(receitasLiquigas), ((receitasLiquigas/totalRecebimentos)*100).toFixed(2)+'%'],['Total - Recebimento Mês', formatarValorExcel(totalRecebimentos), '100,00%'],[],['Resultado Gerencial (CAIXA)', formatarValorExcel(resultadoGerencial), ''],[],['CMV', formatarValorExcel(cmv), ''],['CPV', formatarValorExcel(cpv), ''],['EBITDA AJUSTADO', formatarValorExcel(resultadoGerencial), '']];
@@ -5025,8 +5477,14 @@ function renderizarDRE(){
     if(!l.data)return;
     const mesKey=l.data.slice(0,7);
     if(!mesesMap[mesKey]) mesesMap[mesKey]={itens:[], contas:{}};
-    const chave=getPlanoLabel(l.plano_contas)||getChavePlano(l.plano_contas,l.tipo);
-    if(!mesesMap[mesKey].contas[chave]) mesesMap[mesKey].contas[chave]={proj:0,real:0,diff:0,qtd:0,classif:'OUTRAS'};
+    const chave = chaveCanonicaConta(l.plano_contas, l.tipo);
+    if(!mesesMap[mesKey].contas[chave]){
+      const pl = encontrarPlano(l.plano_contas);
+      mesesMap[mesKey].contas[chave]={proj:0,real:0,diff:0,qtd:0,classif:'OUTRAS',
+        label:(pl && pl.nome) ? pl.nome : (getPlanoLabel(l.plano_contas) || chave),
+        codigo:(pl && pl.codigo) ? pl.codigo : (getPlanoCodigo(l.plano_contas) || '')
+      };
+    }
     const p=parseFloat(l.valor_projetado)||0;
     const r=parseFloat(l.valor_realizado)||0;
     mesesMap[mesKey].contas[chave].proj+=p;
@@ -5040,15 +5498,19 @@ function renderizarDRE(){
   for(let m=1; m<=12; m++){ meses.push(`${anoBase}-${String(m).padStart(2,'0')}`); }
   const contasSet = new Set();
   const contasClassif = {};
+  const contasLabel = {};
+  const contasCodigo = {};
   meses.forEach(mesKey=>{
     if(mesesMap[mesKey]){
       Object.keys(mesesMap[mesKey].contas).forEach(c=>{
         contasSet.add(c);
         if(!contasClassif[c]) contasClassif[c] = mesesMap[mesKey].contas[c].classif;
+        if(!contasLabel[c]) contasLabel[c] = mesesMap[mesKey].contas[c].label;
+        if(!contasCodigo[c]) contasCodigo[c] = mesesMap[mesKey].contas[c].codigo;
       });
     }
   });
-  const contasOrdenadas=Array.from(contasSet).sort((a,b)=>{ const pa=encontrarPlano(a); const pb=encontrarPlano(b); return (pa?.codigo||'').localeCompare(pb?.codigo||'',undefined,{numeric:true}); });
+  const contasOrdenadas=Array.from(contasSet).sort((a,b)=>(contasCodigo[a]||'').localeCompare(contasCodigo[b]||'',undefined,{numeric:true}));
   if(contasOrdenadas.length===0){ wrapper.innerHTML=`<div class="dre-mes-vazio"><i class="fas fa-table"></i><p>Nenhum lançamento com data para exibir no DRE</p></div>`; return; }
   const grupos = { RECEITA: { label:'RECEITAS', cls:'dre-bloco-receita', contas:[] }, CUSTO_VAR: { label:'(-) CUSTOS VARIÁVEIS', cls:'dre-bloco-custo-var', contas:[] }, CUSTO_FIXO:{ label:'(-) CUSTOS FIXOS', cls:'dre-bloco-custo-fixo',contas:[] }, OUTRAS: { label:'(-) OUTRAS DESPESAS', cls:'dre-bloco-outras', contas:[] } };
   contasOrdenadas.forEach(c=>{ const classif = contasClassif[c] || 'OUTRAS'; if(!grupos[classif]) grupos[classif] = { label:'OUTRAS', cls:'dre-bloco-outras', contas:[] }; grupos[classif].contas.push(c); });
@@ -5062,11 +5524,11 @@ function renderizarDRE(){
     if(!g || g.contas.length === 0) return;
     html += `<tr class="${g.cls}"><td colspan="${meses.length+2}" style="text-align:left;padding-left:14px;font-weight:400;text-transform:uppercase;letter-spacing:.6px;">${escapeHtml(g.label)}</td></tr>`;
     g.contas.forEach(conta=>{
-      const plano=encontrarPlano(conta);
-      const codigo=plano?.codigo||'';
-      const label = codigo ? `<span class="conta-codigo-mini">${escapeHtml(codigo)}</span>${escapeHtml(conta)}` : escapeHtml(conta);
+      const codigo = contasCodigo[conta] || '';
+      const label = contasLabel[conta] || conta;
+      const labelHtml = codigo ? `<span class="conta-codigo-mini">${escapeHtml(codigo)}</span>${escapeHtml(label)}` : escapeHtml(label);
       let totLinha = 0;
-      html+=`<tr><td title="${escapeAttr(conta)}">${label}</td>`;
+      html+=`<tr><td title="${escapeAttr(label)}">${labelHtml}</td>`;
       meses.forEach(mesKey=>{
         const d = mesesMap[mesKey]?.contas[conta];
         if(!d || (d.real === 0 && d.proj === 0)){ html+=`<td class="valor-vazio">—</td>`; }
@@ -5102,16 +5564,17 @@ function renderizarDRE(){
   wrapper.innerHTML=html;
 }
 
-function abrirDetalheDREConta(mesKey, conta){
+function abrirDetalheDREConta(mesKey, contaChave){
   const base=getBaseDRE();
-  const itens=base.filter(l=>{ if(!l.data) return false; if(!l.data.startsWith(mesKey)) return false; const chave=getPlanoLabel(l.plano_contas)||getChavePlano(l.plano_contas,l.tipo); return chave===conta; });
+  const itens=base.filter(l=>{ if(!l.data) return false; if(!l.data.startsWith(mesKey)) return false; const chave=chaveCanonicaConta(l.plano_contas,l.tipo); return chave===contaChave; });
   if(itens.length===0){ mostrarToast('Nenhum lançamento encontrado para esta conta neste mês.','warning'); return; }
   const [ano,mesNum]=mesKey.split('-');
   const mesNome=MESES_NOMES[parseInt(mesNum,10)-1]||mesNum;
   const tipoPrincipal = itens[0]?.tipo || 'DESPESA';
+  const labelConta = getPlanoLabel(itens[0].plano_contas) || contaChave;
   window.__detalheExecItens = itens;
-  window.__detalheExecChave = `${conta} — ${mesNome}/${ano}`;
-  abrirDetalheExec(`${conta} — ${mesNome}/${ano}`, itens, 'DRE — Conta', 'fa-file-invoice', tipoPrincipal);
+  window.__detalheExecChave = `${labelConta} — ${mesNome}/${ano}`;
+  abrirDetalheExec(`${labelConta} — ${mesNome}/${ano}`, itens, 'DRE — Conta', 'fa-file-invoice', tipoPrincipal);
 }
 
 function exportarExcelDRE(){
@@ -5127,8 +5590,11 @@ function exportarExcelDRE(){
     if(!l.data)return;
     const mesKey=l.data.slice(0,7);
     if(!mesesMap[mesKey]) mesesMap[mesKey]={};
-    const chave=getPlanoLabel(l.plano_contas)||getChavePlano(l.plano_contas,l.tipo);
-    if(!mesesMap[mesKey][chave]) mesesMap[mesKey][chave]={proj:0,real:0,diff:0,qtd:0,classif:'OUTRAS'};
+    const chave = chaveCanonicaConta(l.plano_contas, l.tipo);
+    if(!mesesMap[mesKey][chave]){
+      const pl = encontrarPlano(l.plano_contas);
+      mesesMap[mesKey][chave]={proj:0,real:0,diff:0,qtd:0,classif:'OUTRAS',label:(pl&&pl.nome)?pl.nome:(getPlanoLabel(l.plano_contas)||chave)};
+    }
     const p=parseFloat(l.valor_projetado)||0;
     const r=parseFloat(l.valor_realizado)||0;
     mesesMap[mesKey][chave].proj+=p;
@@ -5141,7 +5607,8 @@ function exportarExcelDRE(){
   for(let m=1; m<=12; m++){ meses.push(`${anoBase}-${String(m).padStart(2,'0')}`); }
   const contasSet=new Set();
   const contasClassif={};
-  meses.forEach(m=>{ if(mesesMap[m]) Object.keys(mesesMap[m]).forEach(c=>{ contasSet.add(c); if(!contasClassif[c]) contasClassif[c]=mesesMap[m][c].classif; }); });
+  const contasLabel={};
+  meses.forEach(m=>{ if(mesesMap[m]) Object.keys(mesesMap[m]).forEach(c=>{ contasSet.add(c); if(!contasClassif[c]) contasClassif[c]=mesesMap[m][c].classif; if(!contasLabel[c]) contasLabel[c]=mesesMap[m][c].label; }); });
   const contas=Array.from(contasSet).sort((a,b)=>{ const pa=encontrarPlano(a); const pb=encontrarPlano(b); return (pa?.codigo||'').localeCompare(pb?.codigo||'',undefined,{numeric:true}); });
   const grupos = { RECEITA:[], CUSTO_VAR:[], CUSTO_FIXO:[], OUTRAS:[] };
   contas.forEach(c=>{ const cl = contasClassif[c] || 'OUTRAS'; if(!grupos[cl]) grupos[cl]=[]; grupos[cl].push(c); });
@@ -5149,7 +5616,7 @@ function exportarExcelDRE(){
   meses.forEach(m=>{ const [ano,mesNum]=m.split('-'); header.push(`${MESES_CURTO[parseInt(mesNum,10)-1]}/${ano}`); });
   header.push('TOTAL');
   const rows=[header];
-  function linhaConta(conta){ const row=[conta]; let tot=0; meses.forEach(m=>{ const d=mesesMap[m]?.[conta]; const v = d ? d.real : 0; tot += v; row.push(d ? formatarValorExcel(d.real) : ''); }); row.push(formatarValorExcel(tot)); return row; }
+  function linhaConta(conta){ const row=[contasLabel[conta]||conta]; let tot=0; meses.forEach(m=>{ const d=mesesMap[m]?.[conta]; const v = d ? d.real : 0; tot += v; row.push(d ? formatarValorExcel(d.real) : ''); }); row.push(formatarValorExcel(tot)); return row; }
   function linhaTotal(label, listaContas, sinal){ const row=[label]; let tot=0; meses.forEach(m=>{ let t=0; listaContas.forEach(c=>{ if(mesesMap[m]?.[c]) t += mesesMap[m][c].real; }); if(sinal) t = -t; tot += t; row.push(formatarValorExcel(t)); }); row.push(formatarValorExcel(tot)); return row; }
   const grupoLabels = { RECEITA:'RECEITAS', CUSTO_VAR:'(-) CUSTOS VARIÁVEIS', CUSTO_FIXO:'(-) CUSTOS FIXOS', OUTRAS:'(-) OUTRAS DESPESAS' };
   ['RECEITA','CUSTO_VAR','CUSTO_FIXO','OUTRAS'].forEach(gk=>{ if(!grupos[gk] || grupos[gk].length===0) return; rows.push([grupoLabels[gk]]); grupos[gk].forEach(c=>rows.push(linhaConta(c))); rows.push(linhaTotal('SUBTOTAL '+grupoLabels[gk].replace(/^\(-\)\s*/,''), grupos[gk], gk!=='RECEITA')); });
@@ -5218,8 +5685,11 @@ function renderizarDesvios(){
   const base=getBaseDesvios();
   const mapa={};
   base.forEach(l=>{
-    const chave=getPlanoLabel(l.plano_contas)||getChavePlano(l.plano_contas,l.tipo);
-    if(!mapa[chave]) mapa[chave]={proj:0,real:0,diff:0,qtd:0,itens:[]};
+    const chave=chaveCanonicaConta(l.plano_contas, l.tipo);
+    if(!mapa[chave]){
+      const pl = encontrarPlano(l.plano_contas);
+      mapa[chave]={proj:0,real:0,diff:0,qtd:0,itens:[],label:(pl&&pl.nome)?pl.nome:(getPlanoLabel(l.plano_contas)||chave),codigo:(pl&&pl.codigo)?pl.codigo:(getPlanoCodigo(l.plano_contas)||'')};
+    }
     const p=parseFloat(l.valor_projetado)||0;
     const r=parseFloat(l.valor_realizado)||0;
     mapa[chave].proj+=p;
@@ -5248,16 +5718,15 @@ function renderizarDesvios(){
   if(arr.length === 0){ html += `<div class="dre-mes-vazio"><i class="fas fa-check-circle"></i><p>Nenhuma conta encontrada com os filtros aplicados</p></div>`; wrapper.innerHTML = html; return; }
   html += `<table class="desvios-tabela"><thead><tr><th>Conta / Plano de Contas</th><th class="right">Projetado</th><th class="right">Realizado</th><th class="right">Desvio (R$)</th><th class="right">Desvio (%)</th><th class="right">Nível</th><th class="center">Qtd</th></tr></thead><tbody>`;
   arr.forEach(a=>{
-    const plano=encontrarPlano(a.chave);
-    const codigo=plano?.codigo||'';
-    const label = codigo ? `<span class="conta-codigo-mini">${escapeHtml(codigo)}</span>${escapeHtml(a.chave)}` : escapeHtml(a.chave);
+    const codigo=a.codigo||'';
+    const label = codigo ? `<span class="conta-codigo-mini">${escapeHtml(codigo)}</span>${escapeHtml(a.label)}` : escapeHtml(a.label);
     const clsDiff = a.diff >= 0 ? 'positivo' : 'negativo';
     const clsPct = a.pct >= 0 ? 'positivo' : 'negativo';
     const nivelBadge = a.nivel === 'critico' ? '<span style="background:#fdeaea;color:#8f2626;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;">CRÍTICO</span>' : a.nivel === 'atencao' ? '<span style="background:#fef3e2;color:#8f6a0a;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;">ATENÇÃO</span>' : '<span style="background:#d1fae5;color:#0a5e3a;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;">OK</span>';
     const barW = maxAbsDiff > 0 ? Math.max(3, Math.min(60, (Math.abs(a.diff)/maxAbsDiff)*60)) : 0;
     const barCls = a.diff >= 0 ? 'pos' : '';
     const idx = arr.indexOf(a);
-    html += `<tr onclick="abrirDetalheDesvioPorIndice(${idx})"><td title="${escapeAttr(a.chave)}">${label}</td><td class="right">${formatarMoeda(a.proj)}</td><td class="right">${formatarMoeda(a.real)}</td><td class="right ${clsDiff}"><div class="bar-wrap"><div class="bar ${barCls}" style="width:${barW}px;"></div><span>${formatarMoeda(a.diff)}</span></div></td><td class="right ${clsPct}">${a.pct>=0?'+':''}${a.pct.toFixed(1)}%</td><td class="right">${nivelBadge}</td><td class="center"><span class="qtd-badge">${a.qtd}</span></td></tr>`;
+    html += `<tr onclick="abrirDetalheDesvioPorIndice(${idx})"><td title="${escapeAttr(a.label)}">${label}</td><td class="right">${formatarMoeda(a.proj)}</td><td class="right">${formatarMoeda(a.real)}</td><td class="right ${clsDiff}"><div class="bar-wrap"><div class="bar ${barCls}" style="width:${barW}px;"></div><span>${formatarMoeda(a.diff)}</span></div></td><td class="right ${clsPct}">${a.pct>=0?'+':''}${a.pct.toFixed(1)}%</td><td class="right">${nivelBadge}</td><td class="center"><span class="qtd-badge">${a.qtd}</span></td></tr>`;
   });
   const totQtd = arr.reduce((s,a)=>s+a.qtd,0);
   html += `</tbody><tfoot><tr><td>TOTAL (${arr.length} contas)</td><td class="right">${formatarMoeda(arr.reduce((s,a)=>s+a.proj,0))}</td><td class="right">${formatarMoeda(arr.reduce((s,a)=>s+a.real,0))}</td><td class="right ${totDiff>=0?'positivo':'negativo'}">${formatarMoeda(arr.reduce((s,a)=>s+a.diff,0))}</td><td class="right">—</td><td class="right">—</td><td class="center">${totQtd}</td></tr></tfoot></table>`;
@@ -5271,8 +5740,8 @@ function abrirDetalheDesvioPorIndice(idx){
   if(!grupo) { mostrarToast('Nenhum lançamento encontrado.','warning'); return; }
   const tipoPrincipal = grupo.itens[0]?.tipo || 'DESPESA';
   window.__detalheExecItens = grupo.itens;
-  window.__detalheExecChave = grupo.chave;
-  abrirDetalheExec(grupo.chave, grupo.itens, 'Conta com Desvio', 'fa-exclamation-triangle', tipoPrincipal);
+  window.__detalheExecChave = grupo.label || grupo.chave;
+  abrirDetalheExec(grupo.label || grupo.chave, grupo.itens, 'Conta com Desvio', 'fa-exclamation-triangle', tipoPrincipal);
 }
 
 function exportarExcelDesvios(){
@@ -5280,8 +5749,11 @@ function exportarExcelDesvios(){
   if(!base.length){mostrarToast('Nada para exportar.','warning');return;}
   const mapa={};
   base.forEach(l=>{
-    const chave=getPlanoLabel(l.plano_contas)||getChavePlano(l.plano_contas,l.tipo);
-    if(!mapa[chave]) mapa[chave]={proj:0,real:0,diff:0,qtd:0};
+    const chave=chaveCanonicaConta(l.plano_contas, l.tipo);
+    if(!mapa[chave]){
+      const pl = encontrarPlano(l.plano_contas);
+      mapa[chave]={proj:0,real:0,diff:0,qtd:0,label:(pl&&pl.nome)?pl.nome:(getPlanoLabel(l.plano_contas)||chave)};
+    }
     const p=parseFloat(l.valor_projetado)||0;
     const r=parseFloat(l.valor_realizado)||0;
     mapa[chave].proj+=p;
@@ -5293,7 +5765,7 @@ function exportarExcelDesvios(){
   if(desviosNivel !== 'todos') arr = arr.filter(a=>a.nivel===desviosNivel);
   const rows = [['Análise de Desvios — Ranking por Conta'],[],['Conta','Projetado','Realizado','Desvio (R$)','Desvio (%)','Nível','Qtd']];
   let totP=0,totR=0,totD=0,totQ=0;
-  arr.forEach(a=>{ totP+=a.proj; totR+=a.real; totD+=a.diff; totQ+=a.qtd; rows.push([a.chave,formatarValorExcel(a.proj),formatarValorExcel(a.real),formatarValorExcel(a.diff),a.pct.toFixed(2)+'%',a.nivel.toUpperCase(),a.qtd]); });
+  arr.forEach(a=>{ totP+=a.proj; totR+=a.real; totD+=a.diff; totQ+=a.qtd; rows.push([a.label,formatarValorExcel(a.proj),formatarValorExcel(a.real),formatarValorExcel(a.diff),a.pct.toFixed(2)+'%',a.nivel.toUpperCase(),a.qtd]); });
   rows.push(['TOTAL',formatarValorExcel(totP),formatarValorExcel(totR),formatarValorExcel(totD),'', '', totQ]);
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:40},{wch:16},{wch:16},{wch:16},{wch:12},{wch:12},{wch:8}];
@@ -5484,6 +5956,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       fecharPopupPDF();
       fecharConfigColunasPDF();
       fecharPopupColarExcel();
+      fecharModalContasNaoExibidas();
       voltarAbaAnterior();
     }
   });
@@ -5494,6 +5967,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('popupPDF')?.addEventListener('click',e=>{if(e.target.id==='popupPDF')fecharPopupPDF();});
   document.getElementById('popupConfigColunas')?.addEventListener('click',e=>{if(e.target.id==='popupConfigColunas')fecharConfigColunasPDF();});
   document.getElementById('popupColarExcel')?.addEventListener('click',e=>{if(e.target.id==='popupColarExcel')fecharPopupColarExcel();});
+  document.getElementById('popupContasNaoExibidas')?.addEventListener('click',e=>{if(e.target.id==='popupContasNaoExibidas')fecharModalContasNaoExibidas();});
 });
 </script>
 </body>
