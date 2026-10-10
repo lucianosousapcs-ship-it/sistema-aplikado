@@ -20,7 +20,6 @@
 .ms-wrap.open .ms-trigger .ms-caret{transform:rotate(180deg);}
 .ms-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-align:left;}
 
-/* Painel: ESCONDIDO por padrão, sem position absolute */
 .ms-panel{display:none;background:var(--bg-surface);border:1px solid var(--border-strong);border-radius:var(--radius-md);box-shadow:0 8px 20px rgba(120,80,20,.10);margin-top:6px;padding:8px;}
 .ms-wrap.open .ms-panel{display:block;}
 
@@ -40,8 +39,6 @@
 .ms-footer button.apply{background:var(--gradient-header);color:#fff;border-color:transparent;}
 .ms-footer button.apply:hover{box-shadow:0 3px 12px var(--accent-glow);}
 
-/* ===== EXCEÇÃO: no modal "Filtros e Ações" os selects ficam em coluna estreita,
-   então lá SIM usamos position:absolute pra não empurrar os vizinhos ===== */
 .filtros-col .ms-panel{
   position:absolute;
   top:calc(100% + 4px);
@@ -54,9 +51,6 @@
   display:none;
 }
 .filtros-col .ms-wrap.open .ms-panel{display:block;}
-
-
-
 
 :root{
   --bg-app: #f5f2ee;
@@ -512,6 +506,7 @@ body.modo-compacto table thead th{padding:8px 10px;font-size:9px;}
   .filtros-acoes-grid {grid-template-columns: 1fr;gap: 20px;}
   #popupFiltrosAcoes .modal-content {padding: 18px 16px;}
 }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -1104,7 +1099,7 @@ body.modo-compacto table thead th{padding:8px 10px;font-size:9px;}
       </div>
       <div class="pdf-modal-actions" style="display:flex;gap:8px;align-items:center;">
         <button class="btn-voltar" onclick="fecharPopupPDF()"><i class="fas fa-arrow-left"></i> Voltar</button>
-        <button class="btn-pdf" onclick="baixarPDFPopup()"><i class="fas fa-file-pdf"></i> Baixar PDF</button>
+        <button class="btn-pdf" onclick="baixarPDFPopup()" style="background:var(--gradient-header);color:#fff;border:none;padding:8px 18px;border-radius:var(--radius-md);font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 3px 12px var(--accent-glow);"><i class="fas fa-file-pdf"></i> Baixar PDF</button>
         <button class="modal-close" onclick="fecharPopupPDF()" title="Fechar">✕</button>
       </div>
     </div>
@@ -1166,6 +1161,7 @@ let pdfColunasDisponiveis = [];
 let pdfDadosAtuais = [];
 let pdfTituloAtual = '';
 let pdfLabelColAtual = '';
+let pdfContexto = { tipo: 'lancamentos', colunas: [] };
 
 const FORNECEDORES_LIQUIGAS=['LIQUIGÁS','LIQUIGAS','COPA','COPA GAZ','MAKEEN (KOSAN)','MAKEEN','COPAGAZ'];
 const FORNECEDORES_EXCECAO_SULFLU=[
@@ -1336,9 +1332,6 @@ function configurarSortTabela(tableId,callback){
   });
 }
 
-// ============================================================
-// MULTI-SELECT CORRIGIDO — mantém estado e dispara onChange
-// ============================================================
 function getMsSelecionados(id){
   const c=document.getElementById(id);if(!c)return[];
   return [...c.querySelectorAll('.ms-list input[type="checkbox"]')].filter(cb=>cb.dataset.value!=='__ALL__').filter(cb=>cb.checked).map(cb=>cb.dataset.value);
@@ -1404,7 +1397,6 @@ function criarMultiSelect(containerId,opcoes,selecionados,onChange,labelVazio='T
   function dispararOnChange(){
     const checks=[...list.querySelectorAll('input[type="checkbox"]')].filter(c=>c!==checkAll);
     onChange(checks.filter(c=>c.checked).map(c=>c.dataset.value));
-    // Atualiza o label sem recriar o select
     const set=new Set(checks.filter(c=>c.checked).map(c=>c.dataset.value));
     const labelEl=container.querySelector('.ms-label');
     if(labelEl){
@@ -1540,7 +1532,6 @@ async function carregarDados(){
 }
 
 function atualizarFiltrosDinamicos(){
-  // Planos
   const planos=[...new Set(lancamentos.map(l=>getPlanoLabel(l.plano_contas)).filter(Boolean))].sort();
   const c1=document.getElementById('msPlanoLanc');
   if(c1){
@@ -1551,7 +1542,6 @@ function atualizarFiltrosDinamicos(){
       criarMultiSelect('msPlanoLanc',planos,selAtual,()=>renderizarLancamentos(),'Todos Planos');
     }
   }
-  // Cadastros iniciais
   const cadastros=[...new Set(lancamentos.map(l=>(l.cadastro_inicial||'').trim()).filter(Boolean))].sort();
   const c2=document.getElementById('msCadastroInicialLanc');
   if(c2){
@@ -1562,7 +1552,6 @@ function atualizarFiltrosDinamicos(){
       criarMultiSelect('msCadastroInicialLanc',cadastros,selAtual,()=>renderizarLancamentos(),'Todos Cadastros Iniciais');
     }
   }
-  // Situações
   const situacoesExistentes = new Set();
   lancamentos.forEach(l => situacoesExistentes.add(normalizarSituacao(l.situacao)));
   SITUACOES_FIXAS.forEach(s => situacoesExistentes.add(s));
@@ -1603,7 +1592,7 @@ function gerarLinhaTabela(l,comTipo=true,comAcoes=true,comCategoria=true){
   const cadastroInicial=l.cadastro_inicial||'-';
   const usuarioIns=getUsuarioExibicao(l);
   const semData=!l.data;
-  let html='<tr data-id="'+l.id+'" ondblclick="abrirDetalheValor('+l.id+')" style="cursor:pointer;">';
+  let html='<tr data-id="'+l.id+'" style="cursor:pointer;">';
   if(comAcoes){html+=`<td class="td-acoes" onclick="event.stopPropagation()"><button class="btn-actions" onclick="abrirActionPopover(event,${l.id})">Ações</button></td>`;}
   html+=`<td>${semData?'<span class="badge badge-alerta">SEM DATA</span>':formatarData(l.data)}</td>`;
   html+=`<td>${escapeHtml(l.pago_em||'-')}</td>`;
@@ -1637,14 +1626,10 @@ function renderizarTotaisTabela(footId,lista,colsAntes,colsDepois){
     <td colspan="${colsDepois}" style="white-space:nowrap;"></td></tr>`;
 }
 
-// ============================================================
-// FILTRO DE LANÇAMENTOS CORRIGIDO
-// ============================================================
 function renderizarLancamentos(){
   const termo=(document.getElementById('buscaLancamentos')?.value||'').toLowerCase();
   const tipos=getMsSelecionados('msTipoLanc').map(t => t.toUpperCase());
   const meses=getMsSelecionados('msMesLanc').map(m => {
-    // Os meses são armazenados como nomes (Janeiro, Fevereiro...). Converte para número (01, 02...).
     const idx = MESES_NOMES.findIndex(n => normalizarNome(n) === normalizarNome(m));
     return idx >= 0 ? String(idx + 1).padStart(2, '0') : '';
   }).filter(Boolean);
@@ -2002,7 +1987,9 @@ function exportarExcelPlanoContas(){
   XLSX.writeFile(wb,`QNUTRI_PlanoContas_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
+// ============================================================
 // CONTAS NÃO EXIBIDAS
+// ============================================================
 function obterContasExibidas() {
   const contasExibidas = new Set();
   lancamentos.forEach(l => { const plano = getPlanoLabel(l.plano_contas); if (plano) contasExibidas.add(plano); });
@@ -2097,7 +2084,30 @@ function exportarExcelContasNaoExibidas() {
   XLSX.writeFile(wb, `QNUTRI_ContasNaoExibidas_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-// PDF
+// ============================================================
+// PDF — FONTE SEMPRE PRETA + TODOS OS TIPOS FUNCIONANDO
+// ============================================================
+const PDF_STYLE_TH = 'background:#e8e8e8;color:#000 !important;font-size:9px;font-weight:700;padding:6px 5px;text-transform:uppercase;border:1px solid #333;';
+const PDF_STYLE_TD = 'padding:5px;border:1px solid #333;font-size:9.5px;color:#000 !important;background:#fff;';
+const PDF_STYLE_TD_RIGHT = PDF_STYLE_TD + 'text-align:right;';
+const PDF_STYLE_TD_CENTER = PDF_STYLE_TD + 'text-align:center;';
+const PDF_STYLE_TF = 'background:#d8d8d8;color:#000 !important;font-weight:700;padding:6px 5px;border:1px solid #333;';
+
+function pdfCabecalho(titulo, subtitulo, qtdRegistros, labelReg) {
+  return `<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:14px;margin-bottom:18px;">
+    <h1 style="font-size:18px;font-weight:700;color:#000 !important;text-transform:uppercase;letter-spacing:1.4px;margin-bottom:6px;">${escapeHtml(titulo)}</h1>
+    <div style="font-size:11px;color:#000 !important;font-weight:500;text-transform:uppercase;letter-spacing:0.9px;">${escapeHtml(subtitulo || 'QNUTRI — Módulo Financeiro')}</div>
+    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:#000 !important;margin-top:10px;padding-top:8px;border-top:1px solid #000;">
+      <span><strong>${escapeHtml(labelReg || 'Registros')}:</strong> ${qtdRegistros}</span>
+      <span><strong>Emitido em:</strong> ${new Date().toLocaleString('pt-BR')}</span>
+    </div>
+  </div>`;
+}
+
+function pdfRodape() {
+  return `<div style="font-size:9.5px;color:#000 !important;text-align:right;margin-top:12px;padding-top:7px;border-top:1px solid #000;">Gerado em ${new Date().toLocaleString('pt-BR')} — QNUTRI Módulo Financeiro</div>`;
+}
+
 const PDF_COLUNAS_LANCAMENTOS = [
   { chave: 'data', label: 'Venc.' },{ chave: 'pago_em', label: 'Pago' },{ chave: 'nf', label: 'NF' },
   { chave: 'tipo', label: 'Tipo' },{ chave: 'grupo', label: 'Grupo' },{ chave: 'fornecedor', label: 'Fornecedor / Cliente' },
@@ -2115,13 +2125,363 @@ const PDF_COLUNAS_PIVOT = [
   { chave: 'Conta', label: 'Conta' },{ chave: 'projetado', label: 'Projetado' },{ chave: 'realizado', label: 'Realizado' },
   { chave: 'diferenca', label: 'Diferença' },{ chave: 'pct', label: '% do Total' },{ chave: 'qtd', label: 'Qtd' }
 ];
-let pdfContexto = { tipo: 'lancamentos', colunas: PDF_COLUNAS_LANCAMENTOS };
-function abrirConfigColunasPDF() { pdfContexto = { tipo: 'lancamentos', colunas: PDF_COLUNAS_LANCAMENTOS }; abrirConfigColunasGenerico(PDF_COLUNAS_LANCAMENTOS, pdfColunasSelecionadas, 'Colunas do PDF — Lançamentos'); }
-function abrirConfigColunasPDFExec() { const cols = PDF_COLUNAS_PIVOT; pdfContexto = { tipo: 'pivot', colunas: cols }; const sel = {}; cols.forEach(c => sel[c.chave] = pdfColunasSelecionadas[c.chave] !== false); abrirConfigColunasGenerico(cols, sel, 'Colunas do PDF — Resultados Executivos'); }
-function abrirConfigColunasPDFDRE() { const cols = PDF_COLUNAS_DRE; pdfContexto = { tipo: 'dre', colunas: cols }; const sel = {}; cols.forEach(c => sel[c.chave] = pdfColunasSelecionadas[c.chave] !== false); abrirConfigColunasGenerico(cols, sel, 'Colunas do PDF — DRE'); }
-function abrirConfigColunasPDFDesvios() { const cols = PDF_COLUNAS_DESVIOS; pdfContexto = { tipo: 'desvios', colunas: cols }; const sel = {}; cols.forEach(c => sel[c.chave] = pdfColunasSelecionadas[c.chave] !== false); abrirConfigColunasGenerico(cols, sel, 'Colunas do PDF — Desvios'); }
-function abrirConfigColunasPDFDetalheExec() { const cols = PDF_COLUNAS_LANCAMENTOS; pdfContexto = { tipo: 'detalhe_exec', colunas: cols }; const sel = {}; cols.forEach(c => sel[c.chave] = pdfColunasSelecionadas[c.chave] !== false); abrirConfigColunasGenerico(cols, sel, 'Colunas do PDF — Detalhamento'); }
-function abrirConfigColunasPDFGenerico() { abrirConfigColunasGenerico(pdfContexto.colunas, pdfColunasSelecionadas, 'Colunas do PDF'); }
+
+// ============================================================
+// TABELA PADRÃO (LANÇAMENTOS / DETALHAMENTO)
+// ============================================================
+function gerarTabelaPDF(lista, titulo, colunasDisponiveis, selecionadas) {
+  if (!lista.length) return '<p style="color:#000 !important;">Nenhum dado para exibir.</p>';
+  const colunas = colunasDisponiveis || PDF_COLUNAS_LANCAMENTOS;
+  const sel = selecionadas || {};
+  const ativas = colunas.filter(c => sel[c.chave] !== false);
+  if (!ativas.length) return '<p style="color:#000 !important;">Nenhuma coluna selecionada.</p>';
+  const totP = lista.reduce((s,l)=>s+(parseFloat(l.valor_projetado)||0),0);
+  const totR = lista.reduce((s,l)=>s+(parseFloat(l.valor_realizado)||0),0);
+  const totD = totR - totP;
+  const extratores = {
+    data: l => l.data ? formatarData(l.data) : 'SEM DATA',
+    pago_em: l => l.pago_em || '-',
+    nf: l => l.nf || '-',
+    tipo: l => l.tipo,
+    grupo: l => getLabelGrupoRegional(getGrupoRegionalLanc(l)),
+    fornecedor: l => l.fornecedor || '-',
+    plano: l => getPlanoLabel(l.plano_contas) || '-',
+    cadastro: l => l.cadastro_inicial || '-',
+    projetado: l => formatarMoeda(parseFloat(l.valor_projetado) || 0),
+    realizado: l => formatarMoeda(parseFloat(l.valor_realizado) || 0),
+    diferenca: l => formatarMoeda((parseFloat(l.valor_realizado)||0) - (parseFloat(l.valor_projetado)||0)),
+    situacao: l => normalizarSituacao(l.situacao),
+    usuario: l => getUsuarioExibicao(l),
+    banco: l => l.banco || '-'
+  };
+  let html = pdfCabecalho(titulo, 'QNUTRI — Módulo Financeiro', lista.length, 'Registros');
+  html += `<table style="width:100%;max-width:100%;border-collapse:collapse;font-size:10px;background:#fff;border:1px solid #333;margin-bottom:18px;table-layout:fixed;">
+    <thead><tr>${ativas.map(c => `<th style="${PDF_STYLE_TH}text-align:left;">${escapeHtml(c.label)}</th>`).join('')}</tr></thead>
+    <tbody>
+      ${lista.map(l => `<tr>${ativas.map(c => { const fn = extratores[c.chave]; return `<td style="${PDF_STYLE_TD}">${escapeHtml(fn ? fn(l) : '-')}</td>`; }).join('')}</tr>`).join('')}
+    </tbody>
+    <tfoot><tr>${ativas.map((c, i) => {
+      if (c.chave === 'projetado') return `<td style="${PDF_STYLE_TF}text-align:right;">${formatarMoeda(totP)}</td>`;
+      if (c.chave === 'realizado') return `<td style="${PDF_STYLE_TF}text-align:right;">${formatarMoeda(totR)}</td>`;
+      if (c.chave === 'diferenca') return `<td style="${PDF_STYLE_TF}text-align:right;">${formatarMoeda(totD)}</td>`;
+      if (i === 0) return `<td style="${PDF_STYLE_TF}">TOTAIS (${lista.length})</td>`;
+      return `<td style="${PDF_STYLE_TF}"></td>`;
+    }).join('')}</tr></tfoot>
+  </table>`;
+  html += pdfRodape();
+  return html;
+}
+
+// ============================================================
+// TABELA PIVOT (RESULTADOS EXECUTIVOS)
+// ============================================================
+function gerarTabelaPDFPivotComColunas(dados, titulo, labelCol, selecionadas) {
+  if (!dados.length) return '<p style="color:#000 !important;">Nenhum dado para exibir.</p>';
+  const cols = PDF_COLUNAS_PIVOT;
+  const sel = selecionadas || {};
+  const ativas = cols.filter(c => sel[c.chave] !== false);
+  if (!ativas.length) return '<p style="color:#000 !important;">Nenhuma coluna selecionada.</p>';
+  const totalP = dados.reduce((s,d)=>s+d.totalP,0);
+  const totalR = dados.reduce((s,d)=>s+d.totalR,0);
+  const totalD = totalR - totalP;
+  const totalQtd = dados.reduce((s,d)=>s+d.qtd,0);
+  const extratores = {
+    chave: d => d.label || d.chave,
+    projetado: d => formatarMoeda(d.totalP),
+    realizado: d => formatarMoeda(d.totalR),
+    diferenca: d => formatarMoeda(d.totalD),
+    pct: d => totalR > 0 ? (d.totalR / totalR * 100).toFixed(2) + '%' : '0,00%',
+    qtd: d => d.qtd
+  };
+  let html = pdfCabecalho(titulo, 'QNUTRI — Módulo Financeiro', totalQtd, 'Registros');
+  html += `<table style="width:100%;border-collapse:collapse;font-size:10px;background:#fff;border:1px solid #333;margin-bottom:18px;">
+    <thead><tr>${ativas.map(c => {
+      const align = ['projetado','realizado','diferenca','pct'].includes(c.chave) ? 'right' : c.chave==='qtd' ? 'center' : 'left';
+      return `<th style="${PDF_STYLE_TH}text-align:${align};">${escapeHtml(c.label)}</th>`;
+    }).join('')}</tr></thead>
+    <tbody>
+      ${dados.map(d => { let row = '<tr>'; ativas.forEach(c => { const fn = extratores[c.chave]; const val = fn ? fn(d) : '-'; const align = ['projetado','realizado','diferenca','pct'].includes(c.chave) ? 'right' : c.chave === 'qtd' ? 'center' : 'left'; row += `<td style="${PDF_STYLE_TD}text-align:${align};">${escapeHtml(String(val))}</td>`; }); row += '</tr>'; return row; }).join('')}
+    </tbody>
+    <tfoot><tr>${ativas.map((c, i) => {
+      if (c.chave === 'projetado') return `<td style="${PDF_STYLE_TF}text-align:right;">${formatarMoeda(totalP)}</td>`;
+      if (c.chave === 'realizado') return `<td style="${PDF_STYLE_TF}text-align:right;">${formatarMoeda(totalR)}</td>`;
+      if (c.chave === 'diferenca') return `<td style="${PDF_STYLE_TF}text-align:right;">${formatarMoeda(totalD)}</td>`;
+      if (c.chave === 'pct') return `<td style="${PDF_STYLE_TF}text-align:right;">100,00%</td>`;
+      if (c.chave === 'qtd') return `<td style="${PDF_STYLE_TF}text-align:center;">${totalQtd}</td>`;
+      if (i === 0) return `<td style="${PDF_STYLE_TF}">TOTAL GERAL</td>`;
+      return `<td style="${PDF_STYLE_TF}"></td>`;
+    }).join('')}</tr></tfoot>
+  </table>`;
+  html += pdfRodape();
+  return html;
+}
+
+// ============================================================
+// TABELA DESVIOS
+// ============================================================
+function gerarTabelaPDFDesviosComColunas(dados, selecionadas) {
+  if (!dados.length) return '<p style="color:#000 !important;">Nenhum dado para exibir.</p>';
+  const cols = PDF_COLUNAS_DESVIOS;
+  const sel = selecionadas || {};
+  const ativas = cols.filter(c => sel[c.chave] !== false);
+  if (!ativas.length) return '<p style="color:#000 !important;">Nenhuma coluna selecionada.</p>';
+  const totP = dados.reduce((s,d)=>s+d.proj,0);
+  const totR = dados.reduce((s,d)=>s+d.real,0);
+  const totD = dados.reduce((s,d)=>s+d.diff,0);
+  const totQ = dados.reduce((s,d)=>s+d.qtd,0);
+  const extratores = {
+    conta: d => d.label || d.chave,
+    projetado: d => formatarMoeda(d.proj),
+    realizado: d => formatarMoeda(d.real),
+    desvio: d => formatarMoeda(d.diff),
+    desvio_pct: d => (d.pct >= 0 ? '+' : '') + d.pct.toFixed(2) + '%',
+    nivel: d => d.nivel === 'critico' ? 'CRÍTICO' : d.nivel === 'atencao' ? 'ATENÇÃO' : 'OK',
+    qtd: d => d.qtd
+  };
+  let html = pdfCabecalho('Análise de Desvios — Ranking por Conta', 'QNUTRI — Módulo Financeiro', dados.length, 'Contas');
+  html += `<table style="width:100%;border-collapse:collapse;font-size:10px;background:#fff;border:1px solid #333;margin-bottom:18px;">
+    <thead><tr>${ativas.map(c => {
+      const align = ['projetado','realizado','desvio','desvio_pct'].includes(c.chave) ? 'right' : (c.chave==='nivel'||c.chave==='qtd') ? 'center' : 'left';
+      return `<th style="${PDF_STYLE_TH}text-align:${align};">${escapeHtml(c.label)}</th>`;
+    }).join('')}</tr></thead>
+    <tbody>
+      ${dados.map(d => { let row = '<tr>'; ativas.forEach(c => { const fn = extratores[c.chave]; const val = fn ? fn(d) : '-'; const align = ['projetado','realizado','desvio','desvio_pct'].includes(c.chave) ? 'right' : (c.chave === 'nivel' || c.chave === 'qtd') ? 'center' : 'left'; row += `<td style="${PDF_STYLE_TD}text-align:${align};">${escapeHtml(String(val))}</td>`; }); row += '</tr>'; return row; }).join('')}
+    </tbody>
+    <tfoot><tr>${ativas.map((c, i) => {
+      if (c.chave === 'projetado') return `<td style="${PDF_STYLE_TF}text-align:right;">${formatarMoeda(totP)}</td>`;
+      if (c.chave === 'realizado') return `<td style="${PDF_STYLE_TF}text-align:right;">${formatarMoeda(totR)}</td>`;
+      if (c.chave === 'desvio') return `<td style="${PDF_STYLE_TF}text-align:right;">${formatarMoeda(totD)}</td>`;
+      if (c.chave === 'qtd') return `<td style="${PDF_STYLE_TF}text-align:center;">${totQ}</td>`;
+      if (i === 0) return `<td style="${PDF_STYLE_TF}">TOTAL (${dados.length} contas)</td>`;
+      return `<td style="${PDF_STYLE_TF}"></td>`;
+    }).join('')}</tr></tfoot>
+  </table>`;
+  html += pdfRodape();
+  return html;
+}
+
+// ============================================================
+// TABELA DRE — MONTA A PARTIR DOS LANÇAMENTOS FILTRADOS
+// ============================================================
+function gerarTabelaPDFDREComColunas(linhas, selecionadas) {
+  const cols = PDF_COLUNAS_DRE;
+  const sel = selecionadas || {};
+  const ativas = cols.filter(c => sel[c.chave] !== false);
+  if (!ativas.length) return '<p style="color:#000 !important;">Nenhuma coluna selecionada.</p>';
+
+  if (!linhas || linhas.length === 0) {
+    try {
+      const base = (typeof getBaseDRE === 'function') ? getBaseDRE() : lancamentos;
+      if (base.length) {
+        const mapa = {};
+        base.forEach(l => {
+          const chave = chaveCanonicaConta(l.plano_contas, l.tipo);
+          if (!mapa[chave]) {
+            const pl = encontrarPlano(l.plano_contas);
+            mapa[chave] = { conta: (pl && pl.nome) ? pl.nome : (getPlanoLabel(l.plano_contas) || chave), valor: 0 };
+          }
+          mapa[chave].valor += parseFloat(l.valor_realizado) || 0;
+        });
+        linhas = Object.values(mapa).sort((a,b)=>Math.abs(b.valor)-Math.abs(a.valor));
+      }
+    } catch(e) {}
+  }
+
+  if (!linhas || !linhas.length) return '<p style="color:#000 !important;">Nenhum dado para exibir no DRE.</p>';
+
+  const total = linhas.reduce((s,l)=>s+(parseFloat(l.valor)||0),0);
+  let html = pdfCabecalho('DRE — Demonstração do Resultado', 'QNUTRI — Módulo Financeiro', linhas.length, 'Contas');
+  html += `<table style="width:100%;border-collapse:collapse;font-size:10px;background:#fff;border:1px solid #333;margin-bottom:18px;">
+    <thead><tr>${ativas.map(c => `<th style="${PDF_STYLE_TH}text-align:${c.chave==='total'?'right':'left'};">${escapeHtml(c.label)}</th>`).join('')}</tr></thead>
+    <tbody>
+      ${linhas.map(d => { let row = '<tr>'; ativas.forEach(c => {
+        if (c.chave === 'conta') row += `<td style="${PDF_STYLE_TD}">${escapeHtml(d.conta || '-')}</td>`;
+        else if (c.chave === 'total') row += `<td style="${PDF_STYLE_TD_RIGHT}">${formatarMoeda(d.valor || 0)}</td>`;
+        else row += `<td style="${PDF_STYLE_TD}">-</td>`;
+      }); row += '</tr>'; return row; }).join('')}
+    </tbody>
+    <tfoot><tr>${ativas.map((c, i) => {
+      if (c.chave === 'conta') return `<td style="${PDF_STYLE_TF}">TOTAL GERAL</td>`;
+      if (c.chave === 'total') return `<td style="${PDF_STYLE_TF}text-align:right;">${formatarMoeda(total)}</td>`;
+      return `<td style="${PDF_STYLE_TF}"></td>`;
+    }).join('')}</tr></tfoot>
+  </table>`;
+  html += pdfRodape();
+  return html;
+}
+
+// ============================================================
+// TABELA CONSOLIDADO — PDF COMPLETO
+// ============================================================
+function gerarTabelaPDFConsolidado() {
+  const termo = (document.getElementById('buscaExecResultados')?.value || '').toLowerCase();
+  const baseFiltro = lancamentos.filter(l => {
+    if (execMesesConsolidado.length > 0) { const mm = getMes(l.data); if (!mm || !execMesesConsolidado.includes(mm)) return false; }
+    if (execSituacoes.length > 0 && !execSituacoes.includes(normalizarSituacao(l.situacao))) return false;
+    if (termo) { const txt = `${l.fornecedor||''} ${l.nf||''} ${getPlanoLabel(l.plano_contas)} ${l.cadastro_inicial||''}`.toLowerCase(); if (!txt.includes(termo)) return false; }
+    return true;
+  });
+
+  const despesasSulFlu = baseFiltro.filter(l => l.tipo==='DESPESA' && getGrupoRegionalLanc(l)==='SUL FLUMINENSE');
+  const agrupSulFlu = agruparPorPlanoContas(despesasSulFlu);
+  const chavesSulFlu = Object.keys(agrupSulFlu).filter(c => agrupSulFlu[c].realizado !== 0 || agrupSulFlu[c].projetado !== 0).sort((a,b)=>{ const ca = agrupSulFlu[a].codigo || ''; const cb = agrupSulFlu[b].codigo || ''; return ca.localeCompare(cb, undefined, { numeric: true }); });
+  let totProjSulFlu = 0, totRealSulFlu = 0;
+
+  const despesasLiquigas = baseFiltro.filter(l => l.tipo==='DESPESA' && getGrupoRegionalLanc(l)==='LIQUIGÁS');
+  const agrupLiquigas = agruparPorPlanoContas(despesasLiquigas);
+  const chavesLiquigas = Object.keys(agrupLiquigas).filter(c => agrupLiquigas[c].realizado !== 0 || agrupLiquigas[c].projetado !== 0).sort((a,b)=>{ const ca = agrupLiquigas[a].codigo || ''; const cb = agrupLiquigas[b].codigo || ''; return ca.localeCompare(cb, undefined, { numeric: true }); });
+  let totProjLiquigas = 0, totRealLiquigas = 0;
+
+  const todasDespesas = baseFiltro.filter(l => l.tipo==='DESPESA');
+  const agrupGeral = agruparPorPlanoContas(todasDespesas);
+  const chavesDRE = Object.keys(agrupGeral).filter(c => agrupGeral[c].realizado !== 0).sort((a,b)=> agrupGeral[b].realizado - agrupGeral[a].realizado);
+  let totalDRE = 0;
+
+  const baseRecebimentos = lancamentos.filter(l => {
+    if (l.tipo !== 'RECEITA') return false;
+    if (execMesesConsolidado.length > 0) { const mm = getMes(l.data); if (!mm || !execMesesConsolidado.includes(mm)) return false; }
+    if (execRecebimentoSituacoes.length > 0 && !execRecebimentoSituacoes.includes(normalizarSituacao(l.situacao))) return false;
+    return true;
+  });
+  const receitasSulFlu = baseRecebimentos.filter(l => getGrupoRegionalLanc(l)==='SUL FLUMINENSE').reduce((s,l)=>s+(parseFloat(l.valor_realizado)||0),0);
+  const receitasLiquigas = baseRecebimentos.filter(l => getGrupoRegionalLanc(l)==='LIQUIGÁS').reduce((s,l)=>s+(parseFloat(l.valor_realizado)||0),0);
+  const totalRecebimentos = receitasSulFlu + receitasLiquigas;
+  const cmv = somaPorAliases(agrupGeral, ALIASES_CMV);
+  const cpv = totalDRE - cmv;
+  const resultadoGerencial = totalRecebimentos - totalDRE;
+  const eb = calcularEBITDAAjustado(agrupGeral, resultadoGerencial);
+  const pctReceb = (v) => totalRecebimentos > 0 ? (v / totalRecebimentos) * 100 : 0;
+
+  const th = PDF_STYLE_TH;
+  const td = PDF_STYLE_TD;
+  const tdr = PDF_STYLE_TD_RIGHT;
+  const tf = PDF_STYLE_TF;
+
+  let html = pdfCabecalho('Resumo Executivo — Consolidado', 'QNUTRI — Módulo Financeiro', baseFiltro.length, 'Lançamentos no filtro');
+
+  // SUL FLUMINENSE
+  html += `<table style="width:100%;border-collapse:collapse;font-size:10px;background:#fff;border:1px solid #333;margin-bottom:14px;">
+    <thead><tr>
+      <th style="${th}text-align:left;width:50%;">SUL FLUMINENSE — Conta</th>
+      <th style="${th}text-align:right;width:25%;">Projetado</th>
+      <th style="${th}text-align:right;width:25%;">Realizado</th>
+    </tr></thead><tbody>`;
+  chavesSulFlu.forEach(chave => {
+    const d = agrupSulFlu[chave];
+    if (d.projetado === 0 && d.realizado === 0) return;
+    totProjSulFlu += d.projetado; totRealSulFlu += d.realizado;
+    html += `<tr><td style="${td}">${escapeHtml(d.label)}</td><td style="${tdr}">${formatarMoeda(d.projetado)}</td><td style="${tdr}">${formatarMoeda(d.realizado)}</td></tr>`;
+  });
+  html += `<tr><td style="${tf}">Total</td><td style="${tf}text-align:right;">${formatarMoeda(totProjSulFlu)}</td><td style="${tf}text-align:right;">${formatarMoeda(totRealSulFlu)}</td></tr>`;
+  html += `</tbody></table>`;
+
+  // LIQUIGÁS
+  html += `<table style="width:100%;border-collapse:collapse;font-size:10px;background:#fff;border:1px solid #333;margin-bottom:14px;">
+    <thead><tr>
+      <th style="${th}text-align:left;width:50%;">LIQUIGÁS — Conta</th>
+      <th style="${th}text-align:right;width:25%;">Projetado</th>
+      <th style="${th}text-align:right;width:25%;">Realizado</th>
+    </tr></thead><tbody>`;
+  chavesLiquigas.forEach(chave => {
+    const d = agrupLiquigas[chave];
+    if (d.projetado === 0 && d.realizado === 0) return;
+    totProjLiquigas += d.projetado; totRealLiquigas += d.realizado;
+    html += `<tr><td style="${td}">${escapeHtml(d.label)}</td><td style="${tdr}">${formatarMoeda(d.projetado)}</td><td style="${tdr}">${formatarMoeda(d.realizado)}</td></tr>`;
+  });
+  html += `<tr><td style="${tf}">Total Geral</td><td style="${tf}text-align:right;">${formatarMoeda(totProjLiquigas)}</td><td style="${tf}text-align:right;">${formatarMoeda(totRealLiquigas)}</td></tr>`;
+  html += `</tbody></table>`;
+
+  // CONSOLIDADO (DRE)
+  html += `<table style="width:100%;border-collapse:collapse;font-size:10px;background:#fff;border:1px solid #333;margin-bottom:14px;">
+    <thead><tr>
+      <th style="${th}text-align:left;width:50%;">Consolidado — Conta</th>
+      <th style="${th}text-align:right;width:30%;">Valor</th>
+      <th style="${th}text-align:right;width:20%;">% CT</th>
+    </tr></thead><tbody>`;
+  chavesDRE.forEach(chave => {
+    const d = agrupGeral[chave];
+    if (d.realizado === 0) return;
+    totalDRE += d.realizado;
+    const pct = totalDRE > 0 ? (d.realizado / totalDRE) * 100 : 0;
+    html += `<tr><td style="${td}">${escapeHtml(d.label)}</td><td style="${tdr}">${formatarMoeda(d.realizado)}</td><td style="${tdr}">${pct.toFixed(2)}%</td></tr>`;
+  });
+  html += `<tr><td style="${tf}">Total</td><td style="${tf}text-align:right;">${formatarMoeda(totalDRE)}</td><td style="${tf}text-align:right;">100,00%</td></tr>`;
+  html += `</tbody></table>`;
+
+  // RECEBIMENTOS
+  html += `<table style="width:100%;border-collapse:collapse;font-size:10px;background:#fff;border:1px solid #333;margin-bottom:14px;">
+    <thead><tr>
+      <th style="${th}text-align:left;width:50%;">Recebimentos do Mês</th>
+      <th style="${th}text-align:right;width:30%;">Valor</th>
+      <th style="${th}text-align:right;width:20%;">%</th>
+    </tr></thead><tbody>
+      <tr><td style="${td}">SUL FLUMINENSE - Recebimento Mês</td><td style="${tdr}">${formatarMoeda(receitasSulFlu)}</td><td style="${tdr}">${pctReceb(receitasSulFlu).toFixed(2)}%</td></tr>
+      <tr><td style="${td}">LIQUIGÁS - Recebimento Mês</td><td style="${tdr}">${formatarMoeda(receitasLiquigas)}</td><td style="${tdr}">${pctReceb(receitasLiquigas).toFixed(2)}%</td></tr>
+      <tr><td style="${tf}">Total - Recebimento Mês</td><td style="${tf}text-align:right;">${formatarMoeda(totalRecebimentos)}</td><td style="${tf}text-align:right;">100,00%</td></tr>
+    </tbody></table>`;
+
+  // RESULTADO GERENCIAL
+  html += `<table style="width:100%;border-collapse:collapse;font-size:10px;background:#fff;border:1px solid #333;margin-bottom:14px;">
+    <tbody>
+      <tr><td style="${tf}width:60%;">RESULTADO GERENCIAL (CAIXA)</td><td style="${tf}text-align:right;width:40%;">${formatarMoeda(resultadoGerencial)}</td></tr>
+    </tbody></table>`;
+
+  // INDICADORES / EBITDA
+  html += `<table style="width:100%;border-collapse:collapse;font-size:10px;background:#fff;border:1px solid #333;margin-bottom:18px;">
+    <thead><tr>
+      <th style="${th}text-align:left;width:60%;">Indicadores</th>
+      <th style="${th}text-align:right;width:40%;">Valor</th>
+    </tr></thead><tbody>
+      <tr><td style="${td}">RESULTADO GERENCIAL</td><td style="${tdr}">${formatarMoeda(eb.i21)}</td></tr>
+      <tr><td style="${td}">SERVIÇO</td><td style="${tdr}">${formatarMoeda(eb.i10)}</td></tr>
+      <tr><td style="${td}">DIVISÃO DE LUCRO</td><td style="${tdr}">${formatarMoeda(eb.i7)}</td></tr>
+      <tr><td style="${td}">IMPOSTOS / 2</td><td style="${tdr}">${formatarMoeda(eb.i6 / 2)}</td></tr>
+      <tr><td style="${td}">MANUTENÇÃO</td><td style="${tdr}">${formatarMoeda(eb.i12)}</td></tr>
+      <tr><td style="${tf}">EBITDA AJUSTADO</td><td style="${tf}text-align:right;">${formatarMoeda(eb.ebitda)}</td></tr>
+    </tbody></table>`;
+
+  html += pdfRodape();
+  return html;
+}
+
+// ============================================================
+// CONFIG COLUNAS PDF
+// ============================================================
+function abrirConfigColunasPDF() {
+  pdfContexto = { tipo: 'lancamentos', colunas: PDF_COLUNAS_LANCAMENTOS };
+  abrirConfigColunasGenerico(PDF_COLUNAS_LANCAMENTOS, pdfColunasSelecionadas, 'Colunas do PDF — Lançamentos');
+}
+function abrirConfigColunasPDFExec() {
+  const cols = PDF_COLUNAS_PIVOT;
+  pdfContexto = { tipo: 'pivot', colunas: cols };
+  const sel = {};
+  cols.forEach(c => sel[c.chave] = pdfColunasSelecionadas[c.chave] !== false);
+  abrirConfigColunasGenerico(cols, sel, 'Colunas do PDF — Resultados Executivos');
+}
+function abrirConfigColunasPDFDRE() {
+  const cols = PDF_COLUNAS_DRE;
+  pdfContexto = { tipo: 'dre', colunas: cols };
+  const sel = {};
+  cols.forEach(c => sel[c.chave] = pdfColunasSelecionadas[c.chave] !== false);
+  abrirConfigColunasGenerico(cols, sel, 'Colunas do PDF — DRE');
+}
+function abrirConfigColunasPDFDesvios() {
+  const cols = PDF_COLUNAS_DESVIOS;
+  pdfContexto = { tipo: 'desvios', colunas: cols };
+  const sel = {};
+  cols.forEach(c => sel[c.chave] = pdfColunasSelecionadas[c.chave] !== false);
+  abrirConfigColunasGenerico(cols, sel, 'Colunas do PDF — Desvios');
+}
+function abrirConfigColunasPDFDetalheExec() {
+  const cols = PDF_COLUNAS_LANCAMENTOS;
+  pdfContexto = { tipo: 'detalhe_exec', colunas: cols };
+  const sel = {};
+  cols.forEach(c => sel[c.chave] = pdfColunasSelecionadas[c.chave] !== false);
+  abrirConfigColunasGenerico(cols, sel, 'Colunas do PDF — Detalhamento');
+}
+function abrirConfigColunasPDFGenerico() {
+  abrirConfigColunasGenerico(pdfContexto.colunas || PDF_COLUNAS_LANCAMENTOS, pdfColunasSelecionadas, 'Colunas do PDF');
+}
 function abrirConfigColunasGenerico(colunas, selecionadas, titulo) {
   const list = document.getElementById('colConfigList');
   if (!list) return;
@@ -2147,131 +2507,149 @@ function abrirConfigColunasGenerico(colunas, selecionadas, titulo) {
   popup.classList.add('active');
 }
 function fecharConfigColunasPDF() { document.getElementById('popupConfigColunas').classList.remove('active'); }
-function selecionarTodasColunasPDF() { const cols = pdfContexto.colunas || PDF_COLUNAS_LANCAMENTOS; cols.forEach(c => pdfColunasSelecionadas[c.chave] = true); document.querySelectorAll('#colConfigList input[type="checkbox"]').forEach(cb => cb.checked = true); }
-function limparColunasPDF() { const cols = pdfContexto.colunas || PDF_COLUNAS_LANCAMENTOS; cols.forEach(c => pdfColunasSelecionadas[c.chave] = false); document.querySelectorAll('#colConfigList input[type="checkbox"]').forEach(cb => cb.checked = false); }
-function aplicarConfigColunasPDF() { regenerarHTMLPDF(); fecharConfigColunasPDF(); mostrarToast('Colunas atualizadas!', 'success'); }
+function selecionarTodasColunasPDF() {
+  const cols = pdfContexto.colunas || PDF_COLUNAS_LANCAMENTOS;
+  cols.forEach(c => pdfColunasSelecionadas[c.chave] = true);
+  document.querySelectorAll('#colConfigList input[type="checkbox"]').forEach(cb => cb.checked = true);
+}
+function limparColunasPDF() {
+  const cols = pdfContexto.colunas || PDF_COLUNAS_LANCAMENTOS;
+  cols.forEach(c => pdfColunasSelecionadas[c.chave] = false);
+  document.querySelectorAll('#colConfigList input[type="checkbox"]').forEach(cb => cb.checked = false);
+}
+function aplicarConfigColunasPDF() {
+  regenerarHTMLPDF();
+  fecharConfigColunasPDF();
+  mostrarToast('Colunas atualizadas!', 'success');
+}
+
+// ============================================================
+// REGENERAR HTML DO PDF
+// ============================================================
 function regenerarHTMLPDF() {
   const container = document.getElementById('pdfContainer');
   if (!container) return;
-  if (pdfDadosAtuais.length === 0 && pdfContexto.tipo !== 'consolidado') return;
   let html = '';
   switch (pdfContexto.tipo) {
-    case 'lancamentos': html = gerarTabelaPDF(pdfDadosAtuais, 'QNUTRI — Lançamentos Financeiros', pdfColunasDisponiveis, pdfColunasSelecionadas); break;
-    case 'detalhe_exec': html = gerarTabelaPDF(pdfDadosAtuais, pdfTituloAtual, pdfColunasDisponiveis, pdfColunasSelecionadas); break;
-    case 'pivot': html = gerarTabelaPDFPivotComColunas(pdfDadosAtuais, pdfTituloAtual, pdfLabelColAtual, pdfColunasSelecionadas); break;
-    case 'desvios': html = gerarTabelaPDFDesviosComColunas(pdfDadosAtuais, pdfColunasSelecionadas); break;
-    case 'dre': html = gerarTabelaPDFDREComColunas(pdfDadosAtuais, pdfColunasSelecionadas); break;
-    default: html = gerarTabelaPDF(pdfDadosAtuais, pdfTituloAtual || 'Documento', pdfColunasDisponiveis, pdfColunasSelecionadas);
+    case 'lancamentos':
+      html = gerarTabelaPDF(pdfDadosAtuais, 'QNUTRI — Lançamentos Financeiros', PDF_COLUNAS_LANCAMENTOS, pdfColunasSelecionadas);
+      break;
+    case 'detalhe_exec':
+      html = gerarTabelaPDF(pdfDadosAtuais, pdfTituloAtual, PDF_COLUNAS_LANCAMENTOS, pdfColunasSelecionadas);
+      break;
+    case 'pivot':
+      html = gerarTabelaPDFPivotComColunas(pdfDadosAtuais, pdfTituloAtual, pdfLabelColAtual, pdfColunasSelecionadas);
+      break;
+    case 'desvios':
+      html = gerarTabelaPDFDesviosComColunas(pdfDadosAtuais, pdfColunasSelecionadas);
+      break;
+    case 'dre':
+      html = gerarTabelaPDFDREComColunas(pdfDadosAtuais, pdfColunasSelecionadas);
+      break;
+    case 'consolidado':
+      html = gerarTabelaPDFConsolidado();
+      break;
+    default:
+      html = gerarTabelaPDF(pdfDadosAtuais, pdfTituloAtual || 'Documento', PDF_COLUNAS_LANCAMENTOS, pdfColunasSelecionadas);
   }
   container.innerHTML = html;
   pdfHTMLAtual = html;
 }
-function gerarTabelaPDF(lista, titulo, colunasDisponiveis, selecionadas) {
-  if (!lista.length) return '<p style="color:#000;">Nenhum dado para exibir.</p>';
-  const colunas = colunasDisponiveis || PDF_COLUNAS_LANCAMENTOS;
-  const sel = selecionadas || {};
-  const ativas = colunas.filter(c => sel[c.chave] !== false);
-  if (!ativas.length) return '<p style="color:#000;">Nenhuma coluna selecionada.</p>';
-  const totP = lista.reduce((s,l)=>s+(parseFloat(l.valor_projetado)||0),0);
-  const totR = lista.reduce((s,l)=>s+(parseFloat(l.valor_realizado)||0),0);
-  const totD = totR - totP;
-  const extratores = {
-    data: l => l.data ? formatarData(l.data) : 'SEM DATA', pago_em: l => l.pago_em || '-', nf: l => l.nf || '-',
-    tipo: l => l.tipo, grupo: l => getLabelGrupoRegional(getGrupoRegionalLanc(l)), fornecedor: l => l.fornecedor || '-',
-    plano: l => getPlanoLabel(l.plano_contas) || '-', cadastro: l => l.cadastro_inicial || '-',
-    projetado: l => formatarMoeda(parseFloat(l.valor_projetado) || 0), realizado: l => formatarMoeda(parseFloat(l.valor_realizado) || 0),
-    diferenca: l => formatarMoeda((parseFloat(l.valor_realizado)||0) - (parseFloat(l.valor_projetado)||0)),
-    situacao: l => normalizarSituacao(l.situacao), usuario: l => getUsuarioExibicao(l), banco: l => l.banco || '-'
-  };
-  return `<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:14px;margin-bottom:18px;"><h1 style="font-size:18px;font-weight:700;color:#000;text-transform:uppercase;letter-spacing:1.4px;margin-bottom:6px;">${escapeHtml(titulo)}</h1><div style="font-size:11px;color:#000;font-weight:500;text-transform:uppercase;letter-spacing:0.9px;">QNUTRI — Módulo Financeiro</div><div style="display:flex;justify-content:space-between;font-size:10.5px;color:#000;margin-top:10px;padding-top:8px;border-top:1px solid #000;"><span><strong>Registros:</strong> ${lista.length}</span><span><strong>Emitido em:</strong> ${new Date().toLocaleString('pt-BR')}</span></div></div>
-    <table style="width:100%;max-width:100%;border-collapse:collapse;font-size:10px;color:#000;background:#fff;border:1px solid #333;margin-bottom:18px;table-layout:fixed;"><thead><tr>${ativas.map(c => `<th style="background:#e8e8e8;color:#000;font-size:9px;font-weight:700;padding:6px 5px;text-align:left;text-transform:uppercase;border:1px solid #333;">${escapeHtml(c.label)}</th>`).join('')}</tr></thead><tbody>
-    ${lista.map(l => `<tr>${ativas.map(c => { const fn = extratores[c.chave]; return `<td style="padding:5px;border:1px solid #333;font-size:9.5px;color:#000;background:#fff;">${escapeHtml(fn ? fn(l) : '-')}</td>`; }).join('')}</tr>`).join('')}
-    </tbody><tfoot><tr>${ativas.map((c, i) => { if (c.chave === 'projetado') return `<td style="background:#d8d8d8;color:#000;font-weight:700;padding:6px 5px;border:1px solid #333;text-align:right;">${formatarMoeda(totP)}</td>`; if (c.chave === 'realizado') return `<td style="background:#d8d8d8;color:#000;font-weight:700;padding:6px 5px;border:1px solid #333;text-align:right;">${formatarMoeda(totR)}</td>`; if (c.chave === 'diferenca') return `<td style="background:#d8d8d8;color:#000;font-weight:700;padding:6px 5px;border:1px solid #333;text-align:right;">${formatarMoeda(totD)}</td>`; if (i === 0) return `<td style="background:#d8d8d8;color:#000;font-weight:700;padding:6px 5px;border:1px solid #333;">TOTAIS (${lista.length})</td>`; return `<td style="background:#d8d8d8;border:1px solid #333;"></td>`; }).join('')}</tr></tfoot></table>
-    <div style="font-size:9.5px;color:#000;text-align:right;margin-top:12px;padding-top:7px;border-top:1px solid #000;">Gerado em ${new Date().toLocaleString('pt-BR')} — QNUTRI Módulo Financeiro</div>`;
-}
-function gerarTabelaPDFPivotComColunas(dados, titulo, labelCol, selecionadas) {
-  if (!dados.length) return '<p style="color:#000;">Nenhum dado para exibir.</p>';
-  const cols = PDF_COLUNAS_PIVOT;
-  const sel = selecionadas || {};
-  const ativas = cols.filter(c => sel[c.chave] !== false);
-  if (!ativas.length) return '<p style="color:#000;">Nenhuma coluna selecionada.</p>';
-  const totalP = dados.reduce((s,d)=>s+d.totalP,0);
-  const totalR = dados.reduce((s,d)=>s+d.totalR,0);
-  const totalD = totalR - totalP;
-  const totalQtd = dados.reduce((s,d)=>s+d.qtd,0);
-  const extratores = {
-    chave: d => d.label || d.chave, projetado: d => formatarMoeda(d.totalP), realizado: d => formatarMoeda(d.totalR),
-    diferenca: d => formatarMoeda(d.totalD), pct: d => totalR > 0 ? (d.totalR / totalR * 100).toFixed(2) + '%' : '0,00%', qtd: d => d.qtd
-  };
-  let html = `<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:14px;margin-bottom:18px;"><h1 style="font-size:18px;font-weight:700;color:#000;text-transform:uppercase;letter-spacing:1.4px;margin-bottom:6px;">${escapeHtml(titulo)}</h1><div style="font-size:11px;color:#000;font-weight:500;text-transform:uppercase;letter-spacing:0.9px;">QNUTRI — Módulo Financeiro</div><div style="display:flex;justify-content:space-between;font-size:10.5px;color:#000;margin-top:10px;padding-top:8px;border-top:1px solid #000;"><span><strong>Registros:</strong> ${totalQtd}</span><span><strong>Emitido em:</strong> ${new Date().toLocaleString('pt-BR')}</span></div></div>
-    <table style="width:100%;border-collapse:collapse;font-size:10px;color:#000;background:#fff;border:1px solid #333;margin-bottom:18px;"><thead><tr>${ativas.map(c => `<th style="background:#e8e8e8;color:#000;font-size:9px;font-weight:700;padding:6px 5px;text-align:${['projetado','realizado','diferenca','pct'].includes(c.chave)?'right':c.chave==='qtd'?'center':'left'};border:1px solid #333;">${escapeHtml(c.label)}</th>`).join('')}</tr></thead><tbody>`;
-  dados.forEach(d => { html += '<tr>'; ativas.forEach(c => { const fn = extratores[c.chave]; const val = fn ? fn(d) : '-'; const cls = ['projetado','realizado','diferenca','pct'].includes(c.chave) ? 'right' : c.chave === 'qtd' ? 'center' : ''; html += `<td style="padding:5px;border:1px solid #333;font-size:9.5px;color:#000;text-align:${cls};">${escapeHtml(String(val))}</td>`; }); html += '</tr>'; });
-  html += `</tbody><tfoot><tr>${ativas.map((c, i) => { if (c.chave === 'projetado') return `<td style="background:#d8d8d8;font-weight:700;padding:6px 5px;border:1px solid #333;text-align:right;">${formatarMoeda(totalP)}</td>`; if (c.chave === 'realizado') return `<td style="background:#d8d8d8;font-weight:700;padding:6px 5px;border:1px solid #333;text-align:right;">${formatarMoeda(totalR)}</td>`; if (c.chave === 'diferenca') return `<td style="background:#d8d8d8;font-weight:700;padding:6px 5px;border:1px solid #333;text-align:right;">${formatarMoeda(totalD)}</td>`; if (c.chave === 'pct') return `<td style="background:#d8d8d8;font-weight:700;padding:6px 5px;border:1px solid #333;text-align:right;">100,00%</td>`; if (c.chave === 'qtd') return `<td style="background:#d8d8d8;font-weight:700;padding:6px 5px;border:1px solid #333;text-align:center;">${totalQtd}</td>`; if (i === 0) return `<td style="background:#d8d8d8;font-weight:700;padding:6px 5px;border:1px solid #333;">TOTAL GERAL</td>`; return `<td style="background:#d8d8d8;border:1px solid #333;"></td>`; }).join('')}</tr></tfoot></table>`;
-  return html;
-}
-function gerarTabelaPDFDesviosComColunas(dados, selecionadas) {
-  if (!dados.length) return '<p style="color:#000;">Nenhum dado para exibir.</p>';
-  const cols = PDF_COLUNAS_DESVIOS;
-  const sel = selecionadas || {};
-  const ativas = cols.filter(c => sel[c.chave] !== false);
-  if (!ativas.length) return '<p style="color:#000;">Nenhuma coluna selecionada.</p>';
-  const totP = dados.reduce((s,d)=>s+d.proj,0);
-  const totR = dados.reduce((s,d)=>s+d.real,0);
-  const totD = dados.reduce((s,d)=>s+d.diff,0);
-  const totQ = dados.reduce((s,d)=>s+d.qtd,0);
-  const extratores = {
-    conta: d => d.label || d.chave, projetado: d => formatarMoeda(d.proj), realizado: d => formatarMoeda(d.real),
-    desvio: d => formatarMoeda(d.diff), desvio_pct: d => (d.pct >= 0 ? '+' : '') + d.pct.toFixed(2) + '%',
-    nivel: d => d.nivel === 'critico' ? 'CRÍTICO' : d.nivel === 'atencao' ? 'ATENÇÃO' : 'OK', qtd: d => d.qtd
-  };
-  let html = `<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:14px;margin-bottom:18px;"><h1 style="font-size:18px;font-weight:700;color:#000;text-transform:uppercase;letter-spacing:1.4px;margin-bottom:6px;">Análise de Desvios — Ranking por Conta</h1><div style="font-size:11px;color:#000;font-weight:500;text-transform:uppercase;letter-spacing:0.9px;">QNUTRI — Módulo Financeiro</div><div style="display:flex;justify-content:space-between;font-size:10.5px;color:#000;margin-top:10px;padding-top:8px;border-top:1px solid #000;"><span><strong>Contas:</strong> ${dados.length}</span><span><strong>Emitido em:</strong> ${new Date().toLocaleString('pt-BR')}</span></div></div>
-    <table style="width:100%;border-collapse:collapse;font-size:10px;color:#000;background:#fff;border:1px solid #333;margin-bottom:18px;"><thead><tr>${ativas.map(c => `<th style="background:#e8e8e8;color:#000;font-size:9px;font-weight:700;padding:6px 5px;text-align:${['projetado','realizado','desvio','desvio_pct'].includes(c.chave)?'right':c.chave==='nivel'||c.chave==='qtd'?'center':'left'};border:1px solid #333;">${escapeHtml(c.label)}</th>`).join('')}</tr></thead><tbody>`;
-  dados.forEach(d => { html += '<tr>'; ativas.forEach(c => { const fn = extratores[c.chave]; const val = fn ? fn(d) : '-'; const cls = ['projetado','realizado','desvio','desvio_pct'].includes(c.chave) ? 'right' : c.chave === 'nivel' || c.chave === 'qtd' ? 'center' : ''; html += `<td style="padding:5px;border:1px solid #333;font-size:9.5px;color:#000;text-align:${cls};">${escapeHtml(String(val))}</td>`; }); html += '</tr>'; });
-  html += `</tbody><tfoot><tr>${ativas.map((c, i) => { if (c.chave === 'projetado') return `<td style="background:#d8d8d8;font-weight:700;padding:6px 5px;border:1px solid #333;text-align:right;">${formatarMoeda(totP)}</td>`; if (c.chave === 'realizado') return `<td style="background:#d8d8d8;font-weight:700;padding:6px 5px;border:1px solid #333;text-align:right;">${formatarMoeda(totR)}</td>`; if (c.chave === 'desvio') return `<td style="background:#d8d8d8;font-weight:700;padding:6px 5px;border:1px solid #333;text-align:right;">${formatarMoeda(totD)}</td>`; if (c.chave === 'qtd') return `<td style="background:#d8d8d8;font-weight:700;padding:6px 5px;border:1px solid #333;text-align:center;">${totQ}</td>`; if (i === 0) return `<td style="background:#d8d8d8;font-weight:700;padding:6px 5px;border:1px solid #333;">TOTAL (${dados.length} contas)</td>`; return `<td style="background:#d8d8d8;border:1px solid #333;"></td>`; }).join('')}</tr></tfoot></table>`;
-  return html;
-}
-function gerarTabelaPDFDREComColunas(dados, selecionadas) {
-  if (!dados.length) return '<p style="color:#000;">Nenhum dado para exibir.</p>';
-  const cols = PDF_COLUNAS_DRE;
-  const sel = selecionadas || {};
-  const ativas = cols.filter(c => sel[c.chave] !== false);
-  if (!ativas.length) return '<p style="color:#000;">Nenhuma coluna selecionada.</p>';
-  let html = `<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:14px;margin-bottom:18px;"><h1 style="font-size:18px;font-weight:700;color:#000;text-transform:uppercase;letter-spacing:1.4px;margin-bottom:6px;">DRE — Demonstração do Resultado</h1><div style="font-size:11px;color:#000;font-weight:500;text-transform:uppercase;letter-spacing:0.9px;">QNUTRI — Módulo Financeiro</div></div>
-    <table style="width:100%;border-collapse:collapse;font-size:10px;color:#000;background:#fff;border:1px solid #333;margin-bottom:18px;"><thead><tr>${ativas.map(c => `<th style="background:#e8e8e8;color:#000;font-size:9px;font-weight:700;padding:6px 5px;text-align:${c.chave === 'total' ? 'right' : 'left'};border:1px solid #333;">${escapeHtml(c.label)}</th>`).join('')}</tr></thead><tbody>`;
-  dados.forEach(d => { html += '<tr>'; ativas.forEach(c => { if (c.chave === 'conta') html += `<td style="padding:5px;border:1px solid #333;font-size:9.5px;color:#000;">${escapeHtml(d.conta || '-')}</td>`; else if (c.chave === 'total') html += `<td style="padding:5px;border:1px solid #333;font-size:9.5px;color:#000;text-align:right;">${formatarMoeda(d.valor || 0)}</td>`; else html += `<td style="padding:5px;border:1px solid #333;font-size:9.5px;color:#000;">-</td>`; }); html += '</tr>'; });
-  html += `</tbody></table>`;
-  return html;
-}
+
+// ============================================================
+// ABRIR POPUP PDF
+// ============================================================
 function abrirPopupPDF(htmlConteudo, titulo, nomeArquivo, colunasDisponiveis, selecionadas) {
   pdfHTMLAtual = htmlConteudo;
   pdfNomeArquivo = nomeArquivo;
   pdfColunasDisponiveis = colunasDisponiveis || PDF_COLUNAS_LANCAMENTOS;
-  if (Object.keys(pdfColunasSelecionadas).length === 0) { pdfColunasSelecionadas = {}; pdfColunasDisponiveis.forEach(c => pdfColunasSelecionadas[c.chave] = true); }
+  pdfColunasSelecionadas = selecionadas || {};
+
+  if (Object.keys(pdfColunasSelecionadas).length === 0 && pdfColunasDisponiveis.length > 0) {
+    pdfColunasDisponiveis.forEach(c => pdfColunasSelecionadas[c.chave] = true);
+  }
+
   document.getElementById('pdfTitulo').textContent = titulo;
   document.getElementById('pdfContainer').innerHTML = htmlConteudo;
+
   const barCols = document.getElementById('pdfColunasBar');
-  if (colunasDisponiveis && colunasDisponiveis.length > 0) { barCols.style.display = 'flex'; } else { barCols.style.display = 'none'; }
-  document.getElementById('popupPDF').classList.add('active');
+  if (colunasDisponiveis && colunasDisponiveis.length > 0) {
+    barCols.style.display = 'flex';
+  } else {
+    barCols.style.display = 'none';
+  }
+
+  const popup = document.getElementById('popupPDF');
+  popup.classList.add('active');
   pushPopupHistory('popupPDF', fecharPopupPDF);
 }
-function fecharPopupPDF() { document.getElementById('popupPDF').classList.remove('active'); document.getElementById('pdfLoadingOverlay').classList.remove('active'); pdfDadosAtuais = []; }
+
+function fecharPopupPDF() {
+  document.getElementById('popupPDF').classList.remove('active');
+  const loading = document.getElementById('pdfLoadingOverlay');
+  if (loading) loading.style.display = 'none';
+}
+
+// ============================================================
+// BAIXAR PDF
+// ============================================================
 function baixarPDFPopup() {
   const elemento = document.getElementById('pdfContainer');
   const loadingOverlay = document.getElementById('pdfLoadingOverlay');
-  if (!elemento || !elemento.innerHTML.trim()) { mostrarToast('Nada para gerar PDF.', 'warning'); return; }
+  if (!elemento || !elemento.innerHTML.trim()) {
+    mostrarToast('Nada para gerar PDF.', 'warning');
+    return;
+  }
+
   loadingOverlay.style.display = 'flex';
   mostrarToast('Gerando PDF... aguarde', 'info');
-  const opt = { margin: [5, 5, 5, 5], filename: pdfNomeArquivo || `QNUTRI_Documento_${new Date().toISOString().slice(0, 10)}.pdf`, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 1.5, useCORS: true, logging: false, backgroundColor: '#ffffff' }, jsPDF: { unit: 'mm', format: 'a3', orientation: 'landscape', compress: true }, pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } };
-  setTimeout(() => { html2pdf().set(opt).from(elemento).save().then(() => { loadingOverlay.style.display = 'none'; mostrarToast('PDF gerado com sucesso!', 'success'); }).catch(err => { loadingOverlay.style.display = 'none'; mostrarToast('Erro ao gerar PDF: ' + err.message, 'error'); }); }, 50);
+
+  const opt = {
+    margin: [5, 5, 5, 5],
+    filename: pdfNomeArquivo || `QNUTRI_Documento_${new Date().toISOString().slice(0, 10)}.pdf`,
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 1.5, useCORS: true, logging: false, backgroundColor: '#ffffff' },
+    jsPDF: { unit: 'mm', format: 'a3', orientation: 'landscape', compress: true },
+    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+  };
+
+  setTimeout(() => {
+    html2pdf().set(opt).from(elemento).save()
+      .then(() => {
+        loadingOverlay.style.display = 'none';
+        mostrarToast('PDF gerado com sucesso!', 'success');
+      })
+      .catch(err => {
+        loadingOverlay.style.display = 'none';
+        mostrarToast('Erro ao gerar PDF: ' + err.message, 'error');
+      });
+  }, 50);
 }
+
+// ============================================================
+// EXPORTAR PDF — LANÇAMENTOS
+// ============================================================
 function exportarPDFLancamentos() {
   const filt = obterLancamentosFiltrados();
   if (!filt.length) { mostrarToast('Nenhum lançamento para exportar.', 'warning'); return; }
-  pdfDadosAtuais = filt; pdfContexto = { tipo: 'lancamentos', colunas: PDF_COLUNAS_LANCAMENTOS };
-  if (Object.keys(pdfColunasSelecionadas).length === 0) { PDF_COLUNAS_LANCAMENTOS.forEach(c => pdfColunasSelecionadas[c.chave] = true); }
+
+  pdfDadosAtuais = filt;
+  pdfContexto = { tipo: 'lancamentos', colunas: PDF_COLUNAS_LANCAMENTOS };
+
+  if (Object.keys(pdfColunasSelecionadas).length === 0) {
+    PDF_COLUNAS_LANCAMENTOS.forEach(c => pdfColunasSelecionadas[c.chave] = true);
+  }
+
   const html = gerarTabelaPDF(filt, 'QNUTRI — Lançamentos Financeiros', PDF_COLUNAS_LANCAMENTOS, pdfColunasSelecionadas);
-  abrirPopupPDF(html, 'Exportar PDF — Lançamentos', `QNUTRI_Lancamentos_${new Date().toISOString().slice(0, 10)}.pdf`, PDF_COLUNAS_LANCAMENTOS, pdfColunasSelecionadas);
+  abrirPopupPDF(
+    html,
+    'Exportar PDF — Lançamentos',
+    `QNUTRI_Lancamentos_${new Date().toISOString().slice(0, 10)}.pdf`,
+    PDF_COLUNAS_LANCAMENTOS,
+    pdfColunasSelecionadas
+  );
 }
+
 function obterLancamentosFiltrados(){
   const termo=(document.getElementById('buscaLancamentos')?.value||'').toLowerCase();
   const tipos=getMsSelecionados('msTipoLanc').map(t => t.toUpperCase());
@@ -2283,6 +2661,7 @@ function obterLancamentosFiltrados(){
   const planos=getMsSelecionados('msPlanoLanc');
   const cadastros=getMsSelecionados('msCadastroInicialLanc');
   const sits=getMsSelecionados('msSituacaoLanc').map(s => s.toUpperCase());
+
   let filt=lancamentos.filter(l=>{
     if(tipos.length>0&&!tipos.includes((l.tipo||'').toUpperCase()))return false;
     if(meses.length>0){const mm=getMes(l.data);if(!mm||!meses.includes(mm))return false;}
@@ -2298,6 +2677,7 @@ function obterLancamentosFiltrados(){
   if(grupos.length>0)filt=filt.filter(l=>grupos.includes(getGrupoRegionalLanc(l)));
   return ordenarLista(filt,sortConfig.campo,sortConfig.direcao);
 }
+
 function exportarExcelGenerico(lista,aba,arquivoPrefixo){
   const header=['Data','Pago em','NF','Tipo','Grupo/Regional','Fornecedor/Cliente','Plano de Contas','Cadastro Inicial (ANTIGO)','Projetado (R$)','Realizado (R$)','Diferença (R$)','Situação','Usuário','Banco','Observação'];
   const rows=[header];
@@ -2315,7 +2695,7 @@ function exportarExcelLancamentos(){
 }
 
 // ============================================================
-// EXECUTIVO — CORRIGIDO
+// EXECUTIVO
 // ============================================================
 let execPivotMain='despesas';
 let execPivotSub='conta';
@@ -2450,7 +2830,6 @@ function montarFiltrosExec(){
   execFiltrosMontados = true;
 }
 
-// BASE EXEC — respeita todos os filtros
 function getBaseExec(){
   const termo=(document.getElementById('buscaExecResultados')?.value||'').toLowerCase();
   const tipoPrincipal = execPivotMain==='receitas' ? 'RECEITA' : 'DESPESA';
@@ -2717,7 +3096,21 @@ function exportarExcelConsolidadoDRE(){
   XLSX.writeFile(wb, `QNUTRI_ConsolidadoDRE_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 function exportarPDFResultadosExecutivos() {
-  if (execPivotMain === 'consolidado') { pdfDadosAtuais = []; pdfContexto = { tipo: 'consolidado', colunas: [] }; const html = '<p style="color:#000;">Consolidado exportado via Excel.</p>'; abrirPopupPDF(html, 'Exportar PDF — Consolidado', `QNUTRI_Consolidado_${new Date().toISOString().slice(0, 10)}.pdf`, [], {}); return; }
+  if (execPivotMain === 'consolidado') {
+    pdfDadosAtuais = [];
+    pdfTituloAtual = 'Resumo Executivo — Consolidado';
+    pdfContexto = { tipo: 'consolidado', colunas: [] };
+    const html = gerarTabelaPDFConsolidado();
+    abrirPopupPDF(
+      html,
+      'Exportar PDF — Consolidado',
+      `QNUTRI_Consolidado_${new Date().toISOString().slice(0, 10)}.pdf`,
+      [],
+      {}
+    );
+    return;
+  }
+
   const base = getBaseExec();
   if (!base.length) { mostrarToast('Nada para exportar.', 'warning'); return; }
   let agrupador, labelCol;
@@ -2726,34 +3119,67 @@ function exportarPDFResultadosExecutivos() {
   else if (execPivotSub === 'grupo') { agrupador = (l) => getGrupoRegionalLanc(l); labelCol = 'Grupo/Regional'; }
   else { agrupador = (l) => normalizarSituacao(l.situacao); labelCol = 'Situação'; }
   const mapa = {};
-  base.forEach(l => { const chave = agrupador(l); const p = parseFloat(l.valor_projetado) || 0; const r = parseFloat(l.valor_realizado) || 0; const d = r - p; const pl = encontrarPlano(l.plano_contas); const label = (pl && pl.nome) ? pl.nome : (getPlanoLabel(l.plano_contas) || chave); if (!mapa[chave]) mapa[chave] = { totalP: 0, totalR: 0, totalD: 0, qtd: 0, label }; mapa[chave].totalP += p; mapa[chave].totalR += r; mapa[chave].totalD += d; mapa[chave].qtd += 1; });
+  base.forEach(l => {
+    const chave = agrupador(l);
+    const p = parseFloat(l.valor_projetado) || 0;
+    const r = parseFloat(l.valor_realizado) || 0;
+    const d = r - p;
+    const pl = encontrarPlano(l.plano_contas);
+    const label = (pl && pl.nome) ? pl.nome : (getPlanoLabel(l.plano_contas) || chave);
+    if (!mapa[chave]) mapa[chave] = { totalP: 0, totalR: 0, totalD: 0, qtd: 0, label };
+    mapa[chave].totalP += p; mapa[chave].totalR += r; mapa[chave].totalD += d; mapa[chave].qtd += 1;
+  });
   const arr = Object.entries(mapa).map(([chave, dados]) => ({ chave, ...dados })).sort((a, b) => b.totalR - a.totalR);
-  pdfDadosAtuais = arr; pdfTituloAtual = `Resumo Executivo — ${execPivotMain === 'receitas' ? 'Receitas' : 'Despesas'} por ${labelCol}`; pdfLabelColAtual = labelCol;
+
+  pdfDadosAtuais = arr;
+  pdfTituloAtual = `Resumo Executivo — ${execPivotMain === 'receitas' ? 'Receitas' : 'Despesas'} por ${labelCol}`;
+  pdfLabelColAtual = labelCol;
   pdfContexto = { tipo: 'pivot', colunas: PDF_COLUNAS_PIVOT };
+
   const html = gerarTabelaPDFPivotComColunas(arr, pdfTituloAtual, labelCol, pdfColunasSelecionadas);
-  abrirPopupPDF(html, 'Exportar PDF — Resultados Executivos', `QNUTRI_Resultados_${execPivotMain}_${execPivotSub}_${new Date().toISOString().slice(0, 10)}.pdf`, PDF_COLUNAS_PIVOT, pdfColunasSelecionadas);
+  abrirPopupPDF(
+    html,
+    'Exportar PDF — Resultados Executivos',
+    `QNUTRI_Resultados_${execPivotMain}_${execPivotSub}_${new Date().toISOString().slice(0, 10)}.pdf`,
+    PDF_COLUNAS_PIVOT,
+    pdfColunasSelecionadas
+  );
 }
-function exportarPDFDRE() { const html = gerarTabelaPDFDREComColunas([], pdfColunasSelecionadas); pdfDadosAtuais = []; pdfContexto = { tipo: 'dre', colunas: PDF_COLUNAS_DRE }; abrirPopupPDF(html, 'Exportar PDF — DRE', `QNUTRI_DRE_${new Date().toISOString().slice(0, 10)}.pdf`, [], {}); }
+function exportarPDFDRE() {
+  const html = gerarTabelaPDFDREComColunas([], pdfColunasSelecionadas);
+  pdfDadosAtuais = [];
+  pdfContexto = { tipo: 'dre', colunas: PDF_COLUNAS_DRE };
+  abrirPopupPDF(html, 'Exportar PDF — DRE', `QNUTRI_DRE_${new Date().toISOString().slice(0, 10)}.pdf`, [], {});
+}
 function exportarPDFDesvios() {
-  const base = getBaseDesvios(); if (!base.length) { mostrarToast('Nada para exportar.', 'warning'); return; }
+  const base = getBaseDesvios();
+  if (!base.length) { mostrarToast('Nada para exportar.', 'warning'); return; }
   const mapa = {};
   base.forEach(l => { const chave = chaveCanonicaConta(l.plano_contas, l.tipo); if (!mapa[chave]) { const pl = encontrarPlano(l.plano_contas); mapa[chave] = { proj: 0, real: 0, diff: 0, qtd: 0, label: (pl && pl.nome) ? pl.nome : (getPlanoLabel(l.plano_contas) || chave) }; } const p = parseFloat(l.valor_projetado) || 0; const r = parseFloat(l.valor_realizado) || 0; mapa[chave].proj += p; mapa[chave].real += r; mapa[chave].diff += r - p; mapa[chave].qtd += 1; });
   let arr = Object.entries(mapa).map(([chave, d]) => { const pct = d.proj !== 0 ? ((d.diff / Math.abs(d.proj)) * 100) : 0; const nivel = getNivelDesvio(d.proj, d.real).nivel; return { chave, ...d, pct, nivel }; }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
   if (desviosNivel !== 'todos') arr = arr.filter(a => a.nivel === desviosNivel);
   if (!arr.length) { mostrarToast('Nenhum desvio para exportar.', 'warning'); return; }
-  pdfDadosAtuais = arr; pdfContexto = { tipo: 'desvios', colunas: PDF_COLUNAS_DESVIOS };
+  pdfDadosAtuais = arr;
+  pdfContexto = { tipo: 'desvios', colunas: PDF_COLUNAS_DESVIOS };
   const html = gerarTabelaPDFDesviosComColunas(arr, pdfColunasSelecionadas);
   abrirPopupPDF(html, 'Exportar PDF — Análise de Desvios', `QNUTRI_Desvios_${new Date().toISOString().slice(0, 10)}.pdf`, PDF_COLUNAS_DESVIOS, pdfColunasSelecionadas);
 }
 function exportarPDFDetalheExec() {
-  const itens = window.__detalheExecItens || []; if (!itens.length) { mostrarToast('Nada para exportar.', 'warning'); return; }
-  const chave = window.__detalheExecChave || 'Detalhamento'; const sel = {}; PDF_COLUNAS_LANCAMENTOS.forEach(c => sel[c.chave] = true);
+  const itens = window.__detalheExecItens || [];
+  if (!itens.length) { mostrarToast('Nada para exportar.', 'warning'); return; }
+  const chave = window.__detalheExecChave || 'Detalhamento';
+  const sel = {};
+  PDF_COLUNAS_LANCAMENTOS.forEach(c => sel[c.chave] = true);
   const html = gerarTabelaPDF(itens, `Detalhamento — ${chave}`, PDF_COLUNAS_LANCAMENTOS, sel);
-  pdfDadosAtuais = itens; pdfTituloAtual = `Detalhamento — ${chave}`; pdfContexto = { tipo: 'detalhe_exec', colunas: PDF_COLUNAS_LANCAMENTOS };
+  pdfDadosAtuais = itens;
+  pdfTituloAtual = `Detalhamento — ${chave}`;
+  pdfContexto = { tipo: 'detalhe_exec', colunas: PDF_COLUNAS_LANCAMENTOS };
   abrirPopupPDF(html, 'Exportar PDF — Detalhamento', `QNUTRI_Detalhe_${new Date().toISOString().slice(0, 10)}.pdf`, PDF_COLUNAS_LANCAMENTOS, sel);
 }
 
+// ============================================================
 // DRE
+// ============================================================
 let dreGrupo=''; let dreTipo=''; let dreSituacoes=[...SITUACOES_PADRAO_DRE];
 function abrirDRE(){
   pushPopupHistory('popupDRE', fecharDRE);
@@ -2961,7 +3387,9 @@ function exportarExcelDRE(){
   XLSX.writeFile(wb,`QNUTRI_DRE_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
+// ============================================================
 // DESVIOS
+// ============================================================
 let desviosGrupo=''; let desviosTipo=''; let desviosNivel='todos';
 function abrirAnaliseDesvios(){
   pushPopupHistory('popupDesvios', fecharAnaliseDesvios);
@@ -3080,7 +3508,9 @@ function exportarExcelDesvios(){
   XLSX.writeFile(wb,`QNUTRI_AnaliseDesvios_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
+// ============================================================
 // BUSCA GLOBAL
+// ============================================================
 function abrirBuscaGlobal(){document.getElementById('buscaGlobalOverlay').classList.add('active');setTimeout(()=>{document.getElementById('buscaGlobalInput').value='';document.getElementById('buscaGlobalInput').focus();executarBuscaGlobal();},100);}
 function fecharBuscaGlobal(){document.getElementById('buscaGlobalOverlay').classList.remove('active');}
 function executarBuscaGlobal(){
@@ -3158,7 +3588,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   try{ if(localStorage.getItem('qnutri_densidade')==='compacto'){ document.body.classList.add('modo-compacto'); document.getElementById('btnDensidade')?.classList.add('active'); } }catch(e){}
   try{ if(localStorage.getItem('qnutri_tema')==='escuro'){ document.body.classList.add('dark-theme'); const btn=document.getElementById('btnTemaEscuro'); if(btn){btn.innerHTML='<i class="fas fa-sun"></i>';btn.title='Alternar para tema claro';} } }catch(e){}
   try{ supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); }catch(e){mostrarToast('Erro Supabase: '+e.message,'error');}
-  // Multi-selects do modal de filtros — inicializa uma vez
   criarMultiSelect('msTipoLanc',['RECEITA','DESPESA'],[],()=>renderizarLancamentos(),'Todos os Tipos');
   criarMultiSelect('msMesLanc',MESES_NOMES,[],()=>renderizarLancamentos(),'Todos os Meses');
   criarMultiSelect('msGrupoLanc',GRUPOS_REGIONAIS_FINAIS,[],()=>renderizarLancamentos(),'Todos os Grupos');
@@ -3193,13 +3622,11 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 // ============================================================
 // DUPLO CLIQUE SIMPLES — só abre popup com 2 cliques rápidos
-// Resolve: clique acidental ao abrir a tela abrindo popup
 // ============================================================
 (function(){
-  const DELAY = 350; // ms entre os dois cliques
+  const DELAY = 350;
 
   function aplicar(){
-    // Pega todas as linhas que tinham ondblclick inline
     document.querySelectorAll(
       '#execPivotWrapper tbody tr, ' +
       '#desviosWrapper tbody tr, ' +
@@ -3208,7 +3635,6 @@ document.addEventListener('DOMContentLoaded',()=>{
       if (tr.dataset.duploOk === '1') return;
       tr.dataset.duploOk = '1';
 
-      // guarda o handler inline e remove (pra não disparar em clique simples)
       const inline = tr.getAttribute('ondblclick');
       tr.removeAttribute('ondblclick');
       tr.style.cursor = 'default';
@@ -3229,7 +3655,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
   }
 
-  // Aplica agora e sempre que o DOM mudar (novos renders)
   aplicar();
   new MutationObserver(aplicar).observe(document.body, { childList: true, subtree: true });
 })();
@@ -3238,8 +3663,6 @@ document.addEventListener('DOMContentLoaded',()=>{
 // CONSOLIDADO — Explicação do EBITDA + Destacar contas somadas
 // ============================================================
 (function(){
-
-  // Mapeamento usado no cálculo (o mesmo do calcularEBITDAAjustado)
   const MAPA = {
     'RESULTADO GERENCIAL':      { aliases: [],                          desc: 'Recebimentos − Total Despesas' },
     'SERVIÇO':                  { aliases: ['SERVIÇO','SERVICO'],        desc: 'Conta de SERVIÇO' },
@@ -3253,11 +3676,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     return String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
   }
 
-  // ---- 1) Rodapé com a fórmula do EBITDA ----
   function inserirRodapeEBITDA(){
-    const wrapper = document.querySelector('.dre-bloco-header.dre')?.closest('.dre-bloco');
-    if (!wrapper) return;
-    // pega o bloco de indicadores (o que tem "EBITDA AJUSTADO")
     const blocos = document.querySelectorAll('.dre-bloco');
     let blocoIndic = null;
     blocos.forEach(b => {
@@ -3287,18 +3706,12 @@ document.addEventListener('DOMContentLoaded',()=>{
     blocoIndic.appendChild(div);
   }
 
-  // ---- 2) Destacar contas somadas ao passar/clicar na linha ----
   function destacarPorIndicador(indicador){
-    // limpa destaques
     document.querySelectorAll('.dre-bloco table tbody tr.hl-soma').forEach(tr => tr.classList.remove('hl-soma'));
-
     if (!indicador) return;
     const info = MAPA[indicador];
     if (!info || !info.aliases || info.aliases.length === 0) return;
-
     const alvos = info.aliases.map(normalizar);
-
-    // Percorre os blocos SUL FLUMINENSE, LIQUIGÁS, Consolidado (DRE)
     document.querySelectorAll('.dre-bloco table tbody tr.clicavel').forEach(tr => {
       const txt = normalizar(tr.querySelector('td')?.textContent || '');
       if (alvos.some(a => txt.includes(a))) {
@@ -3307,21 +3720,16 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
   }
 
-  // ---- 3) Bind: linhas de indicador no bloco "Indicadores" ----
   function bindIndicadores(){
     const blocos = document.querySelectorAll('.dre-bloco');
     blocos.forEach(bloco => {
       if (!bloco.textContent.includes('EBITDA AJUSTADO')) return;
-
       bloco.querySelectorAll('tbody tr').forEach(tr => {
         if (tr.dataset.hlBind === '1') return;
         tr.dataset.hlBind = '1';
-
         const primeira = tr.querySelector('td')?.textContent?.trim() || '';
-        // só pega as linhas de indicador conhecidas
         const chave = Object.keys(MAPA).find(k => primeira.toUpperCase().includes(k.toUpperCase()));
         if (!chave) return;
-
         tr.style.cursor = 'pointer';
         tr.addEventListener('mouseenter', () => destacarPorIndicador(chave));
         tr.addEventListener('mouseleave', () => destacarPorIndicador(null));
@@ -3330,7 +3738,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
   }
 
-  // ---- 4) CSS dos destaques ----
   if (!document.getElementById('hl-soma-css')){
     const s = document.createElement('style');
     s.id = 'hl-soma-css';
@@ -3351,7 +3758,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.head.appendChild(s);
   }
 
-  // ---- Executa agora e a cada re-render ----
   function aplicar(){
     inserirRodapeEBITDA();
     bindIndicadores();
