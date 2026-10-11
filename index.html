@@ -73,7 +73,7 @@
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         html { scroll-behavior: smooth; }
 
-        .admin-icon { position: fixed; bottom: 20px; left: 20px; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(5px); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ffd000; font-size: 1.2rem; cursor: pointer; z-index: 1500; transition: 0.2s; border: 1px solid rgba(255, 208, 0, 0.3); }
+        .admin-icon { position: fixed; bottom: 20px; left: 20px; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(5px); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ffd000; font-size: 1.2rem; cursor: pointer; z-index: 20000; transition: 0.2s; border: 1px solid rgba(255, 208, 0, 0.3); }
         .admin-icon:hover { background: #ffd000; color: #000; transform: scale(1.05); }
         .admin-icon .badge-notification { position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 50%; min-width: 18px; height: 18px; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; font-family: monospace; padding: 0 4px; box-shadow: 0 0 4px rgba(0, 0, 0, 0.5); }
 
@@ -890,7 +890,7 @@
 
                 const { data, error, status } = await supabaseClient
                     .from('usuarios')
-                    .select('senha, primeiro_acesso, tipo_acesso, clientes_permitidos, ativo, pode_validar_ponto, pode_classificar_atencao')
+                    .select('senha, primeiro_acesso, tipo_acesso, clientes_permitidos, ativo')
                     .eq('nome', username)
                     .maybeSingle();
 
@@ -930,9 +930,7 @@
                     primeiroAcesso: data.primeiro_acesso === true,
                     ativo: data.ativo !== false,
                     tipoAcesso,
-                    clientes,
-                    pode_validar_ponto: data.pode_validar_ponto === true,
-                    pode_classificar_atencao: data.pode_classificar_atencao === true
+                    clientes
                 };
             }
 
@@ -1523,12 +1521,13 @@
                 email: { regex: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, message: 'E-mail inválido' }
             };
 
+            // ✅ VALIDATEFIELD CORRIGIDO (estava com código corrompido)
             function validateField(fieldId, value) {
                 const validator = validators[fieldId];
                 if (!validator) return true;
-                const isValid = validator.regeetElementById(fieldId);
-                const errorSpax.test(value);
-                const field = document.gn = document.getElementById(`${fieldId}Error`);
+                const isValid = validator.regex.test(value);
+                const field = document.getElementById(fieldId);
+                const errorSpan = document.getElementById(`${fieldId}Error`);
                 if (field) {
                     if (!isValid && value.trim() !== '') {
                         field.classList.add('error');
@@ -1834,7 +1833,21 @@
                                 <div id="usr_clientes_err" style="color:#ef4444;font-size:0.72rem;margin-top:4px;display:none;"></div>
                             </div>
 
-                            <div style="grid-column: span 2;">
+                            <div style="grid-column: span 2; margin-top:8px; padding-top:16px; border-top:1px solid #222;">
+                                <label style="display:block;color:#d1d5db;font-size:0.8rem;margin-bottom:8px;font-weight:500;">Permissões Adicionais</label>
+                                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                                    <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;cursor:pointer;">
+                                        <input type="checkbox" id="usr_pode_validar_ponto" ${u.pode_validar_ponto ? 'checked' : ''} style="accent-color:#ffd000;width:16px;height:16px;">
+                                        <span style="color:#d1d5db;font-size:0.85rem;">Validar Pontos</span>
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;cursor:pointer;">
+                                        <input type="checkbox" id="usr_pode_classificar_atencao" ${u.pode_classificar_atencao ? 'checked' : ''} style="accent-color:#ffd000;width:16px;height:16px;">
+                                        <span style="color:#d1d5db;font-size:0.85rem;">Gerar Atenção</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div style="grid-column: span 2; margin-top:8px;">
                                 <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;background:rgba(255,208,0,0.05);border:1px solid rgba(255,208,0,0.2);border-radius:10px;">
                                     <input type="checkbox" id="usr_ativo" ${u.ativo !== false ? 'checked' : ''} style="accent-color:#ffd000;width:17px;height:17px;">
                                     <span style="color:#d1d5db;font-size:0.85rem;">Usuário ativo (pode fazer login)</span>
@@ -1952,6 +1965,8 @@
                     const tipoAcesso = wrapper.querySelector('#usr_tipo_acesso').value;
                     const primeiroAcesso = wrapper.querySelector('#usr_primeiro_acesso').value === 'true';
                     const ativo = wrapper.querySelector('#usr_ativo').checked;
+                    const podeValidarPonto = wrapper.querySelector('#usr_pode_validar_ponto').checked;
+                    const podeClassificarAtencao = wrapper.querySelector('#usr_pode_classificar_atencao').checked;
                     const clientesSelecionados = Array.from(wrapper.querySelectorAll('.usr_cliente:checked')).map(c => c.value);
 
                     let ok = true;
@@ -1999,6 +2014,8 @@
                             tipo_acesso: tipoAcesso,
                             clientes_permitidos: clientesSelecionados,
                             ativo: ativo,
+                            pode_validar_ponto: podeValidarPonto,
+                            pode_classificar_atencao: podeClassificarAtencao,
                             updated_at: agoraISO
                         };
 
@@ -2097,286 +2114,309 @@
             }
 
             // ==========================================================================
-            // ADMIN PANEL
+            // ADMIN PANEL — LISTENER ROBUSTO COM LOGS DE DEBUG
             // ==========================================================================
-            document.getElementById('adminIcon')?.addEventListener('click', async () => {
-                const senha = prompt("Área administrativa - informe a senha:");
-                if (senha !== '123') return;
-
-                const [logsResult, diagnosticosResult, chatResult, senhasResult, usuariosResult] = await Promise.all([
-                    supabaseClient.from('logs_acesso').select('*').order('created_at', { ascending: false }),
-                    supabaseClient.from('diagnosticos_maturidade').select('*').neq('classificacao_risco', 'Contato Chatbot').order('created_at', { ascending: false }),
-                    supabaseClient.from('diagnosticos_maturidade').select('*').eq('classificacao_risco', 'Contato Chatbot').order('created_at', { ascending: false }),
-                    supabaseClient.from('solicitacoes_senha').select('*').order('created_at', { ascending: false }),
-                    supabaseClient.from('usuarios').select('*').order('nome', { ascending: true })
-                ]);
-
-                const logs = logsResult.data || [];
-                const diagnosticos = diagnosticosResult.data || [];
-                const chatMensagens = chatResult.data || [];
-                const solicitacoes = senhasResult.data || [];
-                const usuarios = usuariosResult.data || [];
-
-                const nomesUsuarios = usuarios.map(u => u.nome);
-                let dadosPorUsuario = {};
-                if (nomesUsuarios.length > 0) {
-                    const { data: dadosUsuarios } = await supabaseClient
-                        .from('usuarios_dados').select('*').in('usuario', nomesUsuarios);
-                    (dadosUsuarios || []).forEach(d => { dadosPorUsuario[d.usuario] = d; });
+            (function bindAdminIcon() {
+                const adminIcon = document.getElementById('adminIcon');
+                if (!adminIcon) {
+                    console.error('❌ [ADMIN] Elemento #adminIcon NÃO encontrado no DOM.');
+                    return;
                 }
 
-                await marcarLogsComoLidos();
-                await marcarDiagnosticosComoLidos();
-                await markChatMessagesAsRead();
-                await marcarSolicitacoesComoLidas();
-                await atualizarBadgeGeral();
+                console.log('✅ [ADMIN] Listener do cadeado registrado com sucesso.');
 
-                const logsNaoLidos = logs.filter(l => !l.viewed_at).length;
-                const diagNaoLidos = diagnosticos.filter(d => !d.viewed_at).length;
-                const chatNaoLidos = chatMensagens.filter(c => !c.viewed_at).length;
-                const senhasNaoLidas = solicitacoes.filter(s => !s.viewed_at).length;
+                adminIcon.addEventListener('click', async function adminClickHandler(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🔒 [ADMIN] Cadeado clicado!');
 
-                let html = `
-                <div id="adminPanel" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;overflow:auto;padding:2rem;">
-                    <div style="max-width:1400px;margin:0 auto;background:#0f0f0f;border-radius:24px;padding:2rem;border:1px solid #ffd000;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px;">
-                            <h2 style="color:#ffd000;display:flex;align-items:center;gap:12px;"><i class="fas fa-lock"></i> Painel Administrativo</h2>
-                            <button id="closeAdmin" style="background:#ffd000;padding:8px 20px;border:none;border-radius:40px;cursor:pointer;font-weight:600;">Fechar</button>
-                        </div>
+                    try {
+                        const senha = prompt("Área administrativa - informe a senha:");
+                        if (senha === null) { console.log('🚫 [ADMIN] Cancelado pelo usuário.'); return; }
+                        if (senha !== '123') { console.warn('🚫 [ADMIN] Senha incorreta.'); return; }
 
-                        <div class="admin-stats">
-                            <div class="admin-stat-card log-stat"><div class="stat-number">${logs.length}</div><div class="stat-label">Logs de Acesso</div></div>
-                            <div class="admin-stat-card diag-stat"><div class="stat-number">${diagnosticos.length}</div><div class="stat-label">Diagnósticos</div></div>
-                            <div class="admin-stat-card chat-stat"><div class="stat-number">${chatMensagens.length}</div><div class="stat-label">Mensagens Chatbot</div></div>
-                            <div class="admin-stat-card senha-stat"><div class="stat-number">${solicitacoes.filter(s => s.status === 'pendente').length}</div><div class="stat-label">Solicitações Pendentes</div></div>
-                            <div class="admin-stat-card" style="background:rgba(255,208,0,0.08);border-color:rgba(255,208,0,0.4);"><div class="stat-number">${usuarios.length}</div><div class="stat-label">Usuários Cadastrados</div></div>
-                        </div>
+                        console.log('🔓 [ADMIN] Senha correta — carregando painel...');
 
-                        <div class="admin-tabs">
-                            <button class="admin-tab active" data-tab="tab-logs"><i class="fas fa-history"></i> Logs ${logsNaoLidos > 0 ? `<span class="tab-badge log-badge">${logsNaoLidos}</span>` : ''}</button>
-                            <button class="admin-tab" data-tab="tab-diagnosticos"><i class="fas fa-file-alt"></i> Diagnósticos ${diagNaoLidos > 0 ? `<span class="tab-badge diag-badge">${diagNaoLidos}</span>` : ''}</button>
-                            <button class="admin-tab" data-tab="tab-chat"><i class="fas fa-comment-dots"></i> Chatbot ${chatNaoLidos > 0 ? `<span class="tab-badge chat-badge">${chatNaoLidos}</span>` : ''}</button>
-                            <button class="admin-tab" data-tab="tab-senhas"><i class="fas fa-key"></i> Solicitações ${senhasNaoLidas > 0 ? `<span class="tab-badge senha-badge">${senhasNaoLidas}</span>` : ''}</button>
-                            <button class="admin-tab" data-tab="tab-usuarios" style="border-color:#ffd000;color:#ffd000;"><i class="fas fa-users-cog"></i> Gerenciar Usuários <span class="tab-badge" style="background:#ffd000;color:#000;">${usuarios.length}</span></button>
-                        </div>
+                        const [logsResult, diagnosticosResult, chatResult, senhasResult, usuariosResult] = await Promise.all([
+                            supabaseClient.from('logs_acesso').select('*').order('created_at', { ascending: false }),
+                            supabaseClient.from('diagnosticos_maturidade').select('*').neq('classificacao_risco', 'Contato Chatbot').order('created_at', { ascending: false }),
+                            supabaseClient.from('diagnosticos_maturidade').select('*').eq('classificacao_risco', 'Contato Chatbot').order('created_at', { ascending: false }),
+                            supabaseClient.from('solicitacoes_senha').select('*').order('created_at', { ascending: false }),
+                            supabaseClient.from('usuarios').select('*').order('nome', { ascending: true })
+                        ]);
 
-                        <div class="admin-panel-scroll">
-                            <div id="tab-logs" class="tab-content active">`;
+                        const logs = logsResult.data || [];
+                        const diagnosticos = diagnosticosResult.data || [];
+                        const chatMensagens = chatResult.data || [];
+                        const solicitacoes = senhasResult.data || [];
+                        const usuarios = usuariosResult.data || [];
 
-                if (logs.length > 0) {
-                    html += `<div class="section-title-log"><i class="fas fa-history"></i> Logs de Acesso (${logs.length})</div>`;
-                    logs.forEach((log) => {
-                        const statusClass = log.sucesso ? 'notif-status-success' : 'notif-status-failed';
-                        const statusLabel = log.sucesso ? '✅ Sucesso' : '❌ Falha';
-                        const dataHora = new Date(log.created_at).toLocaleString('pt-BR');
-                        const viewedStatus = log.viewed_at ? '👁️ Visto' : '🆕 Novo';
-                        const viewedClass = log.viewed_at ? 'notif-status-viewed' : 'notif-status-new';
-                        html += `<div class="notification-item notif-log"><div class="notif-header"><span class="notif-user"><i class="fas fa-user"></i> ${log.usuario || 'desconhecido'}</span><span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span><span class="notif-status ${statusClass}">${statusLabel}</span><span class="notif-type">🔵 Log</span><span class="notif-status ${viewedClass}">${viewedStatus}</span></div><div class="notif-details"><span><i class="fas fa-key"></i> Senha: ${log.senha_digitada || 'não informada'}</span>${log.redirect_destino ? `<span style="margin-left:16px;"><i class="fas fa-arrow-right"></i> ${log.redirect_destino}</span>` : ''}</div></div>`;
-                    });
-                } else {
-                    html += `<div class="no-message"><i class="fas fa-inbox"></i> Nenhum log de acesso registrado.</div>`;
-                }
+                        const nomesUsuarios = usuarios.map(u => u.nome);
+                        let dadosPorUsuario = {};
+                        if (nomesUsuarios.length > 0) {
+                            const { data: dadosUsuarios } = await supabaseClient
+                                .from('usuarios_dados').select('*').in('usuario', nomesUsuarios);
+                            (dadosUsuarios || []).forEach(d => { dadosPorUsuario[d.usuario] = d; });
+                        }
 
-                html += `</div><div id="tab-diagnosticos" class="tab-content">`;
-                if (diagnosticos.length > 0) {
-                    html += `<div class="section-title-diag"><i class="fas fa-file-alt"></i> Diagnósticos (${diagnosticos.length})</div>`;
-                    diagnosticos.forEach((d) => {
-                        const dataHora = new Date(d.created_at).toLocaleString('pt-BR');
-                        const viewedStatus = d.viewed_at ? '👁️ Visto' : '🆕 Novo';
-                        const viewedClass = d.viewed_at ? 'notif-status-viewed' : 'notif-status-new';
-                        html += `<div class="notification-item notif-diagnostico"><div class="notif-header"><span class="notif-user"><i class="fas fa-user"></i> ${d.nome_completo || '-'}</span><span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span><span class="notif-type">🟡 Diagnóstico</span><span class="notif-status ${viewedClass}">${viewedStatus}</span></div><div class="notif-details"><span><i class="fas fa-envelope"></i> ${d.email || '-'}</span><span style="margin-left:16px;"><i class="fas fa-phone"></i> ${d.whatsapp || '-'}</span><span style="margin-left:16px;"><i class="fas fa-building"></i> ${d.empresa || '-'}</span><span style="margin-left:16px;"><i class="fas fa-chart-line"></i> Risco: ${d.percentual_risco || '-'}%</span></div></div>`;
-                    });
-                } else {
-                    html += `<div class="no-message"><i class="fas fa-inbox"></i> Nenhum diagnóstico registrado.</div>`;
-                }
+                        await marcarLogsComoLidos();
+                        await marcarDiagnosticosComoLidos();
+                        await markChatMessagesAsRead();
+                        await marcarSolicitacoesComoLidas();
+                        await atualizarBadgeGeral();
 
-                html += `</div><div id="tab-chat" class="tab-content">`;
-                if (chatMensagens.length > 0) {
-                    html += `<div class="section-title-chat"><i class="fas fa-comment-dots"></i> Mensagens do Chatbot (${chatMensagens.length})</div>`;
-                    chatMensagens.forEach((c) => {
-                        const dataHora = new Date(c.created_at).toLocaleString('pt-BR');
-                        const viewedStatus = c.viewed_at ? '👁️ Visto' : '🆕 Novo';
-                        const viewedClass = c.viewed_at ? 'notif-status-viewed' : 'notif-status-new';
-                        let mensagem = c.observacoes || 'Mensagem sem conteúdo';
-                        const match = mensagem.match(/Mensagem:\s*"([^"]*)"/);
-                        if (match) mensagem = match[1];
-                        html += `<div class="notification-item notif-chatbot"><div class="notif-header"><span class="notif-user"><i class="fas fa-user"></i> ${c.nome_completo || 'Chatbot'}</span><span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span><span class="notif-type">🟢 Chatbot</span><span class="notif-status ${viewedClass}">${viewedStatus}</span></div><div class="notif-details"><span><i class="fas fa-envelope"></i> ${c.email || '-'}</span><span style="margin-left:16px;"><i class="fas fa-phone"></i> ${c.whatsapp || '-'}</span></div><div class="notif-details" style="margin-top:8px;padding-top:8px;border-top:1px solid #222;"><i class="fas fa-comment"></i> ${mensagem}</div></div>`;
-                    });
-                } else {
-                    html += `<div class="no-message"><i class="fas fa-inbox"></i> Nenhuma mensagem do chatbot registrada.</div>`;
-                }
+                        const logsNaoLidos = logs.filter(l => !l.viewed_at).length;
+                        const diagNaoLidos = diagnosticos.filter(d => !d.viewed_at).length;
+                        const chatNaoLidos = chatMensagens.filter(c => !c.viewed_at).length;
+                        const senhasNaoLidas = solicitacoes.filter(s => !s.viewed_at).length;
 
-                html += `</div><div id="tab-senhas" class="tab-content">`;
-                if (solicitacoes.length > 0) {
-                    html += `<div class="section-title-senha"><i class="fas fa-key"></i> Solicitações de Senha (${solicitacoes.length})</div>`;
-                    solicitacoes.forEach((s) => {
-                        const dataHora = new Date(s.created_at).toLocaleString('pt-BR');
-                        const viewedStatus = s.viewed_at ? '👁️ Visto' : '🆕 Novo';
-                        const viewedClass = s.viewed_at ? 'notif-status-viewed' : 'notif-status-new';
-                        const statusClass = s.status === 'atendida' ? 'notif-status-atendida' : s.status === 'recusada' ? 'notif-status-recusada' : 'notif-status-pendente';
-                        let tipoLabel = s.tipo_solicitacao;
-                        if (s.tipo_solicitacao === 'reset_senha') tipoLabel = '🔑 Reset de Senha';
-                        else if (s.tipo_solicitacao === 'login_esquecido') tipoLabel = '❓ Login Esquecido';
-                        else if (s.tipo_solicitacao === 'sem_cpf_cadastrado') tipoLabel = '📋 Sem CPF Cadastrado';
-                        html += `<div class="notification-item notif-senha"><div class="notif-header"><span class="notif-user"><i class="fas fa-user"></i> ${s.usuario_informado || 'não informado'}</span><span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span><span class="notif-type">🟣 ${tipoLabel}</span><span class="notif-status ${statusClass}">${s.status.toUpperCase()}</span><span class="notif-status ${viewedClass}">${viewedStatus}</span></div><div class="notif-details"><span><i class="fas fa-id-card"></i> CPF: ${s.cpf_informado || '-'}</span>${s.whatsapp_informado ? `<span style="margin-left:16px;"><i class="fas fa-phone"></i> ${s.whatsapp_informado}</span>` : ''}</div><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;"><button class="admin-tab" onclick="redefinirSenhaManual('${s.usuario_informado}', ${s.id})" style="border-color:#ffd000;color:#ffd000;"><i class="fas fa-key"></i> Redefinir</button><button class="admin-tab" onclick="marcarSolicitacaoAtendida(${s.id})" style="border-color:#10b981;color:#10b981;"><i class="fas fa-check"></i> Atendida</button></div></div>`;
-                    });
-                } else {
-                    html += `<div class="no-message"><i class="fas fa-inbox"></i> Nenhuma solicitação de senha registrada.</div>`;
-                }
+                        let html = `
+                        <div id="adminPanel" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;overflow:auto;padding:2rem;">
+                            <div style="max-width:1400px;margin:0 auto;background:#0f0f0f;border-radius:24px;padding:2rem;border:1px solid #ffd000;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px;">
+                                    <h2 style="color:#ffd000;display:flex;align-items:center;gap:12px;"><i class="fas fa-lock"></i> Painel Administrativo</h2>
+                                    <button id="closeAdmin" style="background:#ffd000;padding:8px 20px;border:none;border-radius:40px;cursor:pointer;font-weight:600;">Fechar</button>
+                                </div>
 
-                html += `</div><div id="tab-usuarios" class="tab-content">
-                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
-                        <div style="font-size:1.2rem;color:#ffd000;font-weight:600;">
-                            <i class="fas fa-users-cog"></i> Usuários Cadastrados
-                        </div>
-                        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-                            <input type="text" id="buscaUsuario" placeholder="🔍 Buscar usuário..." style="padding:10px 16px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:40px;color:#fff;font-size:0.85rem;min-width:220px;">
-                            <button id="btnNovoUsuario" style="background:#ffd000;color:#000;padding:10px 22px;border:none;border-radius:40px;font-weight:700;font-size:0.85rem;cursor:pointer;display:inline-flex;align-items:center;gap:8px;"><i class="fas fa-plus-circle"></i> Novo Usuário</button>
-                        </div>
-                    </div>`;
+                                <div class="admin-stats">
+                                    <div class="admin-stat-card log-stat"><div class="stat-number">${logs.length}</div><div class="stat-label">Logs de Acesso</div></div>
+                                    <div class="admin-stat-card diag-stat"><div class="stat-number">${diagnosticos.length}</div><div class="stat-label">Diagnósticos</div></div>
+                                    <div class="admin-stat-card chat-stat"><div class="stat-number">${chatMensagens.length}</div><div class="stat-label">Mensagens Chatbot</div></div>
+                                    <div class="admin-stat-card senha-stat"><div class="stat-number">${solicitacoes.filter(s => s.status === 'pendente').length}</div><div class="stat-label">Solicitações Pendentes</div></div>
+                                    <div class="admin-stat-card" style="background:rgba(255,208,0,0.08);border-color:rgba(255,208,0,0.4);"><div class="stat-number">${usuarios.length}</div><div class="stat-label">Usuários Cadastrados</div></div>
+                                </div>
 
-                if (usuarios.length > 0) {
-                    html += `<div id="listaUsuarios">`;
-                    usuarios.forEach((user) => {
-                        const dados = dadosPorUsuario[user.nome] || {};
-                        const tipo = user.tipo_acesso || 'direct';
-                        const clientes = (user.clientes_permitidos || []).join(', ') || '—';
-                        const ativo = user.ativo !== false;
-                        const primeiro = user.primeiro_acesso === true;
-                        const tipoLabel = tipo === 'select_client' ? '🔀 Multi-cliente' : '🎯 Direto';
-                        html += `
-                        <div class="notification-item" data-nome="${user.nome}" style="border-left:4px solid ${ativo ? '#ffd000' : '#6b7280'};">
-                            <div class="notif-header">
-                                <span class="notif-user" style="color:${ativo ? '#ffd000' : '#9ca3af'};">
-                                    <i class="fas fa-user-circle"></i> ${user.nome}
-                                    ${!ativo ? '<span style="background:#6b7280;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.6rem;margin-left:6px;">INATIVO</span>' : ''}
-                                    ${primeiro ? '<span style="background:#f59e0b;color:#000;padding:2px 8px;border-radius:10px;font-size:0.6rem;margin-left:6px;">1º ACESSO</span>' : ''}
-                                </span>
-                                <span class="notif-type" style="background:rgba(255,208,0,0.15);color:#ffd000;">${tipoLabel}</span>
-                                <span class="notif-details" style="color:#9ca3af;">Clientes: <strong style="color:#d1d5db;">${clientes}</strong></span>
-                            </div>
-                            <div class="notif-details" style="margin-top:6px;">
-                                ${dados.nome_completo ? `<span><i class="fas fa-id-badge"></i> ${dados.nome_completo}</span>` : '<span style="color:#6b7280;"><i class="fas fa-id-badge"></i> Nome completo não cadastrado</span>'}
-                                ${dados.cpf ? `<span style="margin-left:16px;"><i class="fas fa-id-card"></i> CPF: ${dados.cpf}</span>` : ''}
-                                ${dados.email ? `<span style="margin-left:16px;"><i class="fas fa-envelope"></i> ${dados.email}</span>` : ''}
-                                ${dados.whatsapp ? `<span style="margin-left:16px;"><i class="fas fa-phone"></i> ${dados.whatsapp}</span>` : ''}
-                            </div>
-                            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-                                <button class="admin-tab btn-editar-usuario" data-nome="${user.nome}" style="border-color:#ffd000;color:#ffd000;"><i class="fas fa-edit"></i> Editar</button>
-                                <button class="admin-tab btn-reset-senha" data-nome="${user.nome}" style="border-color:#a855f7;color:#a855f7;"><i class="fas fa-key"></i> Redefinir senha</button>
-                                <button class="admin-tab btn-excluir-usuario" data-nome="${user.nome}" style="border-color:#ef4444;color:#ef4444;"><i class="fas fa-trash"></i> Excluir</button>
-                            </div>
-                        </div>`;
-                    });
-                    html += `</div>`;
-                } else {
-                    html += `<div class="no-message"><i class="fas fa-user-slash"></i> Nenhum usuário cadastrado ainda.<br><br><button id="btnNovoUsuarioVazio" style="background:#ffd000;color:#000;padding:12px 28px;border:none;border-radius:40px;font-weight:700;cursor:pointer;"><i class="fas fa-plus-circle"></i> Cadastrar primeiro usuário</button></div>`;
-                }
+                                <div class="admin-tabs">
+                                    <button class="admin-tab active" data-tab="tab-logs"><i class="fas fa-history"></i> Logs ${logsNaoLidos > 0 ? `<span class="tab-badge log-badge">${logsNaoLidos}</span>` : ''}</button>
+                                    <button class="admin-tab" data-tab="tab-diagnosticos"><i class="fas fa-file-alt"></i> Diagnósticos ${diagNaoLidos > 0 ? `<span class="tab-badge diag-badge">${diagNaoLidos}</span>` : ''}</button>
+                                    <button class="admin-tab" data-tab="tab-chat"><i class="fas fa-comment-dots"></i> Chatbot ${chatNaoLidos > 0 ? `<span class="tab-badge chat-badge">${chatNaoLidos}</span>` : ''}</button>
+                                    <button class="admin-tab" data-tab="tab-senhas"><i class="fas fa-key"></i> Solicitações ${senhasNaoLidas > 0 ? `<span class="tab-badge senha-badge">${senhasNaoLidas}</span>` : ''}</button>
+                                    <button class="admin-tab" data-tab="tab-usuarios" style="border-color:#ffd000;color:#ffd000;"><i class="fas fa-users-cog"></i> Gerenciar Usuários <span class="tab-badge" style="background:#ffd000;color:#000;">${usuarios.length}</span></button>
+                                </div>
 
-                html += `</div></div></div></div>`;
+                                <div class="admin-panel-scroll">
+                                    <div id="tab-logs" class="tab-content active">`;
 
-                const div = document.createElement('div');
-                div.innerHTML = html;
-                document.body.appendChild(div);
+                        if (logs.length > 0) {
+                            html += `<div class="section-title-log"><i class="fas fa-history"></i> Logs de Acesso (${logs.length})</div>`;
+                            logs.forEach((log) => {
+                                const statusClass = log.sucesso ? 'notif-status-success' : 'notif-status-failed';
+                                const statusLabel = log.sucesso ? '✅ Sucesso' : '❌ Falha';
+                                const dataHora = new Date(log.created_at).toLocaleString('pt-BR');
+                                const viewedStatus = log.viewed_at ? '👁️ Visto' : '🆕 Novo';
+                                const viewedClass = log.viewed_at ? 'notif-status-viewed' : 'notif-status-new';
+                                html += `<div class="notification-item notif-log"><div class="notif-header"><span class="notif-user"><i class="fas fa-user"></i> ${log.usuario || 'desconhecido'}</span><span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span><span class="notif-status ${statusClass}">${statusLabel}</span><span class="notif-type">🔵 Log</span><span class="notif-status ${viewedClass}">${viewedStatus}</span></div><div class="notif-details"><span><i class="fas fa-key"></i> Senha: ${log.senha_digitada || 'não informada'}</span>${log.redirect_destino ? `<span style="margin-left:16px;"><i class="fas fa-arrow-right"></i> ${log.redirect_destino}</span>` : ''}</div></div>`;
+                            });
+                        } else {
+                            html += `<div class="no-message"><i class="fas fa-inbox"></i> Nenhum log de acesso registrado.</div>`;
+                        }
 
-                window.redefinirSenhaManual = async function(usuario, solicitacaoId) {
-                    if (!usuario) { alert('Usuário não informado.'); return; }
-                    const novaSenha = prompt(`Defina uma nova senha temporária para ${usuario} (mín. 6 caracteres):`);
-                    if (!novaSenha || novaSenha.length < 6) { alert('Senha inválida.'); return; }
-                    const ok = await saveUserPassword(usuario, novaSenha);
-                    if (ok) {
-                        await supabaseClient.from('usuarios').update({ primeiro_acesso: true }).eq('nome', usuario);
-                        if (solicitacaoId) {
+                        html += `</div><div id="tab-diagnosticos" class="tab-content">`;
+                        if (diagnosticos.length > 0) {
+                            html += `<div class="section-title-diag"><i class="fas fa-file-alt"></i> Diagnósticos (${diagnosticos.length})</div>`;
+                            diagnosticos.forEach((d) => {
+                                const dataHora = new Date(d.created_at).toLocaleString('pt-BR');
+                                const viewedStatus = d.viewed_at ? '👁️ Visto' : '🆕 Novo';
+                                const viewedClass = d.viewed_at ? 'notif-status-viewed' : 'notif-status-new';
+                                html += `<div class="notification-item notif-diagnostico"><div class="notif-header"><span class="notif-user"><i class="fas fa-user"></i> ${d.nome_completo || '-'}</span><span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span><span class="notif-type">🟡 Diagnóstico</span><span class="notif-status ${viewedClass}">${viewedStatus}</span></div><div class="notif-details"><span><i class="fas fa-envelope"></i> ${d.email || '-'}</span><span style="margin-left:16px;"><i class="fas fa-phone"></i> ${d.whatsapp || '-'}</span><span style="margin-left:16px;"><i class="fas fa-building"></i> ${d.empresa || '-'}</span><span style="margin-left:16px;"><i class="fas fa-chart-line"></i> Risco: ${d.percentual_risco || '-'}%</span></div></div>`;
+                            });
+                        } else {
+                            html += `<div class="no-message"><i class="fas fa-inbox"></i> Nenhum diagnóstico registrado.</div>`;
+                        }
+
+                        html += `</div><div id="tab-chat" class="tab-content">`;
+                        if (chatMensagens.length > 0) {
+                            html += `<div class="section-title-chat"><i class="fas fa-comment-dots"></i> Mensagens do Chatbot (${chatMensagens.length})</div>`;
+                            chatMensagens.forEach((c) => {
+                                const dataHora = new Date(c.created_at).toLocaleString('pt-BR');
+                                const viewedStatus = c.viewed_at ? '👁️ Visto' : '🆕 Novo';
+                                const viewedClass = c.viewed_at ? 'notif-status-viewed' : 'notif-status-new';
+                                let mensagem = c.observacoes || 'Mensagem sem conteúdo';
+                                const match = mensagem.match(/Mensagem:\s*"([^"]*)"/);
+                                if (match) mensagem = match[1];
+                                html += `<div class="notification-item notif-chatbot"><div class="notif-header"><span class="notif-user"><i class="fas fa-user"></i> ${c.nome_completo || 'Chatbot'}</span><span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span><span class="notif-type">🟢 Chatbot</span><span class="notif-status ${viewedClass}">${viewedStatus}</span></div><div class="notif-details"><span><i class="fas fa-envelope"></i> ${c.email || '-'}</span><span style="margin-left:16px;"><i class="fas fa-phone"></i> ${c.whatsapp || '-'}</span></div><div class="notif-details" style="margin-top:8px;padding-top:8px;border-top:1px solid #222;"><i class="fas fa-comment"></i> ${mensagem}</div></div>`;
+                            });
+                        } else {
+                            html += `<div class="no-message"><i class="fas fa-inbox"></i> Nenhuma mensagem do chatbot registrada.</div>`;
+                        }
+
+                        html += `</div><div id="tab-senhas" class="tab-content">`;
+                        if (solicitacoes.length > 0) {
+                            html += `<div class="section-title-senha"><i class="fas fa-key"></i> Solicitações de Senha (${solicitacoes.length})</div>`;
+                            solicitacoes.forEach((s) => {
+                                const dataHora = new Date(s.created_at).toLocaleString('pt-BR');
+                                const viewedStatus = s.viewed_at ? '👁️ Visto' : '🆕 Novo';
+                                const viewedClass = s.viewed_at ? 'notif-status-viewed' : 'notif-status-new';
+                                const statusClass = s.status === 'atendida' ? 'notif-status-atendida' : s.status === 'recusada' ? 'notif-status-recusada' : 'notif-status-pendente';
+                                let tipoLabel = s.tipo_solicitacao;
+                                if (s.tipo_solicitacao === 'reset_senha') tipoLabel = '🔑 Reset de Senha';
+                                else if (s.tipo_solicitacao === 'login_esquecido') tipoLabel = '❓ Login Esquecido';
+                                else if (s.tipo_solicitacao === 'sem_cpf_cadastrado') tipoLabel = '📋 Sem CPF Cadastrado';
+                                html += `<div class="notification-item notif-senha"><div class="notif-header"><span class="notif-user"><i class="fas fa-user"></i> ${s.usuario_informado || 'não informado'}</span><span class="notif-time"><i class="far fa-clock"></i> ${dataHora}</span><span class="notif-type">🟣 ${tipoLabel}</span><span class="notif-status ${statusClass}">${s.status.toUpperCase()}</span><span class="notif-status ${viewedClass}">${viewedStatus}</span></div><div class="notif-details"><span><i class="fas fa-id-card"></i> CPF: ${s.cpf_informado || '-'}</span>${s.whatsapp_informado ? `<span style="margin-left:16px;"><i class="fas fa-phone"></i> ${s.whatsapp_informado}</span>` : ''}</div><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;"><button class="admin-tab" onclick="redefinirSenhaManual('${s.usuario_informado}', ${s.id})" style="border-color:#ffd000;color:#ffd000;"><i class="fas fa-key"></i> Redefinir</button><button class="admin-tab" onclick="marcarSolicitacaoAtendida(${s.id})" style="border-color:#10b981;color:#10b981;"><i class="fas fa-check"></i> Atendida</button></div></div>`;
+                            });
+                        } else {
+                            html += `<div class="no-message"><i class="fas fa-inbox"></i> Nenhuma solicitação de senha registrada.</div>`;
+                        }
+
+                        html += `</div><div id="tab-usuarios" class="tab-content">
+                            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+                                <div style="font-size:1.2rem;color:#ffd000;font-weight:600;">
+                                    <i class="fas fa-users-cog"></i> Usuários Cadastrados
+                                </div>
+                                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                                    <input type="text" id="buscaUsuario" placeholder="🔍 Buscar usuário..." style="padding:10px 16px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:40px;color:#fff;font-size:0.85rem;min-width:220px;">
+                                    <button id="btnNovoUsuario" style="background:#ffd000;color:#000;padding:10px 22px;border:none;border-radius:40px;font-weight:700;font-size:0.85rem;cursor:pointer;display:inline-flex;align-items:center;gap:8px;"><i class="fas fa-plus-circle"></i> Novo Usuário</button>
+                                </div>
+                            </div>`;
+
+                        if (usuarios.length > 0) {
+                            html += `<div id="listaUsuarios">`;
+                            usuarios.forEach((user) => {
+                                const dados = dadosPorUsuario[user.nome] || {};
+                                const tipo = user.tipo_acesso || 'direct';
+                                const clientes = (user.clientes_permitidos || []).join(', ') || '—';
+                                const ativo = user.ativo !== false;
+                                const primeiro = user.primeiro_acesso === true;
+                                const tipoLabel = tipo === 'select_client' ? '🔀 Multi-cliente' : '🎯 Direto';
+                                html += `
+                                <div class="notification-item" data-nome="${user.nome}" style="border-left:4px solid ${ativo ? '#ffd000' : '#6b7280'};">
+                                    <div class="notif-header">
+                                        <span class="notif-user" style="color:${ativo ? '#ffd000' : '#9ca3af'};">
+                                            <i class="fas fa-user-circle"></i> ${user.nome}
+                                            ${!ativo ? '<span style="background:#6b7280;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.6rem;margin-left:6px;">INATIVO</span>' : ''}
+                                            ${primeiro ? '<span style="background:#f59e0b;color:#000;padding:2px 8px;border-radius:10px;font-size:0.6rem;margin-left:6px;">1º ACESSO</span>' : ''}
+                                        </span>
+                                        <span class="notif-type" style="background:rgba(255,208,0,0.15);color:#ffd000;">${tipoLabel}</span>
+                                        <span class="notif-details" style="color:#9ca3af;">Clientes: <strong style="color:#d1d5db;">${clientes}</strong></span>
+                                    </div>
+                                    <div class="notif-details" style="margin-top:6px;">
+                                        ${dados.nome_completo ? `<span><i class="fas fa-id-badge"></i> ${dados.nome_completo}</span>` : '<span style="color:#6b7280;"><i class="fas fa-id-badge"></i> Nome completo não cadastrado</span>'}
+                                        ${dados.cpf ? `<span style="margin-left:16px;"><i class="fas fa-id-card"></i> CPF: ${dados.cpf}</span>` : ''}
+                                        ${dados.email ? `<span style="margin-left:16px;"><i class="fas fa-envelope"></i> ${dados.email}</span>` : ''}
+                                        ${dados.whatsapp ? `<span style="margin-left:16px;"><i class="fas fa-phone"></i> ${dados.whatsapp}</span>` : ''}
+                                    </div>
+                                    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                                        <button class="admin-tab btn-editar-usuario" data-nome="${user.nome}" style="border-color:#ffd000;color:#ffd000;"><i class="fas fa-edit"></i> Editar</button>
+                                        <button class="admin-tab btn-reset-senha" data-nome="${user.nome}" style="border-color:#a855f7;color:#a855f7;"><i class="fas fa-key"></i> Redefinir senha</button>
+                                        <button class="admin-tab btn-excluir-usuario" data-nome="${user.nome}" style="border-color:#ef4444;color:#ef4444;"><i class="fas fa-trash"></i> Excluir</button>
+                                    </div>
+                                </div>`;
+                            });
+                            html += `</div>`;
+                        } else {
+                            html += `<div class="no-message"><i class="fas fa-user-slash"></i> Nenhum usuário cadastrado ainda.<br><br><button id="btnNovoUsuarioVazio" style="background:#ffd000;color:#000;padding:12px 28px;border:none;border-radius:40px;font-weight:700;cursor:pointer;"><i class="fas fa-plus-circle"></i> Cadastrar primeiro usuário</button></div>`;
+                        }
+
+                        html += `</div></div></div></div>`;
+
+                        const div = document.createElement('div');
+                        div.innerHTML = html;
+                        document.body.appendChild(div);
+
+                        window.redefinirSenhaManual = async function(usuario, solicitacaoId) {
+                            if (!usuario) { alert('Usuário não informado.'); return; }
+                            const novaSenha = prompt(`Defina uma nova senha temporária para ${usuario} (mín. 6 caracteres):`);
+                            if (!novaSenha || novaSenha.length < 6) { alert('Senha inválida.'); return; }
+                            const ok = await saveUserPassword(usuario, novaSenha);
+                            if (ok) {
+                                await supabaseClient.from('usuarios').update({ primeiro_acesso: true }).eq('nome', usuario);
+                                if (solicitacaoId) {
+                                    await supabaseClient.from('solicitacoes_senha').update({
+                                        status: 'atendida', atendido_em: new Date().toISOString(),
+                                        observacao_admin: 'Senha redefinida manualmente pelo admin'
+                                    }).eq('id', solicitacaoId);
+                                }
+                                alert(`Senha de ${usuario} redefinida com sucesso!`);
+                            } else { alert('Erro ao redefinir. Tente novamente.'); }
+                        };
+
+                        window.marcarSolicitacaoAtendida = async function(id) {
                             await supabaseClient.from('solicitacoes_senha').update({
-                                status: 'atendida', atendido_em: new Date().toISOString(),
-                                observacao_admin: 'Senha redefinida manualmente pelo admin'
-                            }).eq('id', solicitacaoId);
-                        }
-                        alert(`Senha de ${usuario} redefinida com sucesso!`);
-                    } else { alert('Erro ao redefinir. Tente novamente.'); }
-                };
+                                status: 'atendida', atendido_em: new Date().toISOString()
+                            }).eq('id', id);
+                            alert('Solicitação marcada como atendida.');
+                        };
 
-                window.marcarSolicitacaoAtendida = async function(id) {
-                    await supabaseClient.from('solicitacoes_senha').update({
-                        status: 'atendida', atendido_em: new Date().toISOString()
-                    }).eq('id', id);
-                    alert('Solicitação marcada como atendida.');
-                };
+                        const tabs = div.querySelectorAll('.admin-tab[data-tab]');
+                        tabs.forEach(tab => {
+                            tab.addEventListener('click', function() {
+                                tabs.forEach(t => t.classList.remove('active'));
+                                this.classList.add('active');
+                                div.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                                const targetId = this.dataset.tab;
+                                const targetContent = div.querySelector(`#${targetId}`);
+                                if (targetContent) targetContent.classList.add('active');
+                            });
+                        });
 
-                const tabs = div.querySelectorAll('.admin-tab[data-tab]');
-                tabs.forEach(tab => {
-                    tab.addEventListener('click', function() {
-                        tabs.forEach(t => t.classList.remove('active'));
-                        this.classList.add('active');
-                        div.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-                        const targetId = this.dataset.tab;
-                        const targetContent = div.querySelector(`#${targetId}`);
-                        if (targetContent) targetContent.classList.add('active');
-                    });
+                        div.querySelector('#btnNovoUsuario')?.addEventListener('click', () => abrirModalUsuario(null));
+                        div.querySelector('#btnNovoUsuarioVazio')?.addEventListener('click', () => abrirModalUsuario(null));
+
+                        div.querySelectorAll('.btn-editar-usuario').forEach(btn => {
+                            btn.addEventListener('click', async function() {
+                                const nome = this.dataset.nome;
+                                const { data: userData } = await supabaseClient.from('usuarios').select('*').eq('nome', nome).maybeSingle();
+                                const { data: dadosData } = await supabaseClient.from('usuarios_dados').select('*').eq('usuario', nome).maybeSingle();
+                                const merged = { ...userData, ...(dadosData || {}) };
+                                merged.nome = nome;
+                                abrirModalUsuario(merged);
+                            });
+                        });
+
+                        div.querySelectorAll('.btn-reset-senha').forEach(btn => {
+                            btn.addEventListener('click', async function() {
+                                const nome = this.dataset.nome;
+                                const novaSenha = prompt(`Defina uma nova senha temporária para ${nome} (mín. 6 caracteres):`);
+                                if (!novaSenha || novaSenha.length < 6) { alert('Senha inválida.'); return; }
+                                const ok = await saveUserPassword(nome, novaSenha);
+                                if (ok) {
+                                    await supabaseClient.from('usuarios').update({ primeiro_acesso: true }).eq('nome', nome);
+                                    alert(`✅ Senha de ${nome} redefinida!\nO usuário será obrigado a trocar no próximo login.`);
+                                } else { alert('Erro ao redefinir. Tente novamente.'); }
+                            });
+                        });
+
+                        div.querySelectorAll('.btn-excluir-usuario').forEach(btn => {
+                            btn.addEventListener('click', async function() {
+                                const nome = this.dataset.nome;
+                                if (!confirm(`⚠️ Excluir o usuário "${nome}"?\n\nIsso removerá login, senha e dados pessoais.\nAção irreversível.`)) return;
+                                try {
+                                    await supabaseClient.from('usuarios').delete().eq('nome', nome);
+                                    await supabaseClient.from('usuarios_dados').delete().eq('usuario', nome);
+                                    await supabaseClient.from('usuarios_senhas').delete().eq('usuario', nome);
+                                    alert(`🗑️ Usuário ${nome} excluído.`);
+                                    const p = document.getElementById('adminPanel');
+                                    if (p) p.remove();
+                                    document.getElementById('adminIcon').click();
+                                } catch (err) {
+                                    console.error(err);
+                                    alert('Erro ao excluir: ' + err.message);
+                                }
+                            });
+                        });
+
+                        div.querySelector('#buscaUsuario')?.addEventListener('input', function(e) {
+                            const q = e.target.value.trim().toUpperCase();
+                            div.querySelectorAll('#listaUsuarios .notification-item').forEach(item => {
+                                const nome = (item.dataset.nome || '').toUpperCase();
+                                item.style.display = (!q || nome.includes(q)) ? '' : 'none';
+                            });
+                        });
+
+                        div.querySelector('#closeAdmin').onclick = () => { div.remove(); window.location.reload(); };
+                        const closeOnEsc = (e) => {
+                            if (e.key === 'Escape') { div.remove(); window.removeEventListener('keydown', closeOnEsc); window.location.reload(); }
+                        };
+                        window.addEventListener('keydown', closeOnEsc);
+
+                        await atualizarBadgeGeral();
+
+                    } catch (err) {
+                        console.error('💥 [ADMIN] Erro ao abrir painel:', err);
+                        alert('Erro ao abrir painel administrativo:\n\n' + (err.message || err));
+                    }
                 });
-
-                div.querySelector('#btnNovoUsuario')?.addEventListener('click', () => abrirModalUsuario(null));
-                div.querySelector('#btnNovoUsuarioVazio')?.addEventListener('click', () => abrirModalUsuario(null));
-
-                div.querySelectorAll('.btn-editar-usuario').forEach(btn => {
-                    btn.addEventListener('click', async function() {
-                        const nome = this.dataset.nome;
-                        const { data: userData } = await supabaseClient.from('usuarios').select('*').eq('nome', nome).maybeSingle();
-                        const { data: dadosData } = await supabaseClient.from('usuarios_dados').select('*').eq('usuario', nome).maybeSingle();
-                        const merged = { ...userData, ...(dadosData || {}) };
-                        merged.nome = nome;
-                        abrirModalUsuario(merged);
-                    });
-                });
-
-                div.querySelectorAll('.btn-reset-senha').forEach(btn => {
-                    btn.addEventListener('click', async function() {
-                        const nome = this.dataset.nome;
-                        const novaSenha = prompt(`Defina uma nova senha temporária para ${nome} (mín. 6 caracteres):`);
-                        if (!novaSenha || novaSenha.length < 6) { alert('Senha inválida.'); return; }
-                        const ok = await saveUserPassword(nome, novaSenha);
-                        if (ok) {
-                            await supabaseClient.from('usuarios').update({ primeiro_acesso: true }).eq('nome', nome);
-                            alert(`✅ Senha de ${nome} redefinida!\nO usuário será obrigado a trocar no próximo login.`);
-                        } else { alert('Erro ao redefinir. Tente novamente.'); }
-                    });
-                });
-
-                div.querySelectorAll('.btn-excluir-usuario').forEach(btn => {
-                    btn.addEventListener('click', async function() {
-                        const nome = this.dataset.nome;
-                        if (!confirm(`⚠️ Excluir o usuário "${nome}"?\n\nIsso removerá login, senha e dados pessoais.\nAção irreversível.`)) return;
-                        try {
-                            await supabaseClient.from('usuarios').delete().eq('nome', nome);
-                            await supabaseClient.from('usuarios_dados').delete().eq('usuario', nome);
-                            await supabaseClient.from('usuarios_senhas').delete().eq('usuario', nome);
-                            alert(`🗑️ Usuário ${nome} excluído.`);
-                            const p = document.getElementById('adminPanel');
-                            if (p) p.remove();
-                            document.getElementById('adminIcon').click();
-                        } catch (err) {
-                            console.error(err);
-                            alert('Erro ao excluir: ' + err.message);
-                        }
-                    });
-                });
-
-                div.querySelector('#buscaUsuario')?.addEventListener('input', function(e) {
-                    const q = e.target.value.trim().toUpperCase();
-                    div.querySelectorAll('#listaUsuarios .notification-item').forEach(item => {
-                        const nome = (item.dataset.nome || '').toUpperCase();
-                        item.style.display = (!q || nome.includes(q)) ? '' : 'none';
-                    });
-                });
-
-                div.querySelector('#closeAdmin').onclick = () => { div.remove(); window.location.reload(); };
-                const closeOnEsc = (e) => {
-                    if (e.key === 'Escape') { div.remove(); window.removeEventListener('keydown', closeOnEsc); window.location.reload(); }
-                };
-                window.addEventListener('keydown', closeOnEsc);
-
-                await atualizarBadgeGeral();
-            });
+            })();
 
             // ===== CHATBOT UI =====
             const chatWindow = document.getElementById('taasChatWindow');
@@ -2617,6 +2657,7 @@
             });
 
             console.log('🚀 Aplikado inicializado! (Roteamento via banco de dados)');
+            console.log('💡 Dica: para abrir o painel admin, feche o popup de imagem primeiro (X ou clique fora).');
         })();
     </script>
 
