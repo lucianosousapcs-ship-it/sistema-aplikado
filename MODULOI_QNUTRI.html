@@ -9,6 +9,127 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
+/* Sub-abas de Recibos */
+.recibo-subtab-content {
+    display: none;
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    background: #fff;
+}
+.recibo-subtab-content.active {
+    display: block;
+}
+#rec-subtab-controle {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+.form-modelo-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.06);
+}
+.form-recibo-body h2 {
+    text-align: center;
+    font-size: 17px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #1a0a00;
+    border-bottom: 2px solid #FF8C00;
+    padding-bottom: 12px;
+    margin-bottom: 22px;
+}
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+}
+.doc-field-renda {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.doc-field-renda label {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #b07040;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+}
+.doc-field-renda input,
+.doc-field-renda select,
+.doc-field-renda textarea {
+    font-family: 'Poppins', sans-serif;
+    padding: 10px 12px;
+    border: 1.5px solid rgba(255,140,0,.22);
+    border-radius: 8px;
+    font-size: 13px;
+    background: #fff;
+    color: #1a0a00;
+    outline: none;
+    transition: all .24s;
+    font-weight: 500;
+}
+.doc-field-renda input:focus,
+.doc-field-renda select:focus,
+.doc-field-renda textarea:focus {
+    border-color: #FF8C00;
+    box-shadow: 0 0 0 3px rgba(255,140,0,.12);
+}
+.recibo-texto {
+    text-align: justify;
+    margin: 16px 0;
+    text-indent: 24px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #1a0a00;
+}
+.local-data {
+    text-align: right;
+    margin-top: 24px;
+    font-size: 13px;
+    color: #1a0a00;
+}
+.assinatura-area {
+    margin-top: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.assinatura-linha {
+    width: 340px;
+    border-top: 1.5px solid #000;
+    margin-top: 40px;
+    padding-top: 6px;
+    text-align: center;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #1a0a00;
+}
+.form-recibo-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #eee;
+}
+@media(max-width:768px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .form-modelo-wrap { padding: 16px; }
+}
 /* ============================================================
    v6.5 — CSS CONSOLIDADO + RECIBOS VINCULADOS AO COLABORADOR
    ============================================================ */
@@ -189,6 +310,30 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 @keyframes pulse-sem-marcacao{0%,100%{opacity:1}50%{opacity:.7}}
 .btn-excluir-func{background:#f0f0f0;color:#aaa;border:1px solid #e0e0e0;border-radius:6px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;transition:all .2s;flex-shrink:0;opacity:.6}
 .btn-excluir-func:hover{background:#fce4e4;color:#c0392b;border-color:#e74c3c;opacity:1;transform:scale(1.05)}
+
+/* Correção do badge de atenção nos cards */
+.badge-atencao-semana {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #fff3cd, #ffe69c);
+    color: #856404;
+    border: 1px solid #ffc107;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 5px;
+    width: fit-content;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+.badge-atencao-semana:hover {
+    transform: scale(1.05);
+    background: #ffe69c;
+}
 
 /* ---------- CARTÕES NÃO ANEXADOS ---------- */
 #listaCartoesNaoAnexados{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
@@ -513,7 +658,9 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 .modal-atestado-anexo img{max-width:95%;max-height:95%;border-radius:8px;background:#fff;object-fit:contain;}
 .modal-atestado-anexo iframe{width:95vw;height:92vh;border-radius:8px;background:#fff;border:none;}
 .modal-atestado-anexo .fechar{position:absolute;top:20px;right:20px;background:#dc3545;color:#fff;border:none;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer;z-index:11001;display:flex;align-items:center;justify-content:center;}
-.modal-atestado-anexo .fechar:hover{background:#a71e2c;transform:scale(1.1);}/* ---------- ABONO MODAL ---------- */
+.modal-atestado-anexo .fechar:hover{background:#a71e2c;transform:scale(1.1);}
+
+/* ---------- ABONO MODAL ---------- */
 .modal-abono{display:none;position:fixed;z-index:10300;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:16px}
 .modal-abono.active{display:flex}
 .modal-abono .conteudo{background:#fff;border-radius:18px;padding:24px;max-width:640px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
@@ -766,75 +913,229 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 
 /* ---------- CONFERÊNCIA SEMANAL ---------- */
 .conf-filtro-status{width:auto!important;margin:0!important;accent-color:#FF8C00;transform:scale(1.15)}
-.conf-semana{margin-bottom:18px;border:1px solid #eee;border-radius:12px;padding:12px;background:#fff}
 
-/* ---------- RECIBOS (v6.5) ---------- */
-.recibo-tabela{width:100%;border-collapse:collapse;font-size:11px;border:1px solid #000;margin-bottom:14px;min-width:900px}
-.recibo-tabela thead th{background:#d0d0d0;padding:8px 6px;font-size:10px;font-weight:800;text-transform:uppercase;border:1px solid #000;text-align:center;white-space:nowrap}
-.recibo-tabela tbody td{padding:4px;border:1px solid #000;font-size:11px;vertical-align:middle}
-.recibo-tabela tbody tr:nth-child(even) td{background:#fafafa}
-.recibo-tabela .mes-cell{font-weight:800;background:#fef3c7!important;text-align:left;padding-left:10px;min-width:110px;white-space:nowrap}
-.recibo-tabela input[type=number],.recibo-tabela input[type=text]{width:100%;padding:4px;border:1px solid #bbb;border-radius:4px;font-family:'Poppins',sans-serif;font-size:11px;text-align:right;background:#fff;font-weight:600;box-sizing:border-box}
-.recibo-tabela .total-cell{font-weight:800;background:#e8e8e8!important;text-align:right;padding-right:8px}
-.recibo-tabela tfoot td{background:#d0d0d0!important;font-weight:800;padding:10px 6px;border:1px solid #000;font-size:11.5px}
-.recibo-tabela .anexo-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:#d4edda;color:#155724;cursor:pointer;margin:1px}
-.recibo-tabela .anexo-badge.vazio{background:#e2e3e5;color:#6c757d}
-.recibo-tabela .btn-anexo-mini{background:#FF8C00;color:#fff;border:none;border-radius:4px;padding:3px 6px;font-size:9px;font-weight:700;cursor:pointer;margin-left:2px}
-.recibo-subtab{display:flex;gap:6px;margin-bottom:14px;border-bottom:2px solid rgba(255,140,0,.2);padding-bottom:8px;flex-wrap:wrap}
-.recibo-subtab .subtab-btn{background:transparent;border:none;padding:8px 16px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;color:#7a3a00;cursor:pointer;border-radius:8px;display:flex;align-items:center;gap:6px}
-.recibo-subtab .subtab-btn.active{background:#FF8C00;color:#fff}
-.recibo-subtab-content{display:none}
-.recibo-subtab-content.active{display:block}
-.form-modelo-wrap{background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06),0 16px 44px rgba(255,140,0,.10);position:relative;overflow:hidden;border:1px solid rgba(255,140,0,.10);margin-bottom:18px}
-.form-modelo-wrap::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,#FF8C00 0%,#cc7000 100%);z-index:2}
-.form-recibo-body{padding:30px 40px 30px 46px;font-family:'Poppins',sans-serif;color:#000;font-size:13.5px;line-height:1.7}
-.form-recibo-body h2{text-align:center;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:2px;margin-bottom:22px;padding-bottom:10px;border-bottom:2px solid #FF8C00;color:#000}
-.form-recibo-body .recibo-texto{text-align:justify;margin:14px 0;text-indent:24px;color:#000}
-.form-recibo-body .recibo-texto strong{color:#000;font-weight:800}
-.form-recibo-body .assinatura-area{margin-top:46px;display:flex;flex-direction:column;align-items:center;gap:4px;color:#000}
-.form-recibo-body .assinatura-linha{width:340px;border-top:1.5px solid #000;margin-top:34px;padding-top:4px;text-align:center;font-size:11.5px;font-weight:600;color:#000}
-.form-recibo-body .local-data{text-align:right;margin-top:22px;font-size:12.5px;color:#000}
-.form-recibo-body .doc-field-renda{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
-.form-recibo-body .doc-field-renda label{font-size:9.5px;font-weight:800;color:#000;text-transform:uppercase;letter-spacing:1.1px}
-.form-recibo-body .doc-field-renda input,.form-recibo-body .doc-field-renda select,.form-recibo-body .doc-field-renda textarea{font-family:'Poppins',sans-serif;padding:7px 4px;border:none;border-bottom:1.5px solid #000;background:transparent;font-size:13px;color:#000;font-weight:600;outline:none;width:100%}
-.form-recibo-body .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px}
-.form-recibo-body .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 20px}
-@media(max-width:700px){.form-recibo-body .grid-2,.form-recibo-body .grid-3{grid-template-columns:1fr}.form-recibo-body{padding:20px 18px 20px 22px}}
-.form-recibo-actions{padding:14px 40px 16px 46px;border-top:2px dashed rgba(255,140,0,.22);background:linear-gradient(180deg,#fff,#fffbf5);display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-.exec-extrato-modal{display:none;position:fixed;z-index:10800;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:20px}
-.exec-extrato-modal.active{display:flex}
-.exec-extrato-modal .conteudo{background:#fff;border-radius:14px;padding:22px;max-width:1100px;width:100%;max-height:88vh;overflow-y:auto}
-.exec-extrato-modal h3{font-size:16px;color:#1a0a00;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #FF8C00;display:flex;align-items:center;gap:8px}
-.exec-extrato-tabela{width:100%;border-collapse:collapse;font-size:11.5px;border:1px solid #000}
-.exec-extrato-tabela thead th{background:#d0d0d0;padding:8px 6px;font-size:10px;font-weight:800;text-transform:uppercase;border:1px solid #000;text-align:center}
-.exec-extrato-tabela tbody td{padding:7px 6px;border:1px solid #ccc;font-size:11.5px}
-.exec-extrato-tabela .num{text-align:right;font-weight:700}
-.exec-extrato-tabela .doc-link{color:#17a2b8;cursor:pointer;font-weight:700;text-decoration:underline}
+/* Correção da Tabela de Conferência */
+.conf-semana {
+    margin-bottom: 18px;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 16px;
+    background: #fff;
+}
+.conf-semana-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: #f8f9fa;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+}
+.conf-semana-header .titulo {
+    font-weight: 800;
+    color: #7a3a00;
+    font-size: 13px;
+}
+.conf-semana-header .periodo {
+    margin-left: 10px;
+    font-size: 11px;
+    color: #7a3a00;
+    font-weight: 500;
+}
+.conf-semana-header .resumo {
+    font-size: 11px;
+    color: #7a3a00;
+    font-weight: 600;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.conf-semana-header .resumo strong {
+    font-weight: 800;
+}
+.conf-tabela-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    margin-bottom: 12px;
+}
+.conf-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    min-width: 700px;
+}
+.conf-tabela thead th {
+    background: #e8e8e8;
+    color: #1a0a00;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 8px 6px;
+    text-align: center;
+    text-transform: uppercase;
+    border: 1px solid #ccc;
+    white-space: nowrap;
+}
+.conf-tabela tbody td {
+    padding: 6px 4px;
+    border: 1px solid #ddd;
+    font-size: 11px;
+    text-align: center;
+    background: #fff;
+    vertical-align: middle;
+}
+.conf-tabela tbody tr:nth-child(even) td {
+    background: #fafafa;
+}
+.conf-tabela .dia-cell {
+    font-weight: 700;
+    font-size: 11px;
+    text-align: left;
+    padding-left: 10px;
+    white-space: nowrap;
+    border-right: 1px solid #ccc;
+}
+.conf-tabela .obs-cell {
+    font-size: 10px;
+    text-align: left;
+    padding-left: 8px;
+    color: #7a3a00;
+}
+.conf-tabela .total-cell {
+    font-weight: 700;
+    background: #fff8e1;
+    color: #e65100;
+}
+.conf-tabela .extra-cell {
+    font-weight: 700;
+    background: #e8f5e9;
+    color: #1b5e20;
+}
+.conf-semana-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+.conf-semana-footer .btn-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.conf-semana-footer .status-badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 700;
+}
+.conf-semana-obs {
+    margin-top: 10px;
+}
+.conf-semana-obs label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #7a3a00;
+    display: block;
+    margin-bottom: 4px;
+}
+.conf-semana-obs input {
+    font-family: 'Poppins', sans-serif;
+    width: 100%;
+    padding: 8px 12px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 12px;
+    background: #fff;
+    outline: none;
+}
+.conf-semana-obs input:focus {
+    border-color: #FF8C00;
+    box-shadow: 0 0 0 3px rgba(255,140,0,.1);
+}
+.conf-semana-info {
+    font-size: 10px;
+    color: #7a3a00;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
 
-/* ---------- MODAL LANÇAMENTO RECIBO (NOVO v6.5) ---------- */
-.modal-lancamento-recibo{display:none;position:fixed;z-index:10900;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:16px}
-.modal-lancamento-recibo.active{display:flex}
-.modal-lancamento-recibo .conteudo{background:#fff;border-radius:18px;padding:24px;max-width:560px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:modalFadeIn .3s ease}
-.modal-lancamento-recibo h3{font-size:17px;color:#1a0a00;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #FF8C00;display:flex;align-items:center;gap:8px}
-.modal-lancamento-recibo h3 i{color:#FF8C00}
-.modal-lancamento-recibo .campo-form{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
-.modal-lancamento-recibo .campo-form label{font-size:10px;font-weight:700;color:#7a3a00;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:5px}
-.modal-lancamento-recibo .campo-form label i{color:#FF8C00}
-.modal-lancamento-recibo .campo-form input,.modal-lancamento-recibo .campo-form select,.modal-lancamento-recibo .campo-form textarea{font-family:'Poppins',sans-serif;padding:10px 12px;border:1.5px solid rgba(255,140,0,.25);border-radius:10px;font-size:13px;background:#fff;color:#1a0a00;outline:none;transition:all .22s;width:100%;font-weight:500}
-.modal-lancamento-recibo .campo-form input:focus,.modal-lancamento-recibo .campo-form select:focus,.modal-lancamento-recibo .campo-form textarea:focus{border-color:#FF8C00;box-shadow:0 0 0 3px rgba(255,140,0,.12)}
-.modal-lancamento-recibo .anexo-dropzone{border:2px dashed rgba(255,140,0,.4);border-radius:12px;padding:20px 16px;text-align:center;background:linear-gradient(135deg,#fff8f0,#fff3e0);cursor:pointer;transition:all .24s;margin-bottom:10px}
-.modal-lancamento-recibo .anexo-dropzone:hover{border-color:#FF8C00;background:#fff3e0}
-.modal-lancamento-recibo .anexo-dropzone i{font-size:32px;color:#FF8C00}
-.modal-lancamento-recibo .anexo-dropzone .titulo-anexo{font-size:12.5px;font-weight:800;color:#7a3a00;margin-top:8px}
-.modal-lancamento-recibo .anexo-dropzone .sub-anexo{font-size:10px;color:#b07040;margin-top:3px}
-.modal-lancamento-recibo .anexo-preview{display:none;margin-top:8px;padding:10px 14px;background:linear-gradient(135deg,#fff3e0,#ffe0b0);border-radius:10px;align-items:center;gap:10px;font-size:12px;font-weight:700;color:#7a3a00;border:1px solid rgba(255,140,0,.4)}
-.modal-lancamento-recibo .anexo-preview.show{display:flex}
-.modal-lancamento-recibo .anexo-preview .preview-thumb{width:44px;height:44px;border-radius:8px;overflow:hidden;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,140,0,.35)}
-.modal-lancamento-recibo .anexo-preview .preview-thumb img{width:100%;height:100%;object-fit:cover}
-.modal-lancamento-recibo .anexo-preview .preview-thumb .pdf-ico{color:#dc3545;font-size:22px}
-.modal-lancamento-recibo .anexo-preview button{background:rgba(220,53,69,.1);border:none;color:#dc3545;cursor:pointer;font-size:13px;padding:6px 10px;border-radius:6px}
-.modal-lancamento-recibo .anexo-preview button:hover{background:#dc3545;color:#fff}
-.modal-lancamento-recibo .botoes{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid #eee}
+/* ---------- MODAL RECIBOS E FORMULÁRIOS ---------- */
+#modalRecibosFormularios .modal-content {
+    background: #fff;
+    border-radius: 14px;
+    max-width: 1500px;
+    width: 100%;
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+#modalRecibosFormularios .exec-toolbar {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 10px 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+#modalRecibosFormularios .exec-toolbar .campo {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 130px;
+}
+#modalRecibosFormularios .exec-toolbar .campo label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #7a3a00;
+    text-transform: uppercase;
+}
+#modalRecibosFormularios .exec-toolbar .campo select,
+#modalRecibosFormularios .exec-toolbar .campo input {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 12px;
+}
+#rec-subtab-controle {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+#modalRecibosFormularios .nav-relatorios-bar {
+    display: flex;
+    background: #2a2a2a;
+    padding: 0 20px;
+}
+#modalRecibosFormularios .nav-relatorios-bar button {
+    font-family: 'Poppins', sans-serif;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: rgba(255,255,255,.6);
+    padding: 10px 24px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all .25s;
+}
+#modalRecibosFormularios .nav-relatorios-bar button.active {
+    color: #FF8C00;
+    border-bottom-color: #FF8C00;
+    background: rgba(255,140,0,.05);
+}
 
 /* ---------- IMPRESSÃO ---------- */
 @media print{
@@ -859,6 +1160,56 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
   body.printing-relatorio .rel-tabela tbody tr,body.printing-ficha .ficha-tabela tbody tr,body.printing-controle-horas .ficha-tabela tbody tr,body.printing-relatorio-exec .exec-tabela tbody tr{page-break-inside:avoid;break-inside:avoid}
   @page{size:landscape;margin:8mm}
 }
+
+/* ---------- ESTILOS ADICIONAIS PARA RECIBOS ---------- */
+.recibo-tabela{width:100%;border-collapse:collapse;font-size:11px}
+.recibo-tabela th{background:#d8d8d8;color:#1a0a00;font-size:9px;font-weight:800;padding:10px 8px;text-align:center;border:1px solid #999;text-transform:uppercase}
+.recibo-tabela td{padding:8px 6px;border:1px solid #ccc;text-align:center;font-size:11px}
+.recibo-tabela tfoot td{background:#e8e8e8!important;font-weight:800;font-size:11px}
+.btn-anexo-mini{background:#FF8C00;color:#fff;border:none;border-radius:5px;padding:3px 8px;font-size:9px;cursor:pointer;margin:0 2px;transition:all .2s}
+.btn-anexo-mini:hover{transform:scale(1.1);box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.anexo-badge{display:inline-flex;align-items:center;gap:2px;font-size:8px;background:#28a745;color:#fff;padding:1px 5px;border-radius:6px;cursor:pointer;margin:0 1px}
+.anexo-badge.vazio{background:#dc3545}
+.doc-link{color:#17a2b8;cursor:pointer;text-decoration:underline;font-weight:600}
+.doc-link:hover{color:#117a8b}
+
+/* Modal de Lançamento de Recibo */
+.modal-lancamento-recibo{display:none;position:fixed;z-index:10700;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:16px}
+.modal-lancamento-recibo.active{display:flex}
+.modal-lancamento-recibo .conteudo{background:#fff;border-radius:18px;padding:24px;max-width:640px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal-lancamento-recibo h3{font-size:17px;color:#1a0a00;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #FF8C00;display:flex;align-items:center;gap:8px}
+.modal-lancamento-recibo h3 i{color:#FF8C00}
+.modal-lancamento-recibo .campo-form{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.modal-lancamento-recibo .campo-form label{font-size:10px;font-weight:700;color:#b07040;text-transform:uppercase;letter-spacing:.6px}
+.modal-lancamento-recibo .campo-form label i{color:#FF8C00;margin-right:4px}
+.modal-lancamento-recibo .campo-form input,
+.modal-lancamento-recibo .campo-form select,
+.modal-lancamento-recibo .campo-form textarea{font-family:'Poppins',sans-serif;padding:9px 12px;border:1.5px solid rgba(255,140,0,.22);border-radius:10px;font-size:12.5px;background:#fff;color:#1a0a00;outline:none;transition:all .24s;width:100%;font-weight:500}
+.modal-lancamento-recibo .campo-form input:focus,
+.modal-lancamento-recibo .campo-form select:focus,
+.modal-lancamento-recibo .campo-form textarea:focus{border-color:#FF8C00;box-shadow:0 0 0 3px rgba(255,140,0,.12)}
+.modal-lancamento-recibo .anexo-dropzone{border:2px dashed rgba(255,140,0,.45);border-radius:12px;padding:18px 14px;text-align:center;background:linear-gradient(135deg,#fff8f0,#fff3e0);cursor:pointer;transition:all .24s}
+.modal-lancamento-recibo .anexo-dropzone:hover{border-color:#FF8C00;background:#fff3e0}
+.modal-lancamento-recibo .anexo-dropzone i{font-size:26px;color:#FF8C00}
+.modal-lancamento-recibo .anexo-dropzone .titulo-anexo{font-size:12px;font-weight:800;color:#7a3a00;margin-top:6px}
+.modal-lancamento-recibo .anexo-dropzone .sub-anexo{font-size:9.5px;color:#b07040;margin-top:2px}
+.modal-lancamento-recibo .anexo-preview{display:none;margin-top:10px;padding:10px 14px;background:linear-gradient(135deg,#fff8f0,#fff3e0);border-radius:10px;align-items:center;gap:10px;font-size:11.5px;font-weight:700;color:#7a3a00;border:1px solid rgba(255,140,0,.4)}
+.modal-lancamento-recibo .anexo-preview.show{display:flex}
+.modal-lancamento-recibo .anexo-preview .preview-thumb{width:44px;height:44px;border-radius:8px;overflow:hidden;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,140,0,.35)}
+.modal-lancamento-recibo .anexo-preview .preview-thumb img{width:100%;height:100%;object-fit:cover}
+.modal-lancamento-recibo .anexo-preview button{background:rgba(220,53,69,.1);border:none;color:#dc3545;cursor:pointer;font-size:13px;padding:6px 10px;border-radius:6px}
+.modal-lancamento-recibo .anexo-preview button:hover{background:#dc3545;color:#fff}
+
+/* Modal Extrato */
+.exec-extrato-modal{display:none;position:fixed;z-index:10800;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:16px}
+.exec-extrato-modal.active{display:flex}
+.exec-extrato-modal .conteudo{background:#fff;border-radius:16px;padding:22px;max-width:900px;width:100%;max-height:90vh;overflow-y:auto}
+.exec-extrato-modal h3{font-size:16px;color:#1a0a00;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #FF8C00;display:flex;align-items:center;gap:8px}
+.exec-extrato-modal h3 i{color:#FF8C00}
+.exec-extrato-tabela{width:100%;border-collapse:collapse;font-size:11px}
+.exec-extrato-tabela thead th{background:#d8d8d8;color:#1a0a00;font-size:9px;font-weight:800;padding:8px 6px;text-align:center;border:1px solid #999;text-transform:uppercase}
+.exec-extrato-tabela tbody td{padding:6px;border:1px solid #ccc;font-size:11px;text-align:center}
+.exec-extrato-tabela tfoot td{background:#e8e8e8!important;font-weight:800;font-size:11px}
 </style>
 </head>
 <body>
@@ -2066,7 +2417,7 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
     </div>
 </div>
 
-<!-- ============ MODAL LANÇAMENTO DE RECIBO (NOVO v6.5) ============ -->
+<!-- ============ MODAL LANÇAMENTO DE RECIBO ============ -->
 <div class="modal-lancamento-recibo" id="modalLancamentoRecibo">
     <div class="conteudo">
         <h3><i class="fas fa-file-invoice-dollar"></i> Novo Lançamento — <span id="lancReciboTitulo"></span></h3>
@@ -2158,6 +2509,13 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
             <button type="button" class="btn-action btn-primary" onclick="gerarTabelaRecibos()"><i class="fas fa-sync"></i> Atualizar</button>
         </div>
 
+        <!-- NAVEGAÇÃO ENTRE SUB-ABAS -->
+        <div class="nav-relatorios-bar" style="background:#2a2a2a;">
+            <button class="active" data-rec-subtab="controle" onclick="mudarSubAbaRecibo('controle')"><i class="fas fa-table"></i> Controle de Lançamentos</button>
+            <button data-rec-subtab="modelo1" onclick="mudarSubAbaRecibo('modelo1')"><i class="fas fa-bus"></i> Recibo VT</button>
+            <button data-rec-subtab="modelo2" onclick="mudarSubAbaRecibo('modelo2')"><i class="fas fa-file-signature"></i> Recibo de Serviços</button>
+        </div>
+
         <div class="recibo-subtab-content active" id="rec-subtab-controle">
             <div style="text-align:center;padding:60px 20px;color:#7a3a00;">
                 <i class="fas fa-file-invoice-dollar" style="font-size:42px;display:block;margin-bottom:14px;opacity:0.4;"></i>
@@ -2247,9 +2605,7 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
             </div>
         </div>
     </div>
-</div>
-
-<!-- ============ MODAL EXTRATO DETALHADO ============ -->
+</div><!-- ============ MODAL EXTRATO DETALHADO ============ -->
 <div class="exec-extrato-modal" id="modalExtratoCategoria">
     <div class="conteudo">
         <h3><i class="fas fa-list-ul"></i> Extrato Detalhado — <span id="extratoTituloCategoria">Categoria</span></h3>
@@ -3687,18 +4043,17 @@ async function abrirModalFuncionario(id){
                             </div>
                         </div>
                     </div>`:''}
-
-<div id="aba-modal-recibos" class="tab-content">
-    <div style="font-weight:800;font-size:13px;color:#1a0a00;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid rgba(255,140,0,0.2);display:flex;align-items:center;gap:8px;">
-        <i class="fas fa-file-invoice-dollar" style="color:#FF8C00;"></i> Recibos do Colaborador
-    </div>
-    <div id="recibosColaboradorConteudo">
-        <div style="text-align:center;padding:40px;color:#7a3a00;">
-            <i class="fas fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-            Carregando recibos...
-        </div>
-    </div>
-</div>
+                    <div id="aba-modal-recibos" class="tab-content">
+                        <div style="font-weight:800;font-size:13px;color:#1a0a00;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid rgba(255,140,0,0.2);display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-file-invoice-dollar" style="color:#FF8C00;"></i> Recibos do Colaborador
+                        </div>
+                        <div id="recibosColaboradorConteudo">
+                            <div style="text-align:center;padding:40px;color:#7a3a00;">
+                                <i class="fas fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:8px;"></i>
+                                Carregando recibos...
+                            </div>
+                        </div>
+                    </div>
                     <div id="aba-modal-calendario" class="tab-content"><div id="calTabConteudo"></div></div>
                     <div id="aba-modal-atestados" class="tab-content">
                         <div class="doc-section-title" style="font-weight:800;font-size:12.5px;color:#1a0a00;margin-bottom:12px;border-bottom:2px solid rgba(111,66,192,0.2);padding-bottom:10px;display:flex;align-items:center;gap:8px;">
@@ -4156,6 +4511,7 @@ async function recarregarAbaAtestados(id){
     const c = document.getElementById('atTabListaAtestados');
     if(c) c.innerHTML = renderizarAtestadosTab();
 }
+
 /* ============================================================
    PONTO NO MODAL
    ============================================================ */
@@ -6160,6 +6516,11 @@ async function carregarCronogramas(){
         g.innerHTML = `<div class="crono-empty"><i class="fas fa-exclamation-triangle" style="color:#dc3545;"></i><p>Erro: ${e.message}</p></div>`;
     }
 }
+function abrirFuncionarioDoCronograma(id){
+    fecharCronogramas();
+    setTimeout(()=>abrirModalFuncionario(id),300);
+}
+
 /* ============================================================
    RELATÓRIO DE PONTO
    ============================================================ */
@@ -6786,12 +7147,50 @@ function renderizarSemanaConferencia(semana,idx,dd,ab,perm){
             <input type="text" class="motivo-input" value="${(v?.observacao||'').replace(/"/g,'&quot;')}" placeholder="Ex: aguardando comprovante" onchange="salvarObservacaoSemana('${chave}',this.value)">
         </div>`;
     return `<div class="conf-semana" data-semana-chave="${chave}" data-semana-status="${st}" data-semana-idx="${idx}">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:#f8f9fa;border:1px solid #eee;border-radius:10px;padding:10px 14px;margin-bottom:10px;">
-            <div><strong style="color:#7a3a00;font-size:12px;">Semana ${idx+1}</strong><span style="margin-left:10px;font-size:11px;color:#7a3a00;">${semana.inicio.toLocaleDateString('pt-BR')} → ${semana.fim.toLocaleDateString('pt-BR')}</span></div>
-            <div style="font-size:11px;color:#7a3a00;font-weight:600;">Permanência: <strong>${formatarHoras(perm)}</strong> · Trabalhadas: <strong>${formatarHoras(tT)}</strong> · HE: <strong style="color:#28a745;">${formatarHoras(tE)}</strong> · Abonadas: <strong>${formatarHoras(tA)}</strong> · Faltas: <strong style="color:#dc3545;">${tF}</strong></div>
+        <div class="conf-semana-header">
+            <div>
+                <span class="titulo">Semana ${idx+1}</span>
+                <span class="periodo">${semana.inicio.toLocaleDateString('pt-BR')} → ${semana.fim.toLocaleDateString('pt-BR')}</span>
+            </div>
+            <div class="resumo">
+                Permanência: <strong>${formatarHoras(perm)}</strong> · 
+                Trabalhadas: <strong>${formatarHoras(tT)}</strong> · 
+                HE: <strong style="color:#28a745;">${formatarHoras(tE)}</strong> · 
+                Abonadas: <strong>${formatarHoras(tA)}</strong> · 
+                Faltas: <strong style="color:#dc3545;">${tF}</strong>
+            </div>
         </div>
-        <div class="doc-table-wrap" style="margin-bottom:10px;"><table class="doc-table"><thead><tr><th>Dia</th><th>1ª Ent.</th><th>1ª Saí.</th><th>2ª Ent.</th><th>2ª Saí.</th><th>Extra Ent.</th><th>Extra Saí.</th><th>Total</th><th>Hora Extra</th><th>Obs.</th></tr></thead><tbody>${lin}</tbody></table></div>
-        ${botoes}
+        <div class="conf-tabela-wrapper">
+            <table class="conf-tabela">
+                <thead>
+                    <tr>
+                        <th>Dia</th>
+                        <th>1ª Ent.</th>
+                        <th>1ª Saí.</th>
+                        <th>2ª Ent.</th>
+                        <th>2ª Saí.</th>
+                        <th>Extra Ent.</th>
+                        <th>Extra Saí.</th>
+                        <th>Total</th>
+                        <th>Hora Extra</th>
+                        <th>Obs.</th>
+                    </tr>
+                </thead>
+                <tbody>${lin}</tbody>
+            </table>
+        </div>
+        <div class="conf-semana-footer">
+            <div class="btn-group">
+                <button type="button" class="btn-action btn-success btn-sm" ${podeValidarPonto()?'':'disabled title="Sem permissão"'} onclick="classificarSemana('${chave}',${idx},'validado')"><i class="fas fa-check"></i> Validado</button>
+                <button type="button" class="btn-action btn-warning btn-sm" ${podeClassificarAtencao()?'':'disabled title="Sem permissão"'} onclick="classificarSemana('${chave}',${idx},'requer_atencao')"><i class="fas fa-exclamation-triangle"></i> Requer atenção</button>
+            </div>
+            <span class="status-badge" style="color:${sc};background:${sc}22;border:1px solid ${sc};">${sl}</span>
+        </div>
+        ${v?.validado_por?`<div class="conf-semana-info"><i class="fas fa-user-check" style="color:#28a745;"></i> Classificado por <strong>${v.validado_por}</strong> em ${new Date(v.validado_em).toLocaleString('pt-BR')}</div>`:''}
+        <div class="conf-semana-obs">
+            <label><i class="fas fa-comment"></i> Observação</label>
+            <input type="text" class="motivo-input" value="${(v?.observacao||'').replace(/"/g,'&quot;')}" placeholder="Ex: aguardando comprovante" onchange="salvarObservacaoSemana('${chave}',this.value)">
+        </div>
     </div>`;
 }
 function aplicarFiltrosConferencia(){
@@ -8109,7 +8508,7 @@ async function salvarPensao(id){
 }
 
 /* ============================================================
-   RECIBOS E FORMULÁRIOS — v6.5
+   RECIBOS E FORMULÁRIOS — v6.5 (CORRIGIDO)
    ============================================================ */
 const REC_CATEGORIAS = [
     {key:'vt_avulso',label:'VT Avulso',cor:'col-vt',icone:'fa-bus'},
@@ -8176,11 +8575,19 @@ function selecionarColaboradorRecibo(id){
 function fecharRecibosFormularios(){ document.getElementById('modalRecibosFormularios').classList.remove('active'); }
 function mudarSubAbaRecibo(a){
     _recSubAbaAtual = a;
-    document.querySelectorAll('[data-rec-subtab]').forEach(b=>b.classList.toggle('active',b.dataset.recSubtab===a));
-    document.querySelectorAll('.recibo-subtab-content').forEach(c=>c.classList.remove('active'));
-    document.getElementById('rec-subtab-'+a)?.classList.add('active');
-}
-async function carregarColaboradoresRecibos(){
+    document.querySelectorAll('[data-rec-subtab]').forEach(b=>{
+        b.classList.toggle('active', b.dataset.recSubtab === a);
+    });
+    document.querySelectorAll('.recibo-subtab-content').forEach(c=>{
+        c.classList.remove('active');
+        c.style.display = 'none';
+    });
+    const alvo = document.getElementById('rec-subtab-' + a);
+    if(alvo){
+        alvo.classList.add('active');
+        alvo.style.display = 'block';
+    }
+}async function carregarColaboradoresRecibos(){
     const sel = document.getElementById('recFuncionario');
     if(!sel) return;
     sel.innerHTML = '<option value="">Carregando...</option>';
@@ -8339,7 +8746,7 @@ async function gerarTabelaRecibos(){
 }
 
 /* ============================================================
-   MODAL DE LANÇAMENTO DE RECIBO (NOVO v6.5)
+   MODAL DE LANÇAMENTO DE RECIBO
    ============================================================ */
 function abrirModalLancamentoRecibo(mes,cat){
     const funcId = _recFuncSelecionado;
@@ -8650,6 +9057,7 @@ async function anexarReciboAoMes(cat){
         r.readAsDataURL(blob);
     }catch(err){ mostrarToast('❌ Erro: '+err.message,'error'); }
 }
+
 /* ============================================================
    RECIBOS DO COLABORADOR — EXIBIÇÃO NO MODAL
    ============================================================ */
@@ -8779,7 +9187,9 @@ async function carregarRecibosColaborador(id){
             <p style="font-size:11px;">Erro ao carregar recibos: ${e.message}</p>
         </div>`;
     }
-}/* ============================================================
+}
+
+/* ============================================================
    INICIALIZAÇÃO
    ============================================================ */
 window.onload = async function(){
