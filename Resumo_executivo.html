@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e07000 100%);font-family:'Poppins',sans-serif;color:#1a0a00;min-height:100vh;padding-bottom:40px}
@@ -107,14 +108,17 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 .exec-tabela .col-he-normal{background:#e0f2fe;min-width:85px}
 .exec-tabela .col-he-noturna{background:#fce7f3;min-width:85px}
 .exec-tabela .col-adiantamento{background:#e0f2fe;min-width:85px}
+.exec-tabela .col-contracheque{background:#e9d5ff;min-width:100px}
 .exec-tabela input[type=text],.exec-tabela input[type=number]{width:100%;padding:3px 4px;border:1px solid transparent;border-radius:3px;font-family:'Poppins',sans-serif;font-size:10px;text-align:right;background:transparent;font-weight:600;box-sizing:border-box}
 .exec-tabela input:focus{border-color:#FF8C00;background:#fff;outline:none}
 .exec-tabela input[readonly]{background:#f0f0f0;color:#333}
 .calc-btn-inline{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#FF8C00;color:#fff;font-size:8px;cursor:pointer;border:none;flex-shrink:0}
-.btn-atencao{background:#fcc;color:#721c24;border:1px solid #dc3545;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer}
+.btn-atencao{background:#fcc;color:#721c24;border:1px solid #dc3545;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;vertical-align:middle;transition:all .2s}
+.btn-atencao:hover{background:#dc3545;color:#fff;transform:scale(1.1)}
 .auto-badge{display:inline-block;background:#d4edda;color:#155724;font-size:7px;font-weight:800;padding:1px 5px;border-radius:6px;margin-left:3px;text-transform:uppercase}
 .exec-kpi-badge{display:inline-flex;align-items:center;gap:5px;margin-left:12px;padding:4px 12px;background:linear-gradient(135deg,#FF8C00,#e07000);color:#fff;font-size:10px;font-weight:800;border-radius:20px;box-shadow:0 3px 10px rgba(255,140,0,.45);cursor:pointer}
-.exec-badge-semana-individual{display:inline-flex;align-items:center;justify-content:center;gap:3px;margin-left:4px;padding:1px 7px;background:linear-gradient(135deg,#FF8C00,#e07000);color:#fff;font-size:8px;font-weight:800;border-radius:10px;cursor:pointer}
+.exec-badge-semana-individual{display:inline-flex;align-items:center;justify-content:center;gap:3px;margin-left:4px;padding:1px 7px;background:linear-gradient(135deg,#FF8C00,#e07000);color:#fff;font-size:9px;font-weight:800;border-radius:10px;cursor:pointer;border:none;transition:all .2s}
+.exec-badge-semana-individual:hover{transform:scale(1.15);box-shadow:0 2px 8px rgba(255,140,0,.5)}
 .exec-th-link-clicavel{cursor:pointer;transition:background .2s}
 .exec-th-link-clicavel:hover{background:#FF8C00!important;color:#fff!important}
 
@@ -181,6 +185,8 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 .modal-conferencia.active{display:flex!important}
 .modal-conferencia .modal-content{max-width:1400px}
 .conf-semana{margin-bottom:18px;border:1px solid #eee;border-radius:12px;padding:16px;background:#fff}
+.conf-semana.destaque{animation:destaqueSemana 2s ease}
+@keyframes destaqueSemana{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 4px rgba(255,140,0,.5)}}
 .conf-semana-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:#f8f9fa;border:1px solid #eee;border-radius:10px;padding:12px 16px;margin-bottom:14px}
 .conf-semana-header .titulo{font-weight:800;color:#7a3a00;font-size:13px}
 .conf-semana-header .periodo{margin-left:10px;font-size:11px;color:#7a3a00;font-weight:500}
@@ -211,6 +217,32 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 .empty-state{text-align:center;padding:50px 20px;color:#7a3a00;grid-column:1/-1}
 .empty-state i{font-size:56px;color:rgba(255,140,0,.3);margin-bottom:16px;display:block}
 .empty-state p{font-size:14px;font-weight:600}
+
+/* MODAL IMPORTAÇÃO CONTRA CHEQUE */
+.modal-import-contracheque{display:none;position:fixed;z-index:10700;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px}
+.modal-import-contracheque.active{display:flex!important}
+.modal-import-contracheque .conteudo{background:#fff;border-radius:16px;padding:24px;max-width:1000px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal-import-contracheque h3{font-size:17px;color:#1a0a00;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #FF8C00;display:flex;align-items:center;gap:8px}
+.modal-import-contracheque h3 i{color:#FF8C00}
+.import-dropzone{border:2px dashed #FF8C00;border-radius:12px;padding:28px;text-align:center;background:#fff8f0;cursor:pointer;transition:all .3s;margin-bottom:14px}
+.import-dropzone:hover{background:#fff0e0;border-color:#e07000}
+.import-dropzone.dragover{background:#ffe0b0;border-color:#e07000}
+.import-dropzone i{font-size:38px;color:#FF8C00;display:block;margin-bottom:8px}
+.import-dropzone p{font-size:13px;color:#7a3a00;font-weight:600}
+.import-dropzone small{font-size:11px;color:#a06020;display:block;margin-top:6px}
+.import-preview{max-height:340px;overflow:auto;border:1px solid #ddd;border-radius:8px;margin-bottom:14px}
+.import-preview table{width:100%;border-collapse:collapse;font-size:11px}
+.import-preview thead th{background:#f0f0f0;padding:8px 6px;font-size:9px;font-weight:800;text-transform:uppercase;border:1px solid #ccc;text-align:center;position:sticky;top:0}
+.import-preview tbody td{padding:6px;border:1px solid #ddd;font-size:11px;text-align:center}
+.import-preview tbody tr:nth-child(even) td{background:#fafafa}
+.import-preview .nome-cell{font-weight:700;text-align:left;background:#fef3c7!important}
+.import-preview input[type=text],.import-preview input[type=number]{width:100%;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-family:'Poppins',sans-serif;font-size:11px;text-align:right}
+.import-preview input.nome-input{text-align:left;font-weight:700}
+.import-status{font-size:12px;padding:10px 14px;border-radius:8px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.import-status.ok{background:#d4edda;color:#155724;border-left:4px solid #28a745}
+.import-status.warn{background:#fff3cd;color:#856404;border-left:4px solid #ffc107}
+.import-status.err{background:#f8d7da;color:#721c24;border-left:4px solid #dc3545}
+.import-status.info{background:#d1ecf1;color:#0c5460;border-left:4px solid #17a2b8}
 </style>
 </head>
 <body>
@@ -255,6 +287,7 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
         <div class="nav-relatorios-bar">
             <button id="btnNavExecutivo" class="active" onclick="navegarParaRelatorio('executivo')"><i class="fas fa-chart-pie"></i> Relatório Executivo</button>
             <button id="btnNavFinanceiro" onclick="navegarParaRelatorio('financeiro')"><i class="fas fa-money-check-dollar"></i> Resumo Financeiro</button>
+            <button id="btnNavContracheque" onclick="navegarParaRelatorio('contracheque')"><i class="fas fa-file-invoice"></i> Importar Contra Cheque</button>
         </div>
 
         <!-- TOOLBAR EXECUTIVO -->
@@ -330,6 +363,58 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
                     <i class="fas fa-money-check-dollar" style="font-size:42px;display:block;margin-bottom:14px;opacity:0.4;"></i>
                     <p style="font-weight:700;">Carregando resumo financeiro...</p>
                 </div>
+            </div>
+        </div>
+
+        <!-- PAINEL IMPORTAÇÃO CONTRA CHEQUE -->
+        <div id="painelImportContracheque" style="display:none;flex-direction:column;flex:1;">
+            <div style="background:#f8f9fa;border-bottom:1px solid #e0e0e0;padding:12px 20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <div class="campo" style="display:flex;flex-direction:column;gap:3px;min-width:130px;">
+                    <label style="font-size:9px;font-weight:700;color:#7a3a00;text-transform:uppercase;"><i class="fas fa-calendar"></i> Mês</label>
+                    <select id="ccMes" style="padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-family:'Poppins',sans-serif;font-size:12px;"></select>
+                </div>
+                <div class="campo" style="display:flex;flex-direction:column;gap:3px;min-width:80px;">
+                    <label style="font-size:9px;font-weight:700;color:#7a3a00;text-transform:uppercase;"><i class="fas fa-calendar-alt"></i> Ano</label>
+                    <input type="number" id="ccAno" value="2026" min="2020" max="2035" style="padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-family:'Poppins',sans-serif;font-size:12px;">
+                </div>
+                <button type="button" class="btn-action btn-purple" onclick="abrirModalImportacao()"><i class="fas fa-file-import"></i> Importar PDF</button>
+                <button type="button" class="btn-action btn-danger" onclick="limparDadosContracheque()"><i class="fas fa-trash"></i> Limpar Dados</button>
+                <button type="button" class="btn-action btn-success" onclick="sincronizarContracheques()"><i class="fas fa-cloud-upload-alt"></i> Sincronizar com Relatório</button>
+            </div>
+            <div class="exec-body" id="ccBody" style="flex:1;overflow:auto;padding:20px 24px 30px;background:#fff;color:#000;min-height:400px;">
+                <div style="text-align:center;padding:60px 20px;color:#7a3a00;">
+                    <i class="fas fa-file-invoice" style="font-size:42px;display:block;margin-bottom:14px;opacity:0.4;"></i>
+                    <p style="font-weight:700;">Nenhum contra cheque importado.</p>
+                    <p style="font-size:12px;margin-top:6px;">Clique em <strong>Importar PDF</strong> para começar.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE IMPORTAÇÃO DE CONTRA CHEQUE -->
+<div class="modal-import-contracheque" id="modalImportContracheque">
+    <div class="conteudo">
+        <h3><i class="fas fa-file-import"></i> Importar Contra Cheque (PDF)</h3>
+        <div class="import-status info" id="importStatus">
+            <i class="fas fa-info-circle"></i>
+            <span>Selecione um arquivo PDF. O sistema tentará extrair automaticamente os nomes e valores. Você poderá revisar e editar antes de salvar.</span>
+        </div>
+        <div class="import-dropzone" id="importDropzone">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Arraste o PDF aqui ou clique para selecionar</p>
+            <small>Formatos aceitos: .pdf (texto selecionável)</small>
+            <input type="file" id="importFileInput" accept="application/pdf" style="display:none;">
+        </div>
+        <div id="importPreviewContainer" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <strong style="font-size:13px;color:#1a0a00;"><i class="fas fa-list"></i> Pré-visualização <span id="importCount" style="color:#FF8C00;"></span></strong>
+                <button type="button" class="btn-action btn-secondary btn-sm" onclick="resetarImportacao()"><i class="fas fa-undo"></i> Recomeçar</button>
+            </div>
+            <div class="import-preview" id="importPreview"></div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
+                <button type="button" class="btn-action btn-secondary" onclick="fecharModalImportacao()"><i class="fas fa-times"></i> Cancelar</button>
+                <button type="button" class="btn-action btn-success" onclick="salvarImportacaoContracheque()"><i class="fas fa-save"></i> Salvar Dados</button>
             </div>
         </div>
     </div>
@@ -481,8 +566,11 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 
 <script>
 /* ============================================================
-   RESUMO EXECUTIVO — v6.5 (TELA INDEPENDENTE AUTOSSUFICIENTE)
+   RESUMO EXECUTIVO — v7.1 (CORREÇÃO DIRECIONAMENTO ATENÇÃO)
    ============================================================ */
+
+/* ---------- PDF.js ---------- */
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 /* ---------- SUPABASE ---------- */
 const SUPABASE_URL = 'https://avzxplcdutqzlxfievza.supabase.co';
@@ -514,6 +602,9 @@ let _execProdutividade = {};
 let _execKpiSemanasNaoAvaliadas = 0, _execKpiDetalhe = {}, _execSemanasNaoAvaliadasPorFunc = {};
 let _prodCalcIdx = null;
 let _confSemanas = [], _confSemanaAtiva = 0, _confStatusMap = {}, _confSemanasRender = [];
+let _contrachequesImportados = {};
+let _importPreviewData = null;
+let _confDestaqueChave = null; // semana que deve ser destacada ao abrir
 
 const REC_CATEGORIAS = [
     {key:'vt_avulso',label:'VT Avulso',cor:'col-vt',icone:'fa-bus'},
@@ -787,14 +878,21 @@ function navegarParaRelatorio(dest){
     const toolbarExec = document.getElementById('execToolbar');
     const painelExec = document.getElementById('execBody');
     const painelFin = document.getElementById('painelResumoFinanceiro');
+    const painelCC = document.getElementById('painelImportContracheque');
     const btnExec = document.getElementById('btnNavExecutivo');
     const btnFin = document.getElementById('btnNavFinanceiro');
+    const btnCC = document.getElementById('btnNavContracheque');
+
+    if(toolbarExec) toolbarExec.style.display = 'none';
+    if(painelExec) painelExec.style.display = 'none';
+    if(painelFin) painelFin.style.display = 'none';
+    if(painelCC) painelCC.style.display = 'none';
+    btnExec?.classList.remove('active');
+    btnFin?.classList.remove('active');
+    btnCC?.classList.remove('active');
 
     if(dest === 'financeiro'){
-        if(toolbarExec) toolbarExec.style.display = 'none';
-        if(painelExec) painelExec.style.display = 'none';
         if(painelFin) painelFin.style.display = 'flex';
-        btnExec?.classList.remove('active');
         btnFin?.classList.add('active');
         const selMes = document.getElementById('finMes');
         if(selMes && selMes.options.length === 0){
@@ -813,12 +911,20 @@ function navegarParaRelatorio(dest){
             });
         }
         gerarResumoFinanceiro();
+    } else if(dest === 'contracheque'){
+        if(painelCC) painelCC.style.display = 'flex';
+        btnCC?.classList.add('active');
+        const selMes = document.getElementById('ccMes');
+        if(selMes && selMes.options.length === 0){
+            const h = new Date();
+            selMes.innerHTML = MESES.map((m,i)=>`<option value="${i}" ${i===h.getMonth()?'selected':''}>${m}</option>`).join('');
+            document.getElementById('ccAno').value = h.getFullYear();
+        }
+        renderizarPainelContracheque();
     } else {
         if(toolbarExec) toolbarExec.style.display = 'flex';
         if(painelExec) painelExec.style.display = 'block';
-        if(painelFin) painelFin.style.display = 'none';
         btnExec?.classList.add('active');
-        btnFin?.classList.remove('active');
     }
 }
 
@@ -960,6 +1066,9 @@ async function gerarRelatorioExecutivo(){
         const mapaPensao = {};
         (pensaoData||[]).forEach(p=>{ mapaPensao[p.funcionario_id] = p; });
 
+        const chaveMesAno = `${ano}-${mes}`;
+        const ccImport = _contrachequesImportados[chaveMesAno] || {};
+
         _execDadosCache = [];
         for(const f of lista){
             const salario = parseFloat(f.salario||0);
@@ -1009,6 +1118,7 @@ async function gerarRelatorioExecutivo(){
             const fgtsAuto = calcularFGTS(baseAuto);
 
             const recInfo = mapaRec[String(f.id)] || {vt_avulso:0, bonificacoes:0, antecipacoes:0};
+            const ccFunc = ccImport[f.nome] || null;
 
             _execDadosCache.push({
                 id:f.id,nome:f.nome,cpf:f.cpf,unidade:f.unidade,departamento:f.departamento,cargo:f.cargo,
@@ -1026,7 +1136,8 @@ async function gerarRelatorioExecutivo(){
                 automatico:{inss:true,ir:true,fgts:true},
                 vtAvulso: recInfo.vt_avulso || 0,
                 bonificacoes: recInfo.bonificacoes || 0,
-                antecipacoes: recInfo.antecipacoes || 0
+                antecipacoes: recInfo.antecipacoes || 0,
+                contraCheque: ccFunc
             });
         }
 
@@ -1092,7 +1203,8 @@ function renderizarRelatorioExecutivoFormulario(){
         enc:0,inssPatr:0,fgtsPatr:0,demEnc:0,
         benef:0,vtB:0,vrvaB:0,planB:0,segB:0,
         descF:0,inssD:0,irrfD:0,demD:0,
-        vtAvulso:0, bonif:0, antec:0
+        vtAvulso:0, bonif:0, antec:0,
+        ccVenc:0, ccDesc:0, ccLiq:0, ccBase:0, ccINSS:0, ccFGTS:0, ccIRRF:0, ccSalBase:0
     };
     _execDadosCache.forEach(l=>{
         T.salario += l.salario||0; T.he100 += l.valorHoraExtra100||0; T.he50 += l.valorHoraExtra50||0;
@@ -1110,11 +1222,20 @@ function renderizarRelatorioExecutivoFormulario(){
         T.vtAvulso += l.vtAvulso || 0;
         T.bonif += l.bonificacoes || 0;
         T.antec += l.antecipacoes || 0;
+        const cc = l.contraCheque || {};
+        T.ccVenc += cc.vencimentos||0;
+        T.ccDesc += cc.descontos||0;
+        T.ccLiq += cc.liquido||0;
+        T.ccBase += cc.baseINSS||0;
+        T.ccINSS += cc.inss||0;
+        T.ccFGTS += cc.fgts||0;
+        T.ccIRRF += cc.irrf||0;
+        T.ccSalBase += cc.salarioBase||0;
     });
 
     let html = `
         <div style="font-size:11.5px;color:#7a3a00;padding:8px 12px;background:#f8f9fa;border-radius:6px;margin-bottom:12px;border-left:3px solid #FF8C00;">
-            <i class="fas fa-info-circle"></i> <strong>IR, FGTS e INSS</strong> automáticos (faixas 2026). <strong>Pensão</strong> da aba individual. <strong>VT</strong> da aba Vale-Transporte. <strong>13º Adiantado</strong> = salário ÷ 12. <strong>VT Avulso, Bonificações e Antecipações</strong> carregados dos recibos individuais. Use <i class="fas fa-calculator" style="color:#FF8C00;"></i> para ajustes.
+            <i class="fas fa-info-circle"></i> <strong>IR, FGTS e INSS</strong> automáticos (faixas 2026). <strong>Pensão</strong> da aba individual. <strong>VT</strong> da aba Vale-Transporte. <strong>13º Adiantado</strong> = salário ÷ 12. <strong>VT Avulso, Bonificações e Antecipações</strong> carregados dos recibos individuais. <strong>Dados Contra Cheque</strong> importados via PDF na aba "Importar Contra Cheque". Use <i class="fas fa-calculator" style="color:#FF8C00;"></i> para ajustes.
         </div>
         <table class="exec-tabela" id="tabelaExecutiva">
             <thead>
@@ -1131,6 +1252,7 @@ function renderizarRelatorioExecutivoFormulario(){
                     <th colspan="1" style="background:#fef9c3;cursor:pointer;" class="exec-th-link-clicavel" onclick="abrirExtratoCategoriaExec('vt_avulso')"><i class="fas fa-bus"></i> VT Avulso <i class="fas fa-list-ul" style="font-size:8px;"></i></th>
                     <th colspan="1" style="background:#dcfce7;cursor:pointer;" class="exec-th-link-clicavel" onclick="abrirExtratoCategoriaExec('bonificacoes')"><i class="fas fa-gift"></i> Bonificações <i class="fas fa-list-ul" style="font-size:8px;"></i></th>
                     <th colspan="1" style="background:#e0f2fe;cursor:pointer;" class="exec-th-link-clicavel" onclick="abrirExtratoCategoriaExec('antecipacoes')"><i class="fas fa-hand-holding-usd"></i> Antecipações <i class="fas fa-list-ul" style="font-size:8px;"></i></th>
+                    <th colspan="8" style="background:#e9d5ff;">📄 DADOS CONTRA CHEQUE (IMPORTADO)</th>
                 <tr>
                     <th class="col-empresa">Empresa</th>
                     <th class="col-colaborador">Colaborador</th>
@@ -1181,18 +1303,27 @@ function renderizarRelatorioExecutivoFormulario(){
                     <th style="min-width:90px;background:#fef9c3;">Valor</th>
                     <th style="min-width:90px;background:#dcfce7;">Valor</th>
                     <th style="min-width:90px;background:#e0f2fe;">Valor</th>
+                    <th class="col-contracheque">Sal. Base</th>
+                    <th class="col-contracheque">Vencimentos</th>
+                    <th class="col-contracheque">Descontos</th>
+                    <th class="col-contracheque">Líquido</th>
+                    <th class="col-contracheque">Base INSS</th>
+                    <th class="col-contracheque">INSS</th>
+                    <th class="col-contracheque">FGTS</th>
+                    <th class="col-contracheque">IRRF</th>
                 </tr>
             </thead>
             <tbody>`;
     _execDadosCache.forEach((l,idx)=>{
         const alerta = l.temAtencao
-            ? `<button type="button" class="btn-atencao" onclick="abrirConferenciaFuncionarioComSemana('${l.id}',${l.semanasAtencao[0]?.mes},${l.semanasAtencao[0]?.ano},'${l.semanasAtencao[0]?.semana_inicio}')" title="Requer atenção"><i class="fas fa-exclamation-triangle"></i></button>`
+            ? `<button type="button" class="btn-atencao" onclick="event.stopPropagation();abrirConferenciaFuncionarioComSemana('${l.id}',${l.semanasAtencao[0]?.mes},${l.semanasAtencao[0]?.ano},'${l.semanasAtencao[0]?.semana_inicio}')" title="Requer atenção"><i class="fas fa-exclamation-triangle"></i></button>`
             : '';
         const na = _execSemanasNaoAvaliadasPorFunc[l.id]||{total:0,semanas:[]};
         const bna = na.total>0
-            ? `<span class="exec-badge-semana-individual" onclick="event.stopPropagation();abrirConferenciaFuncionarioComSemana('${l.id}',${na.semanas[0]?.mes},${na.semanas[0]?.ano},'${na.semanas[0]?.semana_inicio}')" title="${na.total} semana(s) não avaliada(s)"><i class="fas fa-clock"></i> ${na.total}</span>`
+            ? `<button type="button" class="exec-badge-semana-individual" onclick="event.stopPropagation();abrirConferenciaFuncionarioComSemana('${l.id}',${na.semanas[0]?.mes},${na.semanas[0]?.ano},'${na.semanas[0]?.semana_inicio}')" title="${na.total} semana(s) não avaliada(s)"><i class="fas fa-clock"></i> ${na.total}</button>`
             : '';
         const pv = l.produtividadeValor||0;
+        const cc = l.contraCheque || {};
         html += `<tr>
             <td class="col-empresa" style="font-size:9px;overflow:hidden;text-overflow:ellipsis;">${l.departamento||'-'}</td>
             <td class="col-colaborador" style="font-size:9px;font-weight:700;">${alerta} ${l.nome||'-'}${bna}<br><span style="font-weight:400;font-size:8px;">${l.cargo||''}</span></td>
@@ -1249,6 +1380,14 @@ function renderizarRelatorioExecutivoFormulario(){
             <td style="background:#fef9c3;font-weight:800;text-align:right;">${fmt(l.vtAvulso||0)}</td>
             <td style="background:#dcfce7;font-weight:800;text-align:right;">${fmt(l.bonificacoes||0)}</td>
             <td style="background:#e0f2fe;font-weight:800;text-align:right;">${fmt(l.antecipacoes||0)}</td>
+            <td style="background:#e9d5ff;font-weight:700;text-align:right;font-size:10px;">${cc.salarioBase?fmt(cc.salarioBase):'—'}</td>
+            <td style="background:#e9d5ff;font-weight:700;text-align:right;font-size:10px;">${cc.vencimentos?fmt(cc.vencimentos):'—'}</td>
+            <td style="background:#e9d5ff;font-weight:700;text-align:right;font-size:10px;">${cc.descontos?fmt(cc.descontos):'—'}</td>
+            <td style="background:#e9d5ff;font-weight:800;text-align:right;font-size:10px;color:#6f42c1;">${cc.liquido?fmt(cc.liquido):'—'}</td>
+            <td style="background:#e9d5ff;font-weight:700;text-align:right;font-size:10px;">${cc.baseINSS?fmt(cc.baseINSS):'—'}</td>
+            <td style="background:#e9d5ff;font-weight:700;text-align:right;font-size:10px;">${cc.inss?fmt(cc.inss):'—'}</td>
+            <td style="background:#e9d5ff;font-weight:700;text-align:right;font-size:10px;">${cc.fgts?fmt(cc.fgts):'—'}</td>
+            <td style="background:#e9d5ff;font-weight:700;text-align:right;font-size:10px;">${cc.irrf?fmt(cc.irrf):'—'}</td>
         </tr>`;
     });
     html += `
@@ -1300,6 +1439,14 @@ function renderizarRelatorioExecutivoFormulario(){
             <td class="num" style="background:#fef9c3;font-weight:800;">${fmt(T.vtAvulso)}</td>
             <td class="num" style="background:#dcfce7;font-weight:800;">${fmt(T.bonif)}</td>
             <td class="num" style="background:#e0f2fe;font-weight:800;">${fmt(T.antec)}</td>
+            <td class="num" style="background:#e9d5ff;font-weight:800;font-size:10px;">${fmt(T.ccSalBase)}</td>
+            <td class="num" style="background:#e9d5ff;font-weight:800;font-size:10px;">${fmt(T.ccVenc)}</td>
+            <td class="num" style="background:#e9d5ff;font-weight:800;font-size:10px;">${fmt(T.ccDesc)}</td>
+            <td class="num" style="background:#e9d5ff;font-weight:800;font-size:10px;color:#6f42c1;">${fmt(T.ccLiq)}</td>
+            <td class="num" style="background:#e9d5ff;font-weight:800;font-size:10px;">${fmt(T.ccBase)}</td>
+            <td class="num" style="background:#e9d5ff;font-weight:800;font-size:10px;">${fmt(T.ccINSS)}</td>
+            <td class="num" style="background:#e9d5ff;font-weight:800;font-size:10px;">${fmt(T.ccFGTS)}</td>
+            <td class="num" style="background:#e9d5ff;font-weight:800;font-size:10px;">${fmt(T.ccIRRF)}</td>
         </tr>
         </tbody></table>
         <div style="margin-top:14px;font-size:10.5px;color:#7a3a00;padding:10px 14px;background:#f8f9fa;border-radius:8px;border-left:4px solid #FF8C00;">
@@ -1309,7 +1456,8 @@ function renderizarRelatorioExecutivoFormulario(){
             • <strong>13º Adiantado</strong> = Salário ÷ 12.<br>
             • <strong>INSS Patronal (20%)</strong> e <strong>FGTS (8%)</strong> calculados sobre o salário base.<br>
             • <strong>VT Empresa</strong> automático do Vale-Transporte.<br>
-            • <strong>VT Avulso, Bonificações e Antecipações</strong> carregados dos recibos individuais de cada colaborador.
+            • <strong>VT Avulso, Bonificações e Antecipações</strong> carregados dos recibos individuais de cada colaborador.<br>
+            • <strong>Dados Contra Cheque</strong> importados via PDF na aba "Importar Contra Cheque" — grupo roxo à direita.
         </div>`;
     body.innerHTML = html;
     renderizarKpiSemanasNaoAvaliadas();
@@ -1632,31 +1780,518 @@ function imprimirResumoFinanceiro(){
 }
 
 /* ============================================================
+   IMPORTAÇÃO DE CONTRA CHEQUE
+   ============================================================ */
+function abrirModalImportacao(){
+    const m = document.getElementById('modalImportContracheque');
+    if(!m) return;
+    resetarImportacao();
+    m.classList.add('active');
+}
+function fecharModalImportacao(){
+    document.getElementById('modalImportContracheque').classList.remove('active');
+}
+function resetarImportacao(){
+    document.getElementById('importPreviewContainer').style.display = 'none';
+    document.getElementById('importPreview').innerHTML = '';
+    document.getElementById('importFileInput').value = '';
+    _importPreviewData = null;
+    const st = document.getElementById('importStatus');
+    st.className = 'import-status info';
+    st.innerHTML = '<i class="fas fa-info-circle"></i><span>Selecione um arquivo PDF. O sistema tentará extrair automaticamente os nomes e valores. Você poderá revisar e editar antes de salvar.</span>';
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+    const dz = document.getElementById('importDropzone');
+    const fi = document.getElementById('importFileInput');
+    if(dz && fi){
+        dz.addEventListener('click', ()=>fi.click());
+        dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('dragover'); });
+        dz.addEventListener('dragleave', ()=>dz.classList.remove('dragover'));
+        dz.addEventListener('drop', e=>{
+            e.preventDefault(); dz.classList.remove('dragover');
+            const f = e.dataTransfer.files[0];
+            if(f && f.type === 'application/pdf') processarPdfContracheque(f);
+            else mostrarToast('⚠️ Envie um arquivo PDF.','warning');
+        });
+        fi.addEventListener('change', e=>{
+            const f = e.target.files[0];
+            if(f) processarPdfContracheque(f);
+        });
+    }
+});
+
+async function processarPdfContracheque(file){
+    const st = document.getElementById('importStatus');
+    st.className = 'import-status info';
+    st.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Lendo PDF e extraindo dados...</span>';
+    try{
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+        let fullText = '';
+        for(let i=1; i<=pdf.numPages; i++){
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            const items = content.items;
+            let lastY = null;
+            let pageText = '';
+            for(const it of items){
+                const y = it.transform[5];
+                if(lastY !== null && Math.abs(y - lastY) > 3){
+                    pageText += '\n';
+                }
+                pageText += it.str + ' ';
+                lastY = y;
+            }
+            fullText += pageText + '\n';
+        }
+
+        const textoLimpo = fullText.replace(/\s+/g, ' ').trim();
+        if(textoLimpo.length < 50){
+            st.className = 'import-status warn';
+            st.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Este PDF parece ser uma imagem escaneada (sem texto selecionável). Não é possível extrair automaticamente. Use a tabela abaixo para adicionar manualmente os dados.</span>';
+            _importPreviewData = [{nome:'',salarioBase:0,vencimentos:0,descontos:0,liquido:0,baseINSS:0,inss:0,fgts:0,irrf:0}];
+            renderizarPreviewImportacao(_importPreviewData);
+            document.getElementById('importPreviewContainer').style.display = 'block';
+            return;
+        }
+
+        const registros = extrairDadosContracheque(fullText);
+
+        if(registros.length === 0){
+            st.className = 'import-status warn';
+            st.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Nenhum registro reconhecido automaticamente. Verifique se o PDF possui texto selecionável. Você pode adicionar manualmente abaixo.</span>';
+            _importPreviewData = [{nome:'',salarioBase:0,vencimentos:0,descontos:0,liquido:0,baseINSS:0,inss:0,fgts:0,irrf:0}];
+            renderizarPreviewImportacao(_importPreviewData);
+            document.getElementById('importPreviewContainer').style.display = 'block';
+            return;
+        }
+
+        _importPreviewData = registros;
+        st.className = 'import-status ok';
+        st.innerHTML = `<i class="fas fa-check-circle"></i><span>${registros.length} registro(s) encontrado(s). Revise e edite antes de salvar.</span>`;
+        renderizarPreviewImportacao(registros);
+        document.getElementById('importPreviewContainer').style.display = 'block';
+    }catch(e){
+        console.error(e);
+        st.className = 'import-status err';
+        st.innerHTML = `<i class="fas fa-times-circle"></i><span>Erro ao ler PDF: ${e.message}</span>`;
+    }
+}
+
+function extrairDadosContracheque(texto){
+    const registros = [];
+    const linhas = texto.split(/\n/).map(l=>l.trim()).filter(l=>l.length>0);
+
+    const nomeRegex = /^[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s.]{4,80}$/;
+    const valorRegex = /(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}|\d+\.\d{2})/g;
+
+    const blacklist = ['CNPJ','FOLHA','MENSAL','ADMISSÃO','CBO','DEPARTAMENTO','RECIBO','PAGAMENTO',
+                       'GERAL','CENTRO','CUSTO','TOTAL','VENCIMENTOS','DESCONTOS','LIQUIDO','LÍQUIDO',
+                       'SALARIO','SALÁRIO','BASE','INSS','FGTS','IRRF','REFERENCIA','REFERÊNCIA',
+                       'CODIGO','CÓDIGO','DESCRICAO','DESCRIÇÃO','VALOR','R$','ASSINATURA','DATA',
+                       'HORISTA','MENSALISTA','SÓCIO','SOCIO','ADMINISTRADOR'];
+
+    const blocos = [];
+    for(let i=0; i<linhas.length; i++){
+        const l = linhas[i];
+        const semAcento = l.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+        if(nomeRegex.test(l) && l.split(/\s+/).length >= 2){
+            const palavras = semAcento.split(/\s+/);
+            const temBlacklist = palavras.some(p => blacklist.some(b => p.includes(b)));
+            if(!temBlacklist){
+                blocos.push({nome: l.trim(), idx: i, linhas: []});
+            }
+        }
+    }
+
+    if(blocos.length === 0){
+        for(let i=0; i<linhas.length; i++){
+            const l = linhas[i];
+            const m = l.match(/^([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][A-Za-zÀ-ÿ\s.]{5,60})\s+([\d.,]+)(?:\s+([\d.,]+))?(?:\s+([\d.,]+))?/);
+            if(m){
+                const nomeCand = m[1].trim();
+                const semAcento = nomeCand.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+                const palavras = semAcento.split(/\s+/);
+                const temBlacklist = palavras.some(p => blacklist.some(b => p.includes(b)));
+                if(!temBlacklist && palavras.length >= 2){
+                    const valores = [m[2], m[3], m[4]].filter(Boolean).map(v=>parseFloat(v.replace(/\./g,'').replace(',','.'))||0);
+                    registros.push({
+                        nome: nomeCand,
+                        salarioBase: valores[0]||0,
+                        vencimentos: valores[0]||0,
+                        descontos: valores[1]||0,
+                        liquido: valores[2]||valores[valores.length-1]||0,
+                        baseINSS: 0, inss: 0, fgts: 0, irrf: 0
+                    });
+                }
+            }
+        }
+        return registros;
+    }
+
+    for(let b=0; b<blocos.length; b++){
+        const inicio = blocos[b].idx + 1;
+        const fim = (b+1 < blocos.length) ? blocos[b+1].idx : linhas.length;
+        const blocoLinhas = linhas.slice(inicio, fim);
+        const blocoTexto = blocoLinhas.join(' ');
+
+        const valores = [];
+        let m;
+        const re = new RegExp(valorRegex);
+        while((m = re.exec(blocoTexto)) !== null){
+            const v = parseFloat(m[1].replace(/\./g,'').replace(',','.'));
+            if(!isNaN(v)) valores.push(v);
+        }
+
+        const dados = {
+            nome: blocos[b].nome,
+            salarioBase: 0,
+            vencimentos: 0,
+            descontos: 0,
+            liquido: 0,
+            baseINSS: 0,
+            inss: 0,
+            fgts: 0,
+            irrf: 0
+        };
+
+        const rotulos = [
+            {key:'salarioBase', regex:/sal[aá]rio\s*base[:\s]*([\d.,]+)/i},
+            {key:'vencimentos', regex:/total\s*de\s*vencimentos[:\s]*([\d.,]+)/i},
+            {key:'descontos', regex:/total\s*de\s*descontos[:\s]*([\d.,]+)/i},
+            {key:'liquido', regex:/valor\s*l[ií]quido[:\s]*([\d.,]+)/i},
+            {key:'baseINSS', regex:/base\s*c[aá]lc\.?\s*inss[:\s]*([\d.,]+)/i},
+            {key:'inss', regex:/i\.?n\.?s\.?s\.?[:\s]*([\d.,]+)/i},
+            {key:'fgts', regex:/f\.?g\.?t\.?s\.?[:\s]*([\d.,]+)/i},
+            {key:'irrf', regex:/i\.?r\.?r\.?f\.?[:\s]*([\d.,]+)/i}
+        ];
+
+        for(const r of rotulos){
+            const match = blocoTexto.match(r.regex);
+            if(match){
+                const v = parseFloat(match[1].replace(/\./g,'').replace(',','.'))||0;
+                if(v > 0) dados[r.key] = v;
+            }
+        }
+
+        if(dados.vencimentos === 0 && valores.length > 0) dados.vencimentos = valores[0];
+        if(dados.descontos === 0 && valores.length > 1) dados.descontos = valores[1];
+        if(dados.liquido === 0 && valores.length > 2) dados.liquido = valores[valores.length-1];
+        if(dados.salarioBase === 0 && valores.length > 3) dados.salarioBase = valores[2];
+        if(dados.baseINSS === 0 && valores.length > 4) dados.baseINSS = valores[3];
+        if(dados.inss === 0 && valores.length > 5) dados.inss = valores[4];
+        if(dados.fgts === 0 && valores.length > 6) dados.fgts = valores[5];
+        if(dados.irrf === 0 && valores.length > 7) dados.irrf = valores[6];
+
+        if(dados.vencimentos > 0 || dados.liquido > 0 || dados.descontos > 0){
+            registros.push(dados);
+        }
+    }
+
+    if(registros.length === 0){
+        for(let i=0; i<linhas.length; i++){
+            const l = linhas[i];
+            const m = l.match(/^([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][A-Za-zÀ-ÿ\s.]{5,60})\s+((?:\d{1,3}(?:\.\d{3})*,\d{2}\s*){2,})/);
+            if(m){
+                const nomeCand = m[1].trim();
+                const semAcento = nomeCand.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+                const palavras = semAcento.split(/\s+/);
+                const temBlacklist = palavras.some(p => blacklist.some(b => p.includes(b)));
+                if(!temBlacklist && palavras.length >= 2){
+                    const vals = m[2].trim().split(/\s+/).map(v=>parseFloat(v.replace(/\./g,'').replace(',','.'))||0);
+                    registros.push({
+                        nome: nomeCand,
+                        salarioBase: vals[0]||0,
+                        vencimentos: vals[0]||0,
+                        descontos: vals[1]||0,
+                        liquido: vals[vals.length-1]||0,
+                        baseINSS: 0, inss: 0, fgts: 0, irrf: 0
+                    });
+                }
+            }
+        }
+    }
+
+    return registros;
+}
+
+function renderizarPreviewImportacao(registros){
+    const div = document.getElementById('importPreview');
+    const cnt = document.getElementById('importCount');
+    if(!registros || registros.length === 0){
+        div.innerHTML = `<div style="padding:20px;text-align:center;color:#7a3a00;"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:6px;opacity:0.4;"></i>Nenhum registro para exibir. Adicione manualmente abaixo.</div>`;
+        cnt.textContent = '';
+        registros = [{nome:'',salarioBase:0,vencimentos:0,descontos:0,liquido:0,baseINSS:0,inss:0,fgts:0,irrf:0}];
+        _importPreviewData = registros;
+    } else {
+        cnt.textContent = `(${registros.length})`;
+    }
+    let html = `<table><thead><tr>
+        <th>Nome</th><th>Sal. Base</th><th>Vencimentos</th><th>Descontos</th><th>Líquido</th>
+        <th>Base INSS</th><th>INSS</th><th>FGTS</th><th>IRRF</th><th></th>
+    </tr></thead><tbody>`;
+    registros.forEach((r,i)=>{
+        html += `<tr data-idx="${i}">
+            <td class="nome-cell"><input type="text" class="nome-input" value="${(r.nome||'').replace(/"/g,'&quot;')}" onchange="atualizarPreview(${i},'nome',this.value)"></td>
+            <td><input type="number" step="0.01" value="${(r.salarioBase||0).toFixed(2)}" onchange="atualizarPreview(${i},'salarioBase',this.value)"></td>
+            <td><input type="number" step="0.01" value="${(r.vencimentos||0).toFixed(2)}" onchange="atualizarPreview(${i},'vencimentos',this.value)"></td>
+            <td><input type="number" step="0.01" value="${(r.descontos||0).toFixed(2)}" onchange="atualizarPreview(${i},'descontos',this.value)"></td>
+            <td><input type="number" step="0.01" value="${(r.liquido||0).toFixed(2)}" onchange="atualizarPreview(${i},'liquido',this.value)"></td>
+            <td><input type="number" step="0.01" value="${(r.baseINSS||0).toFixed(2)}" onchange="atualizarPreview(${i},'baseINSS',this.value)"></td>
+            <td><input type="number" step="0.01" value="${(r.inss||0).toFixed(2)}" onchange="atualizarPreview(${i},'inss',this.value)"></td>
+            <td><input type="number" step="0.01" value="${(r.fgts||0).toFixed(2)}" onchange="atualizarPreview(${i},'fgts',this.value)"></td>
+            <td><input type="number" step="0.01" value="${(r.irrf||0).toFixed(2)}" onchange="atualizarPreview(${i},'irrf',this.value)"></td>
+            <td><button type="button" class="btn-action btn-danger btn-sm" onclick="removerLinhaPreview(${i})"><i class="fas fa-trash"></i></button></td>
+        </tr>`;
+    });
+    html += `</tbody></table>`;
+    div.innerHTML = html;
+    const addBtn = document.createElement('div');
+    addBtn.style.cssText = 'padding:8px;text-align:center;';
+    addBtn.innerHTML = `<button type="button" class="btn-action btn-info btn-sm" onclick="adicionarLinhaPreview()"><i class="fas fa-plus"></i> Adicionar linha manual</button>`;
+    div.appendChild(addBtn);
+}
+
+function atualizarPreview(idx,campo,valor){
+    if(!_importPreviewData || !_importPreviewData[idx]) return;
+    if(campo === 'nome') _importPreviewData[idx][campo] = valor;
+    else _importPreviewData[idx][campo] = parseFloat(valor)||0;
+}
+function removerLinhaPreview(idx){
+    if(!_importPreviewData) return;
+    _importPreviewData.splice(idx,1);
+    renderizarPreviewImportacao(_importPreviewData);
+}
+function adicionarLinhaPreview(){
+    if(!_importPreviewData) _importPreviewData = [];
+    _importPreviewData.push({nome:'',salarioBase:0,vencimentos:0,descontos:0,liquido:0,baseINSS:0,inss:0,fgts:0,irrf:0});
+    renderizarPreviewImportacao(_importPreviewData);
+}
+
+async function salvarImportacaoContracheque(){
+    if(!_importPreviewData || _importPreviewData.length === 0){
+        mostrarToast('⚠️ Nenhum dado para salvar.','warning');
+        return;
+    }
+    const mes = parseInt(document.getElementById('ccMes').value);
+    const ano = parseInt(document.getElementById('ccAno').value)||new Date().getFullYear();
+    const chave = `${ano}-${mes}`;
+
+    const validos = _importPreviewData.filter(r=>r.nome && r.nome.trim().length > 2);
+    if(validos.length === 0){
+        mostrarToast('⚠️ Preencha pelo menos um nome.','warning');
+        return;
+    }
+
+    if(!_contrachequesImportados[chave]) _contrachequesImportados[chave] = {};
+    validos.forEach(r=>{
+        _contrachequesImportados[chave][r.nome.trim()] = {
+            salarioBase: r.salarioBase||0,
+            vencimentos: r.vencimentos||0,
+            descontos: r.descontos||0,
+            liquido: r.liquido||0,
+            baseINSS: r.baseINSS||0,
+            inss: r.inss||0,
+            fgts: r.fgts||0,
+            irrf: r.irrf||0
+        };
+    });
+
+    mostrarToast(`✅ ${validos.length} registro(s) salvos para ${MESES[mes]}/${ano}.`);
+    fecharModalImportacao();
+    renderizarPainelContracheque();
+    if(document.getElementById('execBody').style.display !== 'none'){
+        await gerarRelatorioExecutivo();
+    }
+}
+
+function renderizarPainelContracheque(){
+    const body = document.getElementById('ccBody');
+    if(!body) return;
+    const mes = parseInt(document.getElementById('ccMes').value);
+    const ano = parseInt(document.getElementById('ccAno').value)||new Date().getFullYear();
+    const chave = `${ano}-${mes}`;
+    const dados = _contrachequesImportados[chave] || {};
+    const nomes = Object.keys(dados);
+
+    if(nomes.length === 0){
+        body.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#7a3a00;">
+            <i class="fas fa-file-invoice" style="font-size:42px;display:block;margin-bottom:14px;opacity:0.4;"></i>
+            <p style="font-weight:700;">Nenhum contra cheque importado para ${MESES[mes]}/${ano}.</p>
+            <p style="font-size:12px;margin-top:6px;">Clique em <strong>Importar PDF</strong> para começar.</p>
+        </div>`;
+        return;
+    }
+
+    const fmt = v=>(isNaN(v)?0:v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    let html = `<div style="font-size:12px;color:#7a3a00;margin-bottom:10px;"><i class="fas fa-info-circle"></i> Dados importados para <strong>${MESES[mes]}/${ano}</strong> — ${nomes.length} funcionário(s).</div>`;
+    html += `<div style="overflow:auto;max-height:calc(100vh - 340px);border:1px solid #ccc;border-radius:8px;">
+        <table class="financeiro-tabela" style="min-width:1200px;">
+        <thead>
+            <tr class="grupo">
+                <th colspan="2" style="background:#e9d5ff;color:#4a1d96;">IDENTIFICAÇÃO</th>
+                <th colspan="5" style="background:#dcfce7;color:#155724;">PROVENTOS / BASES</th>
+                <th colspan="4" style="background:#fee2e2;color:#721c24;">DESCONTOS</th>
+                <th colspan="1" style="background:#d1fae5;color:#155724;">LÍQUIDO</th>
+            </tr>
+            <tr>
+                <th style="min-width:250px;">Nome</th>
+                <th style="min-width:100px;">Sal. Base</th>
+                <th style="min-width:110px;">Vencimentos</th>
+                <th style="min-width:100px;">Descontos</th>
+                <th style="min-width:100px;">Base INSS</th>
+                <th style="min-width:100px;">INSS</th>
+                <th style="min-width:100px;">FGTS</th>
+                <th style="min-width:100px;">IRRF</th>
+                <th style="min-width:110px;background:#d1fae5;color:#155724;">Líquido</th>
+                <th style="min-width:60px;"></th>
+            </tr>
+        </thead>
+        <tbody>`;
+    let tS=0,tV=0,tD=0,tB=0,tI=0,tF=0,tIR=0,tL=0;
+    nomes.sort().forEach(nome=>{
+        const d = dados[nome];
+        tS += d.salarioBase||0; tV += d.vencimentos||0; tD += d.descontos||0;
+        tB += d.baseINSS||0; tI += d.inss||0; tF += d.fgts||0; tIR += d.irrf||0; tL += d.liquido||0;
+        html += `<tr>
+            <td style="font-weight:700;background:#f3e8ff;">${nome}</td>
+            <td class="num">${fmt(d.salarioBase)}</td>
+            <td class="num">${fmt(d.vencimentos)}</td>
+            <td class="num">${fmt(d.descontos)}</td>
+            <td class="num">${fmt(d.baseINSS)}</td>
+            <td class="num">${fmt(d.inss)}</td>
+            <td class="num">${fmt(d.fgts)}</td>
+            <td class="num">${fmt(d.irrf)}</td>
+            <td class="num col-liquido">${fmt(d.liquido)}</td>
+            <td style="text-align:center;"><button type="button" class="btn-action btn-danger btn-sm" onclick="removerContracheque('${nome.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button></td>
+        </tr>`;
+    });
+    html += `</tbody><tfoot>
+        <tr>
+            <td style="text-align:right;">TOTAIS:</td>
+            <td class="num">${fmt(tS)}</td>
+            <td class="num">${fmt(tV)}</td>
+            <td class="num">${fmt(tD)}</td>
+            <td class="num">${fmt(tB)}</td>
+            <td class="num">${fmt(tI)}</td>
+            <td class="num">${fmt(tF)}</td>
+            <td class="num">${fmt(tIR)}</td>
+            <td class="num" style="font-size:13px;color:#155724;">${fmt(tL)}</td>
+            <td></td>
+        </tr>
+    </tfoot></table></div>`;
+    body.innerHTML = html;
+}
+
+function removerContracheque(nome){
+    const mes = parseInt(document.getElementById('ccMes').value);
+    const ano = parseInt(document.getElementById('ccAno').value)||new Date().getFullYear();
+    const chave = `${ano}-${mes}`;
+    if(!_contrachequesImportados[chave]) return;
+    if(!confirm(`Remover contra cheque de "${nome}"?`)) return;
+    delete _contrachequesImportados[chave][nome];
+    renderizarPainelContracheque();
+    mostrarToast('🗑️ Registro removido.','info');
+}
+
+function limparDadosContracheque(){
+    const mes = parseInt(document.getElementById('ccMes').value);
+    const ano = parseInt(document.getElementById('ccAno').value)||new Date().getFullYear();
+    const chave = `${ano}-${mes}`;
+    if(!_contrachequesImportados[chave] || Object.keys(_contrachequesImportados[chave]).length === 0){
+        mostrarToast('⚠️ Nenhum dado para limpar.','warning');
+        return;
+    }
+    if(!confirm(`Limpar TODOS os contra cheques importados para ${MESES[mes]}/${ano}?`)) return;
+    delete _contrachequesImportados[chave];
+    renderizarPainelContracheque();
+    mostrarToast('🧹 Dados limpos.','info');
+}
+
+async function sincronizarContracheques(){
+    mostrarToast('🔄 Sincronizando com o relatório executivo...','info');
+    await gerarRelatorioExecutivo();
+    mostrarToast('✅ Relatório atualizado com os dados do contra cheque.');
+}
+
+/* ============================================================
    CONFERÊNCIA E VALIDAÇÃO SEMANAL
    ============================================================ */
-let _confSemanaInicioAlvo = null;
+
+/**
+ * Abre a conferência de um funcionário, direcionando para a semana correta.
+ * @param {string} id - ID do funcionário
+ * @param {number} mes - Mês (0-11)
+ * @param {number} ano - Ano
+ * @param {string} semanaInicio - Data ISO da segunda-feira da semana alvo (YYYY-MM-DD)
+ */
 async function abrirConferenciaFuncionarioComSemana(id,mes,ano,semanaInicio){
+    // Valida parâmetros
+    if(!id){ mostrarToast('⚠️ Funcionário não informado.','warning'); return; }
+    if(mes === undefined || mes === null || isNaN(mes)){ 
+        mostrarToast('⚠️ Mês inválido.','warning'); 
+        return; 
+    }
+    if(!ano || isNaN(ano)){ 
+        mostrarToast('⚠️ Ano inválido.','warning'); 
+        return; 
+    }
+
     const f = funcionarios.find(x=>String(x.id)===String(id));
-    if(!f){ mostrarToast('⚠️ Não encontrado','warning'); return; }
+    if(!f){ 
+        mostrarToast('⚠️ Funcionário não encontrado na base.','warning'); 
+        // Mesmo sem o funcionário na lista, ainda podemos tentar abrir com os dados básicos
+        // mas preferimos avisar
+        return; 
+    }
     funcionarioAtual = f;
+
     const m = document.getElementById('modalConferenciaValidacao');
-    if(!m) return;
-    document.getElementById('confFuncNome').textContent = f.nome;
+    if(!m){ mostrarToast('❌ Modal de conferência não encontrado.','error'); return; }
+
+    document.getElementById('confFuncNome').textContent = f.nome || '—';
+
     const s = document.getElementById('confMes');
-    if(s.options.length===0) s.innerHTML = MESES.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+    if(!s) return;
+    if(s.options.length === 0){
+        s.innerHTML = MESES.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+    }
     s.value = mes;
     document.getElementById('confAno').value = ano;
     document.querySelectorAll('.conf-filtro-status').forEach(c=>{ c.checked = true; });
+
     m.classList.add('active');
-    _confSemanaInicioAlvo = semanaInicio;
+    _confSemanaInicioAlvo = semanaInicio || null;
+    _confDestaqueChave = semanaInicio || null;
+
     await carregarConferenciaSemanal();
+
+    // Após carregar, direciona para a semana alvo (se informada)
     if(semanaInicio){
+        // Aguarda o DOM ser renderizado
         setTimeout(()=>{
-            const i = _confSemanas.findIndex(x=>toISODateLocal(x.inicio)===semanaInicio);
-            if(i>=0) mudarSemanaConferencia(i);
-        },500);
+            const idx = _confSemanas.findIndex(x=>toISODateLocal(x.inicio) === semanaInicio);
+            if(idx >= 0){
+                mudarSemanaConferencia(idx, true);
+            } else {
+                // Fallback: tenta encontrar a semana pelo mês/ano e proximidade
+                const semDoMes = _confSemanas;
+                const dAlvo = parseDataLocal(semanaInicio);
+                if(dAlvo){
+                    let melhorIdx = -1, melhorDist = Infinity;
+                    semDoMes.forEach((s,i)=>{
+                        const dist = Math.abs(s.inicio.getTime() - dAlvo.getTime());
+                        if(dist < melhorDist){ melhorDist = dist; melhorIdx = i; }
+                    });
+                    if(melhorIdx >= 0) mudarSemanaConferencia(melhorIdx, true);
+                    else mostrarToast('ℹ️ Semana não localizada no mês. Exibindo primeira semana.','info');
+                }
+            }
+        }, 350);
     }
 }
+
 async function carregarConferenciaSemanal(){
     if(!funcionarioAtual) return;
     const mes = parseInt(document.getElementById('confMes').value);
@@ -1691,12 +2326,29 @@ async function carregarConferenciaSemanal(){
     _confSemanasRender = _confSemanas.map((s,i)=>renderizarSemanaConferencia(s,i,dd,ab,perm));
     aplicarFiltrosConferencia();
 }
-function mudarSemanaConferencia(i){
+
+/**
+ * Muda a semana ativa e, opcionalmente, destaca visualmente.
+ */
+function mudarSemanaConferencia(i, destacar=false){
     _confSemanaAtiva = i;
     document.querySelectorAll('[data-conf-sem]').forEach(b=>b.classList.remove('active'));
-    document.querySelector(`[data-conf-sem="${i}"]`)?.classList.add('active');
+    const btn = document.querySelector(`[data-conf-sem="${i}"]`);
+    if(btn) btn.classList.add('active');
     aplicarFiltrosConferencia();
+
+    if(destacar){
+        setTimeout(()=>{
+            const el = document.querySelector(`.conf-semana[data-semana-idx="${i}"]`);
+            if(el){
+                el.classList.add('destaque');
+                el.scrollIntoView({behavior:'smooth', block:'center'});
+                setTimeout(()=>el.classList.remove('destaque'), 2200);
+            }
+        }, 80);
+    }
 }
+
 function renderizarSemanaConferencia(semana,idx,dd,ab,perm){
     const mi = semana.inicio.getMonth();
     const ano = semana.inicio.getFullYear();
@@ -1902,7 +2554,7 @@ function recarregarTudo(){
    INICIALIZAÇÃO
    ============================================================ */
 window.onload = async function(){
-    console.log('🚀 Iniciando Resumo Executivo v6.5...');
+    console.log('🚀 Iniciando Resumo Executivo v7.1...');
     try{
         const raw = localStorage.getItem(STORAGE_KEY);
         if(raw){
@@ -1918,13 +2570,15 @@ window.onload = async function(){
     if(hn) hn.textContent = usuarioAtual.nome||'Usuário';
     if(hr) hr.textContent = ROLE_LABELS[usuarioAtual.role]||'Visualizador';
 
-    // Preenche o select do mês executivo
     const h = new Date();
     const selMes = document.getElementById('execMes');
     if(selMes) selMes.innerHTML = MESES.map((m,i)=>`<option value="${i}" ${i===h.getMonth()?'selected':''}>${m}</option>`).join('');
     document.getElementById('execAno').value = h.getFullYear();
 
-    // Event listeners do executivo
+    const selCC = document.getElementById('ccMes');
+    if(selCC) selCC.innerHTML = MESES.map((m,i)=>`<option value="${i}" ${i===h.getMonth()?'selected':''}>${m}</option>`).join('');
+    document.getElementById('ccAno').value = h.getFullYear();
+
     ['execMes','execAno','execUnidade','execEmpresa','execBusca'].forEach(id=>{
         const el = document.getElementById(id);
         if(el){
@@ -1933,18 +2587,20 @@ window.onload = async function(){
         }
     });
 
-    // Produtividade
     const pp = document.getElementById('prodPercentual');
     const pb = document.getElementById('prodValorBase');
     if(pp) pp.addEventListener('input',atualizarProdCalc);
     if(pb) pb.addEventListener('input',atualizarProdCalc);
 
-    // Carrega dados e gera relatório
     await carregarFuncionarios();
     await carregarSemanasAtencao();
     await gerarRelatorioExecutivo();
 
-    // ESC fecha modais
+    const ccMes = document.getElementById('ccMes');
+    const ccAno = document.getElementById('ccAno');
+    if(ccMes) ccMes.addEventListener('change', renderizarPainelContracheque);
+    if(ccAno) ccAno.addEventListener('change', renderizarPainelContracheque);
+
     document.addEventListener('keydown',e=>{
         if(e.key==='Escape'){
             fecharCalcPopup();
@@ -1952,11 +2608,25 @@ window.onload = async function(){
             fecharExtratoCategoria();
             fecharDocumentoAnexoView();
             fecharConferenciaValidacao();
+            fecharModalImportacao();
         }
     });
 
-    console.log('✅ Resumo Executivo v6.5 pronto!');
+    console.log('✅ Resumo Executivo v7.1 pronto!');
 };
+
+/* ---------- Função auxiliar para minutos abonados ---------- */
+function getMinutosAbonados(x){
+    if(!x) return 0;
+    if(x.abono_horas){
+        const p = String(x.abono_horas).split(':');
+        if(p.length >= 2) return (parseInt(p[0])||0)*60 + (parseInt(p[1])||0);
+    }
+    if(x.abono_inicio && x.abono_fim){
+        return converterParaMinutos(calcularDiferenca(x.abono_inicio, x.abono_fim));
+    }
+    return 0;
+}
 </script>
 </body>
 </html>
