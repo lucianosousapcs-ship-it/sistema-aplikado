@@ -1,0 +1,1962 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>Resumo Executivo | ApliKado</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e07000 100%);font-family:'Poppins',sans-serif;color:#1a0a00;min-height:100vh;padding-bottom:40px}
+
+/* HEADER */
+.main-header{position:fixed;top:0;left:0;width:100%;background:rgba(10,6,2,.95);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,140,0,.15);z-index:1000;padding:4px 14px;display:flex;justify-content:space-between;align-items:center;height:42px;gap:10px}
+.logo{font-size:15px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:-.3px}
+.logo span{color:#FF8C00}
+.nav-menu{display:flex;align-items:center;gap:4px;min-width:0}
+.nav-menu a{color:rgba(255,255,255,.75);text-decoration:none;font-size:10.5px;font-weight:500;padding:4px 9px;border-radius:6px;display:flex;align-items:center;gap:5px;cursor:pointer;transition:all .3s;white-space:nowrap;flex-shrink:0}
+.nav-menu a:hover{color:#fff;background:rgba(255,140,0,.15)}
+.nav-menu a i{font-size:10px}
+.user-info{display:flex;align-items:center;gap:7px;color:#fff;font-size:10.5px;background:rgba(255,255,255,.1);padding:3px 10px;border-radius:16px;white-space:nowrap;flex-shrink:0}
+.user-info .user-role{background:#FF8C00;padding:1px 6px;border-radius:8px;font-size:8px;font-weight:700;text-transform:uppercase;flex-shrink:0}
+
+/* CONTAINER */
+.container{max-width:1800px;margin:0 auto;padding:54px 16px 20px;display:flex;flex-direction:column;gap:16px}
+.page-title{text-align:center;margin-bottom:4px}
+.page-title h1{font-size:26px;font-weight:800;color:#1a0a00}
+.page-title h1 i{color:#FF8C00;margin-right:10px}
+
+/* BOTÕES */
+.btn-action{font-family:'Poppins',sans-serif;padding:7px 16px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;transition:all .3s;white-space:nowrap}
+.btn-action:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.btn-action:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+.btn-primary{background:#FF8C00;color:#fff}
+.btn-danger{background:#dc3545;color:#fff}
+.btn-warning{background:#ffc107;color:#212529}
+.btn-success{background:#28a745;color:#fff}
+.btn-secondary{background:#6c757d;color:#fff}
+.btn-info{background:#17a2b8;color:#fff}
+.btn-purple{background:#6f42c1;color:#fff}
+.btn-sm{padding:4px 10px;font-size:10px}
+
+/* MODAIS */
+.modal{display:none;position:fixed;z-index:9999;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);justify-content:center;align-items:flex-start;overflow-y:auto;padding:16px}
+.modal.active{display:flex!important}
+.modal-content{background:#fff;padding:20px;border-radius:20px;max-width:1300px;width:100%;max-height:95vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:modalFadeIn .3s ease;margin:auto}
+@keyframes modalFadeIn{from{opacity:0;transform:translateY(-20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #FF8C00;padding-bottom:10px}
+.modal-header h2{font-size:19px;color:#1a0a00}
+.modal-header h2 i{color:#FF8C00;margin-right:8px}
+.modal-close{background:none;border:none;font-size:30px;cursor:pointer;color:#999;padding:0 10px;line-height:1}
+.modal-close:hover{color:#dc3545}
+.modal-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;justify-content:flex-end;border-top:1px solid #eee;padding-top:12px}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:#28a745;color:#fff;padding:15px 25px;border-radius:8px;font-size:15px;font-weight:600;box-shadow:0 5px 15px rgba(0,0,0,.2);z-index:10005;display:none;animation:slideIn .3s ease;max-width:400px}
+.toast.error{background:#dc3545}
+.toast.warning{background:#ffc107;color:#212529}
+.toast.info{background:#17a2b8}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ESTRUTURA EXEC */
+.exec-container{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.15);display:flex;flex-direction:column}
+.exec-header{background:#1e1e1e;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.exec-header h2{font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.exec-header h2 i{color:#FF8C00}
+.rel-header-actions{display:flex;gap:8px}
+.rel-btn{font-family:'Poppins',sans-serif;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:none;white-space:nowrap}
+.rel-btn-pdf{background:#28a745;color:#fff}
+.rel-btn-print{background:#FF8C00;color:#fff}
+.rel-btn-close{background:#3c4043;color:#e8eaed}
+.rel-btn-close:hover{background:#dc3545;color:#fff}
+
+.nav-relatorios-bar{display:flex;background:#2a2a2a;padding:0 20px;overflow-x:auto}
+.nav-relatorios-bar button{font-family:'Poppins',sans-serif;background:transparent;border:none;border-bottom:3px solid transparent;color:rgba(255,255,255,.6);padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .25s;white-space:nowrap}
+.nav-relatorios-bar button.active{color:#FF8C00;border-bottom-color:#FF8C00;background:rgba(255,140,0,.05)}
+
+.exec-toolbar{background:#f8f9fa;border-bottom:1px solid #e0e0e0;padding:10px 20px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.exec-toolbar .campo{display:flex;flex-direction:column;gap:3px;min-width:140px}
+.exec-toolbar .campo label{font-size:9px;font-weight:700;color:#7a3a00;text-transform:uppercase}
+.exec-toolbar .campo select,.exec-toolbar .campo input{padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-family:'Poppins',sans-serif;font-size:12px}
+
+.exec-body{flex:1;overflow:auto;padding:20px 24px 30px;background:#fff;color:#000}
+
+/* TABELA EXECUTIVA */
+.exec-tabela{width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #000;margin-bottom:16px;min-width:3600px}
+.exec-tabela thead th{background:#d0d0d0;padding:6px 4px;font-size:9px;font-weight:800;text-transform:uppercase;border:1px solid #000;text-align:center;white-space:nowrap}
+.exec-tabela thead tr.grupo-header-exec th{background:#b8b8b8;font-size:9.5px;padding:6px 4px;border-bottom:2px solid #000}
+.exec-tabela tbody td{padding:4px 3px;border:1px solid #000;font-size:10px;white-space:nowrap}
+.exec-tabela tbody tr:nth-child(even) td{background:#fafafa}
+.exec-tabela .num{text-align:right;font-weight:600;padding-right:6px}
+.exec-tabela .total-row td{background:#e8e8e8!important;font-weight:800;font-size:10.5px}
+.exec-tabela .col-empresa{background:#dbeafe;min-width:90px}
+.exec-tabela .col-colaborador{background:#fef3c7;min-width:170px}
+.exec-tabela .col-unidade{background:#f3e8ff;min-width:75px}
+.exec-tabela .col-valores{background:#dcfce7;min-width:85px}
+.exec-tabela .col-descontos{background:#fee2e2;min-width:80px}
+.exec-tabela .col-liquido{background:#d1fae5;font-weight:800;min-width:100px}
+.exec-tabela .col-eventuais{background:#ffe4e6;min-width:85px}
+.exec-tabela .col-pgto-func{background:#cffafe;min-width:90px}
+.exec-tabela .col-pgto-encargos{background:#fde68a;min-width:95px}
+.exec-tabela .col-pgto-beneficios{background:#bbf7d0;min-width:95px}
+.exec-tabela .col-pgto-descontos{background:#fecaca;min-width:95px}
+.exec-tabela .col-13{background:#fef08a;min-width:90px}
+.exec-tabela .col-he-normal{background:#e0f2fe;min-width:85px}
+.exec-tabela .col-he-noturna{background:#fce7f3;min-width:85px}
+.exec-tabela .col-adiantamento{background:#e0f2fe;min-width:85px}
+.exec-tabela input[type=text],.exec-tabela input[type=number]{width:100%;padding:3px 4px;border:1px solid transparent;border-radius:3px;font-family:'Poppins',sans-serif;font-size:10px;text-align:right;background:transparent;font-weight:600;box-sizing:border-box}
+.exec-tabela input:focus{border-color:#FF8C00;background:#fff;outline:none}
+.exec-tabela input[readonly]{background:#f0f0f0;color:#333}
+.calc-btn-inline{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#FF8C00;color:#fff;font-size:8px;cursor:pointer;border:none;flex-shrink:0}
+.btn-atencao{background:#fcc;color:#721c24;border:1px solid #dc3545;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer}
+.auto-badge{display:inline-block;background:#d4edda;color:#155724;font-size:7px;font-weight:800;padding:1px 5px;border-radius:6px;margin-left:3px;text-transform:uppercase}
+.exec-kpi-badge{display:inline-flex;align-items:center;gap:5px;margin-left:12px;padding:4px 12px;background:linear-gradient(135deg,#FF8C00,#e07000);color:#fff;font-size:10px;font-weight:800;border-radius:20px;box-shadow:0 3px 10px rgba(255,140,0,.45);cursor:pointer}
+.exec-badge-semana-individual{display:inline-flex;align-items:center;justify-content:center;gap:3px;margin-left:4px;padding:1px 7px;background:linear-gradient(135deg,#FF8C00,#e07000);color:#fff;font-size:8px;font-weight:800;border-radius:10px;cursor:pointer}
+.exec-th-link-clicavel{cursor:pointer;transition:background .2s}
+.exec-th-link-clicavel:hover{background:#FF8C00!important;color:#fff!important}
+
+/* TABELA FINANCEIRA */
+.financeiro-tabela{width:100%;border-collapse:collapse;font-size:11px;border:1px solid #000;min-width:1900px;background:#fff}
+.financeiro-tabela thead th{background:#1e1e1e;color:#fff;padding:10px 6px;font-size:9px;font-weight:800;text-transform:uppercase;border:1px solid #000;text-align:center;position:sticky;top:0;z-index:2}
+.financeiro-tabela thead tr.grupo th{background:#333;font-size:10px;position:sticky;top:0;z-index:3}
+.financeiro-tabela tbody td{padding:6px;border:1px solid #ccc;font-size:11px;white-space:nowrap}
+.financeiro-tabela tbody tr:nth-child(even) td{background:#fafafa}
+.financeiro-tabela .num{text-align:right;font-weight:700}
+.financeiro-tabela .col-ident{background:#fef3c7;font-weight:700;min-width:180px;position:sticky;left:0;z-index:1}
+.financeiro-tabela .col-banco{background:#e0f2fe;min-width:130px;font-size:10px}
+.financeiro-tabela .col-proventos{background:#dcfce7}
+.financeiro-tabela .col-descontos{background:#fee2e2}
+.financeiro-tabela .col-liquido{background:#d1fae5;font-weight:800;font-size:12px;color:#155724}
+.financeiro-tabela .col-total{background:#e8e8e8!important;font-weight:800}
+.financeiro-tabela tfoot td{background:#d0d0d0!important;font-weight:800;padding:10px 6px;border:1px solid #000;font-size:11px;position:sticky;bottom:0;z-index:2}
+.financeiro-toolbar{background:#f8f9fa;border-bottom:1px solid #e0e0e0;padding:10px 20px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.financeiro-toolbar .campo{display:flex;flex-direction:column;gap:3px;min-width:130px}
+.financeiro-toolbar .campo label{font-size:9px;font-weight:700;color:#7a3a00;text-transform:uppercase}
+.financeiro-toolbar .campo select,.financeiro-toolbar .campo input{padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-family:'Poppins',sans-serif;font-size:12px}
+
+/* MODAIS DE CÁLCULO */
+.modal-calc-popup,.modal-calc-produtividade{display:none;position:fixed;z-index:10600;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:16px}
+.modal-calc-popup.active,.modal-calc-produtividade.active{display:flex}
+.modal-calc-popup .conteudo,.modal-calc-produtividade .conteudo{background:#fff;border-radius:16px;padding:22px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto}
+.modal-calc-popup h3,.modal-calc-produtividade h3{font-size:16px;color:#1a0a00;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #FF8C00;display:flex;align-items:center;gap:8px}
+.modal-calc-produtividade h3{border-bottom-color:#6f42c1}
+.modal-calc-popup h3 i{color:#FF8C00}
+.modal-calc-produtividade h3 i{color:#6f42c1}
+.campo-calc{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.campo-calc label{font-size:10px;font-weight:700;color:#7a3a00;text-transform:uppercase;letter-spacing:.5px}
+.campo-calc input,.campo-calc select{font-family:'Poppins',sans-serif;padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;font-weight:600;color:#1a0a00;background:#fff;outline:none}
+.campo-calc input:focus,.campo-calc select:focus{border-color:#FF8C00;box-shadow:0 0 0 3px rgba(255,140,0,.1)}
+.modal-calc-popup .grid-2,.modal-calc-produtividade .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-calc-popup .resultado,.modal-calc-produtividade .resultado{background:#f8f9fa;border-radius:10px;padding:14px;margin-top:12px;border-left:4px solid #28a745}
+.modal-calc-produtividade .resultado{border-left-color:#6f42c1;background:#faf5ff}
+.resultado .linha{display:flex;justify-content:space-between;padding:4px 0;font-size:12px}
+.resultado .total{border-top:1px solid #ddd;margin-top:6px;padding-top:6px;font-weight:800;font-size:14px;color:#28a745}
+.modal-calc-produtividade .resultado .total{color:#6f42c1;font-size:15px}
+.botoes{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid #eee}
+
+/* MODAL EXTRATO */
+.exec-extrato-modal{display:none;position:fixed;z-index:10800;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:16px}
+.exec-extrato-modal.active{display:flex}
+.exec-extrato-modal .conteudo{background:#fff;border-radius:16px;padding:22px;max-width:900px;width:100%;max-height:90vh;overflow-y:auto}
+.exec-extrato-modal h3{font-size:16px;color:#1a0a00;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #FF8C00;display:flex;align-items:center;gap:8px}
+.exec-extrato-modal h3 i{color:#FF8C00}
+.exec-extrato-tabela{width:100%;border-collapse:collapse;font-size:11px}
+.exec-extrato-tabela thead th{background:#d8d8d8;color:#1a0a00;font-size:9px;font-weight:800;padding:8px 6px;text-align:center;border:1px solid #999;text-transform:uppercase}
+.exec-extrato-tabela tbody td{padding:6px;border:1px solid #ccc;font-size:11px;text-align:center}
+.exec-extrato-tabela tfoot td{background:#e8e8e8!important;font-weight:800;font-size:11px}
+
+/* MODAL DOCUMENTO */
+.modal-atestado-anexo{display:none;position:fixed;z-index:11000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.92);justify-content:center;align-items:center;padding:20px}
+.modal-atestado-anexo.active{display:flex}
+.modal-atestado-anexo img{max-width:95%;max-height:95%;border-radius:8px;background:#fff;object-fit:contain;}
+.modal-atestado-anexo iframe{width:95vw;height:92vh;border-radius:8px;background:#fff;border:none;}
+.modal-atestado-anexo .fechar{position:absolute;top:20px;right:20px;background:#dc3545;color:#fff;border:none;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer;z-index:11001;display:flex;align-items:center;justify-content:center;}
+.modal-atestado-anexo .fechar:hover{background:#a71e2c;transform:scale(1.1);}
+
+/* MODAL CONFERÊNCIA */
+.modal-conferencia{display:none;position:fixed;z-index:10200;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);justify-content:center;align-items:flex-start;overflow-y:auto;padding:16px}
+.modal-conferencia.active{display:flex!important}
+.modal-conferencia .modal-content{max-width:1400px}
+.conf-semana{margin-bottom:18px;border:1px solid #eee;border-radius:12px;padding:16px;background:#fff}
+.conf-semana-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:#f8f9fa;border:1px solid #eee;border-radius:10px;padding:12px 16px;margin-bottom:14px}
+.conf-semana-header .titulo{font-weight:800;color:#7a3a00;font-size:13px}
+.conf-semana-header .periodo{margin-left:10px;font-size:11px;color:#7a3a00;font-weight:500}
+.conf-semana-header .resumo{font-size:11px;color:#7a3a00;font-weight:600;display:flex;flex-wrap:wrap;gap:12px}
+.conf-tabela-wrapper{overflow-x:auto;border-radius:8px;border:1px solid #ddd;margin-bottom:12px}
+.conf-tabela{width:100%;border-collapse:collapse;font-size:11px;min-width:700px}
+.conf-tabela thead th{background:#e8e8e8;color:#1a0a00;font-size:9px;font-weight:800;padding:8px 6px;text-align:center;text-transform:uppercase;border:1px solid #ccc;white-space:nowrap}
+.conf-tabela tbody td{padding:6px 4px;border:1px solid #ddd;font-size:11px;text-align:center;background:#fff;vertical-align:middle}
+.conf-tabela tbody tr:nth-child(even) td{background:#fafafa}
+.conf-tabela .dia-cell{font-weight:700;font-size:11px;text-align:left;padding-left:10px;white-space:nowrap;border-right:1px solid #ccc}
+.conf-semana-footer{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:10px}
+.conf-semana-footer .btn-group{display:flex;gap:8px;flex-wrap:wrap}
+.conf-semana-footer .status-badge{margin-left:auto;font-size:11px;font-weight:700}
+.conf-semana-obs{margin-top:10px}
+.conf-semana-obs label{font-size:10px;font-weight:700;color:#7a3a00;display:block;margin-bottom:4px}
+.conf-semana-obs input{font-family:'Poppins',sans-serif;width:100%;padding:8px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:12px;background:#fff;outline:none}
+.conf-semana-obs input:focus{border-color:#FF8C00;box-shadow:0 0 0 3px rgba(255,140,0,.1)}
+.conf-semana-info{font-size:10px;color:#7a3a00;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.conf-filtro-status{width:auto!important;margin:0!important;accent-color:#FF8C00;transform:scale(1.15)}
+.tab-nav{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;border-bottom:1px solid rgba(255,140,0,.15);padding-bottom:6px}
+.tab-btn{background:transparent;border:none;padding:8px 16px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:#7a3a00;cursor:pointer;border-radius:8px;transition:all .3s;display:flex;align-items:center;gap:6px}
+.tab-btn:hover{background:rgba(255,140,0,.1);color:#1a0a00}
+.tab-btn.active{background:#FF8C00;color:#fff}
+.form-group{display:flex;flex-direction:column;gap:3px}
+.form-group label{font-size:10px;font-weight:600;color:#7a3a00;text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select,.form-group textarea{font-family:'Poppins',sans-serif;width:100%;padding:8px 12px;border:1px solid rgba(255,140,0,.2);border-radius:8px;font-size:13px;background:rgba(255,255,255,.6);color:#1a0a00;outline:none;transition:border-color .3s}
+
+.empty-state{text-align:center;padding:50px 20px;color:#7a3a00;grid-column:1/-1}
+.empty-state i{font-size:56px;color:rgba(255,140,0,.3);margin-bottom:16px;display:block}
+.empty-state p{font-size:14px;font-weight:600}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toastSucesso"><i class="fas fa-check-circle"></i> <span id="toastMsg">Salvo!</span></div>
+
+<!-- HEADER -->
+<header class="main-header">
+    <div class="logo">Apli<span>kado</span></div>
+    <nav class="nav-menu">
+        <a href="PONTO.html"><i class="fas fa-arrow-left"></i> <span>Voltar ao Ponto</span></a>
+        <a href="#" onclick="recarregarTudo();return false;"><i class="fas fa-sync"></i> <span>Recarregar</span></a>
+        <span class="user-info">
+            <i class="fas fa-user-circle"></i>
+            <span id="headerUserName">Usuário</span>
+            <span class="user-role" id="headerUserRole">VIEWER</span>
+        </span>
+    </nav>
+</header>
+
+<!-- CONTAINER PRINCIPAL -->
+<div class="container">
+    <div class="page-title">
+        <h1><i class="fas fa-chart-pie"></i> Resumo Executivo</h1>
+    </div>
+
+    <div class="exec-container" id="execContainer">
+        <div class="exec-header">
+            <h2>
+                <i class="fas fa-chart-pie"></i> Relatório Executivo — Formulário de Cálculo
+                <span id="execKpiSemanasNaoAvaliadas" class="exec-kpi-badge" style="display:none;" title="Semanas com marcação de ponto ainda não validadas">
+                    <i class="fas fa-clock"></i> <span id="execKpiSemanasNaoAvaliadasValor">0</span> semana(s) não avaliada(s)
+                </span>
+            </h2>
+            <div class="rel-header-actions">
+                <button type="button" class="rel-btn rel-btn-pdf" onclick="baixarRelatorioExecutivoPdf()"><i class="fas fa-download"></i> Baixar PDF</button>
+                <button type="button" class="rel-btn rel-btn-print" onclick="gerarRelatorioExecutivo()"><i class="fas fa-sync"></i> Atualizar</button>
+            </div>
+        </div>
+
+        <div class="nav-relatorios-bar">
+            <button id="btnNavExecutivo" class="active" onclick="navegarParaRelatorio('executivo')"><i class="fas fa-chart-pie"></i> Relatório Executivo</button>
+            <button id="btnNavFinanceiro" onclick="navegarParaRelatorio('financeiro')"><i class="fas fa-money-check-dollar"></i> Resumo Financeiro</button>
+        </div>
+
+        <!-- TOOLBAR EXECUTIVO -->
+        <div class="exec-toolbar" id="execToolbar">
+            <div class="campo" style="min-width:130px;">
+                <label><i class="fas fa-calendar"></i> Mês</label>
+                <select id="execMes"></select>
+            </div>
+            <div class="campo" style="min-width:80px;">
+                <label><i class="fas fa-calendar-alt"></i> Ano</label>
+                <input type="number" id="execAno" value="2026" min="2020" max="2035">
+            </div>
+            <div class="campo">
+                <label><i class="fas fa-building"></i> Unidade</label>
+                <select id="execUnidade">
+                    <option value="">Todas</option>
+                    <option value="Spoleto">Spoleto</option><option value="A2B">A2B</option><option value="Acço">Acço</option>
+                    <option value="Copaenergia">Copaenergia</option><option value="INSS">INSS</option><option value="Qnutri">Qnutri</option>
+                </select>
+            </div>
+            <div class="campo">
+                <label><i class="fas fa-sitemap"></i> Empresa / Departamento</label>
+                <select id="execEmpresa"><option value="">Todas</option></select>
+            </div>
+            <div class="campo" style="min-width:200px;">
+                <label><i class="fas fa-search"></i> Buscar</label>
+                <input type="text" id="execBusca" placeholder="Nome ou cargo...">
+            </div>
+            <button type="button" class="btn-action btn-primary" onclick="gerarRelatorioExecutivo()"><i class="fas fa-sync"></i> Atualizar</button>
+        </div>
+
+        <!-- BODY EXECUTIVO -->
+        <div class="exec-body" id="execBody" style="min-height:400px;">
+            <div style="text-align:center;padding:60px 20px;color:#7a3a00;">
+                <i class="fas fa-chart-pie" style="font-size:42px;display:block;margin-bottom:14px;opacity:0.4;"></i>
+                <p style="font-weight:700;">Carregando relatório executivo...</p>
+            </div>
+        </div>
+
+        <!-- PAINEL RESUMO FINANCEIRO -->
+        <div id="painelResumoFinanceiro" style="display:none;flex-direction:column;flex:1;">
+            <div class="financeiro-toolbar">
+                <div class="campo" style="min-width:130px;">
+                    <label><i class="fas fa-calendar"></i> Mês</label>
+                    <select id="finMes"></select>
+                </div>
+                <div class="campo" style="min-width:80px;">
+                    <label><i class="fas fa-calendar-alt"></i> Ano</label>
+                    <input type="number" id="finAno" value="2026" min="2020" max="2030">
+                </div>
+                <div class="campo">
+                    <label><i class="fas fa-building"></i> Unidade</label>
+                    <select id="finUnidade">
+                        <option value="">Todas</option>
+                        <option value="Spoleto">Spoleto</option><option value="A2B">A2B</option><option value="Acço">Acço</option>
+                        <option value="Copaenergia">Copaenergia</option><option value="INSS">INSS</option><option value="Qnutri">Qnutri</option>
+                    </select>
+                </div>
+                <div class="campo">
+                    <label><i class="fas fa-sitemap"></i> Empresa / Departamento</label>
+                    <select id="finEmpresa"><option value="">Todas</option></select>
+                </div>
+                <div class="campo" style="min-width:200px;">
+                    <label><i class="fas fa-search"></i> Buscar</label>
+                    <input type="text" id="finBusca" placeholder="Nome ou CPF...">
+                </div>
+                <button type="button" class="btn-action btn-primary" onclick="gerarResumoFinanceiro()"><i class="fas fa-sync"></i> Atualizar</button>
+                <button type="button" class="rel-btn rel-btn-pdf" onclick="baixarResumoFinanceiroPdf()"><i class="fas fa-download"></i> Baixar PDF</button>
+                <button type="button" class="rel-btn rel-btn-print" onclick="imprimirResumoFinanceiro()"><i class="fas fa-print"></i> Imprimir</button>
+            </div>
+            <div class="exec-body" id="finBody" style="flex:1;overflow:auto;padding:20px 24px 30px;background:#fff;color:#000;min-height:400px;">
+                <div style="text-align:center;padding:60px 20px;color:#7a3a00;">
+                    <i class="fas fa-money-check-dollar" style="font-size:42px;display:block;margin-bottom:14px;opacity:0.4;"></i>
+                    <p style="font-weight:700;">Carregando resumo financeiro...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE CÁLCULO -->
+<div class="modal-calc-popup" id="modalCalcPopup">
+    <div class="conteudo">
+        <h3><i class="fas fa-calculator"></i> <span id="calcTitulo">Cálculo</span></h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="campo-calc"><label>Salário Base (R$)</label><input type="number" step="0.01" id="calcSalarioBase" value="0"></div>
+            <div class="campo-calc"><label>Horas Extras 100% (R$)</label><input type="number" step="0.01" id="calcHE100" value="0"></div>
+            <div class="campo-calc"><label>Horas Extras 50% (R$)</label><input type="number" step="0.01" id="calcHE50" value="0"></div>
+            <div class="campo-calc"><label>Adiantamento (R$)</label><input type="number" step="0.01" id="calcAdiantamento" value="0"></div>
+            <div class="campo-calc"><label>Outros Descontos (R$)</label><input type="number" step="0.01" id="calcOutrosDescontos" value="0"></div>
+            <div class="campo-calc"><label>DS. Salário (R$)</label><input type="number" step="0.01" id="calcDsSalario" value="0"></div>
+            <div class="campo-calc"><label>Pensão Alimentícia (%)</label><input type="number" step="0.01" id="calcPensaoPerc" value="0"></div>
+            <div class="campo-calc"><label>Vale Transporte (%)</label><input type="number" step="0.01" id="calcVTPerc" value="6"></div>
+        </div>
+        <div class="campo-calc">
+            <label>Base de Cálculo</label>
+            <select id="calcBase">
+                <option value="salario">Somente Salário Base</option>
+                <option value="salario_he">Salário + Horas Extras</option>
+                <option value="bruto">Total Bruto (Salário + HE 100% + HE 50%)</option>
+            </select>
+        </div>
+        <div class="resultado" id="calcResultado">
+            <div class="linha"><span>Base INSS:</span><strong id="calcBaseINSS">R$ 0,00</strong></div>
+            <div class="linha"><span>INSS:</span><strong id="calcINSS">R$ 0,00</strong></div>
+            <div class="linha"><span>Base IR:</span><strong id="calcBaseIR">R$ 0,00</strong></div>
+            <div class="linha"><span>IR:</span><strong id="calcIR">R$ 0,00</strong></div>
+            <div class="linha"><span>FGTS (8%):</span><strong id="calcFGTS">R$ 0,00</strong></div>
+            <div class="linha"><span>Vale Transporte:</span><strong id="calcVT">R$ 0,00</strong></div>
+            <div class="linha"><span>Pensão:</span><strong id="calcPensao">R$ 0,00</strong></div>
+            <div class="linha total"><span>Total Líquido:</span><strong id="calcTotalLiquido">R$ 0,00</strong></div>
+        </div>
+        <div class="botoes">
+            <button type="button" class="btn-action btn-secondary" onclick="fecharCalcPopup()"><i class="fas fa-times"></i> Cancelar</button>
+            <button type="button" class="btn-action btn-success" onclick="aplicarCalcPopup()"><i class="fas fa-check"></i> Aplicar Valores</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE PRODUTIVIDADE -->
+<div class="modal-calc-produtividade" id="modalCalcProdutividade">
+    <div class="conteudo">
+        <h3><i class="fas fa-chart-line"></i> Cálculo de Produtividade</h3>
+        <div class="grid-2">
+            <div class="campo-calc"><label>Dias Trabalhados no Mês</label><input type="number" id="prodDiasTrabalhados" value="0" readonly style="background:#f0f0f0;cursor:not-allowed;"></div>
+            <div class="campo-calc"><label>Dias Úteis no Mês</label><input type="number" id="prodDiasUteis" value="0" readonly style="background:#f0f0f0;cursor:not-allowed;"></div>
+        </div>
+        <div class="campo-calc"><label>Percentual de Produtividade (%)</label><input type="number" step="0.01" id="prodPercentual" value="0" min="0" max="100"></div>
+        <div class="campo-calc"><label>Valor Base / Salário (R$)</label><input type="number" step="0.01" id="prodValorBase" value="0"></div>
+        <div class="campo-calc"><label>Valor da Produtividade Calculado (R$)</label><input type="number" step="0.01" id="prodValorCalculado" value="0" readonly style="background:#faf5ff;font-weight:800;color:#6f42c1;cursor:not-allowed;"></div>
+        <div class="resultado" id="prodResultado">
+            <div class="linha"><span>Dias Trabalhados / Dias Úteis:</span><strong id="prodFracao">0 / 0</strong></div>
+            <div class="linha"><span>Produtividade (auto):</span><strong id="prodPercentualAuto">0,00%</strong></div>
+            <div class="linha"><span>Percentual informado:</span><strong id="prodPercentualFinal">0,00%</strong></div>
+            <div class="linha total"><span>Valor da Produtividade:</span><strong id="prodTotal">R$ 0,00</strong></div>
+        </div>
+        <div class="botoes">
+            <button type="button" class="btn-action btn-secondary" onclick="fecharCalcProdutividade()"><i class="fas fa-times"></i> Cancelar</button>
+            <button type="button" class="btn-action btn-success" onclick="aplicarCalcProdutividade()"><i class="fas fa-check"></i> Aplicar Valor</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EXTRATO -->
+<div class="exec-extrato-modal" id="modalExtratoCategoria">
+    <div class="conteudo">
+        <h3><i class="fas fa-list-ul"></i> Extrato Detalhado — <span id="extratoTituloCategoria">Categoria</span></h3>
+        <div style="margin-bottom:12px;font-size:12px;color:#7a3a00;font-weight:600;">
+            Total acumulado: <strong style="color:#FF8C00;font-size:15px;" id="extratoTotalCategoria">R$ 0,00</strong>
+        </div>
+        <div style="overflow:auto;max-height:60vh;border:1px solid #ccc;border-radius:8px;">
+            <table class="exec-extrato-tabela">
+                <thead>
+                    <tr>
+                        <th style="min-width:100px;">Mês/Ref.</th>
+                        <th style="min-width:110px;">Data</th>
+                        <th style="min-width:250px;">Descrição</th>
+                        <th style="min-width:110px;">Valor</th>
+                        <th style="min-width:130px;">Documento</th>
+                    </tr>
+                </thead>
+                <tbody id="extratoCorpoTabela"></tbody>
+                <tfoot>
+                    <tr style="background:#e8e8e8;font-weight:800;">
+                        <td colspan="3" style="text-align:right;padding:10px 8px;">TOTAL</td>
+                        <td class="num" id="extratoTotalRodape" style="padding:10px 8px;">R$ 0,00</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px;gap:8px;">
+            <button type="button" class="btn-action btn-secondary" onclick="fecharExtratoCategoria()"><i class="fas fa-times"></i> Fechar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DOCUMENTO -->
+<div class="modal-atestado-anexo" id="modalDocumentoAnexoView">
+    <button type="button" class="fechar" onclick="fecharDocumentoAnexoView()"><i class="fas fa-times"></i></button>
+    <div id="documentoAnexoViewConteudo"></div>
+</div>
+
+<!-- MODAL CONFERÊNCIA -->
+<div class="modal-conferencia" id="modalConferenciaValidacao">
+    <div class="modal-content" style="max-width:1400px;">
+        <div class="modal-header">
+            <h2><i class="fas fa-clipboard-check"></i> Conferência e Validação — <span id="confFuncNome" style="color:#FF8C00;"></span></h2>
+            <button class="modal-close" onclick="fecharConferenciaValidacao()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;">
+                <div class="form-group" style="min-width:180px;flex:1 1 auto;">
+                    <label><i class="fas fa-calendar"></i> Mês</label>
+                    <select id="confMes" onchange="carregarConferenciaSemanal()"></select>
+                </div>
+                <div class="form-group" style="min-width:100px;max-width:130px;">
+                    <label><i class="fas fa-calendar-alt"></i> Ano</label>
+                    <input type="number" id="confAno" value="2026" min="2020" max="2030" onchange="carregarConferenciaSemanal()">
+                </div>
+            </div>
+            <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;background:#f8f9fa;border:1px solid #eee;border-radius:10px;padding:10px 14px;margin-bottom:12px;">
+                <strong style="font-size:11px;color:#7a3a00;text-transform:uppercase;letter-spacing:0.5px;">Filtrar situação:</strong>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;">
+                    <input type="checkbox" class="conf-filtro-status" value="nao_validado" checked onchange="aplicarFiltrosConferencia()"> Não validados
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;">
+                    <input type="checkbox" class="conf-filtro-status" value="validado" checked onchange="aplicarFiltrosConferencia()"> Validados
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;">
+                    <input type="checkbox" class="conf-filtro-status" value="requer_atencao" checked onchange="aplicarFiltrosConferencia()"> Requer atenção
+                </label>
+                <button type="button" class="btn-action btn-secondary btn-sm" onclick="restaurarFiltroConferencia()"><i class="fas fa-undo"></i> Restaurar</button>
+                <button type="button" class="btn-action btn-danger btn-sm" onclick="limparValidacoesConferencia()"><i class="fas fa-broom"></i> Limpar Validações</button>
+            </div>
+            <div id="confAbasSemanais" class="tab-nav" style="margin-bottom:10px;"></div>
+            <div id="confConteudoSemana"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-action btn-secondary" onclick="fecharConferenciaValidacao()"><i class="fas fa-times"></i> Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ============================================================
+   RESUMO EXECUTIVO — v6.5 (TELA INDEPENDENTE AUTOSSUFICIENTE)
+   ============================================================ */
+
+/* ---------- SUPABASE ---------- */
+const SUPABASE_URL = 'https://avzxplcdutqzlxfievza.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_rkwsOtfEMpic9PsiExxC_w_rzYqZNRs';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: false }
+});
+
+const SUPABASE_AUTH_URL = 'https://fxfurmxeizbwufupjppq.supabase.co';
+const SUPABASE_AUTH_KEY = 'sb_publishable_YvzY9AaAmJCLr1Vz1gpS5A_V13Gy2Oe';
+const supabaseAuth = supabase.createClient(SUPABASE_AUTH_URL, SUPABASE_AUTH_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false }
+});
+
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const PERMANENCIAS_VALIDAS = { '08:00': 8*60, '07:20': 7*60+20 };
+const PERMANENCIA_PADRAO = '08:00';
+const STORAGE_KEY = 'apliKado_ponto_session';
+const ROLE_LABELS = { 'admin':'Administrador','user':'Usuário','viewer':'Visualizador' };
+
+/* ---------- ESTADO GLOBAL ---------- */
+let usuarioAtual = null;
+let funcionarios = [];
+let funcionarioAtual = null;
+let cacheSemanasAtencao = {};
+let _execDadosCache = [], _execLinhaCalcIdx = null;
+let _execProdutividade = {};
+let _execKpiSemanasNaoAvaliadas = 0, _execKpiDetalhe = {}, _execSemanasNaoAvaliadasPorFunc = {};
+let _prodCalcIdx = null;
+let _confSemanas = [], _confSemanaAtiva = 0, _confStatusMap = {}, _confSemanasRender = [];
+
+const REC_CATEGORIAS = [
+    {key:'vt_avulso',label:'VT Avulso',cor:'col-vt',icone:'fa-bus'},
+    {key:'bonificacoes',label:'Bonificações',cor:'col-bonif',icone:'fa-gift'},
+    {key:'antecipacoes',label:'Antecipações',cor:'col-antec',icone:'fa-hand-holding-usd'}
+];
+
+/* ---------- HELPERS ---------- */
+function parseDataLocal(str){
+    if(!str) return null;
+    const s = String(str).split('T')[0];
+    const p = s.split('-');
+    if(p.length!==3) return null;
+    const d = new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]),0,0,0,0);
+    return isNaN(d.getTime())?null:d;
+}
+function toISODateLocal(d){
+    if(!d) return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function addDia(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,0,0,0,0); }
+function getDiaSemana(dia,mesIndex,ano){ return DIAS_SEMANA[new Date(ano,mesIndex,dia).getDay()]; }
+function isFeriado(dia,mesIndex,ano){
+    const fixos = [{m:0,d:1},{m:3,d:21},{m:4,d:1},{m:8,d:7},{m:9,d:12},{m:10,d:2},{m:10,d:15},{m:10,d:20},{m:11,d:25}];
+    return fixos.some(f=>f.m===mesIndex&&f.d===dia);
+}
+function converterParaMinutos(h){
+    if(!h||h==='00:00'||h==='—'||h==='ABONADO'||h==='HORAS BH'||h==='ABONO'||h==='FALTA') return 0;
+    const p = String(h).split(':');
+    if(p.length<2) return 0;
+    const hh = parseInt(p[0],10), mm = parseInt(p[1],10);
+    if(isNaN(hh)||isNaN(mm)) return 0;
+    return hh*60+mm;
+}
+function formatarHoras(min){
+    if(min<0){ const a=Math.abs(min); return `-${String(Math.floor(a/60)).padStart(2,'0')}:${String(a%60).padStart(2,'0')}`; }
+    return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
+}
+function calcularDiferenca(ini,fim){
+    if(!ini||!fim) return '00:00';
+    const [h1,m1] = ini.split(':').map(Number);
+    const [h2,m2] = fim.split(':').map(Number);
+    let t = (h2*60+m2)-(h1*60+m1);
+    if(t<0) t+=1440;
+    return formatarHoras(t);
+}
+function formatarData(data){
+    if(!data) return '-';
+    const d = parseDataLocal(data);
+    return d?d.toLocaleDateString('pt-BR'):data;
+}
+function getPermanenciaMinutos(f){
+    if(!f) return PERMANENCIAS_VALIDAS[PERMANENCIA_PADRAO];
+    return PERMANENCIAS_VALIDAS[f.permanencia||PERMANENCIA_PADRAO] ?? PERMANENCIAS_VALIDAS[PERMANENCIA_PADRAO];
+}
+function getPermanenciaLabel(f){ return f?.permanencia || PERMANENCIA_PADRAO; }
+function calcularMinutosNoturnos(start,end){
+    if(!start||!end||start==='—'||end==='—') return 0;
+    const p1 = String(start).split(':'), p2 = String(end).split(':');
+    if(p1.length<2||p2.length<2) return 0;
+    const h1=+p1[0],m1=+p1[1],h2=+p2[0],m2=+p2[1];
+    if([h1,m1,h2,m2].some(isNaN)) return 0;
+    const s = h1*60+m1, e = h2*60+m2;
+    const nightWins = [[0,5*60],[22*60,1440]];
+    const intervals = [];
+    if(e>s) intervals.push([s,e]);
+    else if(e<s){ intervals.push([s,1440]); intervals.push([0,e]); }
+    else return 0;
+    let total = 0;
+    for(const [is_,ie] of intervals)
+        for(const [ns,ne] of nightWins)
+            total += Math.max(0,Math.min(ie,ne)-Math.max(is_,ns));
+    return total;
+}
+function formatarMoeda(v){
+    const n = isNaN(v)?0:Number(v);
+    return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+function podeValidarPonto(){
+    if(!usuarioAtual) return false;
+    if(usuarioAtual.role==='admin') return true;
+    return usuarioAtual.pode_validar_ponto===true;
+}
+function podeClassificarAtencao(){
+    if(!usuarioAtual) return false;
+    if(usuarioAtual.role==='admin') return true;
+    return usuarioAtual.pode_classificar_atencao===true;
+}
+
+/* ---------- TOASTS ---------- */
+function mostrarToast(msg,tipo=''){
+    const t = document.getElementById('toastSucesso');
+    const tm = document.getElementById('toastMsg');
+    if(!t||!tm) return;
+    tm.textContent = msg;
+    t.style.display = 'block';
+    t.className = 'toast';
+    if(tipo==='error') t.classList.add('error');
+    if(tipo==='warning') t.classList.add('warning');
+    if(tipo==='info') t.classList.add('info');
+    clearTimeout(t._t);
+    t._t = setTimeout(()=>{t.style.display='none';},4500);
+}
+
+/* ============================================================
+   FAIXAS INSS / IR / FGTS — 2026
+   ============================================================ */
+const FAIXAS_INSS_2026 = [
+    {ate:1518.00,aliquota:0.075},
+    {ate:2793.88,aliquota:0.09},
+    {ate:4190.83,aliquota:0.12},
+    {ate:8157.41,aliquota:0.14}
+];
+const TETO_INSS = 8157.41;
+const FAIXAS_IR_2026 = [
+    {ate:2259.20,aliquota:0,deducao:0},
+    {ate:2826.65,aliquota:0.075,deducao:169.44},
+    {ate:3751.05,aliquota:0.15,deducao:381.44},
+    {ate:4664.68,aliquota:0.225,deducao:662.77},
+    {ate:Infinity,aliquota:0.275,deducao:896.00}
+];
+const DEDUCAO_DEPENDENTE_IR = 189.59;
+function calcularINSS(s){
+    if(!s||s<=0) return 0;
+    let base = Math.min(s,TETO_INSS), inss = 0, ant = 0;
+    for(const f of FAIXAS_INSS_2026){
+        if(base>f.ate){ inss += (f.ate-ant)*f.aliquota; ant = f.ate; }
+        else { inss += (base-ant)*f.aliquota; break; }
+    }
+    return Math.round(inss*100)/100;
+}
+function calcularIR(s,inss,dep=0){
+    if(!s||s<=0) return 0;
+    const base = s-inss-(dep*DEDUCAO_DEPENDENTE_IR);
+    if(base<=0) return 0;
+    for(const f of FAIXAS_IR_2026){
+        if(base<=f.ate){
+            const ir = base*f.aliquota-f.deducao;
+            return Math.max(0,Math.round(ir*100)/100);
+        }
+    }
+    return 0;
+}
+function calcularFGTS(s){
+    if(!s||s<=0) return 0;
+    return Math.round(s*0.08*100)/100;
+}
+
+/* ============================================================
+   CARREGAR FUNCIONÁRIOS
+   ============================================================ */
+async function carregarFuncionarios(){
+    try{
+        const {data,error} = await supabaseClient.from('funcionarios').select('*').order('nome');
+        if(error) throw error;
+        funcionarios = data||[];
+        popularFiltroEmpresasExecutivo();
+        popularFiltroEmpresasFinanceiro();
+        return funcionarios;
+    }catch(e){ console.warn('Erro funcionarios:',e); funcionarios = []; return []; }
+}
+function popularFiltroEmpresasExecutivo(){
+    const s = document.getElementById('execEmpresa');
+    if(!s) return;
+    const emps = [...new Set(funcionarios.map(f=>f.departamento).filter(Boolean))].sort();
+    s.innerHTML = '<option value="">Todas</option>';
+    emps.forEach(e=>{ const o = document.createElement('option'); o.value = e; o.textContent = e; s.appendChild(o); });
+}
+function popularFiltroEmpresasFinanceiro(){
+    const s = document.getElementById('finEmpresa');
+    if(!s) return;
+    const emps = [...new Set(funcionarios.map(f=>f.departamento).filter(Boolean))].sort();
+    s.innerHTML = '<option value="">Todas</option>';
+    emps.forEach(e=>{ const o = document.createElement('option'); o.value = e; o.textContent = e; s.appendChild(o); });
+}
+
+/* ============================================================
+   CARREGAR SEMANAS ATENÇÃO
+   ============================================================ */
+async function carregarSemanasAtencao(){
+    cacheSemanasAtencao = {};
+    try{
+        const {data,error} = await supabaseClient.from('validacao_semanal_ponto')
+            .select('funcionario_id,status,semana_inicio,mes,ano,observacao').eq('status','requer_atencao');
+        if(error&&error.code!=='PGRST116') throw error;
+        (data||[]).forEach(r=>{
+            if(!cacheSemanasAtencao[r.funcionario_id]) cacheSemanasAtencao[r.funcionario_id] = [];
+            cacheSemanasAtencao[r.funcionario_id].push({semana_inicio:r.semana_inicio,mes:r.mes,ano:r.ano,observacao:r.observacao});
+        });
+    }catch(e){ console.warn('Erro semanas atenção:',e); }
+}
+function calcularSemanasDoMes(mes,ano){
+    const sem = [];
+    const pD = new Date(ano,mes,1);
+    const uD = new Date(ano,mes+1,0);
+    let c = new Date(pD);
+    const dow = c.getDay();
+    const off = dow===0?-6:1-dow;
+    c.setDate(c.getDate()+off);
+    while(c<=uD){
+        const i = new Date(c);
+        const f = new Date(c); f.setDate(f.getDate()+6);
+        sem.push({inicio:i,fim:f});
+        c.setDate(c.getDate()+7);
+    }
+    return sem;
+}
+async function calcularSemanasNaoAvaliadas(ids,mes,ano,mapaMarc){
+    if(!ids||ids.length===0) return {total:0,detalhe:{},porFuncionario:{}};
+    const {data:v} = await supabaseClient.from('validacao_semanal_ponto')
+        .select('funcionario_id,semana_inicio,status').in('funcionario_id',ids).eq('mes',mes).eq('ano',ano);
+    const mv = {};
+    (v||[]).forEach(x=>{
+        if(!mv[x.funcionario_id]) mv[x.funcionario_id] = {};
+        mv[x.funcionario_id][x.semana_inicio] = x.status;
+    });
+    const sem = calcularSemanasDoMes(mes,ano);
+    let tot = 0;
+    const det = {};
+    const pf = {};
+    for(const id of ids){
+        const dd = mapaMarc[id]||{};
+        const vf = mv[id]||{};
+        pf[id] = {total:0,semanas:[]};
+        for(const s of sem){
+            const k = toISODateLocal(s.inicio);
+            let tem = false;
+            for(let d=new Date(s.inicio); d<=s.fim; d.setDate(d.getDate()+1)){
+                if(d.getMonth()!==mes||d.getFullYear()!==ano) continue;
+                const dia = d.getDate();
+                const x = dd[dia]||{};
+                if(x.e1||x.s1||x.e2||x.s2||x.extra_e1||x.extra_s1||x.folga_bh||x.falta_atestado||x.falta_periodo||x.abono){ tem = true; break; }
+            }
+            if(!tem) continue;
+            const st = vf[k];
+            if(st!=='validado'&&st!=='requer_atencao'){
+                tot++;
+                pf[id].total++;
+                pf[id].semanas.push({semana_inicio:k,mes,ano});
+                if(!det[id]) det[id] = [];
+                det[id].push({semana_inicio:k,mes,ano});
+            }
+        }
+    }
+    return {total:tot,detalhe:det,porFuncionario:pf};
+}
+function renderizarKpiSemanasNaoAvaliadas(){
+    const b = document.getElementById('execKpiSemanasNaoAvaliadas');
+    const v = document.getElementById('execKpiSemanasNaoAvaliadasValor');
+    if(!b||!v) return;
+    const t = _execKpiSemanasNaoAvaliadas||0;
+    if(t>0){
+        v.textContent = t;
+        b.style.display = 'inline-flex';
+        b.title = `${t} semana(s) não validada(s). Clique para abrir a Conferência.`;
+        b.onclick = (e)=>{
+            e.stopPropagation();
+            const p = Object.keys(_execKpiDetalhe||{})[0];
+            if(p){
+                const i = _execKpiDetalhe[p][0];
+                abrirConferenciaFuncionarioComSemana(p,i.mes,i.ano,i.semana_inicio);
+            }else mostrarToast('Sem detalhes','info');
+        };
+    }else b.style.display = 'none';
+}
+
+/* ============================================================
+   NAVEGAÇÃO ENTRE ABAS
+   ============================================================ */
+function navegarParaRelatorio(dest){
+    const toolbarExec = document.getElementById('execToolbar');
+    const painelExec = document.getElementById('execBody');
+    const painelFin = document.getElementById('painelResumoFinanceiro');
+    const btnExec = document.getElementById('btnNavExecutivo');
+    const btnFin = document.getElementById('btnNavFinanceiro');
+
+    if(dest === 'financeiro'){
+        if(toolbarExec) toolbarExec.style.display = 'none';
+        if(painelExec) painelExec.style.display = 'none';
+        if(painelFin) painelFin.style.display = 'flex';
+        btnExec?.classList.remove('active');
+        btnFin?.classList.add('active');
+        const selMes = document.getElementById('finMes');
+        if(selMes && selMes.options.length === 0){
+            const h = new Date();
+            selMes.innerHTML = MESES.map((m,i)=>`<option value="${i}" ${i===h.getMonth()?'selected':''}>${m}</option>`).join('');
+            document.getElementById('finAno').value = h.getFullYear();
+            popularFiltroEmpresasFinanceiro();
+            ['finMes','finAno','finUnidade','finEmpresa','finBusca'].forEach(id=>{
+                const el = document.getElementById(id);
+                if(el){
+                    el.removeEventListener('change',gerarResumoFinanceiro);
+                    el.removeEventListener('input',gerarResumoFinanceiro);
+                    el.addEventListener('change',gerarResumoFinanceiro);
+                    if(id==='finBusca') el.addEventListener('input',gerarResumoFinanceiro);
+                }
+            });
+        }
+        gerarResumoFinanceiro();
+    } else {
+        if(toolbarExec) toolbarExec.style.display = 'flex';
+        if(painelExec) painelExec.style.display = 'block';
+        if(painelFin) painelFin.style.display = 'none';
+        btnExec?.classList.add('active');
+        btnFin?.classList.remove('active');
+    }
+}
+
+/* ============================================================
+   PRODUTIVIDADE
+   ============================================================ */
+function abrirCalcProdutividade(idx){
+    _prodCalcIdx = idx;
+    const l = _execDadosCache[idx];
+    if(!l){ mostrarToast('⚠️ Funcionário não encontrado','warning'); return; }
+    const p = document.getElementById('modalCalcProdutividade');
+    if(!p) return;
+    document.getElementById('prodDiasTrabalhados').value = l.diasTrabalhados||0;
+    document.getElementById('prodDiasUteis').value = l.diasUteisMes||0;
+    document.getElementById('prodPercentual').value = (l.produtividade||0).toFixed(2);
+    document.getElementById('prodValorBase').value = (l.salario||0).toFixed(2);
+    document.getElementById('prodValorCalculado').value = (_execProdutividade[l.id]||0).toFixed(2);
+    atualizarProdCalc();
+    p.classList.add('active');
+}
+function atualizarProdCalc(){
+    const d = parseFloat(document.getElementById('prodDiasTrabalhados').value)||0;
+    const du = parseFloat(document.getElementById('prodDiasUteis').value)||0;
+    const p = parseFloat(document.getElementById('prodPercentual').value)||0;
+    const b = parseFloat(document.getElementById('prodValorBase').value)||0;
+    const pa = du>0?(d/du)*100:0;
+    const pf = p>0?p:pa;
+    const vc = b*(pf/100);
+    document.getElementById('prodFracao').textContent = `${d} / ${du}`;
+    document.getElementById('prodPercentualAuto').textContent = pa.toFixed(2).replace('.',',')+'%';
+    document.getElementById('prodPercentualFinal').textContent = pf.toFixed(2).replace('.',',')+'%';
+    document.getElementById('prodTotal').textContent = formatarMoeda(vc);
+    document.getElementById('prodValorCalculado').value = vc.toFixed(2);
+}
+function aplicarCalcProdutividade(){
+    if(_prodCalcIdx===null||!_execDadosCache[_prodCalcIdx]) return;
+    const l = _execDadosCache[_prodCalcIdx];
+    const v = parseFloat(document.getElementById('prodValorCalculado').value)||0;
+    const p = parseFloat(document.getElementById('prodPercentual').value)||0;
+    _execProdutividade[l.id] = v;
+    l.produtividadeValor = v;
+    l.produtividade = p>0?p:l.produtividade;
+    fecharCalcProdutividade();
+    renderizarRelatorioExecutivoFormulario();
+    mostrarToast(`✅ Produtividade de ${l.nome} definida como ${formatarMoeda(v)}`);
+}
+function fecharCalcProdutividade(){
+    document.getElementById('modalCalcProdutividade').classList.remove('active');
+    _prodCalcIdx = null;
+}
+
+/* ============================================================
+   RELATÓRIO EXECUTIVO
+   ============================================================ */
+async function gerarRelatorioExecutivo(){
+    const body = document.getElementById('execBody');
+    if(!body) return;
+    body.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:28px;display:block;margin-bottom:10px;"></i><p style="font-weight:700;">Gerando relatório executivo...</p></div>`;
+
+    const mes = parseInt(document.getElementById('execMes').value);
+    const mn = MESES[mes];
+    const ano = parseInt(document.getElementById('execAno').value)||new Date().getFullYear();
+    const uf = document.getElementById('execUnidade').value;
+    const ef = document.getElementById('execEmpresa').value;
+    const bs = (document.getElementById('execBusca').value||'').toLowerCase().trim();
+
+    try{
+        await carregarFuncionarios();
+        let lista = funcionarios.filter(f=>!f.desligamento&&!f.sem_controle_ponto);
+        if(uf) lista = lista.filter(f=>f.unidade===uf);
+        if(ef) lista = lista.filter(f=>f.departamento===ef);
+        if(bs) lista = lista.filter(f=>(f.nome||'').toLowerCase().includes(bs)||(f.cargo||'').toLowerCase().includes(bs));
+        if(lista.length===0){
+            body.innerHTML = `<div class="empty-state"><i class="fas fa-users"></i><p>Nenhum funcionário</p></div>`;
+            return;
+        }
+
+        const ids = lista.map(f=>f.id);
+
+        let recData = [];
+        try{
+            const {data,error:eR} = await supabaseClient
+                .from('recibos_lancamentos')
+                .select('*')
+                .in('funcionario_id', ids)
+                .eq('ano', ano)
+                .eq('mes', mn);
+            if(!eR){ recData = data || []; }
+        }catch(eR){ console.warn('Exceção recibos:', eR); }
+
+        const mapaRec = {};
+        recData.forEach(r=>{
+            const fid = String(r.funcionario_id);
+            if(!mapaRec[fid]) mapaRec[fid] = {vt_avulso:0, bonificacoes:0, antecipacoes:0};
+            const cat = (r.categoria||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+            const val = parseFloat(r.valor||0) || 0;
+            const catNorm = cat.replace(/[\s_-]/g,'');
+            if(catNorm === 'vtavulso' || catNorm === 'vt') mapaRec[fid].vt_avulso += val;
+            else if(catNorm === 'bonificacoes' || catNorm === 'bonificacao' || catNorm === 'bonus') mapaRec[fid].bonificacoes += val;
+            else if(catNorm === 'antecipacoes' || catNorm === 'antecipacao' || catNorm === 'adiantamento') mapaRec[fid].antecipacoes += val;
+        });
+
+        const {data:marcs,error:eM} = await supabaseClient.from('marcacoes_ponto').select('funcionario_id,dados').in('funcionario_id',ids).eq('mes',mn).eq('ano',ano);
+        if(eM&&eM.code!=='PGRST116') throw eM;
+        const mapaMarc = {};
+        (marcs||[]).forEach(m=>{
+            try{ mapaMarc[m.funcionario_id] = typeof m.dados==='string'?JSON.parse(m.dados):(m.dados||{}); }
+            catch(e){ mapaMarc[m.funcionario_id] = {}; }
+        });
+
+        const td = new Date(ano,mes+1,0).getDate();
+        const iISO = `${ano}-${String(mes+1).padStart(2,'0')}-01`;
+        const fISO = `${ano}-${String(mes+1).padStart(2,'0')}-${String(td).padStart(2,'0')}`;
+        const {data:atests} = await supabaseClient.from('atestados').select('funcionario_id,data_inicio,data_fim,tipo').in('funcionario_id',ids).lte('data_inicio',fISO).gte('data_fim',iISO);
+        const mapaAbon = {};
+        const mapaAbonH = {};
+        (atests||[]).forEach(a=>{
+            const d1 = parseDataLocal(a.data_inicio), d2 = parseDataLocal(a.data_fim);
+            if(!d1||!d2) return;
+            if(!mapaAbon[a.funcionario_id]) mapaAbon[a.funcionario_id] = new Set();
+            if(!mapaAbonH[a.funcionario_id]) mapaAbonH[a.funcionario_id] = 0;
+            const perm = getPermanenciaMinutos(lista.find(f=>f.id===a.funcionario_id));
+            for(let d=new Date(d1.getFullYear(),d1.getMonth(),d1.getDate()); d<=d2; d=addDia(d)){
+                if(d.getMonth()===mes&&d.getFullYear()===ano){ mapaAbon[a.funcionario_id].add(d.getDate()); mapaAbonH[a.funcionario_id] += perm; }
+            }
+        });
+
+        let diasUteis = 0;
+        for(let d=1;d<=td;d++){
+            const dow = new Date(ano,mes,d).getDay();
+            if(dow!==0&&dow!==6&&!isFeriado(d,mes,ano)) diasUteis++;
+        }
+
+        const {data:vtData} = await supabaseClient.from('vale_transporte').select('*').in('funcionario_id',ids).eq('ano',ano).eq('mes',mes);
+        const mapaVT = {};
+        (vtData||[]).forEach(v=>{ mapaVT[v.funcionario_id] = {valor_total:v.valor_total||0,coparticipacao:v.coparticipacao||0,vt_empresa:v.vt_empresa||0,perc_coparticipacao:v.perc_coparticipacao||6}; });
+
+        const {data:pensaoData} = await supabaseClient.from('pensao_alimenticia').select('*').in('funcionario_id',ids);
+        const mapaPensao = {};
+        (pensaoData||[]).forEach(p=>{ mapaPensao[p.funcionario_id] = p; });
+
+        _execDadosCache = [];
+        for(const f of lista){
+            const salario = parseFloat(f.salario||0);
+            const perm = getPermanenciaMinutos(f);
+            const dd = mapaMarc[f.id]||{};
+            const abonSet = mapaAbon[f.id]||new Set();
+            let tTr = 0, tExN = 0, tExNot = 0, dT = 0, tAb = mapaAbonH[f.id]||0;
+            for(let d=1;d<=td;d++){
+                const x = dd[d]||{};
+                const abon = abonSet.has(d)||x.falta_atestado;
+                const fp = x.falta_periodo;
+                const ta = x.abono;
+                const fb = x.folga_bh;
+                if(fp||ta||abon||fb) continue;
+                const df1 = calcularDiferenca(x.e1,x.s1);
+                const df2 = calcularDiferenca(x.e2,x.s2);
+                const dfE = calcularDiferenca(x.extra_e1,x.extra_s1);
+                const tm = converterParaMinutos(df1)+converterParaMinutos(df2)+converterParaMinutos(dfE);
+                const n1 = calcularMinutosNoturnos(x.e1,x.s1);
+                const n2 = calcularMinutosNoturnos(x.e2,x.s2);
+                const nE = calcularMinutosNoturnos(x.extra_e1,x.extra_s1);
+                const n = n1+n2+nE;
+                const di = tm-n;
+                tTr += tm;
+                tExN += Math.max(0,di-perm);
+                tExNot += n;
+                if(tm>0) dT++;
+            }
+            const vh = salario/220;
+            const vHE100 = (tExN/60)*vh*2;
+            const vHE50 = (tExNot/60)*vh*1.5;
+            const prod = diasUteis>0?(dT/diasUteis)*100:0;
+            const sems = (cacheSemanasAtencao[f.id]||[]).filter(s=>s.mes===mes&&s.ano===ano);
+            const vtInfo = mapaVT[f.id]||{valor_total:0,coparticipacao:0,vt_empresa:0,perc_coparticipacao:6};
+            const pensaoInfo = mapaPensao[f.id]||null;
+            const pensaoAtiva = !!(pensaoInfo&&pensaoInfo.ativo);
+            let pensaoValor = 0;
+            if(pensaoAtiva){
+                const pc = parseFloat(pensaoInfo.percentual||0);
+                const fx = parseFloat(pensaoInfo.valor_fixo||0);
+                if(pensaoInfo.tipo_desconto==='percentual') pensaoValor = salario*(pc/100);
+                else pensaoValor = fx;
+            }
+            const baseAuto = salario+vHE100+vHE50;
+            const inssAuto = calcularINSS(baseAuto);
+            const irAuto = calcularIR(baseAuto,inssAuto,0);
+            const fgtsAuto = calcularFGTS(baseAuto);
+
+            const recInfo = mapaRec[String(f.id)] || {vt_avulso:0, bonificacoes:0, antecipacoes:0};
+
+            _execDadosCache.push({
+                id:f.id,nome:f.nome,cpf:f.cpf,unidade:f.unidade,departamento:f.departamento,cargo:f.cargo,
+                permanencia:getPermanenciaLabel(f),salario,
+                valorHoraExtra100:vHE100,valorHoraExtra50:vHE50,
+                horasExtrasMin:tExN+tExNot,horasExtrasNormais:tExN,horasExtrasNoturnas:tExNot,
+                horasAbonadas:tAb,diasTrabalhados:dT,diasUteisMes:diasUteis,produtividade:prod,
+                inss:inssAuto,ir:irAuto,fgts:fgtsAuto,vt:vtInfo.coparticipacao||0,
+                pensao:pensaoValor,pensaoInfo:pensaoInfo,
+                adiantamento:0,dsSalario:0,outrosDescontos:0,
+                vtEmpresa:vtInfo.vt_empresa||0,vtTotal:vtInfo.valor_total||0,
+                bruto:0,liquido:0,
+                temAtencao:sems.length>0,semanasAtencao:sems,observacoes:'',
+                produtividadeValor:_execProdutividade[f.id]||0,
+                automatico:{inss:true,ir:true,fgts:true},
+                vtAvulso: recInfo.vt_avulso || 0,
+                bonificacoes: recInfo.bonificacoes || 0,
+                antecipacoes: recInfo.antecipacoes || 0
+            });
+        }
+
+        try{
+            const kpi = await calcularSemanasNaoAvaliadas(ids,mes,ano,mapaMarc);
+            _execKpiSemanasNaoAvaliadas = kpi.total;
+            _execKpiDetalhe = kpi.detalhe;
+            _execSemanasNaoAvaliadasPorFunc = kpi.porFuncionario||{};
+        }catch(e){ console.warn(e); _execKpiSemanasNaoAvaliadas = 0; _execKpiDetalhe = {}; _execSemanasNaoAvaliadasPorFunc = {}; }
+
+        renderizarRelatorioExecutivoFormulario();
+    }catch(e){
+        console.error(e);
+        body.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:#dc3545;font-size:36px;display:block;margin-bottom:10px;"></i><p style="font-weight:700;color:#dc3545;">Erro: ${e.message}</p></div>`;
+    }
+}
+
+function renderizarRelatorioExecutivoFormulario(){
+    const body = document.getElementById('execBody');
+    const fmt = v=>(isNaN(v)?0:v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+
+    _execDadosCache.forEach(l=>{
+        l.vtAvulso = parseFloat(l.vtAvulso) || 0;
+        l.bonificacoes = parseFloat(l.bonificacoes) || 0;
+        l.antecipacoes = parseFloat(l.antecipacoes) || 0;
+
+        l.decimoTerceiroAdiantado = (l.salario||0)/12;
+        l.rescisao = l.rescisao||0;
+        l.pensaoEvent = l.pensaoEvent||0;
+        l.feriasEvent = l.feriasEvent||0;
+        l.salarioFunc = l.salario||0;
+        l.horasExtrasFunc = (l.valorHoraExtra100||0)+(l.valorHoraExtra50||0);
+        l.adicionaisFunc = l.adicionaisFunc||0;
+        l.comissoesFunc = l.comissoesFunc||0;
+        l.feriasFunc = l.feriasFunc||0;
+        l.decimoTerceiroFunc = l.decimoTerceiroAdiantado;
+        l.rescisoesFunc = l.rescisao||0;
+        l.inssPatronal = (l.salario||0)*0.20;
+        l.fgtsPatronal = (l.salario||0)*0.08;
+        l.demaisEncargos = l.demaisEncargos||0;
+        l.vtBenef = l.vtEmpresa||0;
+        l.vrVaBenef = l.vrVaBenef||0;
+        l.planosBenef = l.planosBenef||0;
+        l.seguroBenef = l.seguroBenef||0;
+        l.inssDesc = l.inss||0;
+        l.irrfDesc = l.ir||0;
+        l.demaisDesc = (l.dsSalario||0)+(l.outrosDescontos||0);
+        l.totalEventuais = l.rescisao+l.pensaoEvent+l.feriasEvent+l.decimoTerceiroAdiantado;
+        l.totalFolhaFunc = l.salarioFunc+l.horasExtrasFunc+l.adicionaisFunc+l.comissoesFunc+l.feriasFunc+l.decimoTerceiroFunc+l.rescisoesFunc;
+        l.totalEncargos = l.inssPatronal+l.fgtsPatronal+l.demaisEncargos;
+        l.totalBeneficios = l.vtBenef+l.vrVaBenef+l.planosBenef+l.seguroBenef;
+        l.totalDescontosFunc = l.inssDesc+l.irrfDesc+l.demaisDesc;
+        const bruto = (l.salario||0)+(l.valorHoraExtra100||0)+(l.valorHoraExtra50||0)+(l.adiantamento||0)+l.totalEventuais;
+        const descontos = (l.inss||0)+(l.ir||0)+(l.fgts||0)+(l.vt||0)+(l.pensao||0)+(l.dsSalario||0)+(l.outrosDescontos||0);
+        l.bruto = bruto;
+        l.liquido = bruto-descontos;
+    });
+
+    const T = {
+        salario:0,he100:0,he50:0,inss:0,ir:0,fgts:0,vt:0,pensao:0,adiant:0,ds:0,outros:0,
+        liquido:0,bruto:0,horasAbon:0,prod:0,vtEmp:0,eventuais:0,rescisao:0,pensaoE:0,feriasE:0,d13:0,
+        salFunc:0,heFunc:0,adicFunc:0,comFunc:0,ferFunc:0,d13Func:0,rescFunc:0,folhaFunc:0,
+        enc:0,inssPatr:0,fgtsPatr:0,demEnc:0,
+        benef:0,vtB:0,vrvaB:0,planB:0,segB:0,
+        descF:0,inssD:0,irrfD:0,demD:0,
+        vtAvulso:0, bonif:0, antec:0
+    };
+    _execDadosCache.forEach(l=>{
+        T.salario += l.salario||0; T.he100 += l.valorHoraExtra100||0; T.he50 += l.valorHoraExtra50||0;
+        T.inss += l.inss||0; T.ir += l.ir||0; T.fgts += l.fgts||0; T.vt += l.vt||0; T.vtEmp += l.vtEmpresa||0;
+        T.pensao += l.pensao||0; T.adiant += l.adiantamento||0; T.ds += l.dsSalario||0; T.outros += l.outrosDescontos||0;
+        T.liquido += l.liquido||0; T.bruto += l.bruto||0; T.horasAbon += l.horasAbonadas||0; T.prod += l.produtividadeValor||0;
+        T.rescisao += l.rescisao||0; T.pensaoE += l.pensaoEvent||0; T.feriasE += l.feriasEvent||0; T.d13 += l.decimoTerceiroAdiantado||0;
+        T.eventuais += l.totalEventuais||0;
+        T.salFunc += l.salarioFunc||0; T.heFunc += l.horasExtrasFunc||0; T.adicFunc += l.adicionaisFunc||0;
+        T.comFunc += l.comissoesFunc||0; T.ferFunc += l.feriasFunc||0; T.d13Func += l.decimoTerceiroFunc||0;
+        T.rescFunc += l.rescisoesFunc||0; T.folhaFunc += l.totalFolhaFunc||0;
+        T.inssPatr += l.inssPatronal||0; T.fgtsPatr += l.fgtsPatronal||0; T.demEnc += l.demaisEncargos||0; T.enc += l.totalEncargos||0;
+        T.vtB += l.vtBenef||0; T.vrvaB += l.vrVaBenef||0; T.planB += l.planosBenef||0; T.segB += l.seguroBenef||0; T.benef += l.totalBeneficios||0;
+        T.inssD += l.inssDesc||0; T.irrfD += l.irrfDesc||0; T.demD += l.demaisDesc||0; T.descF += l.totalDescontosFunc||0;
+        T.vtAvulso += l.vtAvulso || 0;
+        T.bonif += l.bonificacoes || 0;
+        T.antec += l.antecipacoes || 0;
+    });
+
+    let html = `
+        <div style="font-size:11.5px;color:#7a3a00;padding:8px 12px;background:#f8f9fa;border-radius:6px;margin-bottom:12px;border-left:3px solid #FF8C00;">
+            <i class="fas fa-info-circle"></i> <strong>IR, FGTS e INSS</strong> automáticos (faixas 2026). <strong>Pensão</strong> da aba individual. <strong>VT</strong> da aba Vale-Transporte. <strong>13º Adiantado</strong> = salário ÷ 12. <strong>VT Avulso, Bonificações e Antecipações</strong> carregados dos recibos individuais. Use <i class="fas fa-calculator" style="color:#FF8C00;"></i> para ajustes.
+        </div>
+        <table class="exec-tabela" id="tabelaExecutiva">
+            <thead>
+                <tr class="grupo-header-exec">
+                    <th colspan="3" style="background:#dbeafe;">IDENTIFICAÇÃO</th>
+                    <th colspan="10" style="background:#dcfce7;">VENCIMENTOS</th>
+                    <th colspan="7" style="background:#fee2e2;">DESCONTOS CONTRA CHEQUE</th>
+                    <th colspan="1" style="background:#d1fae5;">LÍQUIDO</th>
+                    <th colspan="4" style="background:#ffe4e6;">VALORES EVENTUAIS</th>
+                    <th colspan="8" style="background:#cffafe;">FOLHA — DESPESAS COM FUNCIONÁRIOS</th>
+                    <th colspan="4" style="background:#fde68a;">ENCARGOS E IMPOSTOS</th>
+                    <th colspan="5" style="background:#bbf7d0;">BENEFÍCIOS</th>
+                    <th colspan="4" style="background:#fecaca;">DESCONTOS DOS FUNCIONÁRIOS</th>
+                    <th colspan="1" style="background:#fef9c3;cursor:pointer;" class="exec-th-link-clicavel" onclick="abrirExtratoCategoriaExec('vt_avulso')"><i class="fas fa-bus"></i> VT Avulso <i class="fas fa-list-ul" style="font-size:8px;"></i></th>
+                    <th colspan="1" style="background:#dcfce7;cursor:pointer;" class="exec-th-link-clicavel" onclick="abrirExtratoCategoriaExec('bonificacoes')"><i class="fas fa-gift"></i> Bonificações <i class="fas fa-list-ul" style="font-size:8px;"></i></th>
+                    <th colspan="1" style="background:#e0f2fe;cursor:pointer;" class="exec-th-link-clicavel" onclick="abrirExtratoCategoriaExec('antecipacoes')"><i class="fas fa-hand-holding-usd"></i> Antecipações <i class="fas fa-list-ul" style="font-size:8px;"></i></th>
+                <tr>
+                    <th class="col-empresa">Empresa</th>
+                    <th class="col-colaborador">Colaborador</th>
+                    <th class="col-unidade">Unidade</th>
+                    <th class="col-valores">Salário Base</th>
+                    <th class="col-valores">Permanência</th>
+                    <th class="col-valores">Dias Trab.</th>
+                    <th class="col-valores">Horas Abon.</th>
+                    <th class="col-valores" style="min-width:110px;">Produtiv. (R$)</th>
+                    <th class="col-he-normal">HE 100% (diu)</th>
+                    <th class="col-he-noturna">HE 50% (not)</th>
+                    <th class="col-adiantamento">Adiant.</th>
+                    <th class="col-valores valor-grande">TOTAL</th>
+                    <th class="col-valores">H.E. Total</th>
+                    <th class="col-descontos valor-grande">INSS <span class="auto-badge">auto</span></th>
+                    <th class="col-descontos valor-grande">IR <span class="auto-badge">auto</span></th>
+                    <th class="col-descontos valor-grande">FGTS <span class="auto-badge">auto</span></th>
+                    <th class="col-descontos">VT Copart.</th>
+                    <th class="col-descontos">Pensão</th>
+                    <th class="col-descontos">DS. Salário</th>
+                    <th class="col-descontos">Outros Desc.</th>
+                    <th class="col-liquido">Vlr. Líquido</th>
+                    <th class="col-eventuais">Rescisão</th>
+                    <th class="col-eventuais">Pensão</th>
+                    <th class="col-eventuais">Férias</th>
+                    <th class="col-eventuais col-13">13º Adiant.</th>
+                    <th class="col-pgto-func">Salários</th>
+                    <th class="col-pgto-func">Horas Extras</th>
+                    <th class="col-pgto-func">Adicionais</th>
+                    <th class="col-pgto-func">Comissões</th>
+                    <th class="col-pgto-func">Férias</th>
+                    <th class="col-pgto-func">13º</th>
+                    <th class="col-pgto-func">Rescisões</th>
+                    <th class="col-pgto-func">TOTAL FUNC.</th>
+                    <th class="col-pgto-encargos">INSS Patronal</th>
+                    <th class="col-pgto-encargos">FGTS</th>
+                    <th class="col-pgto-encargos">Demais Enc.</th>
+                    <th class="col-pgto-encargos">TOTAL ENC.</th>
+                    <th class="col-pgto-beneficios">VT</th>
+                    <th class="col-pgto-beneficios">VR/VA</th>
+                    <th class="col-pgto-beneficios">Planos</th>
+                    <th class="col-pgto-beneficios">Seguro</th>
+                    <th class="col-pgto-beneficios">TOTAL BEN.</th>
+                    <th class="col-pgto-descontos">INSS</th>
+                    <th class="col-pgto-descontos">IRRF</th>
+                    <th class="col-pgto-descontos">Demais Desc.</th>
+                    <th class="col-pgto-descontos">TOTAL DESC.</th>
+                    <th style="min-width:90px;background:#fef9c3;">Valor</th>
+                    <th style="min-width:90px;background:#dcfce7;">Valor</th>
+                    <th style="min-width:90px;background:#e0f2fe;">Valor</th>
+                </tr>
+            </thead>
+            <tbody>`;
+    _execDadosCache.forEach((l,idx)=>{
+        const alerta = l.temAtencao
+            ? `<button type="button" class="btn-atencao" onclick="abrirConferenciaFuncionarioComSemana('${l.id}',${l.semanasAtencao[0]?.mes},${l.semanasAtencao[0]?.ano},'${l.semanasAtencao[0]?.semana_inicio}')" title="Requer atenção"><i class="fas fa-exclamation-triangle"></i></button>`
+            : '';
+        const na = _execSemanasNaoAvaliadasPorFunc[l.id]||{total:0,semanas:[]};
+        const bna = na.total>0
+            ? `<span class="exec-badge-semana-individual" onclick="event.stopPropagation();abrirConferenciaFuncionarioComSemana('${l.id}',${na.semanas[0]?.mes},${na.semanas[0]?.ano},'${na.semanas[0]?.semana_inicio}')" title="${na.total} semana(s) não avaliada(s)"><i class="fas fa-clock"></i> ${na.total}</span>`
+            : '';
+        const pv = l.produtividadeValor||0;
+        html += `<tr>
+            <td class="col-empresa" style="font-size:9px;overflow:hidden;text-overflow:ellipsis;">${l.departamento||'-'}</td>
+            <td class="col-colaborador" style="font-size:9px;font-weight:700;">${alerta} ${l.nome||'-'}${bna}<br><span style="font-weight:400;font-size:8px;">${l.cargo||''}</span></td>
+            <td class="col-unidade" style="font-size:8px;text-transform:uppercase;">${(l.unidade||'-').toUpperCase()}</td>
+            <td class="col-valores"><input type="number" step="0.01" class="valor-grande" value="${(l.salario||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'salario',this.value)"></td>
+            <td class="col-valores" style="text-align:center;">${l.permanencia||'-'}</td>
+            <td class="col-valores" style="text-align:center;font-weight:700;">${l.diasTrabalhados||0}</td>
+            <td class="col-valores" style="text-align:center;font-weight:700;">${formatarHoras(l.horasAbonadas||0)}</td>
+            <td class="col-valores" style="text-align:center;font-weight:700;">
+                <div style="display:flex;align-items:center;justify-content:center;gap:3px;">
+                    <span style="color:#6f42c1;">${pv>0?fmt(pv):'R$ 0,00'}</span>
+                    <button type="button" class="calc-btn-inline" onclick="abrirCalcProdutividade(${idx})" title="Calcular produtividade" style="background:#6f42c1;"><i class="fas fa-calculator"></i></button>
+                </div>
+                <div style="font-size:8.5px;color:#7a3a00;">${(l.produtividade||0).toFixed(1)}%</div>
+            </td>
+            <td class="col-he-normal"><input type="text" class="valor-grande" value="${(l.valorHoraExtra100||0).toFixed(2)}" readonly style="background:#f0f0f0;"></td>
+            <td class="col-he-noturna"><input type="text" class="valor-grande" value="${(l.valorHoraExtra50||0).toFixed(2)}" readonly style="background:#f0f0f0;"></td>
+            <td class="col-adiantamento"><div style="display:flex;align-items:center;gap:2px;"><input type="number" step="0.01" class="valor-grande" value="${(l.adiantamento||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'adiantamento',this.value)"><button type="button" class="calc-btn-inline" onclick="abrirCalcPopup(${idx},'adiantamento')"><i class="fas fa-calculator"></i></button></div></td>
+            <td class="col-valores" style="font-weight:800;font-size:10px;">${fmt(l.bruto)}</td>
+            <td class="col-valores" style="font-weight:700;font-size:10px;">${formatarHoras(l.horasExtrasMin||0)}</td>
+            <td class="col-descontos"><div style="display:flex;align-items:center;gap:2px;"><input type="number" step="0.01" class="valor-grande" value="${(l.inss||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'inss',this.value)"><button type="button" class="calc-btn-inline" onclick="abrirCalcPopup(${idx},'inss')"><i class="fas fa-calculator"></i></button></div></td>
+            <td class="col-descontos"><div style="display:flex;align-items:center;gap:2px;"><input type="number" step="0.01" class="valor-grande" value="${(l.ir||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'ir',this.value)"><button type="button" class="calc-btn-inline" onclick="abrirCalcPopup(${idx},'ir')"><i class="fas fa-calculator"></i></button></div></td>
+            <td class="col-descontos"><div style="display:flex;align-items:center;gap:2px;"><input type="number" step="0.01" class="valor-grande" value="${(l.fgts||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'fgts',this.value)"><button type="button" class="calc-btn-inline" onclick="abrirCalcPopup(${idx},'fgts')"><i class="fas fa-calculator"></i></button></div></td>
+            <td class="col-descontos"><div style="display:flex;align-items:center;gap:2px;"><input type="number" step="0.01" value="${(l.vt||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'vt',this.value)" style="width:70px;"><button type="button" class="calc-btn-inline" onclick="abrirCalcPopup(${idx},'vt')"><i class="fas fa-calculator"></i></button></div></td>
+            <td class="col-descontos"><div style="display:flex;align-items:center;gap:2px;"><input type="number" step="0.01" value="${(l.pensao||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'pensao',this.value)" style="width:70px;"><button type="button" class="calc-btn-inline" onclick="abrirCalcPopup(${idx},'pensao')"><i class="fas fa-calculator"></i></button></div></td>
+            <td class="col-descontos"><input type="number" step="0.01" value="${(l.dsSalario||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'dsSalario',this.value)"></td>
+            <td class="col-descontos"><input type="number" step="0.01" value="${(l.outrosDescontos||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'outrosDescontos',this.value)"></td>
+            <td class="col-liquido">${fmt(l.liquido)}</td>
+            <td class="col-eventuais"><input type="number" step="0.01" value="${(l.rescisao||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'rescisao',this.value)"></td>
+            <td class="col-eventuais"><input type="number" step="0.01" value="${(l.pensaoEvent||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'pensaoEvent',this.value)"></td>
+            <td class="col-eventuais"><input type="number" step="0.01" value="${(l.feriasEvent||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'feriasEvent',this.value)"></td>
+            <td class="col-eventuais col-13"><input type="text" value="${(l.decimoTerceiroAdiantado||0).toFixed(2)}" readonly style="background:#fef9c3;font-weight:800;color:#7a3a00;"></td>
+            <td class="col-pgto-func"><input type="text" value="${(l.salarioFunc||0).toFixed(2)}" readonly style="background:#f0f0f0;"></td>
+            <td class="col-pgto-func"><input type="text" value="${(l.horasExtrasFunc||0).toFixed(2)}" readonly style="background:#f0f0f0;"></td>
+            <td class="col-pgto-func"><input type="number" step="0.01" value="${(l.adicionaisFunc||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'adicionaisFunc',this.value)"></td>
+            <td class="col-pgto-func"><input type="number" step="0.01" value="${(l.comissoesFunc||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'comissoesFunc',this.value)"></td>
+            <td class="col-pgto-func"><input type="number" step="0.01" value="${(l.feriasFunc||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'feriasFunc',this.value)"></td>
+            <td class="col-pgto-func"><input type="text" value="${(l.decimoTerceiroFunc||0).toFixed(2)}" readonly style="background:#fef9c3;"></td>
+            <td class="col-pgto-func"><input type="text" value="${(l.rescisoesFunc||0).toFixed(2)}" readonly style="background:#f0f0f0;"></td>
+            <td class="col-pgto-func" style="font-weight:800;text-align:right;font-size:10px;">${fmt(l.totalFolhaFunc)}</td>
+            <td class="col-pgto-encargos"><input type="text" value="${(l.inssPatronal||0).toFixed(2)}" readonly style="background:#fde68a;font-weight:700;color:#7a3a00;"></td>
+            <td class="col-pgto-encargos"><input type="text" value="${(l.fgtsPatronal||0).toFixed(2)}" readonly style="background:#fde68a;font-weight:700;color:#7a3a00;"></td>
+            <td class="col-pgto-encargos"><input type="number" step="0.01" value="${(l.demaisEncargos||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'demaisEncargos',this.value)"></td>
+            <td class="col-pgto-encargos" style="font-weight:800;text-align:right;font-size:10px;">${fmt(l.totalEncargos)}</td>
+            <td class="col-pgto-beneficios"><input type="text" value="${(l.vtBenef||0).toFixed(2)}" readonly style="background:#bbf7d0;font-weight:700;color:#155724;"></td>
+            <td class="col-pgto-beneficios"><input type="number" step="0.01" value="${(l.vrVaBenef||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'vrVaBenef',this.value)"></td>
+            <td class="col-pgto-beneficios"><input type="number" step="0.01" value="${(l.planosBenef||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'planosBenef',this.value)"></td>
+            <td class="col-pgto-beneficios"><input type="number" step="0.01" value="${(l.seguroBenef||0).toFixed(2)}" onchange="atualizarCampoExec(${idx},'seguroBenef',this.value)"></td>
+            <td class="col-pgto-beneficios" style="font-weight:800;text-align:right;font-size:10px;">${fmt(l.totalBeneficios)}</td>
+            <td class="col-pgto-descontos"><input type="text" value="${(l.inssDesc||0).toFixed(2)}" readonly style="background:#fecaca;font-weight:700;color:#721c24;"></td>
+            <td class="col-pgto-descontos"><input type="text" value="${(l.irrfDesc||0).toFixed(2)}" readonly style="background:#fecaca;font-weight:700;color:#721c24;"></td>
+            <td class="col-pgto-descontos"><input type="text" value="${(l.demaisDesc||0).toFixed(2)}" readonly style="background:#fecaca;font-weight:700;color:#721c24;"></td>
+            <td class="col-pgto-descontos" style="font-weight:800;text-align:right;font-size:10px;">${fmt(l.totalDescontosFunc)}</td>
+            <td style="background:#fef9c3;font-weight:800;text-align:right;">${fmt(l.vtAvulso||0)}</td>
+            <td style="background:#dcfce7;font-weight:800;text-align:right;">${fmt(l.bonificacoes||0)}</td>
+            <td style="background:#e0f2fe;font-weight:800;text-align:right;">${fmt(l.antecipacoes||0)}</td>
+        </tr>`;
+    });
+    html += `
+        <tr class="total-row">
+            <td colspan="3" style="text-align:right;font-weight:800;">TOTAIS</td>
+            <td class="num">${fmt(T.salario)}</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">${formatarHoras(T.horasAbon)}</td>
+            <td class="num">${fmt(T.prod)}</td>
+            <td class="num">${fmt(T.he100)}</td>
+            <td class="num">${fmt(T.he50)}</td>
+            <td class="num">${fmt(T.adiant)}</td>
+            <td class="num">${fmt(T.bruto)}</td>
+            <td class="num">—</td>
+            <td class="num">${fmt(T.inss)}</td>
+            <td class="num">${fmt(T.ir)}</td>
+            <td class="num">${fmt(T.fgts)}</td>
+            <td class="num">${fmt(T.vt)}</td>
+            <td class="num">${fmt(T.pensao)}</td>
+            <td class="num">${fmt(T.ds)}</td>
+            <td class="num">${fmt(T.outros)}</td>
+            <td class="num">${fmt(T.liquido)}</td>
+            <td class="num">${fmt(T.rescisao)}</td>
+            <td class="num">${fmt(T.pensaoE)}</td>
+            <td class="num">${fmt(T.feriasE)}</td>
+            <td class="num">${fmt(T.d13)}</td>
+            <td class="num">${fmt(T.salFunc)}</td>
+            <td class="num">${fmt(T.heFunc)}</td>
+            <td class="num">${fmt(T.adicFunc)}</td>
+            <td class="num">${fmt(T.comFunc)}</td>
+            <td class="num">${fmt(T.ferFunc)}</td>
+            <td class="num">${fmt(T.d13Func)}</td>
+            <td class="num">${fmt(T.rescFunc)}</td>
+            <td class="num">${fmt(T.folhaFunc)}</td>
+            <td class="num">${fmt(T.inssPatr)}</td>
+            <td class="num">${fmt(T.fgtsPatr)}</td>
+            <td class="num">${fmt(T.demEnc)}</td>
+            <td class="num">${fmt(T.enc)}</td>
+            <td class="num">${fmt(T.vtB)}</td>
+            <td class="num">${fmt(T.vrvaB)}</td>
+            <td class="num">${fmt(T.planB)}</td>
+            <td class="num">${fmt(T.segB)}</td>
+            <td class="num">${fmt(T.benef)}</td>
+            <td class="num">${fmt(T.inssD)}</td>
+            <td class="num">${fmt(T.irrfD)}</td>
+            <td class="num">${fmt(T.demD)}</td>
+            <td class="num">${fmt(T.descF)}</td>
+            <td class="num" style="background:#fef9c3;font-weight:800;">${fmt(T.vtAvulso)}</td>
+            <td class="num" style="background:#dcfce7;font-weight:800;">${fmt(T.bonif)}</td>
+            <td class="num" style="background:#e0f2fe;font-weight:800;">${fmt(T.antec)}</td>
+        </tr>
+        </tbody></table>
+        <div style="margin-top:14px;font-size:10.5px;color:#7a3a00;padding:10px 14px;background:#f8f9fa;border-radius:8px;border-left:4px solid #FF8C00;">
+            <strong>Observações:</strong><br>
+            • <strong>IR, FGTS e INSS</strong> automáticos conforme tabelas 2026 (editáveis manualmente).<br>
+            • <strong>Pensão Alimentícia</strong> carregada da aba individual.<br>
+            • <strong>13º Adiantado</strong> = Salário ÷ 12.<br>
+            • <strong>INSS Patronal (20%)</strong> e <strong>FGTS (8%)</strong> calculados sobre o salário base.<br>
+            • <strong>VT Empresa</strong> automático do Vale-Transporte.<br>
+            • <strong>VT Avulso, Bonificações e Antecipações</strong> carregados dos recibos individuais de cada colaborador.
+        </div>`;
+    body.innerHTML = html;
+    renderizarKpiSemanasNaoAvaliadas();
+}
+
+function atualizarCampoExec(idx,campo,valor){
+    if(!_execDadosCache[idx]) return;
+    _execDadosCache[idx][campo] = parseFloat(valor)||0;
+    renderizarRelatorioExecutivoFormulario();
+}
+
+async function abrirExtratoCategoriaExec(cat){
+    const mes = MESES[parseInt(document.getElementById('execMes').value)];
+    const ano = parseInt(document.getElementById('execAno').value)||new Date().getFullYear();
+    const ci = REC_CATEGORIAS.find(c=>c.key===cat);
+    try{
+        const {data,error} = await supabaseClient.from('recibos_lancamentos').select('*')
+            .eq('ano',ano).eq('mes',mes).eq('categoria',cat).order('data_lancamento');
+        if(error) throw error;
+        abrirExtratoCategoria(`${ci.label} — ${mes}/${ano}`,data||[]);
+    }catch(e){ mostrarToast('❌ Erro: '+e.message,'error'); }
+}
+function abrirExtratoCategoria(titulo,lanc){
+    document.getElementById('extratoTituloCategoria').textContent = titulo;
+    const t = (lanc||[]).reduce((s,l)=>s+parseFloat(l.valor||0),0);
+    const fmt = v=>(isNaN(v)?0:v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    document.getElementById('extratoTotalCategoria').textContent = fmt(t);
+    document.getElementById('extratoTotalRodape').textContent = fmt(t);
+    const tb = document.getElementById('extratoCorpoTabela');
+    if(!lanc||lanc.length===0){
+        tb.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:#7a3a00;"><i class="fas fa-inbox" style="font-size:32px;display:block;margin-bottom:8px;opacity:0.4;"></i>Nenhum lançamento.</td></tr>`;
+    }else{
+        tb.innerHTML = lanc.map(l=>{
+            const doc = l.documento_url?`<span class="doc-link" onclick="visualizarDocumentoRecibo('${l.id}')"><i class="fas fa-paperclip"></i> ${l.documento_nome||'Anexo'}</span>`:`<span style="color:#999;">—</span>`;
+            return `<tr>
+                <td>${l.mes||'—'}/${l.ano||'—'}</td>
+                <td>${l.data_lancamento?formatarData(l.data_lancamento):'—'}</td>
+                <td>${l.descricao||'—'}<br><small style="color:#7a3a00;">${l.funcionario_nome||''}</small></td>
+                <td class="num">${fmt(l.valor)}</td>
+                <td>${doc}</td>
+            </tr>`;
+        }).join('');
+    }
+    document.getElementById('modalExtratoCategoria').classList.add('active');
+}
+function fecharExtratoCategoria(){ document.getElementById('modalExtratoCategoria').classList.remove('active'); }
+
+function visualizarDocumentoRecibo(id){
+    supabaseClient.from('recibos_lancamentos').select('*').eq('id',id).maybeSingle().then(({data})=>{
+        if(!data||!data.documento_url){ mostrarToast('⚠️ Sem anexo','warning'); return; }
+        const m = document.getElementById('modalDocumentoAnexoView');
+        const c = document.getElementById('documentoAnexoViewConteudo');
+        if(data.documento_url.startsWith('data:application/pdf')) c.innerHTML = `<iframe src="${data.documento_url}" style="width:90vw;height:85vh;background:#fff;"></iframe>`;
+        else c.innerHTML = `<img src="${data.documento_url}" alt="${data.documento_nome||'Documento'}" style="max-width:95%;max-height:95%;">`;
+        m.classList.add('active');
+    });
+}
+function fecharDocumentoAnexoView(){ document.getElementById('modalDocumentoAnexoView').classList.remove('active'); }
+
+function abrirCalcPopup(idx,tipo){
+    _execLinhaCalcIdx = idx;
+    const l = _execDadosCache[idx];
+    if(!l) return;
+    document.getElementById('calcTitulo').textContent = `Cálculo — ${tipo.toUpperCase()}`;
+    document.getElementById('calcSalarioBase').value = (l.salario||0).toFixed(2);
+    document.getElementById('calcHE100').value = (l.valorHoraExtra100||0).toFixed(2);
+    document.getElementById('calcHE50').value = (l.valorHoraExtra50||0).toFixed(2);
+    document.getElementById('calcAdiantamento').value = (l.adiantamento||0).toFixed(2);
+    document.getElementById('calcOutrosDescontos').value = (l.outrosDescontos||0).toFixed(2);
+    document.getElementById('calcDsSalario').value = (l.dsSalario||0).toFixed(2);
+    document.getElementById('calcPensaoPerc').value = '0';
+    document.getElementById('calcVTPerc').value = '6';
+    document.getElementById('calcBase').value = 'bruto';
+    calcularPopup();
+    document.getElementById('modalCalcPopup').classList.add('active');
+}
+function fecharCalcPopup(){ document.getElementById('modalCalcPopup').classList.remove('active'); _execLinhaCalcIdx = null; }
+function calcularPopup(){
+    const s = parseFloat(document.getElementById('calcSalarioBase').value)||0;
+    const h1 = parseFloat(document.getElementById('calcHE100').value)||0;
+    const h2 = parseFloat(document.getElementById('calcHE50').value)||0;
+    const ad = parseFloat(document.getElementById('calcAdiantamento').value)||0;
+    const od = parseFloat(document.getElementById('calcOutrosDescontos').value)||0;
+    const ds = parseFloat(document.getElementById('calcDsSalario').value)||0;
+    const pp = parseFloat(document.getElementById('calcPensaoPerc').value)||0;
+    const vp = parseFloat(document.getElementById('calcVTPerc').value)||0;
+    const bs = document.getElementById('calcBase').value;
+    const bruto = s+h1+h2+ad;
+    let bINSS = s;
+    if(bs==='salario_he') bINSS = s+h1+h2;
+    else if(bs==='bruto') bINSS = bruto;
+    const inss = calcularINSS(bINSS);
+    const bIR = bINSS-inss;
+    const ir = calcularIR(bINSS,inss,0);
+    const fgts = calcularFGTS(bINSS);
+    const vt = s*(vp/100);
+    const pensao = s*(pp/100);
+    const tDesc = inss+ir+fgts+vt+pensao+od+ds;
+    const liq = bruto-tDesc;
+    const fmt = v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    document.getElementById('calcBaseINSS').textContent = fmt(bINSS);
+    document.getElementById('calcINSS').textContent = fmt(inss);
+    document.getElementById('calcBaseIR').textContent = fmt(bIR);
+    document.getElementById('calcIR').textContent = fmt(ir);
+    document.getElementById('calcFGTS').textContent = fmt(fgts);
+    document.getElementById('calcVT').textContent = fmt(vt);
+    document.getElementById('calcPensao').textContent = fmt(pensao);
+    document.getElementById('calcTotalLiquido').textContent = fmt(liq);
+}
+function aplicarCalcPopup(){
+    if(_execLinhaCalcIdx===null||!_execDadosCache[_execLinhaCalcIdx]) return;
+    const l = _execDadosCache[_execLinhaCalcIdx];
+    const p = id=>parseFloat(document.getElementById(id).textContent.replace(/[^\d,-]/g,'').replace(',','.'))||0;
+    l.inss = p('calcINSS');
+    l.ir = p('calcIR');
+    l.fgts = p('calcFGTS');
+    l.vt = p('calcVT');
+    l.pensao = p('calcPensao');
+    l.adiantamento = parseFloat(document.getElementById('calcAdiantamento').value)||0;
+    l.outrosDescontos = parseFloat(document.getElementById('calcOutrosDescontos').value)||0;
+    l.dsSalario = parseFloat(document.getElementById('calcDsSalario').value)||0;
+    fecharCalcPopup();
+    renderizarRelatorioExecutivoFormulario();
+    mostrarToast('✅ Valores aplicados!');
+}
+function baixarRelatorioExecutivoPdf(){
+    const el = document.getElementById('execBody');
+    const n = `Relatorio_Executivo_${MESES[parseInt(document.getElementById('execMes').value)]}_${document.getElementById('execAno').value}.pdf`;
+    const opt = {margin:[8,8,8,8],filename:n,image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy'],avoid:['tr','.exec-kpi']}};
+    mostrarToast('📄 Gerando PDF...','info');
+    html2pdf().set(opt).from(el).save().then(()=>mostrarToast('✅ PDF gerado!')).catch(err=>mostrarToast('❌ Erro: '+err.message,'error'));
+}
+
+/* ============================================================
+   RESUMO FINANCEIRO
+   ============================================================ */
+async function gerarResumoFinanceiro(){
+    const body = document.getElementById('finBody');
+    if(!body) return;
+    body.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#7a3a00;"><i class="fas fa-spinner fa-spin" style="font-size:32px;display:block;margin-bottom:12px;"></i>Gerando resumo...</div>`;
+    const mes = parseInt(document.getElementById('finMes').value);
+    const mn = MESES[mes];
+    const ano = parseInt(document.getElementById('finAno').value)||new Date().getFullYear();
+    const uf = document.getElementById('finUnidade').value;
+    const ef = document.getElementById('finEmpresa').value;
+    const bs = (document.getElementById('finBusca').value||'').toLowerCase().trim();
+    try{
+        let lista = funcionarios.filter(f=>!f.desligamento && !f.sem_controle_ponto);
+        if(uf) lista = lista.filter(f=>f.unidade===uf);
+        if(ef) lista = lista.filter(f=>f.departamento===ef);
+        if(bs) lista = lista.filter(f=>(f.nome||'').toLowerCase().includes(bs)||(f.cpf||'').includes(bs)||(f.cargo||'').toLowerCase().includes(bs));
+        if(lista.length===0){
+            body.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#7a3a00;"><i class="fas fa-users" style="font-size:48px;display:block;margin-bottom:14px;opacity:0.4;"></i><p style="font-weight:700;">Nenhum funcionário</p></div>`;
+            return;
+        }
+        const ids = lista.map(f=>f.id);
+        const {data:marcs} = await supabaseClient.from('marcacoes_ponto').select('funcionario_id,dados').in('funcionario_id',ids).eq('mes',mn).eq('ano',ano);
+        const mapaMarc = {};
+        (marcs||[]).forEach(m=>{
+            try{ mapaMarc[m.funcionario_id] = typeof m.dados==='string'?JSON.parse(m.dados):(m.dados||{}); }catch(e){ mapaMarc[m.funcionario_id] = {}; }
+        });
+        const {data:vtData} = await supabaseClient.from('vale_transporte').select('*').in('funcionario_id',ids).eq('ano',ano).eq('mes',mes);
+        const mapaVT = {};
+        (vtData||[]).forEach(v=>{ mapaVT[v.funcionario_id] = v; });
+        const {data:pensaoData} = await supabaseClient.from('pensao_alimenticia').select('*').in('funcionario_id',ids);
+        const mapaPensao = {};
+        (pensaoData||[]).forEach(p=>{ mapaPensao[p.funcionario_id] = p; });
+        const td = new Date(ano,mes+1,0).getDate();
+        const iISO = `${ano}-${String(mes+1).padStart(2,'0')}-01`;
+        const fISO = `${ano}-${String(mes+1).padStart(2,'0')}-${String(td).padStart(2,'0')}`;
+        const {data:atests} = await supabaseClient.from('atestados').select('funcionario_id,data_inicio,data_fim').in('funcionario_id',ids).lte('data_inicio',fISO).gte('data_fim',iISO);
+        const mapaAbon = {};
+        (atests||[]).forEach(a=>{
+            const d1 = parseDataLocal(a.data_inicio), d2 = parseDataLocal(a.data_fim);
+            if(!d1||!d2) return;
+            if(!mapaAbon[a.funcionario_id]) mapaAbon[a.funcionario_id] = new Set();
+            for(let d=new Date(d1.getFullYear(),d1.getMonth(),d1.getDate()); d<=d2; d=addDia(d)){
+                if(d.getMonth()===mes&&d.getFullYear()===ano) mapaAbon[a.funcionario_id].add(d.getDate());
+            }
+        });
+        let diasUteis = 0;
+        for(let d=1;d<=td;d++){
+            const dow = new Date(ano,mes,d).getDay();
+            if(dow!==0&&dow!==6&&!isFeriado(d,mes,ano)) diasUteis++;
+        }
+        const dados = [];
+        for(const f of lista){
+            const salario = parseFloat(f.salario||0);
+            const perm = getPermanenciaMinutos(f);
+            const dd = mapaMarc[f.id]||{};
+            const abSet = mapaAbon[f.id]||new Set();
+            let tTr = 0, tExN = 0, tExNot = 0, dT = 0;
+            for(let d=1;d<=td;d++){
+                const x = dd[d]||{};
+                const abon = abSet.has(d)||x.falta_atestado;
+                if(x.falta_periodo||x.abono||abon||x.folga_bh) continue;
+                const df1 = calcularDiferenca(x.e1,x.s1);
+                const df2 = calcularDiferenca(x.e2,x.s2);
+                const dfE = calcularDiferenca(x.extra_e1,x.extra_s1);
+                const tm = converterParaMinutos(df1)+converterParaMinutos(df2)+converterParaMinutos(dfE);
+                const n1 = calcularMinutosNoturnos(x.e1,x.s1);
+                const n2 = calcularMinutosNoturnos(x.e2,x.s2);
+                const nE = calcularMinutosNoturnos(x.extra_e1,x.extra_s1);
+                const n = n1+n2+nE;
+                const di = tm-n;
+                tExN += Math.max(0,di-perm);
+                tExNot += n;
+                tTr += tm;
+                if(tm>0) dT++;
+            }
+            const vh = salario/220;
+            const vHE100 = (tExN/60)*vh*2;
+            const vHE50 = (tExNot/60)*vh*1.5;
+            const vtInfo = mapaVT[f.id]||{};
+            const pInfo = mapaPensao[f.id]||{};
+            const pAtiva = !!pInfo.ativo;
+            const pValor = pAtiva?(pInfo.tipo_desconto==='percentual'?salario*(parseFloat(pInfo.percentual||0)/100):parseFloat(pInfo.valor_fixo||0)):0;
+            const brutoBase = salario+vHE100+vHE50;
+            const inssAuto = calcularINSS(brutoBase);
+            const irAuto = calcularIR(brutoBase,inssAuto,0);
+            const fgtsAuto = calcularFGTS(brutoBase);
+            const vtCop = parseFloat(vtInfo.coparticipacao||0);
+            const desc = inssAuto+irAuto+fgtsAuto+vtCop+pValor;
+            const liq = brutoBase-desc;
+            dados.push({id:f.id,nome:f.nome,cpf:f.cpf,unidade:f.unidade,departamento:f.departamento,cargo:f.cargo,salario,permanencia:getPermanenciaLabel(f),vHE100,vHE50,horasExtras:(tExN+tExNot)/60,diasTrabalhados:dT,diasUteisMes:diasUteis,brutoBase,inss:inssAuto,ir:irAuto,fgts:fgtsAuto,vtCopart:vtCop,pensao:pValor,pensaoInfo:pInfo,vtInfo,banco:f.banco,agencia:f.agencia,conta:f.conta,pix:f.pix,descontos:desc,liquido:liq});
+        }
+        let tS=0,tHE=0,tB=0,tI=0,tIR=0,tFG=0,tVT=0,tP=0,tD=0,tL=0;
+        dados.forEach(l=>{
+            tS += l.salario; tHE += l.vHE100+l.vHE50; tB += l.brutoBase;
+            tI += l.inss; tIR += l.ir; tFG += l.fgts; tVT += l.vtCopart;
+            tP += l.pensao; tD += l.descontos; tL += l.liquido;
+        });
+        const fmt = v=>(isNaN(v)?0:v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        let html = `<div style="overflow:auto;max-height:calc(100vh - 320px);border:1px solid #ccc;border-radius:8px;"><table class="financeiro-tabela">
+            <thead>
+                <tr class="grupo">
+                    <th colspan="4" style="background:#fef3c7;color:#7a3a00;">IDENTIFICAÇÃO</th>
+                    <th colspan="4" style="background:#e0f2fe;color:#0c5460;">DADOS BANCÁRIOS</th>
+                    <th colspan="4" style="background:#dcfce7;color:#155724;">PROVENTOS</th>
+                    <th colspan="6" style="background:#fee2e2;color:#721c24;">DESCONTOS</th>
+                    <th colspan="1" style="background:#d1fae5;color:#155724;">LÍQUIDO</th>
+                </tr>
+                <tr>
+                    <th style="min-width:180px;">Colaborador</th>
+                    <th style="min-width:90px;">CPF</th>
+                    <th style="min-width:100px;">Unidade</th>
+                    <th style="min-width:120px;">Empresa</th>
+                    <th style="min-width:120px;">Banco</th>
+                    <th style="min-width:100px;">Agência</th>
+                    <th style="min-width:120px;">Conta</th>
+                    <th style="min-width:140px;">PIX</th>
+                    <th style="min-width:100px;">Salário Base</th>
+                    <th style="min-width:95px;">HE 100%</th>
+                    <th style="min-width:95px;">HE 50%</th>
+                    <th style="min-width:100px;">Total Bruto</th>
+                    <th style="min-width:90px;">INSS</th>
+                    <th style="min-width:85px;">IR</th>
+                    <th style="min-width:85px;">FGTS</th>
+                    <th style="min-width:100px;">VT Copart.</th>
+                    <th style="min-width:100px;">Pensão</th>
+                    <th style="min-width:100px;">Total Descontos</th>
+                    <th style="min-width:120px;background:#d1fae5;color:#155724;font-size:12px;">Líquido a Pagar</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        dados.forEach(l=>{
+            html += `<tr>
+                <td class="col-ident">${l.nome||'-'}<br><span style="font-weight:400;font-size:9px;color:#7a3a00;">${l.cargo||''}</span></td>
+                <td style="text-align:center;">${l.cpf||'-'}</td>
+                <td style="text-align:center;">${l.unidade||'-'}</td>
+                <td style="text-align:center;font-size:10px;">${l.departamento||'-'}</td>
+                <td class="col-banco">${l.banco||'<span style="color:#dc3545;">—</span>'}</td>
+                <td class="col-banco" style="text-align:center;">${l.agencia||'—'}</td>
+                <td class="col-banco" style="text-align:center;">${l.conta||'—'}</td>
+                <td class="col-banco" style="font-size:10px;">${l.pix||'—'}</td>
+                <td class="num col-proventos">${fmt(l.salario)}</td>
+                <td class="num col-proventos">${fmt(l.vHE100)}</td>
+                <td class="num col-proventos">${fmt(l.vHE50)}</td>
+                <td class="num col-total" style="font-weight:800;">${fmt(l.brutoBase)}</td>
+                <td class="num col-descontos">${fmt(l.inss)}</td>
+                <td class="num col-descontos">${fmt(l.ir)}</td>
+                <td class="num col-descontos">${fmt(l.fgts)}</td>
+                <td class="num col-descontos">${fmt(l.vtCopart)}</td>
+                <td class="num col-descontos">${fmt(l.pensao)}</td>
+                <td class="num col-descontos" style="font-weight:800;">${fmt(l.descontos)}</td>
+                <td class="num col-liquido" style="font-size:12px;">${fmt(l.liquido)}</td>
+            </tr>`;
+        });
+        html += `</tbody><tfoot>
+            <tr>
+                <td colspan="8" style="text-align:right;">TOTAIS:</td>
+                <td class="num">${fmt(tS)}</td>
+                <td class="num">${fmt(dados.reduce((s,l)=>s+l.vHE100,0))}</td>
+                <td class="num">${fmt(dados.reduce((s,l)=>s+l.vHE50,0))}</td>
+                <td class="num">${fmt(tB)}</td>
+                <td class="num">${fmt(tI)}</td>
+                <td class="num">${fmt(tIR)}</td>
+                <td class="num">${fmt(tFG)}</td>
+                <td class="num">${fmt(tVT)}</td>
+                <td class="num">${fmt(tP)}</td>
+                <td class="num">${fmt(tD)}</td>
+                <td class="num" style="font-size:13px;color:#155724;">${fmt(tL)}</td>
+            </tr>
+        </tfoot></table></div>`;
+        body.innerHTML = html;
+    }catch(e){
+        console.error(e);
+        body.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#dc3545;"><i class="fas fa-exclamation-triangle" style="font-size:48px;display:block;margin-bottom:14px;"></i><p>Erro: ${e.message}</p></div>`;
+    }
+}
+function baixarResumoFinanceiroPdf(){
+    const el = document.getElementById('finBody');
+    const n = `Resumo_Financeiro_${MESES[parseInt(document.getElementById('finMes').value)]}_${document.getElementById('finAno').value}.pdf`;
+    const opt = {margin:[10,10,10,10],filename:n,image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy'],avoid:['tr']}};
+    mostrarToast('📄 Gerando PDF...','info');
+    html2pdf().set(opt).from(el).save().then(()=>mostrarToast('✅ PDF gerado!')).catch(err=>mostrarToast('❌ Erro: '+err.message,'error'));
+}
+function imprimirResumoFinanceiro(){
+    window.print();
+}
+
+/* ============================================================
+   CONFERÊNCIA E VALIDAÇÃO SEMANAL
+   ============================================================ */
+let _confSemanaInicioAlvo = null;
+async function abrirConferenciaFuncionarioComSemana(id,mes,ano,semanaInicio){
+    const f = funcionarios.find(x=>String(x.id)===String(id));
+    if(!f){ mostrarToast('⚠️ Não encontrado','warning'); return; }
+    funcionarioAtual = f;
+    const m = document.getElementById('modalConferenciaValidacao');
+    if(!m) return;
+    document.getElementById('confFuncNome').textContent = f.nome;
+    const s = document.getElementById('confMes');
+    if(s.options.length===0) s.innerHTML = MESES.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+    s.value = mes;
+    document.getElementById('confAno').value = ano;
+    document.querySelectorAll('.conf-filtro-status').forEach(c=>{ c.checked = true; });
+    m.classList.add('active');
+    _confSemanaInicioAlvo = semanaInicio;
+    await carregarConferenciaSemanal();
+    if(semanaInicio){
+        setTimeout(()=>{
+            const i = _confSemanas.findIndex(x=>toISODateLocal(x.inicio)===semanaInicio);
+            if(i>=0) mudarSemanaConferencia(i);
+        },500);
+    }
+}
+async function carregarConferenciaSemanal(){
+    if(!funcionarioAtual) return;
+    const mes = parseInt(document.getElementById('confMes').value);
+    const ano = parseInt(document.getElementById('confAno').value);
+    const c = document.getElementById('confConteudoSemana');
+    document.getElementById('confAbasSemanais').innerHTML = '';
+    c.innerHTML = `<div style="text-align:center;padding:30px;color:#7a3a00;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>`;
+    _confSemanas = calcularSemanasDoMes(mes,ano);
+    _confStatusMap = {};
+    try{
+        const {data,error} = await supabaseClient.from('validacao_semanal_ponto').select('*')
+            .eq('funcionario_id',funcionarioAtual.id).eq('ano',ano).eq('mes',mes);
+        if(error&&error.code!=='PGRST116') throw error;
+        (data||[]).forEach(r=>{
+            _confStatusMap[r.semana_inicio] = {status:r.status,observacao:r.observacao,validado_por:r.validado_por,validado_em:r.validado_em};
+        });
+    }catch(e){ console.warn(e); }
+    let dd = {};
+    try{
+        const {data} = await supabaseClient.from('marcacoes_ponto').select('*')
+            .eq('funcionario_id',funcionarioAtual.id).eq('mes',MESES[mes]).eq('ano',ano).maybeSingle();
+        if(data?.dados){ try{ dd = typeof data.dados==='string'?JSON.parse(data.dados):data.dados; }catch(e){} }
+    }catch(e){}
+    const ab = await carregarMapaDiasAbonados(funcionarioAtual.id,MESES[mes],ano);
+    const perm = getPermanenciaMinutos(funcionarioAtual);
+    const ae = document.getElementById('confAbasSemanais');
+    ae.innerHTML = _confSemanas.map((s,i)=>{
+        const l = `Sem ${i+1} (${String(s.inicio.getDate()).padStart(2,'0')}/${String(s.inicio.getMonth()+1).padStart(2,'0')} - ${String(s.fim.getDate()).padStart(2,'0')}/${String(s.fim.getMonth()+1).padStart(2,'0')})`;
+        return `<button class="tab-btn ${i===0?'active':''}" data-conf-sem="${i}" onclick="mudarSemanaConferencia(${i})">${l}</button>`;
+    }).join('');
+    _confSemanaAtiva = 0;
+    _confSemanasRender = _confSemanas.map((s,i)=>renderizarSemanaConferencia(s,i,dd,ab,perm));
+    aplicarFiltrosConferencia();
+}
+function mudarSemanaConferencia(i){
+    _confSemanaAtiva = i;
+    document.querySelectorAll('[data-conf-sem]').forEach(b=>b.classList.remove('active'));
+    document.querySelector(`[data-conf-sem="${i}"]`)?.classList.add('active');
+    aplicarFiltrosConferencia();
+}
+function renderizarSemanaConferencia(semana,idx,dd,ab,perm){
+    const mi = semana.inicio.getMonth();
+    const ano = semana.inicio.getFullYear();
+    let lin = '';
+    let tT = 0, tE = 0, tA = 0, tF = 0;
+    for(let d=new Date(semana.inicio); d<=semana.fim; d.setDate(d.getDate()+1)){
+        if(d.getMonth()!==mi||d.getFullYear()!==ano){
+            lin += `<tr style="opacity:0.35;"><td class="dia-cell">${String(d.getDate()).padStart(2,'0')} ${DIAS_SEMANA[d.getDay()]}</td><td colspan="9" style="text-align:center;color:#999;">— fora do mês —</td></tr>`;
+            continue;
+        }
+        const dia = d.getDate();
+        const x = dd[dia]||{};
+        const abon = ab.has(dia)||x.falta_atestado;
+        const fp = x.falta_periodo;
+        const fb = x.folga_bh;
+        const ta = x.abono;
+        const df1 = calcularDiferenca(x.e1,x.s1);
+        const df2 = calcularDiferenca(x.e2,x.s2);
+        const dfE = calcularDiferenca(x.extra_e1,x.extra_s1);
+        const tm = converterParaMinutos(df1)+converterParaMinutos(df2)+converterParaMinutos(dfE);
+        const hE = (tm>perm&&!abon&&!fb&&!ta&&!fp)?tm-perm:0;
+        if(tm>0) tT += tm;
+        if(hE>0) tE += hE;
+        if(abon||ta) tA += abon?perm:getMinutosAbonados(x);
+        if(fp) tF++;
+        let ob = '';
+        if(fp) ob = 'FALTA';
+        else if(ta) ob = `ABONO ${x.abono_inicio||''}${x.abono_fim?'-'+x.abono_fim:''} ${x.abono_horas||''}`.trim();
+        else if(abon) ob = 'ATESTADO';
+        else if(fb) ob = 'FOLGA BH';
+        else if(isFeriado(dia,mi,ano)) ob = 'FERIADO';
+        lin += `<tr>
+            <td class="dia-cell">${String(dia).padStart(2,'0')} ${DIAS_SEMANA[d.getDay()]}</td>
+            <td>${x.e1||''}</td><td>${x.s1||''}</td>
+            <td>${x.e2||''}</td><td>${x.s2||''}</td>
+            <td>${x.extra_e1||''}</td><td>${x.extra_s1||''}</td>
+            <td style="font-weight:700;">${formatarHoras(tm)}</td>
+            <td style="color:${hE>0?'#28a745':'#7a3a00'};font-weight:700;">${hE>0?formatarHoras(hE):'00:00'}</td>
+            <td style="font-size:10px;">${ob}</td>
+        </tr>`;
+    }
+    const chave = toISODateLocal(semana.inicio);
+    const v = _confStatusMap[chave]||null;
+    const st = v?.status||'nao_validado';
+    const sl = st==='validado'?'✅ Validado':(st==='requer_atencao'?'⚠️ Requer atenção':'⬜ Não validado');
+    const sc = st==='validado'?'#28a745':(st==='requer_atencao'?'#ffc107':'#6c757d');
+    return `<div class="conf-semana" data-semana-chave="${chave}" data-semana-status="${st}" data-semana-idx="${idx}">
+        <div class="conf-semana-header">
+            <div>
+                <span class="titulo">Semana ${idx+1}</span>
+                <span class="periodo">${semana.inicio.toLocaleDateString('pt-BR')} → ${semana.fim.toLocaleDateString('pt-BR')}</span>
+            </div>
+            <div class="resumo">
+                Permanência: <strong>${formatarHoras(perm)}</strong> · 
+                Trabalhadas: <strong>${formatarHoras(tT)}</strong> · 
+                HE: <strong style="color:#28a745;">${formatarHoras(tE)}</strong> · 
+                Abonadas: <strong>${formatarHoras(tA)}</strong> · 
+                Faltas: <strong style="color:#dc3545;">${tF}</strong>
+            </div>
+        </div>
+        <div class="conf-tabela-wrapper">
+            <table class="conf-tabela">
+                <thead>
+                    <tr>
+                        <th>Dia</th><th>1ª Ent.</th><th>1ª Saí.</th><th>2ª Ent.</th><th>2ª Saí.</th>
+                        <th>Extra Ent.</th><th>Extra Saí.</th><th>Total</th><th>Hora Extra</th><th>Obs.</th>
+                    </tr>
+                </thead>
+                <tbody>${lin}</tbody>
+            </table>
+        </div>
+        <div class="conf-semana-footer">
+            <div class="btn-group">
+                <button type="button" class="btn-action btn-success btn-sm" ${podeValidarPonto()?'':'disabled title="Sem permissão"'} onclick="classificarSemana('${chave}',${idx},'validado')"><i class="fas fa-check"></i> Validado</button>
+                <button type="button" class="btn-action btn-warning btn-sm" ${podeClassificarAtencao()?'':'disabled title="Sem permissão"'} onclick="classificarSemana('${chave}',${idx},'requer_atencao')"><i class="fas fa-exclamation-triangle"></i> Requer atenção</button>
+            </div>
+            <span class="status-badge" style="color:${sc};background:${sc}22;border:1px solid ${sc};">${sl}</span>
+        </div>
+        ${v?.validado_por?`<div class="conf-semana-info"><i class="fas fa-user-check" style="color:#28a745;"></i> Classificado por <strong>${v.validado_por}</strong> em ${new Date(v.validado_em).toLocaleString('pt-BR')}</div>`:''}
+        <div class="conf-semana-obs">
+            <label><i class="fas fa-comment"></i> Observação</label>
+            <input type="text" class="motivo-input" value="${(v?.observacao||'').replace(/"/g,'&quot;')}" placeholder="Ex: aguardando comprovante" onchange="salvarObservacaoSemana('${chave}',this.value)">
+        </div>
+    </div>`;
+}
+function aplicarFiltrosConferencia(){
+    const marc = Array.from(document.querySelectorAll('.conf-filtro-status:checked')).map(c=>c.value);
+    const c = document.getElementById('confConteudoSemana');
+    if(marc.length===0){ c.innerHTML = `<div style="text-align:center;padding:30px;color:#7a3a00;">Selecione ao menos uma situação.</div>`; return; }
+    const html = _confSemanasRender[_confSemanaAtiva]||'';
+    if(!html){ c.innerHTML = ''; return; }
+    const t = document.createElement('div'); t.innerHTML = html;
+    const st = t.firstElementChild?.dataset.semanaStatus||'nao_validado';
+    const f = st==='validado'?'validado':(st==='requer_atencao'?'requer_atencao':'nao_validado');
+    if(marc.includes(f)) c.innerHTML = html;
+    else c.innerHTML = `<div style="text-align:center;padding:30px;color:#7a3a00;background:#f8f9fa;border-radius:10px;border:1px dashed #ccc;"><i class="fas fa-filter" style="font-size:28px;opacity:0.5;display:block;margin-bottom:8px;"></i>Esta semana não corresponde aos filtros.</div>`;
+}
+function restaurarFiltroConferencia(){
+    document.querySelectorAll('.conf-filtro-status').forEach(c=>{ c.checked = true; });
+    aplicarFiltrosConferencia();
+}
+async function classificarSemana(chave,idx,novo){
+    if(novo==='validado'&&!podeValidarPonto()){ mostrarToast('⚠️ Sem permissão para validar.','error'); return; }
+    if(novo==='requer_atencao'&&!podeClassificarAtencao()){ mostrarToast('⚠️ Sem permissão.','error'); return; }
+    const mes = parseInt(document.getElementById('confMes').value);
+    const ano = parseInt(document.getElementById('confAno').value);
+    const sem = _confSemanas[idx];
+    if(!sem) return;
+    const sI = toISODateLocal(sem.inicio);
+    const sF = toISODateLocal(sem.fim);
+    const p = {funcionario_id:funcionarioAtual.id,ano,mes,semana_inicio:sI,semana_fim:sF,status:novo,validado_por:usuarioAtual?.nome||'—',validado_em:new Date().toISOString()};
+    try{
+        const {data:ex} = await supabaseClient.from('validacao_semanal_ponto').select('id')
+            .eq('funcionario_id',funcionarioAtual.id).eq('ano',ano).eq('mes',mes).eq('semana_inicio',sI).maybeSingle();
+        let r;
+        if(ex?.id) r = await supabaseClient.from('validacao_semanal_ponto').update(p).eq('id',ex.id);
+        else r = await supabaseClient.from('validacao_semanal_ponto').insert(p);
+        if(r.error) throw r.error;
+        _confStatusMap[sI] = {status:novo,observacao:p.observacao,validado_por:p.validado_por,validado_em:p.validado_em};
+        mostrarToast(`✅ Semana classificada como "${novo==='validado'?'Validado':'Requer atenção'}"`);
+        await carregarConferenciaSemanal();
+        await carregarSemanasAtencao();
+    }catch(e){ mostrarToast('❌ Erro: '+e.message,'error'); }
+}
+async function salvarObservacaoSemana(chave,obs){
+    const mes = parseInt(document.getElementById('confMes').value);
+    const ano = parseInt(document.getElementById('confAno').value);
+    const sem = _confSemanas.find(s=>toISODateLocal(s.inicio)===chave);
+    if(!sem) return;
+    try{
+        const {data:ex} = await supabaseClient.from('validacao_semanal_ponto').select('id')
+            .eq('funcionario_id',funcionarioAtual.id).eq('ano',ano).eq('mes',mes).eq('semana_inicio',chave).maybeSingle();
+        if(ex?.id) await supabaseClient.from('validacao_semanal_ponto').update({observacao:obs}).eq('id',ex.id);
+        else await supabaseClient.from('validacao_semanal_ponto').insert({funcionario_id:funcionarioAtual.id,ano,mes,semana_inicio:chave,semana_fim:toISODateLocal(sem.fim),status:'nao_validado',observacao:obs});
+        mostrarToast('💾 Observação salva','info');
+        if(_confStatusMap[chave]) _confStatusMap[chave].observacao = obs;
+    }catch(e){ mostrarToast('❌ Erro: '+e.message,'error'); }
+}
+async function limparValidacoesConferencia(){
+    if(!funcionarioAtual){ mostrarToast('⚠️ Nenhum funcionário','warning'); return; }
+    const mes = parseInt(document.getElementById('confMes').value);
+    const ano = parseInt(document.getElementById('confAno').value);
+    const mn = MESES[mes];
+    if(!confirm(`⚠️ Limpar TODAS as validações de "${funcionarioAtual.nome}" para ${mn}/${ano}?`)) return;
+    try{
+        const {error} = await supabaseClient.from('validacao_semanal_ponto').delete()
+            .eq('funcionario_id',funcionarioAtual.id).eq('mes',mes).eq('ano',ano);
+        if(error) throw error;
+        _confStatusMap = {};
+        mostrarToast('🧹 Validações removidas!','info');
+        await carregarConferenciaSemanal();
+        await carregarSemanasAtencao();
+    }catch(e){ mostrarToast('❌ Erro: '+e.message,'error'); }
+}
+function fecharConferenciaValidacao(){ document.getElementById('modalConferenciaValidacao').classList.remove('active'); }
+
+/* ============================================================
+   CARREGAR MAPA DIAS ABONADOS
+   ============================================================ */
+async function carregarMapaDiasAbonados(id,mes,ano){
+    const set = new Set();
+    try{
+        const mi = MESES.indexOf(mes);
+        if(mi<0) return set;
+        const td = new Date(ano,mi+1,0).getDate();
+        const iISO = `${ano}-${String(mi+1).padStart(2,'0')}-01`;
+        const fISO = `${ano}-${String(mi+1).padStart(2,'0')}-${String(td).padStart(2,'0')}`;
+        const {data,error} = await supabaseClient.from('atestados').select('data_inicio,data_fim')
+            .eq('funcionario_id',id).lte('data_inicio',fISO).gte('data_fim',iISO);
+        if(!error&&data) data.forEach(a=>{
+            const d1 = parseDataLocal(a.data_inicio), d2 = parseDataLocal(a.data_fim);
+            if(!d1||!d2) return;
+            for(let d=new Date(d1.getFullYear(),d1.getMonth(),d1.getDate()); d<=d2; d=addDia(d)){
+                if(d.getMonth()===mi&&d.getFullYear()===ano) set.add(d.getDate());
+            }
+        });
+        const {data:mp} = await supabaseClient.from('marcacoes_ponto').select('dados')
+            .eq('funcionario_id',id).eq('mes',mes).eq('ano',ano).maybeSingle();
+        if(mp?.dados){
+            let j = {};
+            try{ j = typeof mp.dados==='string'?JSON.parse(mp.dados):mp.dados; }catch(e){}
+            Object.keys(j||{}).forEach(k=>{ if(j[k]?.falta_atestado) set.add(parseInt(k)); });
+        }
+    }catch(e){ console.warn('Erro mapa abonados:',e); }
+    return set;
+}
+
+/* ============================================================
+   RECARREGAR
+   ============================================================ */
+function recarregarTudo(){
+    _execKpiSemanasNaoAvaliadas = 0;
+    _execKpiDetalhe = {};
+    _execSemanasNaoAvaliadasPorFunc = {};
+    carregarFuncionarios().then(()=>{
+        carregarSemanasAtencao().then(()=>{
+            gerarRelatorioExecutivo();
+        });
+    });
+}
+
+/* ============================================================
+   INICIALIZAÇÃO
+   ============================================================ */
+window.onload = async function(){
+    console.log('🚀 Iniciando Resumo Executivo v6.5...');
+    try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(raw){
+            const s = JSON.parse(raw);
+            if(s && s.nome){ usuarioAtual = s; }
+        }
+    }catch(e){}
+    if(!usuarioAtual){
+        usuarioAtual = {id:'anon',nome:'Visitante',role:'viewer',pode_validar_ponto:false,pode_classificar_atencao:false};
+    }
+    const hn = document.getElementById('headerUserName');
+    const hr = document.getElementById('headerUserRole');
+    if(hn) hn.textContent = usuarioAtual.nome||'Usuário';
+    if(hr) hr.textContent = ROLE_LABELS[usuarioAtual.role]||'Visualizador';
+
+    // Preenche o select do mês executivo
+    const h = new Date();
+    const selMes = document.getElementById('execMes');
+    if(selMes) selMes.innerHTML = MESES.map((m,i)=>`<option value="${i}" ${i===h.getMonth()?'selected':''}>${m}</option>`).join('');
+    document.getElementById('execAno').value = h.getFullYear();
+
+    // Event listeners do executivo
+    ['execMes','execAno','execUnidade','execEmpresa','execBusca'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el){
+            el.addEventListener('change',gerarRelatorioExecutivo);
+            if(id==='execBusca') el.addEventListener('input',gerarRelatorioExecutivo);
+        }
+    });
+
+    // Produtividade
+    const pp = document.getElementById('prodPercentual');
+    const pb = document.getElementById('prodValorBase');
+    if(pp) pp.addEventListener('input',atualizarProdCalc);
+    if(pb) pb.addEventListener('input',atualizarProdCalc);
+
+    // Carrega dados e gera relatório
+    await carregarFuncionarios();
+    await carregarSemanasAtencao();
+    await gerarRelatorioExecutivo();
+
+    // ESC fecha modais
+    document.addEventListener('keydown',e=>{
+        if(e.key==='Escape'){
+            fecharCalcPopup();
+            fecharCalcProdutividade();
+            fecharExtratoCategoria();
+            fecharDocumentoAnexoView();
+            fecharConferenciaValidacao();
+        }
+    });
+
+    console.log('✅ Resumo Executivo v6.5 pronto!');
+};
+</script>
+</body>
+</html>
