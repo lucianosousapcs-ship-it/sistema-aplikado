@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e07000 100%);font-family:'Poppins',sans-serif;color:#1a0a00;min-height:100vh;padding-bottom:40px}
@@ -398,12 +399,12 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
         <h3><i class="fas fa-file-import"></i> Importar Contra Cheque (PDF)</h3>
         <div class="import-status info" id="importStatus">
             <i class="fas fa-info-circle"></i>
-            <span>Selecione um arquivo PDF. O sistema tentará extrair automaticamente os nomes e valores. Você poderá revisar e editar antes de salvar.</span>
+            <span>Selecione um arquivo PDF. Se for escaneado, o OCR será ativado automaticamente (pode levar 1-3 minutos). Você poderá revisar e editar antes de salvar.</span>
         </div>
         <div class="import-dropzone" id="importDropzone">
             <i class="fas fa-cloud-upload-alt"></i>
             <p>Arraste o PDF aqui ou clique para selecionar</p>
-            <small>Formatos aceitos: .pdf (texto selecionável)</small>
+            <small>Formatos aceitos: .pdf (texto ou escaneado com OCR)</small>
             <input type="file" id="importFileInput" accept="application/pdf" style="display:none;">
         </div>
         <div id="importPreviewContainer" style="display:none;">
@@ -566,7 +567,7 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 
 <script>
 /* ============================================================
-   RESUMO EXECUTIVO — v7.1 (CORREÇÃO DIRECIONAMENTO ATENÇÃO)
+   RESUMO EXECUTIVO — v8.0 (OCR + CORREÇÕES DE DIRECIONAMENTO)
    ============================================================ */
 
 /* ---------- PDF.js ---------- */
@@ -604,7 +605,7 @@ let _prodCalcIdx = null;
 let _confSemanas = [], _confSemanaAtiva = 0, _confStatusMap = {}, _confSemanasRender = [];
 let _contrachequesImportados = {};
 let _importPreviewData = null;
-let _confDestaqueChave = null; // semana que deve ser destacada ao abrir
+let _confDestaqueChave = null;
 
 const REC_CATEGORIAS = [
     {key:'vt_avulso',label:'VT Avulso',cor:'col-vt',icone:'fa-bus'},
@@ -692,6 +693,17 @@ function podeClassificarAtencao(){
     if(!usuarioAtual) return false;
     if(usuarioAtual.role==='admin') return true;
     return usuarioAtual.pode_classificar_atencao===true;
+}
+function getMinutosAbonados(x){
+    if(!x) return 0;
+    if(x.abono_horas){
+        const p = String(x.abono_horas).split(':');
+        if(p.length >= 2) return (parseInt(p[0])||0)*60 + (parseInt(p[1])||0);
+    }
+    if(x.abono_inicio && x.abono_fim){
+        return converterParaMinutos(calcularDiferenca(x.abono_inicio, x.abono_fim));
+    }
+    return 0;
 }
 
 /* ---------- TOASTS ---------- */
@@ -1118,7 +1130,7 @@ async function gerarRelatorioExecutivo(){
             const fgtsAuto = calcularFGTS(baseAuto);
 
             const recInfo = mapaRec[String(f.id)] || {vt_avulso:0, bonificacoes:0, antecipacoes:0};
-            const ccFunc = ccImport[f.nome] || null;
+            const ccFunc = ccImport[f.nome] || ccImport[f.nome?.toUpperCase()] || null;
 
             _execDadosCache.push({
                 id:f.id,nome:f.nome,cpf:f.cpf,unidade:f.unidade,departamento:f.departamento,cargo:f.cargo,
@@ -1780,7 +1792,7 @@ function imprimirResumoFinanceiro(){
 }
 
 /* ============================================================
-   IMPORTAÇÃO DE CONTRA CHEQUE
+   IMPORTAÇÃO DE CONTRA CHEQUE — COM OCR
    ============================================================ */
 function abrirModalImportacao(){
     const m = document.getElementById('modalImportContracheque');
@@ -1798,7 +1810,7 @@ function resetarImportacao(){
     _importPreviewData = null;
     const st = document.getElementById('importStatus');
     st.className = 'import-status info';
-    st.innerHTML = '<i class="fas fa-info-circle"></i><span>Selecione um arquivo PDF. O sistema tentará extrair automaticamente os nomes e valores. Você poderá revisar e editar antes de salvar.</span>';
+    st.innerHTML = '<i class="fas fa-info-circle"></i><span>Selecione um arquivo PDF. Se for escaneado, o OCR será ativado automaticamente (pode levar 1-3 minutos).</span>';
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -1824,10 +1836,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
 async function processarPdfContracheque(file){
     const st = document.getElementById('importStatus');
     st.className = 'import-status info';
-    st.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Lendo PDF e extraindo dados...</span>';
+    st.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Lendo PDF...</span>';
     try{
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+
+        // 1) Tenta extrair texto normal
         let fullText = '';
         for(let i=1; i<=pdf.numPages; i++){
             const page = await pdf.getPage(i);
@@ -1837,9 +1851,7 @@ async function processarPdfContracheque(file){
             let pageText = '';
             for(const it of items){
                 const y = it.transform[5];
-                if(lastY !== null && Math.abs(y - lastY) > 3){
-                    pageText += '\n';
-                }
+                if(lastY !== null && Math.abs(y - lastY) > 3) pageText += '\n';
                 pageText += it.str + ' ';
                 lastY = y;
             }
@@ -1847,20 +1859,18 @@ async function processarPdfContracheque(file){
         }
 
         const textoLimpo = fullText.replace(/\s+/g, ' ').trim();
-        if(textoLimpo.length < 50){
-            st.className = 'import-status warn';
-            st.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Este PDF parece ser uma imagem escaneada (sem texto selecionável). Não é possível extrair automaticamente. Use a tabela abaixo para adicionar manualmente os dados.</span>';
-            _importPreviewData = [{nome:'',salarioBase:0,vencimentos:0,descontos:0,liquido:0,baseINSS:0,inss:0,fgts:0,irrf:0}];
-            renderizarPreviewImportacao(_importPreviewData);
-            document.getElementById('importPreviewContainer').style.display = 'block';
-            return;
+
+        // 2) Se não tem texto suficiente → PDF é imagem → usa OCR
+        if(textoLimpo.length < 100){
+            fullText = await executarOcrNoPdf(pdf);
         }
 
+        // 3) Extrai registros
         const registros = extrairDadosContracheque(fullText);
 
         if(registros.length === 0){
             st.className = 'import-status warn';
-            st.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Nenhum registro reconhecido automaticamente. Verifique se o PDF possui texto selecionável. Você pode adicionar manualmente abaixo.</span>';
+            st.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Nenhum registro reconhecido. Verifique o PDF ou adicione manualmente abaixo.</span>';
             _importPreviewData = [{nome:'',salarioBase:0,vencimentos:0,descontos:0,liquido:0,baseINSS:0,inss:0,fgts:0,irrf:0}];
             renderizarPreviewImportacao(_importPreviewData);
             document.getElementById('importPreviewContainer').style.display = 'block';
@@ -1879,56 +1889,163 @@ async function processarPdfContracheque(file){
     }
 }
 
+async function executarOcrNoPdf(pdf){
+    let textoTotal = '';
+    const totalPaginas = pdf.numPages;
+
+    for(let i=1; i<=totalPaginas; i++){
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({scale: 2.5});
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({canvasContext: ctx, viewport}).promise;
+
+        const st = document.getElementById('importStatus');
+        if(st) st.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>OCR página ${i}/${totalPaginas}...</span>`;
+
+        const resultado = await Tesseract.recognize(
+            canvas,
+            'por',
+            {
+                logger: m => {
+                    if(m.status === 'recognizing text' && st){
+                        const pct = Math.round((m.progress||0)*100);
+                        st.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>OCR página ${i}/${totalPaginas} — ${pct}%</span>`;
+                    }
+                }
+            }
+        );
+        textoTotal += resultado.data.text + '\n\n';
+    }
+    return textoTotal;
+}
+
 function extrairDadosContracheque(texto){
     const registros = [];
-    const linhas = texto.split(/\n/).map(l=>l.trim()).filter(l=>l.length>0);
 
-    const nomeRegex = /^[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s.]{4,80}$/;
-    const valorRegex = /(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}|\d+\.\d{2})/g;
+    // Normaliza
+    let t = texto
+        .replace(/\r/g,'')
+        .replace(/[ \t]{2,}/g,' ')
+        .replace(/\n{2,}/g,'\n')
+        .trim();
 
-    const blacklist = ['CNPJ','FOLHA','MENSAL','ADMISSÃO','CBO','DEPARTAMENTO','RECIBO','PAGAMENTO',
-                       'GERAL','CENTRO','CUSTO','TOTAL','VENCIMENTOS','DESCONTOS','LIQUIDO','LÍQUIDO',
-                       'SALARIO','SALÁRIO','BASE','INSS','FGTS','IRRF','REFERENCIA','REFERÊNCIA',
-                       'CODIGO','CÓDIGO','DESCRICAO','DESCRIÇÃO','VALOR','R$','ASSINATURA','DATA',
-                       'HORISTA','MENSALISTA','SÓCIO','SOCIO','ADMINISTRADOR'];
+    const linhas = t.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
 
+    // ---------- BLACKLIST ----------
+    const BLACKLIST_EXATA = new Set([
+        'J D QUINTINO DE JESUS RESTAURANTE',
+        'J D QUINTINO',
+        'I.N.S.S',
+        'I.N.S.S.',
+        'INSS',
+        'TAXA DE MANUTENCAO',
+        'TAXA DE MANUTENÇÃO',
+        'DESCONTO DIAS AFASTADOS',
+        'MEDIA AFAST DOENCA',
+        'DIAS AFAST.INSS',
+        'DIAS NORMAIS',
+        'PRODUTIVIDADE',
+        'DESC VALE ALIMENTACAO',
+        'VALE TRANSPORTE',
+        'HORAS NORMAIS VARIAVEIS',
+        'DSR HORISTA VARIAVEL',
+        'PRO-LABORE DIAS',
+        'INSS EMPREGADOR',
+        'PRO-LABORE',
+        'SALARIO BASE',
+        'BASE CALC. INSS',
+        'BASE CALC. FGTS',
+        'BASE CALC. IRRF',
+        'F.G.T.S DO MÊS',
+        'FGTS DO MES',
+        'VALOR LIQUIDO',
+        'VALOR LÍQUIDO',
+        'TOTAL DE VENCIMENTOS',
+        'TOTAL DE DESCONTOS',
+        'SAL. CONTR. INSS',
+        'SAL CONTR INSS',
+        'FAIXA IRRF',
+        'MATRICULA INSS',
+        'MATRÍCULA INSS',
+        'CÓDIGO',
+        'CODIGO',
+        'DESCRIÇÃO',
+        'DESCRICAO',
+        'REFERÊNCIA',
+        'REFERENCIA',
+        'VENCIMENTOS',
+        'DESCONTOS',
+        'NOME DO FUNCIONÁRIO',
+        'NOME DO FUNCIONARIO',
+        'CBO',
+        'DEPARTAMENTO',
+        'ADMISSÃO',
+        'ADMISSAO',
+        'MENSALISTA',
+        'HORISTA',
+        'FOLHA MENSAL',
+        'CC: GERAL',
+        'CC: CENTRO DE CUSTO',
+        'CNPJ',
+        'ASSINATURA DO FUNCIONÁRIO',
+        'ASSINATURA DO FUNCIONARIO',
+        'DOCUMENTO OU RECIBO',
+        'DATA',
+        'GERAL',
+        'CENTRO DE CUSTO'
+    ]);
+
+    const BLACKLIST_PARCIAL = [
+        'CNPJ','QUINTINO','RESTAURANTE','FOLHA','MENSAL','GERAL',
+        'CENTRO','CUSTO','TOTAL','VENCIMENTOS','DESCONTOS','LIQUIDO','LÍQUIDO',
+        'SALARIO','SALÁRIO','SAL.','BASE','INSS','FGTS','IRRF','REFERENCIA','REFERÊNCIA',
+        'CODIGO','CÓDIGO','DESCRICAO','DESCRIÇÃO','VALOR','R$','ASSINATURA','DATA',
+        'HORISTA','MENSALISTA','SÓCIO','SOCIO','ADMINISTRADOR','FUNCIONARIO','FUNCIONÁRIO',
+        'MATRICULA','MATRÍCULA','PRO-LABORE','PROLABORE','EMPREGADOR','FAIXA',
+        'DIAS','NORMAIS','PRODUTIVIDADE','VALE','TRANSPORTE','ALIMENTACAO','ALIMENTAÇÃO',
+        'MANUTENCAO','MANUTENÇÃO','DESCONTO','MEDIA','MÉDIA','AFAST','DOENCA','DOENÇA',
+        'HORAS','VARIAVEIS','VARIÁVEIS','DSR','DO MÊS','DO MES'
+    ];
+
+    function ehValidoComoNome(nome){
+        if(!nome) return false;
+        const limpo = nome.replace(/\s+/g,' ').trim();
+        const semAcento = limpo.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+
+        const palavras = semAcento.split(' ').filter(p=>p.length>1);
+        if(palavras.length < 2) return false;
+
+        if(BLACKLIST_EXATA.has(semAcento)) return false;
+        if(BLACKLIST_EXATA.has(limpo.toUpperCase())) return false;
+
+        for(const p of palavras){
+            for(const b of BLACKLIST_PARCIAL){
+                if(p.includes(b)) return false;
+            }
+        }
+
+        if(/^\d+/.test(semAcento)) return false;
+        if(palavras.length > 6) return false;
+
+        return true;
+    }
+
+    // ---------- LOCALIZA BLOCOS ----------
     const blocos = [];
     for(let i=0; i<linhas.length; i++){
         const l = linhas[i];
-        const semAcento = l.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
-        if(nomeRegex.test(l) && l.split(/\s+/).length >= 2){
-            const palavras = semAcento.split(/\s+/);
-            const temBlacklist = palavras.some(p => blacklist.some(b => p.includes(b)));
-            if(!temBlacklist){
-                blocos.push({nome: l.trim(), idx: i, linhas: []});
-            }
-        }
+        if(/\d/.test(l) || l.includes('R$')) continue;
+        if(l.length < 6 || l.length > 60) continue;
+        if(!/^[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ]/.test(l)) continue;
+        if(!ehValidoComoNome(l)) continue;
+        blocos.push({nome: l.replace(/\s+/g,' ').trim(), idx: i});
     }
 
-    if(blocos.length === 0){
-        for(let i=0; i<linhas.length; i++){
-            const l = linhas[i];
-            const m = l.match(/^([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][A-Za-zÀ-ÿ\s.]{5,60})\s+([\d.,]+)(?:\s+([\d.,]+))?(?:\s+([\d.,]+))?/);
-            if(m){
-                const nomeCand = m[1].trim();
-                const semAcento = nomeCand.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
-                const palavras = semAcento.split(/\s+/);
-                const temBlacklist = palavras.some(p => blacklist.some(b => p.includes(b)));
-                if(!temBlacklist && palavras.length >= 2){
-                    const valores = [m[2], m[3], m[4]].filter(Boolean).map(v=>parseFloat(v.replace(/\./g,'').replace(',','.'))||0);
-                    registros.push({
-                        nome: nomeCand,
-                        salarioBase: valores[0]||0,
-                        vencimentos: valores[0]||0,
-                        descontos: valores[1]||0,
-                        liquido: valores[2]||valores[valores.length-1]||0,
-                        baseINSS: 0, inss: 0, fgts: 0, irrf: 0
-                    });
-                }
-            }
-        }
-        return registros;
-    }
+    // ---------- EXTRAI VALORES ----------
+    const valorRegex = /(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})/g;
 
     for(let b=0; b<blocos.length; b++){
         const inicio = blocos[b].idx + 1;
@@ -1941,8 +2058,10 @@ function extrairDadosContracheque(texto){
         const re = new RegExp(valorRegex);
         while((m = re.exec(blocoTexto)) !== null){
             const v = parseFloat(m[1].replace(/\./g,'').replace(',','.'));
-            if(!isNaN(v)) valores.push(v);
+            if(!isNaN(v) && v > 0) valores.push(v);
         }
+
+        if(valores.length === 0) continue;
 
         const dados = {
             nome: blocos[b].nome,
@@ -1957,63 +2076,60 @@ function extrairDadosContracheque(texto){
         };
 
         const rotulos = [
-            {key:'salarioBase', regex:/sal[aá]rio\s*base[:\s]*([\d.,]+)/i},
-            {key:'vencimentos', regex:/total\s*de\s*vencimentos[:\s]*([\d.,]+)/i},
-            {key:'descontos', regex:/total\s*de\s*descontos[:\s]*([\d.,]+)/i},
-            {key:'liquido', regex:/valor\s*l[ií]quido[:\s]*([\d.,]+)/i},
-            {key:'baseINSS', regex:/base\s*c[aá]lc\.?\s*inss[:\s]*([\d.,]+)/i},
-            {key:'inss', regex:/i\.?n\.?s\.?s\.?[:\s]*([\d.,]+)/i},
-            {key:'fgts', regex:/f\.?g\.?t\.?s\.?[:\s]*([\d.,]+)/i},
-            {key:'irrf', regex:/i\.?r\.?r\.?f\.?[:\s]*([\d.,]+)/i}
+            {key:'salarioBase', regex:/sal[aá]rio\s*base\D{0,20}?([\d.,]+)/i},
+            {key:'vencimentos', regex:/total\s*de\s*vencimentos\D{0,20}?([\d.,]+)/i},
+            {key:'descontos', regex:/total\s*de\s*descontos\D{0,20}?([\d.,]+)/i},
+            {key:'liquido', regex:/valor\s*l[ií]quido\D{0,20}?([\d.,]+)/i},
+            {key:'baseINSS', regex:/base\s*c[aá]lc\.?\s*inss\D{0,20}?([\d.,]+)/i},
+            {key:'inss', regex:/\bi\.?n\.?s\.?s\.?\b\D{0,20}?([\d.,]+)/i},
+            {key:'fgts', regex:/f\.?\s*g\.?\s*t\.?\s*s\.?\D{0,20}?([\d.,]+)/i},
+            {key:'irrf', regex:/i\.?\s*r\.?\s*r\.?\s*f\.?\D{0,20}?([\d.,]+)/i}
         ];
 
+        let achouRotulo = 0;
         for(const r of rotulos){
             const match = blocoTexto.match(r.regex);
             if(match){
                 const v = parseFloat(match[1].replace(/\./g,'').replace(',','.'))||0;
-                if(v > 0) dados[r.key] = v;
+                if(v > 0){ dados[r.key] = v; achouRotulo++; }
             }
         }
 
-        if(dados.vencimentos === 0 && valores.length > 0) dados.vencimentos = valores[0];
-        if(dados.descontos === 0 && valores.length > 1) dados.descontos = valores[1];
-        if(dados.liquido === 0 && valores.length > 2) dados.liquido = valores[valores.length-1];
-        if(dados.salarioBase === 0 && valores.length > 3) dados.salarioBase = valores[2];
-        if(dados.baseINSS === 0 && valores.length > 4) dados.baseINSS = valores[3];
-        if(dados.inss === 0 && valores.length > 5) dados.inss = valores[4];
-        if(dados.fgts === 0 && valores.length > 6) dados.fgts = valores[5];
-        if(dados.irrf === 0 && valores.length > 7) dados.irrf = valores[6];
+        if(achouRotulo < 3){
+            if(valores.length >= 2){
+                if(dados.vencimentos === 0) dados.vencimentos = valores[0];
+                if(dados.descontos === 0) dados.descontos = valores[1];
+                if(dados.liquido === 0){
+                    const liqCalc = valores[0] - valores[1];
+                    if(valores.length >= 3 && Math.abs(valores[2] - liqCalc) < 1){
+                        dados.liquido = valores[2];
+                    } else {
+                        dados.liquido = Math.max(0, liqCalc);
+                    }
+                }
+                if(dados.salarioBase === 0) dados.salarioBase = valores[0];
+            } else if(valores.length === 1){
+                if(dados.vencimentos === 0) dados.vencimentos = valores[0];
+                if(dados.salarioBase === 0) dados.salarioBase = valores[0];
+            }
+        }
 
         if(dados.vencimentos > 0 || dados.liquido > 0 || dados.descontos > 0){
             registros.push(dados);
         }
     }
 
-    if(registros.length === 0){
-        for(let i=0; i<linhas.length; i++){
-            const l = linhas[i];
-            const m = l.match(/^([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][A-Za-zÀ-ÿ\s.]{5,60})\s+((?:\d{1,3}(?:\.\d{3})*,\d{2}\s*){2,})/);
-            if(m){
-                const nomeCand = m[1].trim();
-                const semAcento = nomeCand.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
-                const palavras = semAcento.split(/\s+/);
-                const temBlacklist = palavras.some(p => blacklist.some(b => p.includes(b)));
-                if(!temBlacklist && palavras.length >= 2){
-                    const vals = m[2].trim().split(/\s+/).map(v=>parseFloat(v.replace(/\./g,'').replace(',','.'))||0);
-                    registros.push({
-                        nome: nomeCand,
-                        salarioBase: vals[0]||0,
-                        vencimentos: vals[0]||0,
-                        descontos: vals[1]||0,
-                        liquido: vals[vals.length-1]||0,
-                        baseINSS: 0, inss: 0, fgts: 0, irrf: 0
-                    });
-                }
-            }
-        }
+    // Remove duplicatas
+    const seen = new Set();
+    const unicos = [];
+    for(const r of registros){
+        const key = r.nome.toUpperCase();
+        if(seen.has(key)) continue;
+        seen.add(key);
+        unicos.push(r);
     }
 
-    return registros;
+    return unicos;
 }
 
 function renderizarPreviewImportacao(registros){
@@ -2218,16 +2334,7 @@ async function sincronizarContracheques(){
 /* ============================================================
    CONFERÊNCIA E VALIDAÇÃO SEMANAL
    ============================================================ */
-
-/**
- * Abre a conferência de um funcionário, direcionando para a semana correta.
- * @param {string} id - ID do funcionário
- * @param {number} mes - Mês (0-11)
- * @param {number} ano - Ano
- * @param {string} semanaInicio - Data ISO da segunda-feira da semana alvo (YYYY-MM-DD)
- */
 async function abrirConferenciaFuncionarioComSemana(id,mes,ano,semanaInicio){
-    // Valida parâmetros
     if(!id){ mostrarToast('⚠️ Funcionário não informado.','warning'); return; }
     if(mes === undefined || mes === null || isNaN(mes)){ 
         mostrarToast('⚠️ Mês inválido.','warning'); 
@@ -2241,8 +2348,6 @@ async function abrirConferenciaFuncionarioComSemana(id,mes,ano,semanaInicio){
     const f = funcionarios.find(x=>String(x.id)===String(id));
     if(!f){ 
         mostrarToast('⚠️ Funcionário não encontrado na base.','warning'); 
-        // Mesmo sem o funcionário na lista, ainda podemos tentar abrir com os dados básicos
-        // mas preferimos avisar
         return; 
     }
     funcionarioAtual = f;
@@ -2267,25 +2372,20 @@ async function abrirConferenciaFuncionarioComSemana(id,mes,ano,semanaInicio){
 
     await carregarConferenciaSemanal();
 
-    // Após carregar, direciona para a semana alvo (se informada)
     if(semanaInicio){
-        // Aguarda o DOM ser renderizado
         setTimeout(()=>{
             const idx = _confSemanas.findIndex(x=>toISODateLocal(x.inicio) === semanaInicio);
             if(idx >= 0){
                 mudarSemanaConferencia(idx, true);
             } else {
-                // Fallback: tenta encontrar a semana pelo mês/ano e proximidade
-                const semDoMes = _confSemanas;
                 const dAlvo = parseDataLocal(semanaInicio);
                 if(dAlvo){
                     let melhorIdx = -1, melhorDist = Infinity;
-                    semDoMes.forEach((s,i)=>{
+                    _confSemanas.forEach((s,i)=>{
                         const dist = Math.abs(s.inicio.getTime() - dAlvo.getTime());
                         if(dist < melhorDist){ melhorDist = dist; melhorIdx = i; }
                     });
                     if(melhorIdx >= 0) mudarSemanaConferencia(melhorIdx, true);
-                    else mostrarToast('ℹ️ Semana não localizada no mês. Exibindo primeira semana.','info');
                 }
             }
         }, 350);
@@ -2327,9 +2427,6 @@ async function carregarConferenciaSemanal(){
     aplicarFiltrosConferencia();
 }
 
-/**
- * Muda a semana ativa e, opcionalmente, destaca visualmente.
- */
 function mudarSemanaConferencia(i, destacar=false){
     _confSemanaAtiva = i;
     document.querySelectorAll('[data-conf-sem]').forEach(b=>b.classList.remove('active'));
@@ -2554,7 +2651,7 @@ function recarregarTudo(){
    INICIALIZAÇÃO
    ============================================================ */
 window.onload = async function(){
-    console.log('🚀 Iniciando Resumo Executivo v7.1...');
+    console.log('🚀 Iniciando Resumo Executivo v8.0...');
     try{
         const raw = localStorage.getItem(STORAGE_KEY);
         if(raw){
@@ -2612,21 +2709,8 @@ window.onload = async function(){
         }
     });
 
-    console.log('✅ Resumo Executivo v7.1 pronto!');
+    console.log('✅ Resumo Executivo v8.0 pronto!');
 };
-
-/* ---------- Função auxiliar para minutos abonados ---------- */
-function getMinutosAbonados(x){
-    if(!x) return 0;
-    if(x.abono_horas){
-        const p = String(x.abono_horas).split(':');
-        if(p.length >= 2) return (parseInt(p[0])||0)*60 + (parseInt(p[1])||0);
-    }
-    if(x.abono_inicio && x.abono_fim){
-        return converterParaMinutos(calcularDiferenca(x.abono_inicio, x.abono_fim));
-    }
-    return 0;
-}
 </script>
 </body>
 </html>
