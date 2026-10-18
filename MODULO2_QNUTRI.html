@@ -3372,13 +3372,42 @@ function agruparPorPlanoContas(lista){
   return mapa;
 }
 const MAPEAMENTO_EBITDA = {
-  I6: ['IMPOSTOS'], I7: ['DIVISÃO DE LUCRO', 'DIVISAO DE LUCRO', 'DIVISÃO LUCRO'],
-  I10: ['EMPRÉSTIMO', 'EMPRESTIMO'], I12: ['IMPOSTO PASSIVO'], I21: '__RESULTADO_GERENCIAL__'
+  I6: ['IMPOSTOS'],
+  I7: ['DIVISÃO DE LUCRO', 'DIVISAO DE LUCRO', 'DIVISÃO LUCRO'],
+  I10: ['EMPRÉSTIMO', 'EMPRESTIMO'],
+  I12: ['IMPOSTO PASSIVO', 'IMPOSTOS PASSIVO', 'IMPOSTO PASSIVOS', 'IMPOSTOS PASSIVOS'],
+  I21: '__RESULTADO_GERENCIAL__'
 };
 function buscarValorConta(agrupGeral, aliases) {
   if (!aliases || aliases.length === 0) return 0;
-  for (const alias of aliases) { const chave = normalizarNome(alias); if (agrupGeral[chave]) return agrupGeral[chave].realizado || 0; const chaveAlias = aplicarAliasConta(chave); if (agrupGeral[chaveAlias]) return agrupGeral[chaveAlias].realizado || 0; }
-  for (const alias of aliases) { const chave = normalizarNome(alias); for (const k of Object.keys(agrupGeral)) { if (k.includes(chave) || chave.includes(k)) { return agrupGeral[k].realizado || 0; } } }
+  // 1ª passada: match exato ou por alias
+  for (const alias of aliases) {
+    const chave = normalizarNome(alias);
+    if (agrupGeral[chave]) return agrupGeral[chave].realizado || 0;
+    const chaveAlias = aplicarAliasConta(chave);
+    if (agrupGeral[chaveAlias]) return agrupGeral[chaveAlias].realizado || 0;
+  }
+  // 2ª passada: match parcial (contains nos dois sentidos)
+  for (const alias of aliases) {
+    const chave = normalizarNome(alias);
+    for (const k of Object.keys(agrupGeral)) {
+      if (k.includes(chave) || chave.includes(k)) {
+        return agrupGeral[k].realizado || 0;
+      }
+    }
+  }
+  // 3ª passada: match por palavras (todas as palavras do alias precisam estar na chave)
+  for (const alias of aliases) {
+    const palavrasAlias = normalizarNome(alias).split(' ').filter(Boolean);
+    if (palavrasAlias.length === 0) continue;
+    for (const k of Object.keys(agrupGeral)) {
+      const palavrasK = k.split(' ').filter(Boolean);
+      const todasPresentes = palavrasAlias.every(p => palavrasK.includes(p));
+      if (todasPresentes) {
+        return agrupGeral[k].realizado || 0;
+      }
+    }
+  }
   return 0;
 }
 function calcularEBITDAAjustado(agrupGeral, resultadoGerencial) {
@@ -4206,7 +4235,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     'DIVISÃO DE LUCRO / 2': { aliases: ['DIVISÃO DE LUCRO','DIVISAO DE LUCRO','DIVISÃO LUCRO'], desc: 'Conta de DIVISÃO DE LUCRO ÷ 2' },
     'IMPOSTOS': { aliases: ['IMPOSTOS'], desc: 'Conta de IMPOSTOS' },
     'EMPRÉSTIMO': { aliases: ['EMPRÉSTIMO','EMPRESTIMO'], desc: 'Conta de EMPRÉSTIMO' },
-    'IMPOSTO PASSIVO': { aliases: ['IMPOSTO PASSIVO'], desc: 'Conta de IMPOSTO PASSIVO' },
+    'IMPOSTO PASSIVO': { aliases: ['IMPOSTO PASSIVO', 'IMPOSTOS PASSIVO'], desc: 'Conta de IMPOSTO PASSIVO' },
     'EBITDA AJUSTADO': { aliases: [], desc: 'Result. Gerencial + Div. Lucro/2 + Impostos + Empréstimo + Imposto Passivo' }
   };
   function normalizar(s){ return String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' '); }
@@ -4227,7 +4256,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       <div style="margin-top:6px;opacity:.85;">
         • <b>Result. Gerencial</b> = Total Recebimentos − Total Despesas<br>
         • <b>Divisão de Lucro</b> entra dividida por 2<br>
-        • Contas consideradas: as que contêm <code>IMPOSTOS</code>, <code>DIVISÃO DE LUCRO</code>, <code>EMPRÉSTIMO</code>, <code>IMPOSTO PASSIVO</code>
+        • Contas consideradas: as que contêm <code>IMPOSTOS</code>, <code>DIVISÃO DE LUCRO</code>, <code>EMPRÉSTIMO</code>, <code>IMPOSTO PASSIVO</code> (ou <code>IMPOSTOS PASSIVO</code>)
       </div>`;
     blocoIndic.appendChild(div);
   }
