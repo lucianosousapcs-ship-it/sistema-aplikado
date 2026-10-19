@@ -629,6 +629,59 @@ body.modo-compacto table thead th{padding:8px 10px;font-size:9px;}
     transform-origin: top left;
   }
 }
+
+/* ===== AJUSTES PARA O PDF DO CONSOLIDADO ===== */
+.pdf-consolidado-wrap {
+  background: #fff !important;
+  color: #000 !important;
+  padding: 20px;
+  font-family: 'Inter', sans-serif;
+}
+.pdf-consolidado-wrap .dre-bloco {
+  background: #fff !important;
+  border: 1px solid #333 !important;
+  margin-bottom: 14px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.pdf-consolidado-wrap .dre-bloco-header {
+  background: #e8e8e8 !important;
+  color: #000 !important;
+  border-bottom: 2px solid #000 !important;
+  font-size: 13px;
+  padding: 12px 16px !important;
+}
+.pdf-consolidado-wrap .dre-bloco table thead th {
+  background: #ddd !important;
+  color: #000 !important;
+  font-size: 11px;
+  border: 1px solid #333 !important;
+  padding: 10px 12px !important;
+}
+.pdf-consolidado-wrap .dre-bloco table tbody td {
+  background: #fff !important;
+  color: #000 !important;
+  font-size: 12px;
+  border: 1px solid #333 !important;
+  padding: 12px 12px !important;
+}
+.pdf-consolidado-wrap .dre-bloco table tbody tr.destaque td,
+.pdf-consolidado-wrap .dre-bloco table tbody tr.destaque-verde td,
+.pdf-consolidado-wrap .dre-bloco table tbody tr.total td {
+  background: #f0f0f0 !important;
+  font-weight: 700 !important;
+}
+.pdf-consolidado-wrap .dre-bloco table tbody td.num,
+.pdf-consolidado-wrap .dre-bloco table tbody td.pct {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pdf-consolidado-wrap .dre-consolidado-wrapper {
+  display: block !important;
+}
+.pdf-consolidado-wrap .dre-col {
+  margin-bottom: 20px;
+}
 </style>
 </head>
 <body>
@@ -1319,6 +1372,7 @@ let pdfDadosAtuais = [];
 let pdfTituloAtual = '';
 let pdfLabelColAtual = '';
 let pdfContexto = { tipo: 'lancamentos', colunas: [] };
+let pdfHTMLDaTela = false; // NOVO: indica se o HTML veio da tela (consolidado)
 
 const FORNECEDORES_LIQUIGAS=['LIQUIGÁS','LIQUIGAS','COPA','COPA GAZ','MAKEEN (KOSAN)','MAKEEN','COPAGAZ'];
 const FORNECEDORES_EXCECAO_SULFLU=[
@@ -2570,7 +2624,6 @@ const PDF_STYLE_TD_RIGHT = PDF_STYLE_TD + 'text-align:right;';
 const PDF_STYLE_TD_CENTER = PDF_STYLE_TD + 'text-align:center;';
 const PDF_STYLE_TF = 'background:#d8d8d8;color:#000 !important;font-weight:700;padding:12px 8px;border:1px solid #333;word-wrap:break-word;overflow:hidden;font-size:12px;';
 
-// Estilos específicos para o PDF do Consolidado (fontes maiores e mais espaçamento)
 const PDF_CONS_TH = 'background:#e8e8e8;color:#000 !important;font-size:12px;font-weight:700;padding:14px 12px;text-transform:uppercase;border:1px solid #333;word-wrap:break-word;overflow:hidden;';
 const PDF_CONS_TD = 'padding:16px 12px;border:1px solid #333;font-size:13px;color:#000 !important;background:#fff;word-wrap:break-word;overflow:hidden;';
 const PDF_CONS_TF = 'background:#d8d8d8;color:#000 !important;font-weight:700;padding:16px 12px;border:1px solid #333;word-wrap:break-word;overflow:hidden;font-size:13px;';
@@ -2780,130 +2833,44 @@ function gerarTabelaPDFDREComColunas(linhas, selecionadas) {
   return html;
 }
 
-function gerarTabelaPDFConsolidado() {
-  const termo = (document.getElementById('buscaExecResultados')?.value || '').toLowerCase();
-  const baseFiltro = lancamentos.filter(l => {
-    if (execMesesConsolidado.length > 0) { const mm = getMes(l.data); if (!mm || !execMesesConsolidado.includes(mm)) return false; }
-    if (execSituacoes.length > 0 && !execSituacoes.includes(normalizarSituacao(l.situacao))) return false;
-    if (termo) { const txt = `${l.fornecedor||''} ${l.nf||''} ${getPlanoLabel(l.plano_contas)} ${l.cadastro_inicial||''}`.toLowerCase(); if (!txt.includes(termo)) return false; }
-    return true;
-  });
-
-  const despesasSulFlu = baseFiltro.filter(l => l.tipo==='DESPESA' && getGrupoRegionalLanc(l)==='SUL FLUMINENSE');
-  const agrupSulFlu = agruparPorPlanoContas(despesasSulFlu);
-  const chavesSulFlu = Object.keys(agrupSulFlu).filter(c => agrupSulFlu[c].realizado !== 0 || agrupSulFlu[c].projetado !== 0).sort((a,b)=>{ const ca = agrupSulFlu[a].codigo || ''; const cb = agrupSulFlu[b].codigo || ''; return ca.localeCompare(cb, undefined, { numeric: true }); });
-  let totProjSulFlu = 0, totRealSulFlu = 0;
-
-  const despesasLiquigas = baseFiltro.filter(l => l.tipo==='DESPESA' && getGrupoRegionalLanc(l)==='LIQUIGÁS');
-  const agrupLiquigas = agruparPorPlanoContas(despesasLiquigas);
-  const chavesLiquigas = Object.keys(agrupLiquigas).filter(c => agrupLiquigas[c].realizado !== 0 || agrupLiquigas[c].projetado !== 0).sort((a,b)=>{ const ca = agrupLiquigas[a].codigo || ''; const cb = agrupLiquigas[b].codigo || ''; return ca.localeCompare(cb, undefined, { numeric: true }); });
-  let totProjLiquigas = 0, totRealLiquigas = 0;
-
-  const todasDespesas = baseFiltro.filter(l => l.tipo==='DESPESA');
-  const agrupGeral = agruparPorPlanoContas(todasDespesas);
-  const chavesDRE = Object.keys(agrupGeral).filter(c => agrupGeral[c].realizado !== 0).sort((a,b)=> agrupGeral[b].realizado - agrupGeral[a].realizado);
-  let totalDRE = 0;
-
-  const baseRecebimentos = lancamentos.filter(l => {
-    if (l.tipo !== 'RECEITA') return false;
-    if (execMesesConsolidado.length > 0) { const mm = getMes(l.data); if (!mm || !execMesesConsolidado.includes(mm)) return false; }
-    if (execRecebimentoSituacoes.length > 0 && !execRecebimentoSituacoes.includes(normalizarSituacao(l.situacao))) return false;
-    return true;
-  });
-  const receitasSulFlu = baseRecebimentos.filter(l => getGrupoRegionalLanc(l)==='SUL FLUMINENSE').reduce((s,l)=>s+(parseFloat(l.valor_realizado)||0),0);
-  const receitasLiquigas = baseRecebimentos.filter(l => getGrupoRegionalLanc(l)==='LIQUIGÁS').reduce((s,l)=>s+(parseFloat(l.valor_realizado)||0),0);
-  const totalRecebimentos = receitasSulFlu + receitasLiquigas;
-  const cmv = somaPorAliases(agrupGeral, ALIASES_CMV);
-  const cpv = totalDRE - cmv;
-  const resultadoGerencial = totalRecebimentos - totalDRE;
-  const eb = calcularEBITDAAjustado(agrupGeral, resultadoGerencial);
-  const pctReceb = (v) => totalRecebimentos > 0 ? (v / totalRecebimentos) * 100 : 0;
-
-  // Usando estilos específicos do Consolidado com fontes maiores e mais espaçamento
-  const th = PDF_CONS_TH;
-  const td = PDF_CONS_TD;
-  const tdr = PDF_CONS_TD + 'text-align:right;';
-  const tf = PDF_CONS_TF;
-
-  let html = pdfCabecalho('Resumo Executivo — Consolidado', 'QNUTRI — Módulo Financeiro', baseFiltro.length, 'Lançamentos no filtro');
-
-  html += `<table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid #333;margin-bottom:14px;table-layout:fixed;">
-    <thead><tr>
-      <th style="${th}width:50%;text-align:left;">SUL FLUMINENSE — Conta</th>
-      <th style="${th}width:25%;text-align:right;">Projetado</th>
-      <th style="${th}width:25%;text-align:right;">Realizado</th>
-    </tr></thead><tbody>`;
-  chavesSulFlu.forEach(chave => {
-    const d = agrupSulFlu[chave];
-    if (d.projetado === 0 && d.realizado === 0) return;
-    totProjSulFlu += d.projetado; totRealSulFlu += d.realizado;
-    html += `<tr><td style="${td}">${escapeHtml(d.label)}</td><td style="${tdr}">${formatarMoeda(d.projetado)}</td><td style="${tdr}">${formatarMoeda(d.realizado)}</td></tr>`;
-  });
-  html += `<tr><td style="${tf}">Total</td><td style="${tf}text-align:right;">${formatarMoeda(totProjSulFlu)}</td><td style="${tf}text-align:right;">${formatarMoeda(totRealSulFlu)}</td></tr>`;
-  html += `</tbody></table>`;
-
-  html += `<table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid #333;margin-bottom:14px;table-layout:fixed;">
-    <thead><tr>
-      <th style="${th}width:50%;text-align:left;">LIQUIGÁS — Conta</th>
-      <th style="${th}width:25%;text-align:right;">Projetado</th>
-      <th style="${th}width:25%;text-align:right;">Realizado</th>
-    </tr></thead><tbody>`;
-  chavesLiquigas.forEach(chave => {
-    const d = agrupLiquigas[chave];
-    if (d.projetado === 0 && d.realizado === 0) return;
-    totProjLiquigas += d.projetado; totRealLiquigas += d.realizado;
-    html += `<tr><td style="${td}">${escapeHtml(d.label)}</td><td style="${tdr}">${formatarMoeda(d.projetado)}</td><td style="${tdr}">${formatarMoeda(d.realizado)}</td></tr>`;
-  });
-  html += `<tr><td style="${tf}">Total Geral</td><td style="${tf}text-align:right;">${formatarMoeda(totProjLiquigas)}</td><td style="${tf}text-align:right;">${formatarMoeda(totRealLiquigas)}</td></tr>`;
-  html += `</tbody></table>`;
-
-  html += `<table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid #333;margin-bottom:14px;table-layout:fixed;">
-    <thead><tr>
-      <th style="${th}width:50%;text-align:left;">Consolidado — Conta</th>
-      <th style="${th}width:30%;text-align:right;">Valor</th>
-      <th style="${th}width:20%;text-align:right;">% CT</th>
-    </tr></thead><tbody>`;
-  chavesDRE.forEach(chave => {
-    const d = agrupGeral[chave];
-    if (d.realizado === 0) return;
-    totalDRE += d.realizado;
-    const pct = totalDRE > 0 ? (d.realizado / totalDRE) * 100 : 0;
-    html += `<tr><td style="${td}">${escapeHtml(d.label)}</td><td style="${tdr}">${formatarMoeda(d.realizado)}</td><td style="${tdr}">${pct.toFixed(2)}%</td></tr>`;
-  });
-  html += `<tr><td style="${tf}">Total</td><td style="${tf}text-align:right;">${formatarMoeda(totalDRE)}</td><td style="${tf}text-align:right;">100,00%</td></tr>`;
-  html += `</tbody></table>`;
-
-  html += `<table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid #333;margin-bottom:14px;table-layout:fixed;">
-    <thead><tr>
-      <th style="${th}width:50%;text-align:left;">Recebimentos do Mês</th>
-      <th style="${th}width:30%;text-align:right;">Valor</th>
-      <th style="${th}width:20%;text-align:right;">%</th>
-    </tr></thead><tbody>
-      <tr><td style="${td}">SUL FLUMINENSE - Recebimento Mês</td><td style="${tdr}">${formatarMoeda(receitasSulFlu)}</td><td style="${tdr}">${pctReceb(receitasSulFlu).toFixed(2)}%</td></tr>
-      <tr><td style="${td}">LIQUIGÁS - Recebimento Mês</td><td style="${tdr}">${formatarMoeda(receitasLiquigas)}</td><td style="${tdr}">${pctReceb(receitasLiquigas).toFixed(2)}%</td></tr>
-      <tr><td style="${tf}">Total - Recebimento Mês</td><td style="${tf}text-align:right;">${formatarMoeda(totalRecebimentos)}</td><td style="${tf}text-align:right;">100,00%</td></tr>
-    </tbody></table>`;
-
-  html += `<table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid #333;margin-bottom:14px;table-layout:fixed;">
-    <tbody>
-      <tr><td style="${tf}width:60%;">RESULTADO GERENCIAL (CAIXA)</td><td style="${tf}text-align:right;width:40%;">${formatarMoeda(resultadoGerencial)}</td></tr>
-    </tbody></table>`;
-
-  html += `<table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid #333;margin-bottom:18px;table-layout:fixed;">
-    <thead><tr>
-      <th style="${th}width:60%;text-align:left;">Indicadores</th>
-      <th style="${th}width:40%;text-align:right;">Valor</th>
-    </tr></thead><tbody>
-      <tr><td style="${td}">RESULTADO GERENCIAL</td><td style="${tdr}">${formatarMoeda(eb.i21)}</td></tr>
-      <tr><td style="${td}">DIVISÃO DE LUCRO / 2</td><td style="${tdr}">${formatarMoeda(eb.i7 / 2)}</td></tr>
-      <tr><td style="${td}">IMPOSTOS</td><td style="${tdr}">${formatarMoeda(eb.i6)}</td></tr>
-      <tr><td style="${td}">EMPRÉSTIMO</td><td style="${tdr}">${formatarMoeda(eb.i10)}</td></tr>
-      <tr><td style="${td}">IMPOSTO PASSIVO</td><td style="${tdr}">${formatarMoeda(eb.i12)}</td></tr>
-      <tr><td style="${tf}">EBITDA AJUSTADO</td><td style="${tf}text-align:right;">${formatarMoeda(eb.ebitda)}</td></tr>
-    </tbody></table>`;
-
+// NOVO: Captura o HTML real da tela de Consolidado (já filtrado) e prepara para PDF
+function gerarHTMLConsolidadoDaTela() {
+  const wrapper = document.getElementById('execPivotWrapper');
+  if (!wrapper || !wrapper.innerHTML.trim()) {
+    return '<p style="color:#000 !important;">Nenhum dado para exibir.</p>';
+  }
+  // Clona o conteúdo para não alterar a tela
+  const clone = wrapper.cloneNode(true);
+  // Remove os botões de toggle (SUL FLUMINENSE / LIQUIGÁS) que são controles de UI
+  const botoesToggle = clone.querySelector('div[style*="display:flex"][style*="gap:10px"]');
+  if (botoesToggle && (botoesToggle.textContent.includes('SUL FLUMINENSE') || botoesToggle.textContent.includes('LIQUIGÁS'))) {
+    botoesToggle.remove();
+  }
+  // Remove qualquer botão de ação restante
+  clone.querySelectorAll('button').forEach(b => b.remove());
+  // Ajusta a classe para o estilo de PDF
+  const wrap = document.createElement('div');
+  wrap.className = 'pdf-consolidado-wrap';
+  wrap.innerHTML = clone.innerHTML;
+  // Adiciona cabeçalho e rodapé do PDF
+  let html = pdfCabecalho('Resumo Executivo — Consolidado', 'QNUTRI — Módulo Financeiro', '', '');
+  html += wrap.outerHTML;
   html += pdfRodape();
   return html;
+}
+
+// NOVO: Exporta o PDF do Consolidado capturando o HTML da tela
+function exportarPDFConsolidadoDaTela() {
+  const html = gerarHTMLConsolidadoDaTela();
+  const titulo = 'Resumo Executivo — Consolidado';
+  abrirPopupPDF(
+    html,
+    titulo,
+    `QNUTRI_Consolidado_${new Date().toISOString().slice(0, 10)}.pdf`,
+    null,
+    null,
+    true // flag indicando que o HTML veio da tela
+  );
 }
 
 function abrirConfigColunasPDF() {
@@ -3003,7 +2970,7 @@ function regenerarHTMLPDF() {
       html = gerarTabelaPDFDREComColunas(pdfDadosAtuais, pdfColunasSelecionadas);
       break;
     case 'consolidado':
-      html = gerarTabelaPDFConsolidado();
+      html = gerarHTMLConsolidadoDaTela();
       break;
     default:
       html = gerarTabelaPDF(pdfDadosAtuais, pdfTituloAtual || 'Documento', PDF_COLUNAS_LANCAMENTOS, pdfColunasSelecionadas);
@@ -3012,13 +2979,14 @@ function regenerarHTMLPDF() {
   pdfHTMLAtual = html;
 }
 
-function abrirPopupPDF(htmlConteudo, titulo, nomeArquivo, colunasDisponiveis, selecionadas) {
+function abrirPopupPDF(htmlConteudo, titulo, nomeArquivo, colunasDisponiveis, selecionadas, daTela) {
   pdfHTMLAtual = htmlConteudo;
   pdfNomeArquivo = nomeArquivo;
   pdfColunasDisponiveis = colunasDisponiveis || PDF_COLUNAS_LANCAMENTOS;
   pdfColunasSelecionadas = selecionadas || {};
+  pdfHTMLDaTela = !!daTela;
 
-  if (Object.keys(pdfColunasSelecionadas).length === 0 && pdfColunasDisponiveis.length > 0) {
+  if (!daTela && Object.keys(pdfColunasSelecionadas).length === 0 && pdfColunasDisponiveis.length > 0) {
     pdfColunasDisponiveis.forEach(c => pdfColunasSelecionadas[c.chave] = true);
   }
 
@@ -3028,7 +2996,7 @@ function abrirPopupPDF(htmlConteudo, titulo, nomeArquivo, colunasDisponiveis, se
   container.classList.add('pdf-single-page');
 
   const barCols = document.getElementById('pdfColunasBar');
-  if (colunasDisponiveis && colunasDisponiveis.length > 0) {
+  if (colunasDisponiveis && colunasDisponiveis.length > 0 && !daTela) {
     barCols.style.display = 'flex';
   } else {
     barCols.style.display = 'none';
@@ -3056,12 +3024,10 @@ function baixarPDFPopup() {
   loadingOverlay.style.display = 'flex';
   mostrarToast('Gerando PDF em folha única... aguarde', 'info');
 
-  // Salvar estilos originais
   const transformOriginal = elemento.style.transform;
   const transformOriginOriginal = elemento.style.transformOrigin;
   const zoomOriginal = elemento.style.zoom;
 
-  // Aplicar zoom/transform para caber em uma única folha A3 paisagem
   elemento.style.transformOrigin = 'top left';
   elemento.style.transform = 'scale(0.72)';
   elemento.style.zoom = '0.72';
@@ -3090,7 +3056,6 @@ function baixarPDFPopup() {
 
   setTimeout(() => {
     html2pdf().set(opt).from(elemento).toPdf().get('pdf').then(function(pdf) {
-      // Forçar uma única página: remover páginas extras
       const totalPages = pdf.internal.getNumberOfPages();
       if (totalPages > 1) {
         for (let i = totalPages; i > 1; i--) {
@@ -3099,7 +3064,6 @@ function baixarPDFPopup() {
       }
       pdf.save(opt.filename);
     }).then(() => {
-      // Restaurar estilos
       elemento.style.transform = transformOriginal;
       elemento.style.transformOrigin = transformOriginOriginal;
       elemento.style.zoom = zoomOriginal;
@@ -3209,8 +3173,8 @@ function abrirResultadosExecutivos(){
   execSituacoes = [...SITUACOES_PADRAO_EXECUTIVO]; execGrupo=''; execTipos=[]; execPivotMain='despesas'; execPivotSub='conta';
   const mesAnterior = getMesAnteriorVigenteNum();
   execMesesConsolidado = [ mesAnterior ]; execMesesResumo = [ mesAnterior ]; execRecebimentoSituacoes = [...SITUACOES_PADRAO_EXECUTIVO]; execSidebarAberta = false;
-  consolidadoMostrarSulFlu = false; // Inicia inibido
-  consolidadoMostrarLiquigas = false; // Inicia inibido
+  consolidadoMostrarSulFlu = false;
+  consolidadoMostrarLiquigas = false;
   document.querySelectorAll('.exec-toggle-btn').forEach(b=>b.classList.toggle('active',b.dataset.pivot==='despesas'));
   document.querySelectorAll('.exec-pivot-subtab').forEach(b=>b.classList.toggle('active',b.dataset.sub==='conta'));
   atualizarSubAbasVisiveis(); atualizarMesSelectorVisibilidade(); atualizarSidebarExec(); atualizarChipsMesExecResumo(); atualizarChipsMesConsolidadoInline();
@@ -3220,8 +3184,8 @@ function abrirExecComPivot(pivot) {
   document.getElementById('execWelcomeScreen').style.display = 'none'; 
   document.getElementById('execMainLayout').style.display = 'flex'; 
   if (pivot === 'consolidado') {
-    consolidadoMostrarSulFlu = false; // Inicia inibido
-    consolidadoMostrarLiquigas = false; // Inicia inibido
+    consolidadoMostrarSulFlu = false;
+    consolidadoMostrarLiquigas = false;
     if (!execMesesConsolidado || execMesesConsolidado.length === 0) {
       execMesesConsolidado = [getMesAnteriorVigenteNum()];
     }
@@ -3380,14 +3344,12 @@ const MAPEAMENTO_EBITDA = {
 };
 function buscarValorConta(agrupGeral, aliases) {
   if (!aliases || aliases.length === 0) return 0;
-  // 1ª passada: match exato ou por alias
   for (const alias of aliases) {
     const chave = normalizarNome(alias);
     if (agrupGeral[chave]) return agrupGeral[chave].realizado || 0;
     const chaveAlias = aplicarAliasConta(chave);
     if (agrupGeral[chaveAlias]) return agrupGeral[chaveAlias].realizado || 0;
   }
-  // 2ª passada: match parcial (contains nos dois sentidos)
   for (const alias of aliases) {
     const chave = normalizarNome(alias);
     for (const k of Object.keys(agrupGeral)) {
@@ -3396,7 +3358,6 @@ function buscarValorConta(agrupGeral, aliases) {
       }
     }
   }
-  // 3ª passada: match por palavras (todas as palavras do alias precisam estar na chave)
   for (const alias of aliases) {
     const palavrasAlias = normalizarNome(alias).split(' ').filter(Boolean);
     if (palavrasAlias.length === 0) continue;
@@ -3456,7 +3417,6 @@ function renderizarConsolidadoDRE(){
   const pctDRE = (v) => totalDRE > 0 ? (v / totalDRE) * 100 : 0;
   const pctReceb = (v) => totalRecebimentos > 0 ? (v / totalRecebimentos) * 100 : 0;
 
-  // Botões de toggle para SUL FLUMINENSE e LIQUIGÁS
   let html = `<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
     <button onclick="toggleConsolidadoSulFlu()" style="padding:8px 16px;border-radius:8px;font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid ${consolidadoMostrarSulFlu?'var(--accent)':'var(--border)'};background:${consolidadoMostrarSulFlu?'var(--gradient-header)':'var(--bg-surface)'};color:${consolidadoMostrarSulFlu?'#fff':'var(--text-secondary)'};transition:all .2s;">
       <i class="fas fa-${consolidadoMostrarSulFlu?'eye':'eye-slash'}"></i> SUL FLUMINENSE
@@ -3667,17 +3627,7 @@ function exportarExcelConsolidadoDRE(){
 }
 function exportarPDFResultadosExecutivos() {
   if (execPivotMain === 'consolidado') {
-    pdfDadosAtuais = [];
-    pdfTituloAtual = 'Resumo Executivo — Consolidado';
-    pdfContexto = { tipo: 'consolidado', colunas: [] };
-    const html = gerarTabelaPDFConsolidado();
-    abrirPopupPDF(
-      html,
-      'Exportar PDF — Consolidado',
-      `QNUTRI_Consolidado_${new Date().toISOString().slice(0, 10)}.pdf`,
-      [],
-      {}
-    );
+    exportarPDFConsolidadoDaTela();
     return;
   }
 
