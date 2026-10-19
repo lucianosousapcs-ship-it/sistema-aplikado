@@ -3016,70 +3016,125 @@ function fecharPopupPDF() {
 function baixarPDFPopup() {
   const elemento = document.getElementById('pdfContainer');
   const loadingOverlay = document.getElementById('pdfLoadingOverlay');
+  
   if (!elemento || !elemento.innerHTML.trim()) {
     mostrarToast('Nada para gerar PDF.', 'warning');
     return;
   }
 
   loadingOverlay.style.display = 'flex';
-  mostrarToast('Gerando PDF em folha única... aguarde', 'info');
+  mostrarToast('Abrindo janela de impressão... aguarde', 'info');
 
-  const transformOriginal = elemento.style.transform;
-  const transformOriginOriginal = elemento.style.transformOrigin;
-  const zoomOriginal = elemento.style.zoom;
+  // 1. CRIA UM IFRAME OCULTO PARA IMPRESSÃO
+  // O iframe isola o conteúdo do sistema, garantindo que apenas o PDF seja impresso
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
 
-  elemento.style.transformOrigin = 'top left';
-  elemento.style.transform = 'scale(0.72)';
-  elemento.style.zoom = '0.72';
+  const doc = iframe.contentWindow.document;
+  
+  // 2. PEGA O HTML DO CONTAINER
+  const conteudoHTML = elemento.innerHTML;
 
-  const opt = {
-    margin: [3, 3, 3, 3],
-    filename: pdfNomeArquivo || `QNUTRI_Documento_${new Date().toISOString().slice(0, 10)}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { 
-      scale: 2, 
-      useCORS: true, 
-      logging: false, 
-      backgroundColor: '#ffffff',
-      windowWidth: elemento.scrollWidth,
-      windowHeight: elemento.scrollHeight
-    },
-    jsPDF: { 
-      unit: 'mm', 
-      format: 'a3', 
-      orientation: 'portrait', 
-      compress: true,
-      precision: 16
-    },
-    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-  };
-
-  setTimeout(() => {
-    html2pdf().set(opt).from(elemento).toPdf().get('pdf').then(function(pdf) {
-      const totalPages = pdf.internal.getNumberOfPages();
-      if (totalPages > 1) {
-        for (let i = totalPages; i > 1; i--) {
-          pdf.deletePage(i);
+  // 3. MONTA O DOCUMENTO DO IFRAME COM ESTILOS DE IMPRESSÃO
+  doc.open();
+  doc.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${pdfNomeArquivo || 'QNUTRI_Documento'}</title>
+      <style>
+        @page {
+          size: A3 ${pdfContexto.tipo === 'consolidado' ? 'landscape' : 'portrait'};
+          margin: 15mm;
         }
-      }
-      pdf.save(opt.filename);
-    }).then(() => {
-      elemento.style.transform = transformOriginal;
-      elemento.style.transformOrigin = transformOriginOriginal;
-      elemento.style.zoom = zoomOriginal;
-      loadingOverlay.style.display = 'none';
-      mostrarToast('PDF gerado com sucesso!', 'success');
-    }).catch(err => {
-      elemento.style.transform = transformOriginal;
-      elemento.style.transformOrigin = transformOriginOriginal;
-      elemento.style.zoom = zoomOriginal;
-      loadingOverlay.style.display = 'none';
-      mostrarToast('Erro ao gerar PDF: ' + err.message, 'error');
-    });
-  }, 100);
-}
+        body {
+          font-family: 'Inter', Arial, sans-serif;
+          color: #000 !important;
+          background: #fff !important;
+          margin: 0;
+          padding: 0;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          page-break-inside: avoid;
+        }
+        th, td {
+          border: 1px solid #333 !important;
+          padding: 8px !important;
+          font-size: 11px !important;
+          color: #000 !important;
+          background: #fff !important;
+        }
+        th {
+          background: #e8e8e8 !important;
+          font-weight: 700 !important;
+          text-transform: uppercase;
+        }
+        .dre-bloco {
+          border: 1px solid #333 !important;
+          margin-bottom: 15px;
+          page-break-inside: avoid;
+        }
+        .dre-bloco-header {
+          background: #e8e8e8 !important;
+          color: #000 !important;
+          border-bottom: 2px solid #000 !important;
+          padding: 10px 14px !important;
+          font-weight: 700 !important;
+          font-size: 13px !important;
+        }
+        .dre-consolidado-wrapper {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+        .dre-consolidado-wrapper.somente-uma {
+          display: block;
+        }
+        .dre-col {
+          margin-bottom: 20px;
+        }
+        * {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+      </style>
+    </head>
+    <body>
+      ${conteudoHTML}
+    </body>
+    </html>
+  `);
+  doc.close();
 
-function exportarPDFLancamentos() {
+  // 4. AGUARDA RENDERIZAÇÃO E CHAMA A IMPRESSÃO
+  setTimeout(() => {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch (e) {
+      console.error('Erro ao imprimir:', e);
+      mostrarToast('Erro ao abrir impressão. Use Ctrl+P.', 'error');
+    }
+
+    // 5. LIMPA O IFRAME APÓS UM TEMPO
+    setTimeout(() => {
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      loadingOverlay.style.display = 'none';
+      mostrarToast('Janela de impressão aberta. Escolha "Salvar como PDF".', 'success');
+    }, 2000);
+  }, 500);
+}function exportarPDFLancamentos() {
   const filt = obterLancamentosFiltrados();
   if (!filt.length) { mostrarToast('Nenhum lançamento para exportar.', 'warning'); return; }
 
