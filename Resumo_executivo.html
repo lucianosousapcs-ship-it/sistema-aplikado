@@ -795,10 +795,9 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 
 <script>
 /* ============================================================
-   RESUMO EXECUTIVO — v38.0
-   - Cadastro de funcionário corrigido (campos válidos da tabela)
-   - Modal "Ver Contracheques Importados" no Resumo Executivo
-   - PDF do contracheque salvo como base64 no banco
+   RESUMO EXECUTIVO — v38.1
+   - Seleção de mês/ano no modal "Ver Contracheques Importados" carrega automaticamente.
+   - Navegação por páginas do PDF: cada clique no funcionário avança para a página correspondente.
    ============================================================ */
 
 const SUPABASE_URL = 'https://avzxplcdutqzlxfievza.supabase.co';
@@ -839,6 +838,12 @@ let _verCcLista = [];
 let _verCcSelecionado = null;
 let _verCcDocAtual = null;
 let _verCcBytesCache = {};
+
+// Variáveis para controlar a página atual no modal Ver CC
+let _verCcPaginaAtual = 0;        // índice da página (0-based)
+let _verCcTotalPaginas = 0;
+let _verCcPdfDoc = null;
+let _verCcMappingFuncionarioPagina = []; // array com { funcId, pagina } para mapear funcionário -> página
 
 const REC_CATEGORIAS = [
     {key:'vt_avulso',label:'VT Avulso',cor:'col-vt',icone:'fa-bus'},
@@ -3132,16 +3137,21 @@ function abrirModalVerContracheques() {
     }
     selMes.value = String(mesAtual);
     document.getElementById('verCcAno').value = anoAtual;
-    document.getElementById('verCcLista').innerHTML = '<div style="text-align:center;padding:20px;color:#7a3a00;font-size:12px;">Clique em Carregar</div>';
+    document.getElementById('verCcLista').innerHTML = '<div style="text-align:center;padding:20px;color:#7a3a00;font-size:12px;">Carregando...</div>';
     document.getElementById('verCcViewer').innerHTML = `<div class="placeholder"><i class="fas fa-file-pdf"></i>Selecione um contracheque à esquerda para visualizar o PDF.</div>`;
     document.getElementById('verCcMesAno').textContent = '';
     m.classList.add('active');
+    // Carrega automaticamente ao abrir
     carregarVerCC();
 }
 function fecharModalVerCC() {
     document.getElementById('modalVerCC').classList.remove('active');
     _verCcDocAtual = null;
     _verCcSelecionado = null;
+    _verCcPdfDoc = null;
+    _verCcTotalPaginas = 0;
+    _verCcPaginaAtual = 0;
+    _verCcMappingFuncionarioPagina = [];
 }
 async function carregarVerCC() {
     const mes = parseInt(document.getElementById('verCcMes').value) + 1;
@@ -3153,6 +3163,8 @@ async function carregarVerCC() {
     lista.innerHTML = '<div style="text-align:center;padding:20px;color:#7a3a00;font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
     viewer.innerHTML = `<div class="placeholder"><i class="fas fa-file-pdf"></i>Selecione um contracheque à esquerda.</div>`;
     badge.textContent = `${MESES[mes-1]} / ${ano}`;
+    _verCcMappingFuncionarioPagina = [];
+    _verCcPaginaAtual = 0;
     try {
         const { data, error } = await supabaseClient
             .from('contracheques')
@@ -3183,6 +3195,8 @@ async function carregarVerCC() {
         lista.innerHTML = `<div style="text-align:center;padding:20px;color:#dc3545;font-size:12px;">Erro: ${e.message}</div>`;
     }
 }
+
+// Função para selecionar funcionário e avançar para a página correspondente
 async function selecionarVerCC(idx) {
     const viewer = document.getElementById('verCcViewer');
     if(!viewer) return;
@@ -3192,36 +3206,78 @@ async function selecionarVerCC(idx) {
     _verCcSelecionado = _verCcLista[idx];
     const cc = _verCcSelecionado;
     if(!cc) return;
-    if(!cc.arquivo_base64) {
-        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#ffc107;"></i>Este contracheque não tem PDF salvo no banco.<br><br><small style="font-size:11px;">O PDF só é salvo em importações novas. Reimporte este contracheque para salvar o arquivo.</small></div>`;
-        return;
-    }
-    viewer.innerHTML = `<div class="placeholder"><i class="fas fa-spinner fa-spin"></i>Carregando PDF...</div>`;
-    try {
-        // Converte base64 para Uint8Array
-        const base64 = cc.arquivo_base64.split(',')[1];
-        const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-        for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        _verCcBytesCache[cc.id] = bytes;
-        const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
-        _verCcDocAtual = pdf;
-        viewer.innerHTML = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const viewport = page.getViewport({ scale: 1.4 });
-            const canvas = document.createElement('canvas');
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            canvas.style.maxWidth = '100%';
-            canvas.style.height = 'auto';
-            const ctx = canvas.getContext('2d');
-            await page.render({ canvasContext: ctx, viewport }).promise;
-            viewer.appendChild(canvas);
+
+    // Se ainda não carregamos o PDF ou é outro PDF, carrega
+    if(!_verCcPdfDoc) {
+        if(!cc.arquivo_base64) {
+            viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#ffc107;"></i>Este contracheque não tem PDF salvo no banco.<br><br><small style="font-size:11px;">O PDF só é salvo em importações novas. Reimporte este contracheque para salvar o arquivo.</small></div>`;
+            return;
         }
+        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-spinner fa-spin"></i>Carregando PDF...</div>`;
+        try {
+            const base64 = cc.arquivo_base64.split(',')[1];
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            _verCcBytesCache[cc.id] = bytes;
+            const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+            _verCcPdfDoc = pdf;
+            _verCcTotalPaginas = pdf.numPages;
+            _verCcMappingFuncionarioPagina = [];
+            // Mapeia cada página a um funcionário (ordem do PDF)
+            // Assumimos que cada página contém um funcionário
+            for(let p = 1; p <= pdf.numPages; p++) {
+                // O índice da lista corresponde à ordem das páginas
+                const funcIdx = p - 1;
+                if(funcIdx < _verCcLista.length) {
+                    _verCcMappingFuncionarioPagina.push({ funcId: _verCcLista[funcIdx].funcionario_id, pagina: p, nome: _verCcLista[funcIdx].funcionario_nome });
+                }
+            }
+        } catch(e) {
+            console.error('Erro ao renderizar PDF:', e);
+            viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#dc3545;"></i>Erro ao renderizar PDF: ${e.message}</div>`;
+            return;
+        }
+    }
+
+    // Encontra a página correspondente ao funcionário selecionado
+    let paginaAlvo = 1;
+    const mapping = _verCcMappingFuncionarioPagina.find(m => String(m.funcId) === String(cc.funcionario_id));
+    if(mapping) {
+        paginaAlvo = mapping.pagina;
+    } else {
+        // fallback: usa o índice da lista + 1
+        paginaAlvo = idx + 1;
+        if(paginaAlvo > _verCcTotalPaginas) paginaAlvo = _verCcTotalPaginas;
+    }
+    _verCcPaginaAtual = paginaAlvo;
+    await renderizarPaginaVerCC(paginaAlvo);
+}
+
+async function renderizarPaginaVerCC(numPagina) {
+    const viewer = document.getElementById('verCcViewer');
+    if(!viewer || !_verCcPdfDoc) return;
+    viewer.innerHTML = `<div class="placeholder"><i class="fas fa-spinner fa-spin"></i>Renderizando página ${numPagina}...</div>`;
+    try {
+        const page = await _verCcPdfDoc.getPage(numPagina);
+        const viewport = page.getViewport({ scale: 1.4 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.maxWidth = '100%';
+        canvas.style.height = 'auto';
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        viewer.innerHTML = '';
+        viewer.appendChild(canvas);
+        // Adiciona indicador de página
+        const info = document.createElement('div');
+        info.style.cssText = 'color:#fff;font-size:11px;margin-top:6px;background:rgba(0,0,0,.5);padding:2px 10px;border-radius:10px;';
+        info.textContent = `Página ${numPagina} de ${_verCcTotalPaginas}`;
+        viewer.appendChild(info);
     } catch(e) {
-        console.error('Erro ao renderizar PDF:', e);
-        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#dc3545;"></i>Erro ao renderizar PDF: ${e.message}</div>`;
+        console.error('Erro ao renderizar página:', e);
+        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#dc3545;"></i>Erro ao renderizar página ${numPagina}: ${e.message}</div>`;
     }
 }
 
@@ -3655,7 +3711,7 @@ function extrairFuncionarioIndividualPorNome(texto, nomeConhecido){
 }
 
 window.onload = async function(){
-    console.log('🚀 Resumo Executivo v38.0');
+    console.log('🚀 Resumo Executivo v38.1');
     try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ const s = JSON.parse(raw); if(s && s.nome){ usuarioAtual = s; } } }catch(e){}
     if(!usuarioAtual) usuarioAtual = {id:'anon',nome:'Visitante',role:'viewer',pode_validar_ponto:false,pode_classificar_atencao:false};
     const hn = document.getElementById('headerUserName'); const hr = document.getElementById('headerUserRole');
@@ -3683,6 +3739,12 @@ window.onload = async function(){
     await carregarFuncionarios();
     await carregarSemanasAtencao();
     await gerarRelatorioExecutivo();
+    
+    // Event listener para mudança de mês/ano no modal Ver CC
+    const verCcMes = document.getElementById('verCcMes');
+    const verCcAno = document.getElementById('verCcAno');
+    if(verCcMes) verCcMes.addEventListener('change', carregarVerCC);
+    if(verCcAno) verCcAno.addEventListener('change', carregarVerCC);
     
     document.addEventListener('keydown',e=>{
         if(e.key==='Escape'){ fecharCalcPopup(); fecharCalcProdutividade(); fecharExtratoCategoria(); fecharDocumentoAnexoView(); fecharConferenciaValidacao(); fecharModalImportacao(); fecharValidacaoCC(); fecharNomesPendentes(); fecharProgresso(); fecharCadastroRapido(); fecharModalVerCC(); }
