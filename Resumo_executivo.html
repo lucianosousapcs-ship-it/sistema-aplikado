@@ -2688,7 +2688,7 @@ function confirmarVinculosPendentes() {
     mostrarToast('✅ Vínculos confirmados! Clique em "Validar e Salvar".', 'info');
 }
 
-/* =============== CADASTRO RÁPIDO (CORRIGIDO) =============== */
+/* =============== CADASTRO RÁPIDO =============== */
 function abrirCadastroRapido(itemIdx) {
     _cadastroRapidoItemIdx = itemIdx;
     const item = _nomesPendentes[itemIdx];
@@ -2727,7 +2727,6 @@ async function salvarCadastroRapido() {
     const permanencia = document.getElementById('cadPermanencia').value || '08:00';
     const admissao = document.getElementById('cadAdmissao').value || null;
 
-    // Verifica se já existe funcionário com mesmo nome exato
     const nomeNorm = normalizarNome(nome);
     const duplicado = funcionarios.find(f => normalizarNome(f.nome) === nomeNorm);
     if(duplicado) {
@@ -2740,7 +2739,6 @@ async function salvarCadastroRapido() {
     if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; }
 
     try {
-        // Monta payload apenas com campos que existem na tabela (conforme schema fornecido)
         const payload = {
             nome: nome,
             salario: salario > 0 ? salario : 2500,
@@ -2752,8 +2750,6 @@ async function salvarCadastroRapido() {
         if(cargo) payload.cargo = cargo;
         if(admissao) payload.admissao = admissao;
 
-        console.log('📤 Inserindo funcionário:', payload);
-
         const { data, error } = await supabaseClient
             .from('funcionarios')
             .insert(payload)
@@ -2761,7 +2757,6 @@ async function salvarCadastroRapido() {
             .single();
         
         if(error) {
-            console.error('❌ Erro Supabase:', error);
             throw new Error(`Supabase: ${error.message}${error.details ? ' | ' + error.details : ''}${error.hint ? ' | ' + error.hint : ''}`);
         }
         
@@ -2769,13 +2764,9 @@ async function salvarCadastroRapido() {
             throw new Error('Cadastro retornou sem ID. Verifique as políticas RLS da tabela.');
         }
 
-        console.log('✅ Funcionário cadastrado:', data);
-
-        // Adiciona na lista local
         funcionarios.push(data);
         funcionarios.sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
 
-        // Vincula automaticamente ao item pendente
         if(_cadastroRapidoItemIdx !== null && _nomesPendentes[_cadastroRapidoItemIdx]) {
             _nomesPendentes[_cadastroRapidoItemIdx].funcionarioId = data.id;
             _nomesPendentes[_cadastroRapidoItemIdx].sugestoes = [{ funcionario: data, similaridade: 100 }];
@@ -2994,7 +2985,6 @@ async function confirmarValidacaoCC(){
     let atualizados = 0;
     const erros = [];
 
-    // Verifica se a coluna arquivo_base64 existe (tenta incluir, se falhar, salva sem)
     let incluirPdf = !!_pdfBase64Atual;
 
     for(let i = 0; i < normalizado.length; i++){
@@ -3037,7 +3027,6 @@ async function confirmarValidacaoCC(){
             importado_por: usuarioAtual?.nome || 'sistema'
         };
 
-        // Tenta incluir o PDF em base64 (campo arquivo_base64)
         if(incluirPdf && _pdfBase64Atual) {
             payload.arquivo_base64 = _pdfBase64Atual;
         }
@@ -3056,7 +3045,6 @@ async function confirmarValidacaoCC(){
             if(existente?.id){
                 const {error} = await supabaseClient.from('contracheques').update(payload).eq('id', existente.id);
                 if(error) {
-                    // Se o erro for por coluna arquivo_base64 inexistente, tenta sem ela
                     if(incluirPdf && /arquivo_base64|column .* does not exist/i.test(error.message)) {
                         console.warn('⚠️ Coluna arquivo_base64 não existe. Salvando sem o PDF.');
                         incluirPdf = false;
@@ -3165,6 +3153,11 @@ async function carregarVerCC() {
     badge.textContent = `${MESES[mes-1]} / ${ano}`;
     _verCcMappingFuncionarioPagina = [];
     _verCcPaginaAtual = 0;
+    
+    // Reset do PDF ao mudar o mês/ano
+    _verCcPdfDoc = null;
+    _verCcTotalPaginas = 0;
+    
     try {
         const { data, error } = await supabaseClient
             .from('contracheques')
@@ -3196,7 +3189,6 @@ async function carregarVerCC() {
     }
 }
 
-// Função para selecionar funcionário e avançar para a página correspondente
 async function selecionarVerCC(idx) {
     const viewer = document.getElementById('verCcViewer');
     if(!viewer) return;
@@ -3227,7 +3219,6 @@ async function selecionarVerCC(idx) {
             // Mapeia cada página a um funcionário (ordem do PDF)
             // Assumimos que cada página contém um funcionário
             for(let p = 1; p <= pdf.numPages; p++) {
-                // O índice da lista corresponde à ordem das páginas
                 const funcIdx = p - 1;
                 if(funcIdx < _verCcLista.length) {
                     _verCcMappingFuncionarioPagina.push({ funcId: _verCcLista[funcIdx].funcionario_id, pagina: p, nome: _verCcLista[funcIdx].funcionario_nome });
@@ -3246,7 +3237,6 @@ async function selecionarVerCC(idx) {
     if(mapping) {
         paginaAlvo = mapping.pagina;
     } else {
-        // fallback: usa o índice da lista + 1
         paginaAlvo = idx + 1;
         if(paginaAlvo > _verCcTotalPaginas) paginaAlvo = _verCcTotalPaginas;
     }
@@ -3270,7 +3260,6 @@ async function renderizarPaginaVerCC(numPagina) {
         await page.render({ canvasContext: ctx, viewport }).promise;
         viewer.innerHTML = '';
         viewer.appendChild(canvas);
-        // Adiciona indicador de página
         const info = document.createElement('div');
         info.style.cssText = 'color:#fff;font-size:11px;margin-top:6px;background:rgba(0,0,0,.5);padding:2px 10px;border-radius:10px;';
         info.textContent = `Página ${numPagina} de ${_verCcTotalPaginas}`;
@@ -3392,11 +3381,9 @@ async function verPdfDoContracheque(id) {
         const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
         const viewer = document.getElementById('verCcViewer');
         const m = document.getElementById('modalVerCC');
-        // Abre o modal já com o PDF
         if(!m.classList.contains('active')) {
             abrirModalVerContracheques();
         }
-        // Popula a lista com este item
         _verCcLista = [data];
         const fmt = v => (v === null || v === undefined || isNaN(v)) ? '—' : Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
         const lista = document.getElementById('verCcLista');
@@ -3666,7 +3653,6 @@ function recarregarTudo(){
     carregarFuncionarios().then(()=>{ carregarSemanasAtencao().then(()=>{ gerarRelatorioExecutivo(); }); });
 }
 
-// Extrair funcionários de texto puro (fallback)
 function extrairTodosFuncionarios(texto){
     const textoNorm = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ');
     const regexNomeFunc = /([A-Z][A-Z\s]{5,60}?)\s+NOME\s+DO\s+FUNCIONARIO/gi;
@@ -3740,7 +3726,6 @@ window.onload = async function(){
     await carregarSemanasAtencao();
     await gerarRelatorioExecutivo();
     
-    // Event listener para mudança de mês/ano no modal Ver CC
     const verCcMes = document.getElementById('verCcMes');
     const verCcAno = document.getElementById('verCcAno');
     if(verCcMes) verCcMes.addEventListener('change', carregarVerCC);
