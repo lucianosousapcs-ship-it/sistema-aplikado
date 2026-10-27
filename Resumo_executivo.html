@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e07000 100%);font-family:'Poppins',sans-serif;color:#1a0a00;min-height:100vh;padding-bottom:40px}
@@ -342,6 +343,40 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 .ver-cc-viewer .placeholder{color:#adb5bd;text-align:center;padding:80px 20px;font-size:13px}
 .ver-cc-viewer .placeholder i{font-size:48px;display:block;margin-bottom:12px;opacity:0.5}
 .ver-cc-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+
+/* CONSOLIDADOR PDF */
+.consolidador-wrap{display:grid;grid-template-columns:340px 1fr;gap:16px;min-height:600px}
+@media(max-width:900px){.consolidador-wrap{grid-template-columns:1fr}}
+.consolidador-lista{background:#f8f9fa;border:1px solid #ddd;border-radius:10px;display:flex;flex-direction:column;max-height:80vh;overflow:hidden}
+.consolidador-lista-header{background:#1e1e1e;color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.consolidador-lista-header span{font-size:12px;font-weight:700}
+.consolidador-lista-body{flex:1;overflow-y:auto;padding:8px}
+.consolidador-item{display:flex;gap:8px;padding:8px;margin-bottom:6px;background:#fff;border:1.5px solid #e0e0e0;border-radius:8px;cursor:pointer;transition:all .2s;align-items:center}
+.consolidador-item:hover{border-color:#0d6efd;background:#eff6ff}
+.consolidador-item.selected{border-color:#0d6efd;background:#dbeafe}
+.consolidador-item.removida{opacity:0.45;background:#fce4e4;border-color:#dc3545}
+.consolidador-item.removida .consolidador-item-info{text-decoration:line-through;color:#721c24}
+.consolidador-item-thumb{width:60px;height:80px;object-fit:cover;border-radius:4px;border:1px solid #ccc;background:#fff;flex-shrink:0}
+.consolidador-item-info{flex:1;min-width:0;font-size:11px}
+.consolidador-item-info .nome-arquivo{font-weight:700;color:#1a0a00;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.consolidador-item-info .pagina-label{font-size:10px;color:#6c757d;margin-top:2px;display:block}
+.consolidador-item-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.consolidador-btn-mini{width:26px;height:26px;border-radius:6px;border:none;cursor:pointer;font-size:11px;display:inline-flex;align-items:center;justify-content:center;transition:all .2s;font-family:'Poppins',sans-serif}
+.consolidador-btn-mini:hover{transform:scale(1.1)}
+.consolidador-btn-mini.remover{background:#f8d7da;color:#721c24}
+.consolidador-btn-mini.remover:hover{background:#dc3545;color:#fff}
+.consolidador-btn-mini.restaurar{background:#d4edda;color:#155724}
+.consolidador-btn-mini.restaurar:hover{background:#28a745;color:#fff}
+.consolidador-viewer{background:#525659;border-radius:10px;overflow:auto;min-height:500px;max-height:80vh;padding:12px;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative}
+.consolidador-viewer canvas{display:block;max-width:100%;height:auto;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4);}
+.consolidador-viewer .placeholder{color:#adb5bd;text-align:center;padding:80px 20px;font-size:13px}
+.consolidador-viewer .placeholder i{font-size:48px;display:block;margin-bottom:12px;opacity:0.5}
+.consolidador-aviso{display:none;margin-top:16px;padding:14px 18px;background:#d1fae5;border-left:4px solid #28a745;border-radius:8px;font-size:13px;color:#155724;}
+.consolidador-aviso.active{display:block}
+.consolidador-toolbar{background:linear-gradient(135deg,#0d6efd,#0a58ca);color:#fff;border-radius:12px;padding:18px 22px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.consolidador-toolbar h2{font-size:18px;font-weight:800;display:flex;align-items:center;gap:10px;margin:0;}
+.consolidador-toolbar p{font-size:12px;opacity:0.9;margin-top:4px;}
+.consolidador-toolbar-botoes{display:flex;gap:8px;flex-wrap:wrap;}
 </style>
 </head>
 <body>
@@ -375,6 +410,9 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
                 </span>
             </h2>
             <div class="rel-header-actions">
+                <button type="button" class="rel-btn" style="background:#0d6efd;color:#fff;" onclick="abrirConsolidadorPDF()" title="Importe vários PDFs, consolide e exporte">
+                    <i class="fas fa-object-group"></i> Consolidador PDF
+                </button>
                 <button type="button" class="btn-toggle-cols ativo" id="btnToggleCols" onclick="toggleColunasZeradas()" title="Oculta colunas cujos valores totais sejam menores que R$ 1,00">
                     <i class="fas fa-eye-slash"></i> Ocultar Colunas Zeradas
                 </button>
@@ -388,6 +426,7 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
             <button id="btnNavExecutivo" class="active" onclick="navegarParaRelatorio('executivo')"><i class="fas fa-chart-pie"></i> Relatório Executivo</button>
             <button id="btnNavFinanceiro" onclick="navegarParaRelatorio('financeiro')"><i class="fas fa-money-check-dollar"></i> Resumo Financeiro</button>
             <button id="btnNavContracheque" onclick="navegarParaRelatorio('contracheque')"><i class="fas fa-file-invoice"></i> Importar Contra Cheque</button>
+            <button id="btnNavConsolidador" onclick="navegarParaRelatorio('consolidador')"><i class="fas fa-object-group"></i> Consolidador PDF</button>
         </div>
 
         <div class="exec-toolbar" id="execToolbar">
@@ -488,6 +527,101 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
                     <p style="font-size:12px;margin-top:6px;">Escolha o Mês/Ano acima e clique em <strong>Confirmar Competência</strong>.</p>
                 </div>
             </div>
+        </div>
+
+        <!-- ================= PAINEL CONSOLIDADOR PDF ================= -->
+        <div id="painelConsolidadorPDF" style="display:none;flex-direction:column;flex:1;">
+            <div class="exec-body" style="flex:1;overflow:auto;padding:20px 24px 30px;background:#fff;color:#000;min-height:400px;">
+                <div class="consolidador-toolbar">
+                    <div>
+                        <h2><i class="fas fa-object-group"></i> Consolidador de Contracheques PDF</h2>
+                        <p>Importe vários PDFs (1 ou mais páginas), consolide em um único arquivo, remova páginas indesejadas e exporte.</p>
+                    </div>
+                    <div class="consolidador-toolbar-botoes">
+                        <button type="button" class="btn-action" style="background:#fff;color:#0d6efd;" onclick="consolidadorImportarPdfs()">
+                            <i class="fas fa-file-import"></i> Importar PDFs
+                        </button>
+                        <button type="button" class="btn-action btn-success" onclick="consolidadorConsolidar()" id="btnConsolidar" disabled>
+                            <i class="fas fa-layer-group"></i> Consolidar
+                        </button>
+                        <button type="button" class="btn-action btn-warning" onclick="consolidadorExportar()" id="btnExportarConsolidado" disabled>
+                            <i class="fas fa-file-export"></i> Exportar PDF
+                        </button>
+                        <button type="button" class="btn-action btn-danger" onclick="consolidadorLimpar()">
+                            <i class="fas fa-trash"></i> Limpar Tudo
+                        </button>
+                    </div>
+                </div>
+
+                <div id="consolidadorStatus" class="import-status info" style="margin-bottom:14px;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Nenhum PDF importado. Clique em <strong>Importar PDFs</strong> para começar.</span>
+                </div>
+
+                <input type="file" id="consolidadorFileInput" accept=".pdf" multiple style="display:none;" onchange="consolidadorProcessarArquivos(this.files)">
+
+                <div class="consolidador-wrap">
+                    <div class="consolidador-lista">
+                        <div class="consolidador-lista-header">
+                            <span><i class="fas fa-list"></i> Páginas (<span id="consolidadorContador">0</span>)</span>
+                            <div style="display:flex;gap:4px;">
+                                <button type="button" class="consolidador-btn-mini restaurar" onclick="consolidadorRestaurarTodas()" title="Restaurar todas as páginas removidas">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <button type="button" class="consolidador-btn-mini remover" onclick="consolidadorRemoverTodas()" title="Remover todas as páginas">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="consolidador-lista-body" id="consolidadorListaPaginas">
+                            <div style="text-align:center;padding:30px 10px;color:#7a3a00;font-size:12px;">
+                                <i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:0.4;"></i>
+                                Importe PDFs para ver as páginas aqui.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="consolidador-viewer" id="consolidadorVisualizador">
+                        <div class="placeholder">
+                            <i class="fas fa-file-pdf"></i>
+                            Selecione uma página à esquerda para visualizar.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="consolidadorConsolidadoInfo" class="consolidador-aviso">
+                    <i class="fas fa-check-circle"></i> <strong>Arquivo consolidado pronto!</strong>
+                    <span id="consolidadorConsolidadoTexto"></span>
+                    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+                        <button type="button" class="btn-action btn-info btn-sm" onclick="consolidadorVisualizarConsolidado()">
+                            <i class="fas fa-eye"></i> Visualizar Consolidado
+                        </button>
+                        <button type="button" class="btn-action btn-success btn-sm" onclick="consolidadorExportar()">
+                            <i class="fas fa-download"></i> Exportar Consolidado
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL VISUALIZAÇÃO CONSOLIDADO ================= -->
+<div class="modal-ver-cc" id="modalConsolidadoView">
+    <div class="conteudo">
+        <h3>
+            <span><i class="fas fa-file-pdf"></i> Arquivo Consolidado</span>
+            <span id="consolidadoInfo" style="font-size:12px;background:#d1fae5;color:#155724;padding:4px 12px;border-radius:20px;font-weight:700;"></span>
+        </h3>
+        <div class="ver-cc-viewer" id="consolidadoViewer" style="min-height:500px;">
+            <div class="placeholder">
+                <i class="fas fa-file-pdf"></i>
+                Carregando visualização...
+            </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
+            <button type="button" class="btn-action btn-secondary" onclick="fecharConsolidadoView()"><i class="fas fa-times"></i> Fechar</button>
+            <button type="button" class="btn-action btn-success" onclick="consolidadorExportar()"><i class="fas fa-download"></i> Exportar PDF</button>
         </div>
     </div>
 </div>
@@ -822,11 +956,7 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 
 <script>
 /* ============================================================
-   RESUMO EXECUTIVO — v38.5
-   - Sticky columns: Empresa, Colaborador, Unidade (congeladas)
-   - Botão "Ocultar Colunas Zeradas" com lógica em CASCATA
-   - CORREÇÃO: colspan do grupo VENCIMENTOS agora inicia em 4
-     (Permanência + Dias Trab. + Horas Abon. + H.E. Total)
+   RESUMO EXECUTIVO + CONSOLIDADOR PDF — v39
    ============================================================ */
 
 const SUPABASE_URL = 'https://avzxplcdutqzlxfievza.supabase.co';
@@ -872,8 +1002,23 @@ let _verCcTotalPaginas = 0;
 let _verCcPdfDoc = null;
 let _verCcMappingFuncionarioPagina = [];
 
-// CONTROLE DE COLUNAS ZERADAS — ATIVO POR PADRÃO
+// CONTROLE DE COLUNAS ZERADAS
 let _execOcultarColunasZeradas = true;
+
+// CONSOLIDADOR PDF
+let _consPaginas = [];                    // {id, nomeArquivo, paginaOriginal, bytesOrigem, selecionada, thumb, removida}
+let _consPaginaSelecionadaIdx = -1;
+let _consIdSeq = 0;
+let _consPdfConsolidadoBytes = null;
+let _consTotalPaginasConsolidadas = 0;
+
+// Helper de biblioteca PDF
+function getPdfLib(){
+    if(typeof PDFLib !== 'undefined') return PDFLib;
+    if(typeof pdfLib !== 'undefined') return pdfLib;
+    if(window.PDFLib) return window.PDFLib;
+    return null;
+}
 
 const REC_CATEGORIAS = [
     {key:'vt_avulso',label:'VT Avulso',cor:'col-vt',icone:'fa-bus'},
@@ -1324,17 +1469,21 @@ function navegarParaRelatorio(dest){
     const painelExec = document.getElementById('execBody');
     const painelFin = document.getElementById('painelResumoFinanceiro');
     const painelCC = document.getElementById('painelImportContracheque');
+    const painelCons = document.getElementById('painelConsolidadorPDF');
     const btnExec = document.getElementById('btnNavExecutivo');
     const btnFin = document.getElementById('btnNavFinanceiro');
     const btnCC = document.getElementById('btnNavContracheque');
+    const btnCons = document.getElementById('btnNavConsolidador');
 
     if(toolbarExec) toolbarExec.style.display = 'none';
     if(painelExec) painelExec.style.display = 'none';
     if(painelFin) painelFin.style.display = 'none';
     if(painelCC) painelCC.style.display = 'none';
+    if(painelCons) painelCons.style.display = 'none';
     btnExec?.classList.remove('active');
     btnFin?.classList.remove('active');
     btnCC?.classList.remove('active');
+    btnCons?.classList.remove('active');
 
     if(dest === 'financeiro'){
         if(painelFin) painelFin.style.display = 'flex';
@@ -1366,6 +1515,11 @@ function navegarParaRelatorio(dest){
             document.getElementById('ccAno').value = h.getFullYear();
         }
         if(_competenciaConfirmada) renderizarPainelContracheque();
+    } else if(dest === 'consolidador'){
+        if(painelCons) painelCons.style.display = 'flex';
+        btnCons?.classList.add('active');
+        consolidadorAtualizarStatus();
+        consolidadorAtualizarBotoes();
     } else {
         if(toolbarExec) toolbarExec.style.display = 'flex';
         if(painelExec) painelExec.style.display = 'block';
@@ -1751,7 +1905,6 @@ function renderizarRelatorioExecutivoFormulario(){
         T.ccBase += cc.baseINSS||0; T.ccINSS += cc.inss||0; T.ccFGTS += cc.fgts||0; T.ccIRRF += cc.irrf||0; T.ccSalBase += cc.salarioBase||0;
     });
 
-    // 1. Verificação básica de visibilidade (R$ < 1,00 oculta)
     const isVis = (val) => {
         if (!_execOcultarColunasZeradas) return true;
         const n = parseFloat(val);
@@ -1789,7 +1942,6 @@ function renderizarRelatorioExecutivoFormulario(){
     const vD13Func = isVis(T.d13Func);
     const vRescFunc = isVis(T.rescFunc);
 
-    // LÓGICA EM CASCATA: Se todas as colunas do grupo sumiram, o TOTAL oculta também
     let vFolhaFunc = isVis(T.folhaFunc);
     if (vFolhaFunc && !vSalFunc && !vHeFunc && !vAdicFunc && !vComFunc && !vFerFunc && !vD13Func && !vRescFunc) {
         vFolhaFunc = false;
@@ -1836,8 +1988,6 @@ function renderizarRelatorioExecutivoFormulario(){
     const vCcFGTS = isVis(T.ccFGTS);
     const vCcIRRF = isVis(T.ccIRRF);
 
-    // 2. Cálculo dos Colspans dinâmicos
-    // VENCIMENTOS: Permanência(1) + Dias Trab.(1) + Horas Abon.(1) + H.E. Total(1) = 4 fixos
     const cVenc = 4 + (vSalario?1:0) + (vProd?1:0) + (vHE100?1:0) + (vHE50?1:0) + (vAdiant?1:0) + (vBruto?1:0);
     const cDescCC = (vInss?1:0) + (vIr?1:0) + (vFgts?1:0) + (vVt?1:0) + (vPensao?1:0) + (vDs?1:0) + (vOutros?1:0);
     const cEventuais = (vRescisao?1:0) + (vPensaoE?1:0) + (vFeriasE?1:0) + (vD13?1:0);
@@ -3264,7 +3414,7 @@ async function confirmarValidacaoCC(){
     }
 }
 
-/* =============== VER CONTRACHEQUES IMPORTADOS =============== */
+/* =============== VER CONTRACHEQUES =============== */
 function abrirModalVerContracheques() {
     const m = document.getElementById('modalVerCC');
     if(!m) return;
@@ -3511,7 +3661,6 @@ async function verPdfDoContracheque(id) {
         const bytes = new Uint8Array(binary.length);
         for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
         const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
-        const viewer = document.getElementById('verCcViewer');
         const m = document.getElementById('modalVerCC');
         if(!m.classList.contains('active')) {
             abrirModalVerContracheques();
@@ -3784,6 +3933,348 @@ function recarregarTudo(){
     carregarFuncionarios().then(()=>{ carregarSemanasAtencao().then(()=>{ gerarRelatorioExecutivo(); }); });
 }
 
+/* ============================================================
+   CONSOLIDADOR DE PDFs — NOVA FUNCIONALIDADE
+   ============================================================ */
+
+function consolidadorImportarPdfs(){
+    const input = document.getElementById('consolidadorFileInput');
+    if(!input){ mostrarToast('❌ Input não encontrado.','error'); return; }
+    input.value = '';
+    input.click();
+}
+
+async function consolidadorProcessarArquivos(files){
+    if(!files || files.length === 0) return;
+    consolidadorAtualizarStatus('info', `Processando ${files.length} arquivo(s)...`, 'spinner');
+
+    let paginasAdicionadas = 0;
+    const erros = [];
+
+    for(let fi = 0; fi < files.length; fi++){
+        const file = files[fi];
+        try{
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+            const totalPaginas = pdf.numPages;
+
+            for(let p = 1; p <= totalPaginas; p++){
+                const page = await pdf.getPage(p);
+                const viewport = page.getViewport({ scale: 0.4 });
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                const ctx = canvas.getContext('2d');
+                await page.render({ canvasContext: ctx, viewport }).promise;
+                const thumb = canvas.toDataURL('image/jpeg', 0.6);
+
+                _consPaginas.push({
+                    id: ++_consIdSeq,
+                    nomeArquivo: file.name,
+                    paginaOriginal: p,
+                    totalPaginasArquivo: totalPaginas,
+                    bytesOrigem: new Uint8Array(arrayBuffer.slice(0)),
+                    selecionada: true,
+                    removida: false,
+                    thumb: thumb,
+                    thumbBlob: null
+                });
+                paginasAdicionadas++;
+            }
+        }catch(e){
+            console.error('Erro ao processar:', file.name, e);
+            erros.push(`${file.name}: ${e.message}`);
+        }
+    }
+
+    consolidadorRenderizarLista();
+    consolidadorAtualizarBotoes();
+    _consPdfConsolidadoBytes = null;
+    document.getElementById('consolidadorConsolidadoInfo').classList.remove('active');
+
+    if(erros.length > 0){
+        consolidadorAtualizarStatus('warn', `${paginasAdicionadas} página(s) adicionadas, ${erros.length} erro(s).`);
+    } else {
+        consolidadorAtualizarStatus('ok', `✅ ${paginasAdicionadas} página(s) de ${files.length} arquivo(s) importadas.`);
+    }
+    if(paginasAdicionadas > 0){
+        const idxPrimeira = _consPaginas.findIndex(p => !p.removida);
+        if(idxPrimeira >= 0) consolidadorSelecionarPagina(idxPrimeira);
+    }
+}
+
+function consolidadorRenderizarLista(){
+    const lista = document.getElementById('consolidadorListaPaginas');
+    const contador = document.getElementById('consolidadorContador');
+    if(!lista) return;
+    if(contador) contador.textContent = _consPaginas.length;
+
+    if(_consPaginas.length === 0){
+        lista.innerHTML = `<div style="text-align:center;padding:30px 10px;color:#7a3a00;font-size:12px;">
+            <i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:0.4;"></i>
+            Importe PDFs para ver as páginas aqui.
+        </div>`;
+        return;
+    }
+
+    lista.innerHTML = _consPaginas.map((p, i) => {
+        const sel = (i === _consPaginaSelecionadaIdx) ? 'selected' : '';
+        const rem = p.removida ? 'removida' : '';
+        return `<div class="consolidador-item ${sel} ${rem}" data-idx="${i}" onclick="consolidadorSelecionarPagina(${i})">
+            <img class="consolidador-item-thumb" src="${p.thumb}" alt="pág ${p.paginaOriginal}">
+            <div class="consolidador-item-info">
+                <span class="nome-arquivo" title="${p.nomeArquivo}">${p.nomeArquivo}</span>
+                <span class="pagina-label">Página ${p.paginaOriginal} / ${p.totalPaginasArquivo}</span>
+            </div>
+            <div class="consolidador-item-actions">
+                ${p.removida 
+                    ? `<button type="button" class="consolidador-btn-mini restaurar" onclick="event.stopPropagation();consolidadorRestaurarPagina(${i})" title="Restaurar"><i class="fas fa-undo"></i></button>`
+                    : `<button type="button" class="consolidador-btn-mini remover" onclick="event.stopPropagation();consolidadorRemoverPagina(${i})" title="Remover"><i class="fas fa-trash"></i></button>`
+                }
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function consolidadorSelecionarPagina(idx){
+    if(idx < 0 || idx >= _consPaginas.length) return;
+    _consPaginaSelecionadaIdx = idx;
+    consolidadorRenderizarLista();
+    consolidadorRenderizarPreview(idx);
+}
+
+async function consolidadorRenderizarPreview(idx){
+    const viewer = document.getElementById('consolidadorVisualizador');
+    if(!viewer) return;
+    const p = _consPaginas[idx];
+    if(!p){
+        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-file-pdf"></i>Selecione uma página à esquerda.</div>`;
+        return;
+    }
+    viewer.innerHTML = `<div class="placeholder"><i class="fas fa-spinner fa-spin"></i>Renderizando ${p.nomeArquivo} — pág ${p.paginaOriginal}...</div>`;
+    try{
+        const pdf = await pdfjsLib.getDocument({ data: p.bytesOrigem.slice(0) }).promise;
+        const page = await pdf.getPage(p.paginaOriginal);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        viewer.innerHTML = '';
+        viewer.appendChild(canvas);
+        const info = document.createElement('div');
+        info.style.cssText = 'color:#fff;font-size:11px;background:rgba(0,0,0,.6);padding:4px 12px;border-radius:12px;';
+        info.textContent = `${p.nomeArquivo} — Página ${p.paginaOriginal} de ${p.totalPaginasArquivo}`;
+        viewer.appendChild(info);
+    }catch(e){
+        console.error('Erro ao renderizar:', e);
+        viewer.innerHTML = `<div class="placeholder" style="color:#dc3545;"><i class="fas fa-exclamation-triangle"></i>Erro ao renderizar: ${e.message}</div>`;
+    }
+}
+
+function consolidadorRemoverPagina(idx){
+    if(!_consPaginas[idx]) return;
+    _consPaginas[idx].removida = true;
+    consolidadorRenderizarLista();
+    consolidadorAtualizarBotoes();
+    _consPdfConsolidadoBytes = null;
+    document.getElementById('consolidadorConsolidadoInfo').classList.remove('active');
+    mostrarToast('🗑️ Página marcada para remoção.', 'info');
+}
+
+function consolidadorRestaurarPagina(idx){
+    if(!_consPaginas[idx]) return;
+    _consPaginas[idx].removida = false;
+    consolidadorRenderizarLista();
+    consolidadorAtualizarBotoes();
+    _consPdfConsolidadoBytes = null;
+    document.getElementById('consolidadorConsolidadoInfo').classList.remove('active');
+    mostrarToast('↩️ Página restaurada.', 'info');
+}
+
+function consolidadorRemoverTodas(){
+    if(_consPaginas.length === 0) return;
+    if(!confirm('Marcar TODAS as páginas para remoção?')) return;
+    _consPaginas.forEach(p => p.removida = true);
+    consolidadorRenderizarLista();
+    consolidadorAtualizarBotoes();
+}
+
+function consolidadorRestaurarTodas(){
+    if(_consPaginas.length === 0) return;
+    _consPaginas.forEach(p => p.removida = false);
+    consolidadorRenderizarLista();
+    consolidadorAtualizarBotoes();
+    _consPdfConsolidadoBytes = null;
+    document.getElementById('consolidadorConsolidadoInfo').classList.remove('active');
+    mostrarToast('↩️ Todas as páginas restauradas.', 'info');
+}
+
+function consolidadorLimpar(){
+    if(_consPaginas.length === 0 && !_consPdfConsolidadoBytes){
+        mostrarToast('⚠️ Nada para limpar.', 'warning');
+        return;
+    }
+    if(!confirm('Limpar TODOS os PDFs importados e o consolidado gerado?')) return;
+    _consPaginas = [];
+    _consPaginaSelecionadaIdx = -1;
+    _consPdfConsolidadoBytes = null;
+    _consIdSeq = 0;
+    document.getElementById('consolidadorListaPaginas').innerHTML = `<div style="text-align:center;padding:30px 10px;color:#7a3a00;font-size:12px;"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:0.4;"></i>Importe PDFs para ver as páginas aqui.</div>`;
+    document.getElementById('consolidadorVisualizador').innerHTML = `<div class="placeholder"><i class="fas fa-file-pdf"></i>Selecione uma página à esquerda para visualizar.</div>`;
+    document.getElementById('consolidadorContador').textContent = '0';
+    document.getElementById('consolidadorConsolidadoInfo').classList.remove('active');
+    consolidadorAtualizarStatus('info', 'Nenhum PDF importado. Clique em <strong>Importar PDFs</strong> para começar.');
+    consolidadorAtualizarBotoes();
+    mostrarToast('🧹 Tudo limpo.', 'info');
+}
+
+function consolidadorAtualizarBotoes(){
+    const btnConsolidar = document.getElementById('btnConsolidar');
+    const btnExportar = document.getElementById('btnExportarConsolidado');
+    const selecionadas = _consPaginas.filter(p => !p.removida);
+    if(btnConsolidar) btnConsolidar.disabled = selecionadas.length === 0;
+    if(btnExportar) btnExportar.disabled = !_consPdfConsolidadoBytes;
+}
+
+function consolidadorAtualizarStatus(tipo, msgHTML, icone){
+    const st = document.getElementById('consolidadorStatus');
+    if(!st) return;
+    st.className = 'import-status ' + (tipo==='ok'?'ok':tipo==='warn'?'warn':tipo==='err'?'err':'info');
+    let ic = 'info-circle';
+    if(icone === 'spinner') ic = 'spinner fa-spin';
+    else if(tipo==='ok') ic = 'check-circle';
+    else if(tipo==='warn') ic = 'exclamation-triangle';
+    else if(tipo==='err') ic = 'times-circle';
+    st.innerHTML = `<i class="fas fa-${ic}"></i><span>${msgHTML}</span>`;
+}
+
+async function consolidadorConsolidar(){
+    const selecionadas = _consPaginas.filter(p => !p.removida);
+    if(selecionadas.length === 0){
+        mostrarToast('⚠️ Nenhuma página selecionada para consolidar.', 'warning');
+        return;
+    }
+    const pdfLib = getPdfLib();
+    if(!pdfLib){
+        mostrarToast('❌ Biblioteca pdf-lib não carregada.', 'error');
+        return;
+    }
+    const btnConsolidar = document.getElementById('btnConsolidar');
+    if(btnConsolidar){ btnConsolidar.disabled = true; btnConsolidar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consolidando...'; }
+    consolidadorAtualizarStatus('info', `Consolidando ${selecionadas.length} página(s)...`, 'spinner');
+
+    try{
+        const { PDFDocument } = pdfLib;
+        const pdfFinal = await PDFDocument.create();
+
+        // Cache de PDFs de origem carregados por arquivo
+        const cacheDocsOrigem = {};
+
+        for(let i = 0; i < selecionadas.length; i++){
+            const p = selecionadas[i];
+            const chave = p.nomeArquivo + '::' + p.bytesOrigem.length;
+            let docOrigem = cacheDocsOrigem[chave];
+            if(!docOrigem){
+                docOrigem = await PDFDocument.load(p.bytesOrigem);
+                cacheDocsOrigem[chave] = docOrigem;
+            }
+            const [paginaCopiada] = await pdfFinal.copyPages(docOrigem, [p.paginaOriginal - 1]);
+            pdfFinal.addPage(paginaCopiada);
+        }
+
+        const pdfBytes = await pdfFinal.save();
+        _consPdfConsolidadoBytes = pdfBytes;
+        _consTotalPaginasConsolidadas = selecionadas.length;
+
+        const infoDiv = document.getElementById('consolidadorConsolidadoInfo');
+        const infoTxt = document.getElementById('consolidadorConsolidadoTexto');
+        if(infoTxt) infoTxt.textContent = ` ${_consTotalPaginasConsolidadas} página(s) de ${new Set(selecionadas.map(p=>p.nomeArquivo)).size} arquivo(s) — ${(pdfBytes.length/1024).toFixed(1)} KB.`;
+        if(infoDiv) infoDiv.classList.add('active');
+
+        consolidadorAtualizarStatus('ok', `✅ Consolidado gerado com <strong>${_consTotalPaginasConsolidadas}</strong> página(s).`);
+        mostrarToast(`✅ PDF consolidado (${_consTotalPaginasConsolidadas} páginas) pronto!`, '');
+    }catch(e){
+        console.error('Erro ao consolidar:', e);
+        consolidadorAtualizarStatus('err', `❌ Erro ao consolidar: ${e.message}`);
+        mostrarToast('❌ Erro: ' + e.message, 'error');
+    }finally{
+        if(btnConsolidar){ btnConsolidar.disabled = false; btnConsolidar.innerHTML = '<i class="fas fa-layer-group"></i> Consolidar'; }
+        consolidadorAtualizarBotoes();
+    }
+}
+
+function consolidadorExportar(){
+    if(!_consPdfConsolidadoBytes){
+        mostrarToast('⚠️ Gere o consolidado primeiro.', 'warning');
+        return;
+    }
+    try{
+        const blob = new Blob([_consPdfConsolidadoBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const ts = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
+        a.href = url;
+        a.download = `consolidado_contracheques_${ts}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(()=> URL.revokeObjectURL(url), 3000);
+        mostrarToast(`✅ PDF exportado (${_consTotalPaginasConsolidadas} páginas).`, '');
+    }catch(e){
+        console.error('Erro ao exportar:', e);
+        mostrarToast('❌ Erro ao exportar: ' + e.message, 'error');
+    }
+}
+
+async function consolidadorVisualizarConsolidado(){
+    if(!_consPdfConsolidadoBytes){
+        mostrarToast('⚠️ Gere o consolidado primeiro.', 'warning');
+        return;
+    }
+    const m = document.getElementById('modalConsolidadoView');
+    const viewer = document.getElementById('consolidadoViewer');
+    const info = document.getElementById('consolidadoInfo');
+    if(!m || !viewer) return;
+    if(info) info.textContent = `${_consTotalPaginasConsolidadas} página(s)`;
+    viewer.innerHTML = `<div class="placeholder"><i class="fas fa-spinner fa-spin"></i>Renderizando consolidado...</div>`;
+    m.classList.add('active');
+    try{
+        const pdf = await pdfjsLib.getDocument({ data: _consPdfConsolidadoBytes.slice(0) }).promise;
+        viewer.innerHTML = '';
+        for(let i = 1; i <= pdf.numPages; i++){
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale: 1.4 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            canvas.style.maxWidth = '100%';
+            canvas.style.height = 'auto';
+            const ctx = canvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            viewer.appendChild(canvas);
+            const lbl = document.createElement('div');
+            lbl.style.cssText = 'color:#fff;font-size:11px;background:rgba(0,0,0,.6);padding:2px 10px;border-radius:10px;margin-top:4px;';
+            lbl.textContent = `Página ${i} de ${pdf.numPages}`;
+            viewer.appendChild(lbl);
+        }
+    }catch(e){
+        console.error('Erro ao visualizar consolidado:', e);
+        viewer.innerHTML = `<div class="placeholder" style="color:#dc3545;"><i class="fas fa-exclamation-triangle"></i>Erro: ${e.message}</div>`;
+    }
+}
+
+function fecharConsolidadoView(){
+    document.getElementById('modalConsolidadoView').classList.remove('active');
+    const viewer = document.getElementById('consolidadoViewer');
+    if(viewer) viewer.innerHTML = `<div class="placeholder"><i class="fas fa-file-pdf"></i>Carregando visualização...</div>`;
+}
+
+function abrirConsolidadorPDF(){
+    navegarParaRelatorio('consolidador');
+}
+
 function extrairTodosFuncionarios(texto){
     const textoNorm = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ');
     const regexNomeFunc = /([A-Z][A-Z\s]{5,60}?)\s+NOME\s+DO\s+FUNCIONARIO/gi;
@@ -3827,8 +4318,11 @@ function extrairFuncionarioIndividualPorNome(texto, nomeConhecido){
     return dados;
 }
 
+/* ============================================================
+   INICIALIZAÇÃO
+   ============================================================ */
 window.onload = async function(){
-    console.log('🚀 Resumo Executivo v38.5 — Sticky columns + Colunas ocultas com colspan corrigido');
+    console.log('🚀 Sistema v40 — Resumo Executivo + Consolidador PDF');
     try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ const s = JSON.parse(raw); if(s && s.nome){ usuarioAtual = s; } } }catch(e){}
     if(!usuarioAtual) usuarioAtual = {id:'anon',nome:'Visitante',role:'viewer',pode_validar_ponto:false,pode_classificar_atencao:false};
     const hn = document.getElementById('headerUserName'); const hr = document.getElementById('headerUserRole');
@@ -3861,7 +4355,13 @@ window.onload = async function(){
     if(verCcAno) verCcAno.addEventListener('change', carregarVerCC);
 
     document.addEventListener('keydown',e=>{
-        if(e.key==='Escape'){ fecharCalcPopup(); fecharCalcProdutividade(); fecharExtratoCategoria(); fecharDocumentoAnexoView(); fecharConferenciaValidacao(); fecharModalImportacao(); fecharValidacaoCC(); fecharNomesPendentes(); fecharProgresso(); fecharCadastroRapido(); fecharModalVerCC(); }
+        if(e.key==='Escape'){
+            fecharCalcPopup(); fecharCalcProdutividade(); fecharExtratoCategoria();
+            fecharDocumentoAnexoView(); fecharConferenciaValidacao();
+            fecharModalImportacao(); fecharValidacaoCC(); fecharNomesPendentes();
+            fecharProgresso(); fecharCadastroRapido(); fecharModalVerCC();
+            fecharConsolidadoView();
+        }
     });
     console.log('✅ Pronto!');
 };
