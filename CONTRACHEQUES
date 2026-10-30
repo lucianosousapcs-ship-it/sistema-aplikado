@@ -1,0 +1,2922 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>Contracheques | ApliKado</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --orange:#FF8C00;
+  --orange-dark:#e07000;
+  --purple:#6f42c1;
+  --purple-dark:#4a1d96;
+  --ink:#1a0a00;
+  --muted:#7a3a00;
+}
+body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e07000 100%);font-family:'Poppins',sans-serif;color:var(--ink);min-height:100vh;padding-bottom:40px}
+
+/* ================= HEADER ================= */
+.main-header{position:fixed;top:0;left:0;width:100%;background:rgba(10,6,2,.95);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,140,0,.15);z-index:1000;padding:4px 14px;display:flex;justify-content:space-between;align-items:center;height:46px;gap:10px}
+.logo{font-size:16px;font-weight:800;color:#fff;flex-shrink:0;letter-spacing:-.3px}
+.logo span{color:var(--orange)}
+.nav-menu{display:flex;align-items:center;gap:4px;min-width:0}
+.nav-menu a{color:rgba(255,255,255,.75);text-decoration:none;font-size:10.5px;font-weight:500;padding:5px 10px;border-radius:6px;display:flex;align-items:center;gap:5px;cursor:pointer;transition:all .3s;white-space:nowrap;flex-shrink:0}
+.nav-menu a:hover{color:#fff;background:rgba(255,140,0,.15)}
+.nav-menu a i{font-size:10px}
+.user-info{display:flex;align-items:center;gap:7px;color:#fff;font-size:10.5px;background:rgba(255,255,255,.1);padding:3px 10px;border-radius:16px;white-space:nowrap;flex-shrink:0}
+.user-info .user-role{background:var(--orange);padding:1px 6px;border-radius:8px;font-size:8px;font-weight:800;text-transform:uppercase;flex-shrink:0}
+
+/* ================= LAYOUT ================= */
+.container{max-width:1800px;margin:0 auto;padding:60px 16px 24px;display:flex;flex-direction:column;gap:16px}
+.page-title{text-align:center;margin-bottom:2px}
+.page-title h1{font-size:26px;font-weight:800;color:var(--ink)}
+.page-title h1 i{color:var(--orange);margin-right:10px}
+.page-subtitle{font-size:12px;color:#6b3200;font-weight:500;margin-top:4px}
+
+.exec-container{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.18);display:flex;flex-direction:column;min-height:620px}
+.exec-header{background:#1e1e1e;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.exec-header h2{font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.exec-header h2 i{color:var(--orange)}
+.exec-kpi-badge{display:inline-flex;align-items:center;gap:5px;margin-left:4px;padding:4px 12px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;font-size:10px;font-weight:800;border-radius:20px;box-shadow:0 3px 10px rgba(255,140,0,.45)}
+.rel-header-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.btn-action{font-family:'Poppins',sans-serif;padding:8px 16px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .25s;white-space:nowrap;line-height:1.2}
+.btn-action:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 5px 14px rgba(0,0,0,.18)}
+.btn-action:disabled{opacity:.45;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.btn-primary{background:var(--orange);color:#fff}
+.btn-danger{background:#dc3545;color:#fff}
+.btn-warning{background:#ffc107;color:#212529}
+.btn-success{background:#28a745;color:#fff}
+.btn-secondary{background:#6c757d;color:#fff}
+.btn-info{background:#17a2b8;color:#fff}
+.btn-purple{background:var(--purple);color:#fff}
+.btn-blue{background:#0d6efd;color:#fff}
+.btn-light{background:#fff;color:#0d6efd;border:1.5px solid #0d6efd}
+.btn-sm{padding:5px 10px;font-size:10px}
+
+.nav-relatorios-bar{display:flex;background:#2a2a2a;padding:0 20px;overflow-x:auto}
+.nav-relatorios-bar button{font-family:'Poppins',sans-serif;background:transparent;border:none;border-bottom:3px solid transparent;color:rgba(255,255,255,.6);padding:11px 24px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .25s;white-space:nowrap}
+.nav-relatorios-bar button:hover{color:#fff;background:rgba(255,140,0,.06)}
+.nav-relatorios-bar button.active{color:var(--orange);border-bottom-color:var(--orange);background:rgba(255,140,0,.05)}
+
+.painel{display:none;flex-direction:column;flex:1;min-height:0}
+.painel.active{display:flex;animation:fadePainel .25s ease}
+@keyframes fadePainel{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ================= TOOLBAR ================= */
+.exec-toolbar{background:#f8f9fa;border-bottom:1px solid #e5e5e5;padding:12px 20px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.exec-toolbar .campo{display:flex;flex-direction:column;gap:4px;min-width:130px}
+.exec-toolbar .campo label{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.exec-toolbar .campo select,.exec-toolbar .campo input{padding:7px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:var(--ink);background:#fff;outline:none;transition:border-color .2s,box-shadow .2s}
+.exec-toolbar .campo select:focus,.exec-toolbar .campo input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,140,0,.12)}
+.exec-toolbar .campo.busca{min-width:220px;flex:1 1 220px;max-width:360px}
+.exec-body{flex:1;overflow:auto;padding:18px 22px 26px;background:#fff;color:#000;min-height:420px}
+
+/* ================= VER CONTRACHEQUES ================= */
+.split-layout{display:grid;grid-template-columns:380px minmax(0,1fr);gap:16px;min-height:560px;align-items:stretch}
+@media(max-width:980px){.split-layout{grid-template-columns:1fr}}
+.list-card{background:#fff;border:1px solid #e2e2e2;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 315px);min-height:480px;box-shadow:0 4px 16px rgba(0,0,0,.05)}
+.list-card-head{background:#1e1e1e;color:#fff;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-shrink:0}
+.list-card-head span{font-size:12px;font-weight:800;display:flex;align-items:center;gap:7px}
+.list-card-head .contador{background:rgba(255,255,255,.15);padding:1px 9px;border-radius:10px;font-size:10px;font-weight:700}
+.list-body{flex:1;overflow-y:auto;padding:9px;background:#fbfbfb}
+.cc-item{display:flex;gap:9px;padding:10px;margin-bottom:7px;background:#fff;border:1.5px solid #e8e8e8;border-radius:9px;cursor:pointer;transition:all .2s;align-items:center}
+.cc-item:hover{border-color:var(--purple);background:#faf7ff}
+.cc-item.selected{border-color:var(--purple);background:var(--purple);color:#fff;box-shadow:0 5px 16px rgba(111,66,193,.28)}
+.cc-item.selected .cc-sub,.cc-item.selected .cc-val{color:rgba(255,255,255,.88)}
+.cc-item.selected .cc-val{color:#eaffea}
+.cc-item .cc-icon{width:40px;height:48px;border-radius:7px;background:#f3e8ff;color:var(--purple);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid #e2d3ff}
+.cc-item.selected .cc-icon{background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.25)}
+.cc-item .cc-body{flex:1;min-width:0}
+.cc-item .cc-name{font-weight:800;font-size:12.5px;display:block;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-item .cc-sub{font-size:10px;color:#6c757d;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-item .cc-val{font-size:10.5px;font-weight:800;color:#28a745;margin-top:4px;display:block}
+
+.viewer{background:#3e4147;border:1px solid #2f3237;border-radius:12px;overflow:auto;min-height:480px;max-height:calc(100vh - 315px);padding:14px;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative}
+.viewer canvas{display:block;max-width:100%;height:auto;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.5);border-radius:2px}
+.viewer .placeholder{color:#c3c7ce;text-align:center;padding:80px 20px;font-size:13px;font-weight:600;line-height:1.7}
+.viewer .placeholder i{font-size:48px;display:block;margin-bottom:14px;opacity:.45;color:#ffb457}
+.viewer .placeholder small{font-size:11px;font-weight:400;opacity:.75}
+.viewer-bar{color:#fff;font-size:11px;background:rgba(0,0,0,.65);padding:5px 12px;border-radius:14px;display:flex;gap:8px;align-items:center;margin-top:2px;flex-wrap:wrap;justify-content:center}
+.viewer-bar button{background:rgba(255,255,255,.16);border:none;color:#fff;padding:3px 11px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:800;font-family:'Poppins',sans-serif;transition:background .2s}
+.viewer-bar button:hover:not(:disabled){background:var(--orange)}
+.viewer-bar button:disabled{opacity:.3;cursor:not-allowed}
+
+/* ================= COMPETÊNCIA / IMPORTAÇÃO ================= */
+.competencia-bar{background:#fff3cd;border-bottom:1px solid #ffe69c;padding:12px 20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.competencia-bar .comp-title{display:flex;gap:9px;align-items:center;color:#856404;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.3px}
+.competencia-bar .comp-title i{font-size:19px}
+.competencia-bar .comp-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.competencia-bar select,.competencia-bar input{padding:7px 10px;border:2px solid #ffc107;border-radius:7px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:800;color:#856404;background:#fff;outline:none}
+.competencia-bar input{width:86px}
+.competencia-bar .comp-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.comp-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;font-size:10px;font-weight:800;background:#6c757d;color:#fff}
+.comp-badge.locked{background:#28a745}
+.comp-badge.unlocked{background:#dc3545}
+
+.import-wrap{display:flex;flex-direction:column;gap:14px}
+.import-summary{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;background:#f8f9fa;border:1px solid #eee;border-left:4px solid var(--orange);border-radius:10px;padding:11px 14px;font-size:12px;color:var(--muted)}
+.import-summary strong{color:var(--ink)}
+.import-summary .badge{background:#f3e8ff;color:var(--purple);padding:3px 9px;border-radius:12px;font-size:10px;font-weight:800}
+
+.table-wrap{overflow:auto;max-height:calc(100vh - 400px);border:1px solid #ddd;border-radius:10px;background:#fff}
+.data-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px;min-width:1080px}
+.data-table thead th{background:#e9e9e9;color:#1a0a00;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.25px;padding:9px 7px;text-align:center;border-bottom:2px solid #cfcfcf;position:sticky;top:0;z-index:2;white-space:nowrap}
+.data-table tbody td{padding:7px;border-bottom:1px solid #eee;text-align:center;white-space:nowrap;background:#fff}
+.data-table tbody tr:nth-child(even) td{background:#fbfbfb}
+.data-table tbody tr:hover td{background:#fff8ee}
+.data-table .col-nome{text-align:left;font-weight:800;background:#fef3c7!important;min-width:220px;position:sticky;left:0;z-index:1}
+.data-table thead .col-nome{z-index:3}
+.data-table .num{text-align:right;font-weight:700;padding-right:9px}
+.data-table .col-liq{background:#d1fae5!important;color:#155724;font-weight:800;font-size:12px}
+.data-table tfoot td{background:#e4e4e4!important;font-weight:800;padding:10px 7px;border-top:2px solid #bbb;font-size:11px}
+.data-table .sem-pdf{color:#b0b0b0;font-size:10px}
+.data-table .acoes{display:flex;gap:4px;justify-content:center}
+.data-table .btn-mini{border:none;border-radius:5px;padding:5px 7px;font-size:10px;cursor:pointer;color:#fff;font-family:'Poppins',sans-serif;transition:transform .2s}
+.data-table .btn-mini:hover{transform:scale(1.08)}
+.data-table .btn-mini.pdf{background:#17a2b8}
+.data-table .btn-mini.del{background:#dc3545}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted);line-height:1.65}
+.empty-state i{font-size:48px;color:rgba(255,140,0,.35);margin-bottom:14px;display:block}
+.empty-state p{font-size:14px;font-weight:700}
+.empty-state small{font-size:11.5px;font-weight:400;color:#8a6a50;display:block;margin-top:5px}
+
+/* ================= CONSOLIDADOR ================= */
+.cons-toolbar{background:linear-gradient(135deg,#1e1e1e,#3a2408);color:#fff;border-radius:12px;padding:18px 20px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border:1px solid rgba(255,140,0,.35)}
+.cons-toolbar h2{font-size:17px;font-weight:800;display:flex;align-items:center;gap:9px;margin:0}
+.cons-toolbar h2 i{color:var(--orange)}
+.cons-toolbar p{font-size:11px;opacity:.82;margin-top:4px;line-height:1.5}
+.cons-toolbar-botoes{display:flex;gap:8px;flex-wrap:wrap}
+.cons-status{padding:11px 15px;border-radius:9px;font-size:12px;font-weight:600;margin-bottom:13px;display:flex;align-items:center;gap:9px;line-height:1.45}
+.cons-status.ok{background:#d4edda;color:#155724;border-left:4px solid #28a745}
+.cons-status.warn{background:#fff3cd;color:#856404;border-left:4px solid #ffc107}
+.cons-status.err{background:#f8d7da;color:#721c24;border-left:4px solid #dc3545}
+.cons-status.info{background:#d1ecf1;color:#0c5460;border-left:4px solid #17a2b8}
+.cons-aviso{display:none;margin-top:14px;padding:13px 16px;background:#d1fae5;border-left:4px solid #28a745;border-radius:9px;font-size:12px;color:#155724;font-weight:600}
+.cons-aviso.active{display:block}
+.cons-lista-item{display:flex;gap:9px;padding:8px;margin-bottom:6px;background:#fff;border:1.5px solid #e2e2e2;border-radius:8px;cursor:pointer;transition:all .2s;align-items:center}
+.cons-lista-item:hover{border-color:#0d6efd;background:#f1f7ff}
+.cons-lista-item.selected{border-color:#0d6efd;background:#dbeafe}
+.cons-lista-item.removida{opacity:.45;background:#fde8e8;border-color:#dc3545}
+.cons-lista-item.removida .cons-info{text-decoration:line-through;color:#721c24}
+.cons-thumb{width:54px;height:72px;object-fit:cover;border-radius:5px;border:1px solid #ccc;background:#fff;flex-shrink:0}
+.cons-info{flex:1;min-width:0;font-size:10.5px}
+.cons-info .nome{font-weight:800;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1a0a00}
+.cons-info .pag{display:block;color:#6c757d;font-size:9.5px;margin-top:2px}
+.cons-mini{width:26px;height:26px;border-radius:5px;border:none;cursor:pointer;font-size:10px;display:inline-flex;align-items:center;justify-content:center;transition:transform .2s;flex-shrink:0;color:#fff}
+.cons-mini:hover{transform:scale(1.12)}
+.cons-mini.red{background:#f8d7da;color:#721c24}
+.cons-mini.green{background:#d4edda;color:#155724}
+
+/* ================= MODAIS ================= */
+.modal{display:none;position:fixed;inset:0;z-index:10600;background:rgba(0,0,0,.68);backdrop-filter:blur(7px);justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px}
+.modal.active{display:flex}
+.modal-box{background:#fff;border-radius:16px;padding:0;width:100%;max-width:980px;max-height:94vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.38);animation:modalIn .25s ease}
+@keyframes modalIn{from{opacity:0;transform:translateY(12px) scale(.99)}to{opacity:1;transform:none}}
+.modal-box.wide{max-width:1600px}
+.modal-box.medium{max-width:1080px}
+.modal-box.small{max-width:620px}
+.modal-box.tiny{max-width:480px}
+.modal-head{background:#1e1e1e;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
+.modal-head h3{font-size:15px;font-weight:800;display:flex;align-items:center;gap:9px;line-height:1.35}
+.modal-head h3 i{color:var(--orange)}
+.modal-head .modal-close{background:rgba(255,255,255,.12);border:none;color:#fff;width:32px;height:32px;border-radius:8px;font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.modal-head .modal-close:hover{background:#dc3545}
+.modal-body{padding:18px 20px;overflow-y:auto;flex:1}
+.modal-actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid #eee}
+.modal-actions.between{justify-content:space-between}
+
+.status-box{padding:10px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:13px;display:flex;align-items:center;gap:8px;line-height:1.45}
+.status-box.ok{background:#d4edda;color:#155724;border-left:4px solid #28a745}
+.status-box.warn{background:#fff3cd;color:#856404;border-left:4px solid #ffc107}
+.status-box.err{background:#f8d7da;color:#721c24;border-left:4px solid #dc3545}
+.status-box.info{background:#d1ecf1;color:#0c5460;border-left:4px solid #17a2b8}
+
+.comp-lock{background:#f8d7da;border:2px solid #dc3545;border-radius:9px;padding:12px 15px;margin-bottom:13px;display:none;align-items:center;gap:11px}
+.comp-lock.show{display:flex}
+.comp-lock i{font-size:23px;color:#dc3545}
+.comp-lock strong{display:block;color:#721c24;font-size:13px}
+.comp-lock span{color:#721c24;font-size:11.5px;line-height:1.45}
+
+.file-box{background:#f8f9fa;border:2px solid var(--orange);border-radius:10px;padding:13px;margin-bottom:13px}
+.file-box label{font-size:11.5px;font-weight:800;color:var(--muted);display:block;margin-bottom:7px}
+.file-box input[type=file]{width:100%;padding:9px;border:1px solid #ccc;border-radius:6px;background:#fff;font-family:'Poppins',sans-serif;font-size:11.5px}
+.file-actions{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
+
+.import-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:stretch}
+@media(max-width:1000px){.import-layout{grid-template-columns:1fr}}
+.pdf-panel{border:1px solid #ddd;border-radius:9px;background:#f8f9fa;overflow:hidden;display:flex;flex-direction:column;min-height:470px;max-height:64vh}
+.pdf-panel-head{background:#1e1e1e;color:#fff;padding:8px 13px;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0}
+.pdf-panel-head i{color:var(--orange)}
+.pdf-panel-body{flex:1;overflow:auto;background:#4d5157;padding:10px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.pdf-panel-body canvas{display:block;max-width:100%;height:auto;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.45)}
+.pdf-placeholder{color:#c7cbd1;text-align:center;padding:50px 20px;font-size:12px;line-height:1.7}
+.pdf-placeholder i{font-size:44px;display:block;margin-bottom:12px;opacity:.5;color:#ffb457}
+.import-preview-box{border:1px solid #ddd;border-radius:9px;background:#fff;overflow:auto;max-height:64vh;min-height:470px}
+.import-preview{width:100%}
+.import-preview table{width:100%;border-collapse:collapse;font-size:10.5px;min-width:560px}
+.import-preview thead th{background:#f0f0f0;padding:8px 5px;font-size:8.5px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #ccc;text-align:center;position:sticky;top:0;z-index:2;white-space:nowrap}
+.import-preview tbody td{padding:6px 5px;border-bottom:1px solid #eee;text-align:center;white-space:nowrap}
+.import-preview tbody tr:nth-child(even) td{background:#fcfcfc}
+.import-preview .nome-cell{font-weight:800;text-align:left;background:#fef3c7!important;font-size:10.5px;white-space:normal;min-width:150px}
+.import-preview .num{text-align:right;font-weight:700}
+.import-preview .ok-badge{display:inline-block;background:#d4edda;color:#155724;font-size:7px;font-weight:800;padding:1px 5px;border-radius:7px;margin-left:3px;text-transform:uppercase}
+.import-preview .pend-badge{display:inline-block;background:#f8d7da;color:#721c24;font-size:7px;font-weight:800;padding:1px 5px;border-radius:7px;margin-left:3px;text-transform:uppercase}
+.import-preview .alerta{display:block;background:#fff3cd;color:#856404;font-size:9px;font-weight:700;padding:3px 6px;border-radius:4px;margin-top:3px;border:1px solid #ffc107;white-space:normal;text-align:left}
+.import-preview .vazio{color:#aaa;font-style:italic}
+.count-pill{display:inline-flex;align-items:center;gap:4px;background:var(--orange);color:#fff;font-size:10px;font-weight:800;border-radius:14px;padding:2px 9px;margin-left:5px}
+
+/* ============ VALIDAÇÃO ============ */
+.val-aviso{background:#f3e8ff;border-left:4px solid var(--purple);border-radius:8px;padding:11px 14px;font-size:11.5px;color:var(--purple-dark);margin-bottom:14px;line-height:1.55}
+.val-lista{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:13px}
+.val-lista button{font-family:'Poppins',sans-serif;border:1.5px solid #d0c4e8;background:#fff;color:var(--purple-dark);border-radius:7px;padding:5px 9px;font-size:10.5px;font-weight:700;cursor:pointer;transition:all .2s;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.val-lista button:hover{background:#f3e8ff}
+.val-lista button.atual{outline:2px solid var(--purple);outline-offset:1px}
+.val-lista button.ok{border-color:#28a745;background:#eaffea;color:#155724}
+.val-lista button.pendente{border-color:#ffc107;background:#fffbe6;color:#856404}
+.val-func{margin-bottom:13px}
+.val-func label{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px}
+.val-func input{width:100%;padding:9px 11px;border:2px solid var(--purple);border-radius:8px;font-family:'Poppins',sans-serif;font-size:12.5px;font-weight:700;background:#f3e8ff;color:var(--purple-dark);outline:none}
+.val-func input:focus{box-shadow:0 0 0 3px rgba(111,66,193,.14)}
+.val-func input.ok{border-color:#28a745;background:#eaffea;color:#155724}
+.val-func input.pendente{border-color:#ffc107;background:#fffbe6;color:#856404}
+.val-func .val-dica{margin-top:6px;font-size:10px;color:#6c757d;line-height:1.5}
+.val-func .val-dica.ok{color:#155724}
+.val-func .val-dica.novo{color:#856404}
+.val-sugestao{margin-top:5px;font-size:10.5px;color:var(--purple);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.val-sugestao button{background:var(--purple);color:#fff;border:none;border-radius:5px;padding:2px 7px;font-size:9.5px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif}
+.val-secao{font-size:10.5px;font-weight:800;color:var(--purple-dark);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 7px;padding-bottom:4px;border-bottom:1px dashed #d0c4e8}
+.val-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}
+.val-campo{display:flex;flex-direction:column;gap:3px}
+.val-campo label{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.val-campo input{padding:7px 9px;border:1.5px solid #d0c4e8;border-radius:7px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:var(--ink);outline:none}
+.val-campo input:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(111,66,193,.14)}
+.val-campo input.corrigido{border-color:#28a745;background:#eaffea}
+.val-campo small{font-size:8.5px;color:#999;font-style:italic}
+.val-footer{display:flex;justify-content:space-between;align-items:center;gap:9px;flex-wrap:wrap;margin-top:16px;padding-top:13px;border-top:2px solid #eee}
+.val-nav{display:flex;gap:7px;align-items:center}
+.val-contador{font-size:11px;font-weight:800;color:var(--purple);background:#f3e8ff;padding:5px 12px;border-radius:15px}
+
+/* ============ NOMES PENDENTES ============ */
+.pend-aviso{background:#f8d7da;border-left:4px solid #dc3545;border-radius:8px;padding:11px 14px;font-size:11.5px;color:#721c24;margin-bottom:13px;line-height:1.55}
+.pend-item{background:#f8f9fa;border:1px solid #eee;border-radius:9px;padding:12px;margin-bottom:9px}
+.pend-nome{font-weight:800;color:var(--ink);font-size:13px;margin-bottom:3px}
+.pend-nome i{color:#dc3545;margin-right:5px}
+.pend-dados{font-size:10px;color:#6c757d;margin-bottom:9px;display:flex;gap:10px;flex-wrap:wrap}
+.pend-label{font-size:10px;font-weight:800;color:var(--muted);margin-bottom:5px}
+.pend-sugestoes{display:flex;flex-direction:column;gap:5px}
+.pend-sugestao{display:flex;align-items:center;gap:7px;background:#fff;border:1.5px solid #d0c4e8;border-radius:7px;padding:7px 10px;cursor:pointer;font-family:'Poppins',sans-serif;font-size:11px;color:var(--purple-dark);text-align:left;width:100%;transition:all .2s}
+.pend-sugestao:hover{background:#f3e8ff;border-color:var(--purple)}
+.pend-sugestao.selected{background:var(--purple);color:#fff;border-color:var(--purple)}
+.pend-sugestao .pct{font-size:8px;font-weight:800;padding:2px 6px;border-radius:8px;background:#28a745;color:#fff;margin-left:auto;flex-shrink:0}
+.pend-sugestao .pct.baixa{background:#ffc107;color:#212529}
+.pend-sugestao .pct.media{background:#fd7e14}
+.pend-select{width:100%;padding:7px 10px;border:2px solid var(--purple);border-radius:7px;font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;background:#fff;color:var(--purple-dark);outline:none;margin-top:7px}
+.pend-cadastrar{width:100%;margin-top:7px;justify-content:center}
+.pend-nome-campo{margin:9px 0 7px}
+.pend-nome-campo label{font-size:9.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:3px}
+.pend-nome-input{width:100%;padding:8px 10px;border:1.5px solid #d0c4e8;border-radius:7px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;color:var(--purple-dark);background:#fff;outline:none}
+.pend-nome-input:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(111,66,193,.12)}
+#modalNomesPendentes .modal-head{background:#fff;color:var(--ink);border-bottom:2px solid #dc3545;padding:15px 20px}
+#modalNomesPendentes .modal-head h3{font-size:18px;color:var(--ink)}
+#modalNomesPendentes .modal-head h3 i{color:#dc3545}
+#modalNomesPendentes .modal-head .modal-close{background:#f1f3f5;color:#333}
+#modalNomesPendentes .modal-head .modal-close:hover{background:#dc3545;color:#fff}
+
+/* ============ CADASTRO RÁPIDO ============ */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.form-grid .full{grid-column:1/-1}
+.form-field{display:flex;flex-direction:column;gap:3px}
+.form-field label{font-size:9.5px;font-weight:800;color:var(--muted);text-transform:uppercase}
+.form-field input,.form-field select{padding:8px 10px;border:1.5px solid #ddd;border-radius:7px;font-family:'Poppins',sans-serif;font-size:12px;outline:none;background:#fff}
+.form-field input:focus,.form-field select:focus{border-color:#28a745;box-shadow:0 0 0 3px rgba(40,167,69,.1)}
+.form-erro{display:none;background:#f8d7da;color:#721c24;padding:9px 12px;border-radius:7px;font-size:11px;margin-bottom:10px;border-left:4px solid #dc3545;line-height:1.45}
+
+/* ============ PROGRESSO ============ */
+.progress-box{background:#fff;border-radius:14px;padding:28px;max-width:460px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.progress-box i{font-size:40px;color:var(--orange);margin-bottom:13px;display:block}
+.progress-box h3{font-size:17px;margin-bottom:6px;color:var(--ink)}
+.progress-box p{font-size:12px;color:var(--muted);margin-bottom:14px}
+.progress-bar{width:100%;height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden;margin-bottom:9px}
+.progress-bar-inner{height:100%;background:linear-gradient(90deg,var(--orange),var(--orange-dark));width:0%;transition:width .3s;border-radius:4px}
+.progress-status{font-size:10.5px;color:#6c757d;font-style:italic}
+
+/* ============ TOAST ============ */
+.toast{position:fixed;bottom:20px;right:20px;background:#28a745;color:#fff;padding:14px 22px;border-radius:9px;font-size:13px;font-weight:700;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:12000;display:none;animation:slideIn .3s ease;max-width:430px;line-height:1.45}
+.toast.show{display:block}
+.toast.error{background:#dc3545}
+.toast.warning{background:#ffc107;color:#212529}
+.toast.info{background:#17a2b8}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ============ RESPONSIVO ============ */
+@media(max-width:1100px){
+  .exec-header{padding:12px 14px}
+  .exec-body{padding:14px}
+  .nav-relatorios-bar{padding:0 10px}
+  .nav-relatorios-bar button{padding:10px 15px;font-size:12px}
+  .competencia-bar{padding:11px 14px}
+  .exec-toolbar{padding:10px 14px}
+}
+@media(max-width:720px){
+  .main-header{height:auto;min-height:46px;flex-wrap:wrap;padding:5px 10px}
+  .nav-menu{overflow-x:auto;max-width:100%}
+  .user-info{display:none}
+  .container{padding:64px 10px 20px}
+  .page-title h1{font-size:21px}
+  .exec-header h2{font-size:14px}
+  .rel-header-actions{width:100%;justify-content:flex-start}
+  .exec-toolbar .campo.busca{max-width:none}
+  .split-layout{grid-template-columns:1fr}
+  .list-card,.viewer{max-height:58vh;min-height:360px}
+  .competencia-bar{flex-direction:column;align-items:flex-start}
+  .competencia-bar .comp-controls,.competencia-bar .comp-actions{width:100%}
+  .form-grid{grid-template-columns:1fr}
+  .modal{padding:8px}
+  .modal-box{max-height:97vh;border-radius:12px}
+  .modal-body{padding:14px}
+  .import-layout{grid-template-columns:1fr}
+  .pdf-panel,.import-preview-box{max-height:46vh;min-height:320px}
+  .val-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toastSucesso"><i class="fas fa-check-circle"></i> <span id="toastMsg">Salvo!</span></div>
+
+<header class="main-header">
+    <div class="logo">Apli<span>kado</span></div>
+    <nav class="nav-menu">
+        <a href="MODULOI_QNUTRI.html" onclick="localStorage.removeItem('apliKado_ponto_session');"><i class="fas fa-arrow-left"></i> <span>Voltar ao Ponto</span></a>
+        <a href="#" onclick="recarregarTudo();return false;"><i class="fas fa-sync"></i> <span>Recarregar</span></a>
+        <span class="user-info">
+            <i class="fas fa-user-circle"></i>
+            <span id="headerUserName">Usuário</span>
+            <span class="user-role" id="headerUserRole">VIEWER</span>
+        </span>
+    </nav>
+</header>
+
+<div class="container">
+    <div class="page-title">
+        <h1><i class="fas fa-file-invoice-dollar"></i> Contracheques</h1>
+        <div class="page-subtitle">Importação, conferência e consolidação de contracheques em PDF</div>
+    </div>
+
+    <div class="exec-container" id="execContainer">
+        <div class="exec-header">
+            <h2>
+                <i class="fas fa-file-invoice-dollar"></i> Gestão de Contracheques
+                <span class="exec-kpi-badge" id="kpiContracheques"><i class="fas fa-folder-open"></i> <span id="kpiContrachequesValor">0</span> registro(s)</span>
+            </h2>
+            <div class="rel-header-actions">
+                <button type="button" class="btn-action btn-purple" onclick="navegarParaAba('importar')"><i class="fas fa-file-import"></i> Importar Contra Cheque</button>
+                <button type="button" class="btn-action btn-info" onclick="navegarParaAba('consolidador')"><i class="fas fa-object-group"></i> Consolidador PDF</button>
+                <button type="button" class="btn-action btn-primary" onclick="recarregarTudo()"><i class="fas fa-sync"></i> Atualizar</button>
+            </div>
+        </div>
+
+        <div class="nav-relatorios-bar">
+            <button type="button" id="btnNavVer" class="active" onclick="navegarParaAba('ver')"><i class="fas fa-file-invoice"></i> Ver Contracheques</button>
+            <button type="button" id="btnNavImportar" onclick="navegarParaAba('importar')"><i class="fas fa-file-import"></i> Importar Contra Cheque</button>
+            <button type="button" id="btnNavConsolidador" onclick="navegarParaAba('consolidador')"><i class="fas fa-object-group"></i> Consolidador PDF</button>
+        </div>
+
+        <!-- ================= PAINEL VER ================= -->
+        <div class="painel active" id="painelVer">
+            <div class="exec-toolbar">
+                <div class="campo" style="min-width:135px;">
+                    <label><i class="fas fa-calendar"></i> Mês</label>
+                    <select id="verMes"></select>
+                </div>
+                <div class="campo" style="min-width:85px;">
+                    <label><i class="fas fa-calendar-alt"></i> Ano</label>
+                    <input type="number" id="verAno" value="2026" min="2020" max="2035">
+                </div>
+                <div class="campo busca">
+                    <label><i class="fas fa-search"></i> Buscar colaborador</label>
+                    <input type="text" id="verBusca" placeholder="Nome do colaborador...">
+                </div>
+                <button type="button" class="btn-action btn-primary" onclick="carregarVerContracheques()"><i class="fas fa-search"></i> Carregar</button>
+                <button type="button" class="btn-action btn-secondary" onclick="limparCacheVer()"><i class="fas fa-broom"></i> Limpar Cache</button>
+            </div>
+            <div class="exec-body">
+                <div class="split-layout">
+                    <div class="list-card">
+                        <div class="list-card-head">
+                            <span><i class="fas fa-list"></i> Contracheques <span class="contador" id="verContador">0</span></span>
+                        </div>
+                        <div class="list-body" id="verLista">
+                            <div class="empty-state" style="padding:40px 14px;">
+                                <i class="fas fa-inbox"></i>
+                                <p>Carregando...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="viewer" id="verViewer">
+                        <div class="placeholder">
+                            <i class="fas fa-file-pdf"></i>
+                            Selecione um contracheque à esquerda.
+                            <small>O PDF fica salvo no próprio registro do contracheque.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PAINEL IMPORTAR ================= -->
+        <div class="painel" id="painelImportar">
+            <div class="competencia-bar">
+                <div class="comp-title"><i class="fas fa-bullseye"></i> Competência</div>
+                <div class="comp-controls">
+                    <select id="ccMes" title="Mês de referência"></select>
+                    <input type="number" id="ccAno" value="2026" min="2020" max="2035" title="Ano de referência">
+                    <button type="button" class="btn-action btn-success" onclick="confirmarCompetencia()"><i class="fas fa-check-double"></i> Confirmar Competência</button>
+                    <span class="comp-badge unlocked" id="competenciaBadge"><i class="fas fa-lock-open"></i> Não confirmada</span>
+                </div>
+                <div class="comp-actions">
+                    <button type="button" class="btn-action btn-purple" id="btnAbrirImportacao" onclick="abrirModalImportacao()" disabled><i class="fas fa-file-pdf"></i> Importar PDF</button>
+                    <button type="button" class="btn-action btn-danger" id="btnLimparDados" onclick="limparDadosContracheque()" disabled><i class="fas fa-trash"></i> Limpar Dados</button>
+                    <button type="button" class="btn-action btn-info" id="btnSincronizar" onclick="sincronizarContracheques()" disabled><i class="fas fa-cloud-upload-alt"></i> Sincronizar</button>
+                </div>
+            </div>
+            <div class="exec-body" id="importPainelBody">
+                <div class="empty-state">
+                    <i class="fas fa-lock"></i>
+                    <p>Competência não confirmada.</p>
+                    <small>Escolha o Mês/Ano acima e clique em <strong>Confirmar Competência</strong>.</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PAINEL CONSOLIDADOR ================= -->
+        <div class="painel" id="painelConsolidador">
+            <div class="exec-body">
+                <div class="cons-toolbar">
+                    <div>
+                        <h2><i class="fas fa-object-group"></i> Consolidador de Contracheques PDF</h2>
+                        <p>Importe vários PDFs (1 ou mais páginas), consolide em um único arquivo, remova páginas indesejadas e exporte.</p>
+                    </div>
+                    <div class="cons-toolbar-botoes">
+                        <button type="button" class="btn-action btn-light" onclick="consImportar()"><i class="fas fa-file-import"></i> Importar PDFs</button>
+                        <button type="button" class="btn-action btn-success" id="btnConsolidar" onclick="consConsolidar()" disabled><i class="fas fa-layer-group"></i> Consolidar</button>
+                        <button type="button" class="btn-action btn-warning" id="btnExportarConsolidado" onclick="consExportar()" disabled><i class="fas fa-file-export"></i> Exportar PDF</button>
+                        <button type="button" class="btn-action btn-danger" onclick="consLimpar()"><i class="fas fa-trash"></i> Limpar Tudo</button>
+                    </div>
+                </div>
+
+                <div id="consStatus" class="cons-status info"><i class="fas fa-info-circle"></i><span>Nenhum PDF importado. Clique em <strong>Importar PDFs</strong> para começar.</span></div>
+
+                <input type="file" id="consFileInput" accept=".pdf" multiple style="display:none;">
+
+                <div class="split-layout">
+                    <div class="list-card">
+                        <div class="list-card-head">
+                            <span><i class="fas fa-list"></i> Páginas <span class="contador" id="consContador">0</span></span>
+                            <div style="display:flex;gap:4px;">
+                                <button type="button" class="cons-mini green" onclick="consRestaurarTodas()" title="Restaurar todas"><i class="fas fa-undo"></i></button>
+                                <button type="button" class="cons-mini red" onclick="consRemoverTodas()" title="Remover todas"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="list-body" id="consLista">
+                            <div class="empty-state" style="padding:40px 14px;"><i class="fas fa-inbox"></i><p>Importe PDFs para ver as páginas.</p></div>
+                        </div>
+                    </div>
+                    <div class="viewer" id="consViewer">
+                        <div class="placeholder"><i class="fas fa-file-pdf"></i>Selecione uma página à esquerda para visualizar.</div>
+                    </div>
+                </div>
+
+                <div class="cons-aviso" id="consAviso">
+                    <i class="fas fa-check-circle"></i> <strong>Arquivo consolidado pronto!</strong> <span id="consTexto"></span>
+                    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+                        <button type="button" class="btn-action btn-info btn-sm" onclick="consVisualizar()"><i class="fas fa-eye"></i> Visualizar Consolidado</button>
+                        <button type="button" class="btn-action btn-success btn-sm" onclick="consExportar()"><i class="fas fa-download"></i> Exportar Consolidado</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL IMPORTAÇÃO ================= -->
+<div class="modal" id="modalImport">
+    <div class="modal-box wide">
+        <div class="modal-head">
+            <h3><i class="fas fa-file-pdf"></i> Importar Contra Cheque (PDF)</h3>
+            <button type="button" class="modal-close" onclick="fecharModalImportacao()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="comp-lock" id="avisoCompetenciaImportacao">
+                <i class="fas fa-lock"></i>
+                <div>
+                    <strong>Competência Travada</strong>
+                    <span>Os dados deste PDF serão salvos em: <strong id="txtCompetenciaTravada"></strong></span>
+                </div>
+            </div>
+
+            <div class="status-box info" id="importStatus">
+                <i class="fas fa-info-circle"></i>
+                <span>Selecione o arquivo PDF do contracheque. O sistema tentará extrair os dados automaticamente usando a estrutura visual (coordenadas X/Y).</span>
+            </div>
+
+            <div class="file-box">
+                <label><i class="fas fa-upload"></i> Selecione o arquivo PDF:</label>
+                <input type="file" id="importFileInput" accept=".pdf">
+                <div class="file-actions">
+                    <button type="button" class="btn-action btn-primary" id="btnExtrairPDF" onclick="processarPDFImportacao()"><i class="fas fa-crosshairs"></i> Extrair e Validar Dados</button>
+                    <button type="button" class="btn-action btn-secondary" onclick="document.getElementById('importFileInput').value='';"><i class="fas fa-eraser"></i> Limpar Arquivo</button>
+                </div>
+            </div>
+
+            <div class="import-layout">
+                <div class="pdf-panel">
+                    <div class="pdf-panel-head">
+                        <span><i class="fas fa-file-pdf"></i> Visualização do PDF</span>
+                        <span id="pdfPageInfo" style="font-size:9.5px;color:#aaa;"></span>
+                    </div>
+                    <div class="pdf-panel-body" id="pdfViewerBody">
+                        <div class="pdf-placeholder">
+                            <i class="fas fa-file-pdf"></i>
+                            Selecione um arquivo PDF e clique em <strong>Extrair e Validar Dados</strong> para visualizar.
+                        </div>
+                    </div>
+                </div>
+                <div class="import-preview-box">
+                    <div style="padding:10px 12px;border-bottom:1px solid #eee;font-size:11.5px;font-weight:800;color:#1a0a00;background:#fafafa;position:sticky;top:0;z-index:3;">
+                        <i class="fas fa-users" style="color:#FF8C00;"></i> Colaboradores identificados
+                        <span class="count-pill" id="importCount">0</span>
+                        <div style="font-size:9.5px;font-weight:500;color:#7a3a00;margin-top:3px;">Após extrair, clique em <strong>Validar e Salvar</strong> para corrigir e confirmar os valores.</div>
+                    </div>
+                    <div class="import-preview" id="importPreview">
+                        <div class="empty-state" style="padding:45px 20px;"><i class="fas fa-inbox"></i><p>Nenhum colaborador processado.</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-action btn-secondary" onclick="fecharModalImportacao()"><i class="fas fa-times"></i> Cancelar</button>
+                <button type="button" class="btn-action btn-danger" onclick="resetarImportacao()"><i class="fas fa-trash"></i> Limpar Lista</button>
+                <button type="button" class="btn-action btn-success" onclick="abrirValidacaoContracheques()"><i class="fas fa-clipboard-check"></i> Validar e Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL VALIDAÇÃO ================= -->
+<div class="modal" id="modalValidacaoCC" style="z-index:10700;">
+    <div class="modal-box medium">
+        <div class="modal-head">
+            <h3><i class="fas fa-clipboard-check"></i> Validar e Corrigir Dados do Contracheque</h3>
+            <button type="button" class="modal-close" onclick="fecharValidacaoCC()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="val-aviso">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Confira cada valor antes de salvar.</strong> Os campos já vêm preenchidos com o que foi extraído do PDF, mas você pode <strong>corrigir manualmente</strong>. Confirme também o <strong>nome do colaborador</strong>.
+            </div>
+            <div class="val-lista" id="validacaoCCLista"></div>
+            <div id="validacaoCCConteudo"></div>
+            <div class="val-footer">
+                <div class="val-nav">
+                    <button type="button" class="btn-action btn-secondary btn-sm" onclick="validacaoCCAnterior()"><i class="fas fa-chevron-left"></i> Anterior</button>
+                    <span class="val-contador" id="validacaoCCContador">1 / 1</span>
+                    <button type="button" class="btn-action btn-secondary btn-sm" onclick="validacaoCCProximo()">Próximo <i class="fas fa-chevron-right"></i></button>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" class="btn-action btn-danger" onclick="fecharValidacaoCC()"><i class="fas fa-times"></i> Cancelar</button>
+                    <button type="button" class="btn-action btn-success" id="btnSalvarValidacao" onclick="confirmarValidacaoCC()"><i class="fas fa-save"></i> Confirmar e Salvar Todos</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL NOMES PENDENTES ================= -->
+<div class="modal" id="modalNomesPendentes" style="z-index:10800;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3><i class="fas fa-user-slash"></i> Nomes não vinculados</h3>
+            <button type="button" class="modal-close" onclick="fecharNomesPendentes()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="pend-aviso">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Os nomes abaixo foram extraídos do PDF mas não encontraram correspondência exata.</strong>
+                Selecione o funcionário correto entre as sugestões, ou clique em <strong>Cadastrar</strong> para criar um novo funcionário na base.
+            </div>
+            <div id="nomesPendentesLista"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-action btn-secondary" onclick="fecharNomesPendentes()"><i class="fas fa-times"></i> Cancelar</button>
+                <button type="button" class="btn-action btn-success" onclick="confirmarVinculosPendentes()"><i class="fas fa-check"></i> Confirmar Vínculos</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL CADASTRO RÁPIDO ================= -->
+<div class="modal" id="modalCadastroRapido" style="z-index:10900;">
+    <div class="modal-box small">
+        <div class="modal-head">
+            <h3><i class="fas fa-user-plus"></i> Cadastrar Funcionário</h3>
+            <button type="button" class="modal-close" onclick="fecharCadastroRapido()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-erro" id="cadastroRapidoErro"></div>
+            <div class="form-grid">
+                <div class="form-field full">
+                    <label>Nome Completo *</label>
+                    <input type="text" id="cadNome" placeholder="Nome do funcionário">
+                </div>
+                <div class="form-field">
+                    <label>CPF</label>
+                    <input type="text" id="cadCPF" placeholder="000.000.000-00">
+                </div>
+                <div class="form-field">
+                    <label>Salário Base (R$)</label>
+                    <input type="number" step="0.01" id="cadSalario" placeholder="0,00">
+                </div>
+                <div class="form-field">
+                    <label>Unidade</label>
+                    <select id="cadUnidade">
+                        <option value="">Selecione</option>
+                        <option value="Spoleto">Spoleto</option><option value="A2B">A2B</option><option value="Acço">Acço</option>
+                        <option value="Copaenergia">Copaenergia</option><option value="INSS">INSS</option><option value="Qnutri">Qnutri</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Departamento / Empresa</label>
+                    <input type="text" id="cadDepartamento" placeholder="Ex: J D QUINTINO">
+                </div>
+                <div class="form-field">
+                    <label>Cargo</label>
+                    <input type="text" id="cadCargo" placeholder="Cargo">
+                </div>
+                <div class="form-field">
+                    <label>Permanência</label>
+                    <select id="cadPermanencia">
+                        <option value="08:00">08:00</option>
+                        <option value="07:20">07:20</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Admissão</label>
+                    <input type="date" id="cadAdmissao">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-action btn-secondary" onclick="fecharCadastroRapido()"><i class="fas fa-times"></i> Cancelar</button>
+                <button type="button" class="btn-action btn-success" onclick="salvarCadastroRapido()"><i class="fas fa-save"></i> Salvar e Vincular</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL CONSOLIDADO ================= -->
+<div class="modal" id="modalConsolidadoView" style="z-index:11100;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3><i class="fas fa-file-pdf"></i> Arquivo Consolidado <span id="consolidadoInfo" style="font-size:10px;background:#d1fae5;color:#155724;padding:3px 10px;border-radius:12px;font-weight:800;"></span></h3>
+            <button type="button" class="modal-close" onclick="fecharConsolidadoView()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="viewer" id="consolidadoViewer" style="min-height:500px;max-height:72vh;">
+                <div class="placeholder"><i class="fas fa-file-pdf"></i>Carregando visualização...</div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-action btn-secondary" onclick="fecharConsolidadoView()"><i class="fas fa-times"></i> Fechar</button>
+                <button type="button" class="btn-action btn-success" onclick="consExportar()"><i class="fas fa-download"></i> Exportar PDF</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL PROGRESSO ================= -->
+<div class="modal" id="modalProgresso" style="z-index:11500;align-items:center;">
+    <div class="progress-box">
+        <i class="fas fa-sync fa-spin" id="progressoIcone"></i>
+        <h3 id="progressoTitulo">Processando</h3>
+        <p id="progressoDescricao">Aguarde...</p>
+        <div class="progress-bar"><div class="progress-bar-inner" id="progressoBarra"></div></div>
+        <span class="progress-status" id="progressoStatus">Iniciando...</span>
+    </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIGURAÇÃO — PROJETO NOVO
+   ============================================================ */
+const SUPABASE_URL = 'https://xjthmombfstowozbmsdc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_4qsEv8mvtxTkH9EElKRV3Q_1l2-8GT-';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+});
+
+/* Projeto antigo: usado somente como diretório de colaboradores para o pop-up de vínculo */
+const LEGACY_SUPABASE_URL = 'https://avzxplcdutqzlxfievza.supabase.co';
+const LEGACY_SUPABASE_KEY = 'sb_publishable_rkwsOtfEMpic9PsiExxC_w_rzYqZNRs';
+const dbLegacy = supabase.createClient(LEGACY_SUPABASE_URL, LEGACY_SUPABASE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+});
+
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const STORAGE_KEY = 'apliKado_ponto_session';
+const ROLE_LABELS = { admin:'Administrador', user:'Usuário', viewer:'Visualizador' };
+const PERMANENCIAS_VALIDAS = { '08:00': 8*60, '07:20': 7*60+20 };
+const PERMANENCIA_PADRAO = '08:00';
+
+let usuarioAtual = null;
+let funcionarios = [];
+
+let _competenciaConfirmada = false;
+let _importContextMes = null;
+let _importContextAno = null;
+
+let _importPreviewData = [];
+let _nomesPendentes = [];
+let _importUidSeq = 0;
+
+let _validacaoCCData = [];
+let _validacaoCCIdx = 0;
+let _salvandoCC = false;
+
+let _pdfBytesAtual = null;
+let _pdfBase64Atual = '';
+let _pdfArquivoNome = '';
+let _pdfDocAtual = null;
+
+let _cadastroRapidoItemIdx = null;
+
+let _verListaCompleta = [];
+let _verLista = [];
+let _verSelecionado = null;
+let _verPdfDoc = null;
+let _verBytesCache = new Map();
+let _verPaginaAtual = 1;
+let _verTotalPaginas = 1;
+let _verReqSeq = 0;
+let _verRenderSeq = 0;
+
+let _consPaginas = [];
+let _consBytesCache = {};
+let _consSelIdx = -1;
+let _consIdSeq = 0;
+let _consConsolidado = null;
+let _consTotalPag = 0;
+
+/* Cache de colunas que não existem no projeto Supabase (compatibilidade entre schemas) */
+const _colunasAusentes = {};
+
+/* ============================================================
+   HELPERS GERAIS
+   ============================================================ */
+function escaparHTML(v){
+    return String(v === null || v === undefined ? '' : v)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+function fmtBRL(v){
+    const n = Number(v);
+    return (isNaN(n) ? 0 : n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+function fmtNum(v){
+    if(v === null || v === undefined || v === '' || isNaN(Number(v))) return '—';
+    return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function normalizarNome(nome){
+    if(!nome) return '';
+    return String(nome).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
+        .replace(/[^A-Z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+function parseNumeroEstrito(str){
+    if(str === null || str === undefined) return null;
+    let s = String(str).trim();
+    if(!s) return null;
+    if(/[a-zA-Z]/.test(s.replace(/R\$\s*/gi,'')) ) return null;
+    s = s.replace(/R\$\s*/gi,'').replace(/\s+/g,'');
+    if(s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+}
+function getPermanenciaMinutos(f){
+    if(!f) return PERMANENCIAS_VALIDAS[PERMANENCIA_PADRAO];
+    return PERMANENCIAS_VALIDAS[f.permanencia || PERMANENCIA_PADRAO] ?? PERMANENCIAS_VALIDAS[PERMANENCIA_PADRAO];
+}
+function formatoHoras(min){
+    if(!min || min < 0) return '00:00';
+    return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
+}
+const FAIXAS_INSS = [
+    {ate:1518.00,aliq:0.075},{ate:2793.88,aliq:0.09},
+    {ate:4190.83,aliq:0.12},{ate:8157.41,aliq:0.14}
+];
+const TETO_INSS = 8157.41;
+function calcularINSS(salario){
+    if(!salario || salario <= 0) return 0;
+    let base = Math.min(salario, TETO_INSS), inss = 0, anterior = 0;
+    for(const f of FAIXAS_INSS){
+        if(base > f.ate){ inss += (f.ate - anterior) * f.aliq; anterior = f.ate; }
+        else { inss += (base - anterior) * f.aliq; break; }
+    }
+    return Math.round(inss * 100) / 100;
+}
+function calcularFGTS(salario){
+    if(!salario || salario <= 0) return 0;
+    return Math.round(salario * 0.08 * 100) / 100;
+}
+function bytesParaBase64(bytes){
+    let binario = '';
+    const chunk = 0x8000;
+    for(let i = 0; i < bytes.length; i += chunk){
+        binario += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunk, bytes.length)));
+    }
+    return btoa(binario);
+}
+function base64ParaBytes(valor){
+    const base64 = String(valor || '').includes(',') ? String(valor).split(',').pop() : String(valor || '');
+    const binario = atob(base64);
+    const bytes = new Uint8Array(binario.length);
+    for(let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+    return bytes;
+}
+function obterPdfBase64(){
+    if(_pdfBase64Atual) return _pdfBase64Atual;
+    if(!_pdfBytesAtual || _pdfBytesAtual.length === 0) return '';
+    _pdfBase64Atual = 'data:application/pdf;base64,' + bytesParaBase64(_pdfBytesAtual);
+    return _pdfBase64Atual;
+}
+function gerarUUID(){
+    if(window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+function lerDadosBrutos(row){
+    let d = row ? row.dados_brutos : null;
+    if(!d) return {};
+    if(typeof d === 'string'){
+        try{ return JSON.parse(d) || {}; }catch(e){ return {}; }
+    }
+    return (typeof d === 'object') ? d : {};
+}
+function caminhoPdfRegistro(row){
+    const dados = lerDadosBrutos(row);
+    return row?.arquivo_path || dados.arquivo_path || dados.arquivo_storage || null;
+}
+function temPdfRegistro(row){
+    if(!row) return false;
+    return !!(row.arquivo_base64 || row.arquivo_nome || caminhoPdfRegistro(row));
+}
+function paginaPdfRegistro(row){
+    const dados = lerDadosBrutos(row);
+    return parseInt(dados.paginaPDF, 10) || 1;
+}
+function mensagemErroBanco(error){
+    const msg = error?.message || String(error || 'Erro desconhecido');
+    if(/row-level security|42501/i.test(msg)){
+        return 'Sem permissão de gravação (RLS). Configure as policies de INSERT/UPDATE/DELETE da tabela "contracheques".';
+    }
+    return msg;
+}
+function mostrarToast(msg, tipo=''){
+    const t = document.getElementById('toastSucesso');
+    const m = document.getElementById('toastMsg');
+    if(!t || !m) return;
+    m.textContent = msg;
+    t.className = 'toast show';
+    if(tipo === 'error') t.classList.add('error');
+    else if(tipo === 'warning') t.classList.add('warning');
+    else if(tipo === 'info') t.classList.add('info');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(()=>{ t.className = 'toast'; }, 4800);
+}
+function abrirProgresso(titulo, descricao){
+    const modal = document.getElementById('modalProgresso');
+    document.getElementById('progressoTitulo').textContent = titulo || 'Processando';
+    document.getElementById('progressoDescricao').textContent = descricao || 'Aguarde...';
+    document.getElementById('progressoBarra').style.width = '0%';
+    document.getElementById('progressoStatus').textContent = 'Iniciando...';
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+}
+function atualizarProgresso(pct, status){
+    document.getElementById('progressoBarra').style.width = `${Math.min(100, Math.max(0, pct))}%`;
+    if(status) document.getElementById('progressoStatus').textContent = status;
+}
+function fecharProgresso(){
+    const modal = document.getElementById('modalProgresso');
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+}
+function extrairColunaAusente(error){
+    if(!error) return null;
+    const msg = error.message || '';
+    let m = msg.match(/column\s+(?:[a-zA-Z0-9_]+\.)?["']?([a-zA-Z0-9_]+)["']?\s+does not exist/i);
+    if(m) return m[1];
+    m = msg.match(/Could not find the '([^']+)' column/i);
+    if(m) return m[1];
+    m = msg.match(/column\s+["']([^"']+)["']/i);
+    if(m) return m[1];
+    return null;
+}
+async function salvarComFallback(tabela, operacao, payloadInicial){
+    if(!_colunasAusentes[tabela]) _colunasAusentes[tabela] = new Set();
+    const ignoradas = _colunasAusentes[tabela];
+    const payload = { ...payloadInicial };
+    for(const coluna of ignoradas){
+        delete payload[coluna];
+    }
+    let ultimoErro = null;
+    for(let tent = 0; tent < 24; tent++){
+        const { data, error } = await operacao(payload);
+        if(!error) return { ok:true, data };
+        ultimoErro = error;
+        const coluna = extrairColunaAusente(error);
+        if(coluna && Object.prototype.hasOwnProperty.call(payload, coluna)){
+            console.warn(`[${tabela}] Coluna "${coluna}" não existe. Removendo do payload e tentando novamente.`);
+            ignoradas.add(coluna);
+            delete payload[coluna];
+            continue;
+        }
+        return { ok:false, error };
+    }
+    return { ok:false, error: ultimoErro };
+}
+
+/* ============================================================
+   DIRETÓRIO DE COLABORADORES
+   ------------------------------------------------------------
+   O projeto novo não possui a tabela "funcionarios". O diretório
+   é montado a partir dos contracheques já existentes. Se a tabela
+   "funcionarios" existir no futuro, ela é usada automaticamente.
+   ============================================================ */
+async function carregarFuncionarios(){
+    try{
+        const { data, error } = await db.from('funcionarios').select('*').order('nome');
+        if(!error && data && data.length > 0){
+            funcionarios = data;
+            return funcionarios;
+        }
+        if(error && error.code !== 'PGRST205' && error.code !== '42P01'){
+            console.warn('Tabela funcionarios indisponível no projeto novo:', error.message);
+        }
+    }catch(e){
+        console.warn('Tabela funcionarios indisponível no projeto novo:', e);
+    }
+
+    // Diretório oficial do sistema antigo (é de lá que vêm as sugestões do pop-up)
+    try{
+        const { data, error } = await dbLegacy.from('funcionarios').select('*').order('nome');
+        if(!error && data && data.length > 0){
+            funcionarios = data.map(f=>({
+                ...f,
+                desligamento: f.desligamento || f.demissao || null
+            }));
+            return funcionarios;
+        }
+        if(error) console.warn('Base antiga de funcionarios indisponível:', error.message);
+    }catch(e){
+        console.warn('Base antiga de funcionarios indisponível:', e);
+    }
+
+    // Último fallback: nomes que já existem no histórico de contracheques
+    const { data, error } = await db
+        .from('contracheques')
+        .select('funcionario_id, funcionario_nome, unidade, departamento, cargo, salario_base, updated_at')
+        .order('updated_at', { ascending:false })
+        .limit(5000);
+    if(error) throw error;
+
+    const mapa = new Map();
+    for(const r of data || []){
+        const nome = (r.funcionario_nome || '').trim();
+        const chave = normalizarNome(nome);
+        if(!chave) continue;
+        if(!mapa.has(chave)){
+            mapa.set(chave, {
+                id: r.funcionario_id || null,
+                nome,
+                unidade: r.unidade || null,
+                departamento: r.departamento || null,
+                cargo: r.cargo || null,
+                salario: Number(r.salario_base) || 0
+            });
+        }else if(!mapa.get(chave).id && r.funcionario_id){
+            mapa.get(chave).id = r.funcionario_id;
+        }
+    }
+    funcionarios = [...mapa.values()].sort((a,b)=>(a.nome || '').localeCompare(b.nome || ''));
+    return funcionarios;
+}
+function funcionarioAtivo(f){ return f && !f.desligamento; }
+
+/* ============================================================
+   ABAS / COMPETÊNCIA
+   ============================================================ */
+async function navegarParaAba(dest){
+    ['ver','importar','consolidador'].forEach(k=>{
+        const painel = document.getElementById('painel' + (k === 'ver' ? 'Ver' : k === 'importar' ? 'Importar' : 'Consolidador'));
+        if(painel) painel.classList.toggle('active', k === dest);
+    });
+    document.getElementById('btnNavVer').classList.toggle('active', dest === 'ver');
+    document.getElementById('btnNavImportar').classList.toggle('active', dest === 'importar');
+    document.getElementById('btnNavConsolidador').classList.toggle('active', dest === 'consolidador');
+
+    if(dest === 'ver'){
+        await carregarVerContracheques();
+    }else if(dest === 'importar'){
+        if(_competenciaConfirmada) await carregarPainelImportacao();
+        else renderizarImportBloqueado();
+    }else if(dest === 'consolidador'){
+        consAtualizarBotoes();
+    }
+}
+function renderizarImportBloqueado(){
+    const body = document.getElementById('importPainelBody');
+    if(!body) return;
+    body.innerHTML = `<div class="empty-state"><i class="fas fa-lock"></i><p>Competência não confirmada.</p><small>Escolha o Mês/Ano acima e clique em <strong>Confirmar Competência</strong>.</small></div>`;
+    document.getElementById('kpiContrachequesValor').textContent = '0';
+}
+function atualizarBotoesCompetencia(){
+    const badge = document.getElementById('competenciaBadge');
+    const btnImp = document.getElementById('btnAbrirImportacao');
+    const btnLim = document.getElementById('btnLimparDados');
+    const btnSin = document.getElementById('btnSincronizar');
+    if(_competenciaConfirmada){
+        badge.className = 'comp-badge locked';
+        badge.innerHTML = `<i class="fas fa-lock"></i> ${MESES[_importContextMes-1]} / ${_importContextAno}`;
+        btnImp.disabled = false; btnLim.disabled = false; btnSin.disabled = false;
+    }else{
+        badge.className = 'comp-badge unlocked';
+        badge.innerHTML = '<i class="fas fa-lock-open"></i> Não confirmada';
+        btnImp.disabled = true; btnLim.disabled = true; btnSin.disabled = true;
+    }
+}
+function confirmarCompetencia(){
+    const mes = parseInt(document.getElementById('ccMes').value, 10) + 1;
+    const ano = parseInt(document.getElementById('ccAno').value, 10);
+    if(!mes || mes < 1 || mes > 12 || !ano){
+        mostrarToast('⚠️ Selecione um Mês e um Ano válidos.', 'warning');
+        return;
+    }
+    _importContextMes = mes;
+    _importContextAno = ano;
+    _competenciaConfirmada = true;
+    atualizarBotoesCompetencia();
+    document.getElementById('avisoCompetenciaImportacao').classList.add('show');
+    document.getElementById('txtCompetenciaTravada').textContent = `${MESES[mes-1]} / ${ano}`;
+    mostrarToast(`🔒 Competência confirmada: ${MESES[mes-1]} / ${ano}`);
+    carregarPainelImportacao();
+}
+function verificarAlteracaoCompetencia(){
+    if(!_competenciaConfirmada) return;
+    const mes = parseInt(document.getElementById('ccMes').value, 10) + 1;
+    const ano = parseInt(document.getElementById('ccAno').value, 10);
+    if(mes !== _importContextMes || ano !== _importContextAno){
+        _competenciaConfirmada = false;
+        _importContextMes = null;
+        _importContextAno = null;
+        atualizarBotoesCompetencia();
+        renderizarImportBloqueado();
+        document.getElementById('avisoCompetenciaImportacao').classList.remove('show');
+        mostrarToast('Competência alterada. Confirme novamente para importar.', 'info');
+    }
+}
+
+/* ============================================================
+   ABA VER CONTRACHEQUES
+   ============================================================ */
+function atualizarKpi(qtd){
+    const el = document.getElementById('kpiContrachequesValor');
+    if(el) el.textContent = String(qtd || 0);
+}
+async function carregarVerContracheques(){
+    const mes = parseInt(document.getElementById('verMes').value, 10) + 1;
+    const ano = parseInt(document.getElementById('verAno').value, 10) || new Date().getFullYear();
+    const lista = document.getElementById('verLista');
+    const viewer = document.getElementById('verViewer');
+    if(!lista) return;
+    const seq = ++_verReqSeq;
+    lista.innerHTML = `<div class="empty-state" style="padding:40px 14px;"><i class="fas fa-spinner fa-spin"></i><p>Carregando...</p></div>`;
+    viewer.innerHTML = `<div class="placeholder"><i class="fas fa-spinner fa-spin"></i>Carregando contracheques...</div>`;
+
+    try{
+        const { data, error } = await db
+            .from('contracheques')
+            .select('id, funcionario_nome, funcionario_id, salario_base, total_proventos, total_descontos, valor_liquido, base_calc_inss, fgts_mes, faixa_irrf, mes_referencia, ano_referencia, arquivo_nome, dados_brutos, updated_at')
+            .eq('mes_referencia', mes)
+            .eq('ano_referencia', ano)
+            .order('funcionario_nome');
+        if(error) throw error;
+        if(seq !== _verReqSeq) return;
+
+        _verListaCompleta = data || [];
+        _verSelecionado = null;
+        _verPdfDoc = null;
+        atualizarKpi(_verListaCompleta.length);
+        aplicarFiltroVer();
+        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-file-pdf"></i>Selecione um contracheque à esquerda.<small>${_verListaCompleta.length} registro(s) em ${MESES[mes-1]}/${ano}.</small></div>`;
+
+        if(_verLista.length > 0){
+            const idx = _verLista.findIndex(c=>temPdfRegistro(c));
+            verSelecionar(idx >= 0 ? idx : 0);
+        }
+    }catch(e){
+        if(seq !== _verReqSeq) return;
+        console.error('Erro ao carregar contracheques:', e);
+        lista.innerHTML = `<div class="empty-state" style="padding:40px 14px;"><i class="fas fa-exclamation-triangle" style="color:#dc3545;"></i><p style="color:#dc3545;">Erro ao carregar</p><small>${escaparHTML(e.message || e)}</small></div>`;
+        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#ff8a8a;"></i>Não foi possível carregar os contracheques.<small>${escaparHTML(e.message || e)}</small></div>`;
+    }
+}
+function aplicarFiltroVer(){
+    const termo = normalizarNome(document.getElementById('verBusca').value || '');
+    _verLista = !termo ? [..._verListaCompleta] : _verListaCompleta.filter(c=>normalizarNome(c.funcionario_nome).includes(termo));
+    renderizarListaVer();
+}
+function renderizarListaVer(){
+    const box = document.getElementById('verLista');
+    document.getElementById('verContador').textContent = _verLista.length;
+    if(_verLista.length === 0){
+        box.innerHTML = `<div class="empty-state" style="padding:40px 14px;"><i class="fas fa-inbox"></i><p>Nenhum contracheque.</p><small>Importe um PDF na aba “Importar Contra Cheque”.</small></div>`;
+        return;
+    }
+    box.innerHTML = _verLista.map((c, i)=>{
+        const selecionado = _verSelecionado && String(_verSelecionado.id) === String(c.id) ? 'selected' : '';
+        const temPdf = temPdfRegistro(c);
+        return `<div class="cc-item ${selecionado}" data-idx="${i}" onclick="verSelecionar(${i})">
+            <div class="cc-icon"><i class="fas fa-file-invoice"></i></div>
+            <div class="cc-body">
+                <span class="cc-name" title="${escaparHTML(c.funcionario_nome || '')}">${escaparHTML(c.funcionario_nome || '(sem nome)')}</span>
+                <span class="cc-sub">Sal. Base: ${fmtBRL(c.salario_base)}</span>
+                <span class="cc-val"><i class="fas fa-${temPdf ? 'paperclip' : 'exclamation-triangle'}"></i> ${temPdf ? 'PDF disponível' : 'Sem PDF'}</span>
+            </div>
+        </div>`;
+    }).join('');
+}
+async function verSelecionar(idx){
+    const cc = _verLista[idx];
+    if(!cc) return;
+    _verSelecionado = cc;
+    renderizarListaVer();
+    const viewer = document.getElementById('verViewer');
+    _verPdfDoc = null;
+    _verPaginaAtual = 1;
+    _verTotalPaginas = 1;
+    try{
+        const { data: completo, error } = await db
+            .from('contracheques')
+            .select('id, arquivo_base64, arquivo_nome, dados_brutos')
+            .eq('id', cc.id)
+            .maybeSingle();
+        if(error) throw error;
+
+        let bytes = _verBytesCache.get(String(cc.id));
+        if(!bytes){
+            if(completo && completo.arquivo_base64){
+                bytes = base64ParaBytes(completo.arquivo_base64);
+            }else{
+                const caminho = caminhoPdfRegistro(completo);
+                if(!caminho) throw new Error('Este contracheque não tem PDF salvo.');
+                const { data: blob, error: errStorage } = await db.storage.from('contracheques').download(caminho);
+                if(errStorage) throw errStorage;
+                bytes = new Uint8Array(await blob.arrayBuffer());
+            }
+            _verBytesCache.set(String(cc.id), bytes);
+        }
+        if(_verSelecionado !== cc) return;
+        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-spinner fa-spin"></i>Renderizando PDF...</div>`;
+        const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+        _verPdfDoc = pdf;
+        _verTotalPaginas = pdf.numPages;
+        const paginaRegistro = paginaPdfRegistro(completo);
+        await verRenderPagina(Math.min(Math.max(paginaRegistro, 1), pdf.numPages));
+    }catch(e){
+        console.error('Erro ao abrir PDF:', e);
+        if(_verSelecionado !== cc) return;
+        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#ffc107;"></i>PDF não disponível.<small>${escaparHTML(e.message || e)}</small></div>`;
+    }
+}
+async function verRenderPagina(num){
+    if(!_verPdfDoc) return;
+    const viewer = document.getElementById('verViewer');
+    const docAtual = _verPdfDoc;
+    const seq = ++_verRenderSeq;
+    try{
+        _verPaginaAtual = num;
+        const page = await docAtual.getPage(num);
+        const vp = page.getViewport({ scale: 1.45 });
+        const canvas = document.createElement('canvas');
+        canvas.width = vp.width;
+        canvas.height = vp.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+        if(seq !== _verRenderSeq || docAtual !== _verPdfDoc) return;
+        viewer.innerHTML = '';
+        viewer.appendChild(canvas);
+        const bar = document.createElement('div');
+        bar.className = 'viewer-bar';
+        bar.innerHTML = `
+            <button ${num <= 1 ? 'disabled' : ''} onclick="verRenderPagina(${num-1})">◀</button>
+            <span>Página ${num} de ${_verTotalPaginas}</span>
+            <button ${num >= _verTotalPaginas ? 'disabled' : ''} onclick="verRenderPagina(${num+1})">▶</button>
+            <button onclick="verBaixarPdf()"><i class="fas fa-download"></i> Baixar</button>
+        `;
+        viewer.appendChild(bar);
+    }catch(e){
+        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#ff8a8a;"></i>Erro ao renderizar página.<small>${escaparHTML(e.message || e)}</small></div>`;
+    }
+}
+function verBaixarPdf(){
+    if(!_verSelecionado) return;
+    const bytes = _verBytesCache.get(String(_verSelecionado.id));
+    if(!bytes){
+        mostrarToast('⚠️ PDF ainda não carregado.', 'warning');
+        return;
+    }
+    const blob = new Blob([bytes], {type:'application/pdf'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = _verSelecionado.arquivo_nome || `contracheque_${_verSelecionado.funcionario_nome || 'arquivo'}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+}
+function limparCacheVer(){
+    _verBytesCache.clear();
+    _verPdfDoc = null;
+    mostrarToast('🧹 Cache de PDFs limpo.', 'info');
+    if(_verSelecionado) verSelecionar(_verLista.findIndex(c=>String(c.id) === String(_verSelecionado.id)));
+}
+
+/* ============================================================
+   PAINEL DE IMPORTAÇÃO / REGISTROS DA COMPETÊNCIA
+   ============================================================ */
+async function sincronizarContracheques(){
+    if(!_competenciaConfirmada){
+        mostrarToast('⚠️ Confirme a Competência primeiro.', 'warning');
+        return;
+    }
+    await carregarPainelImportacao();
+    await carregarVerContracheques();
+    mostrarToast('✅ Dados sincronizados.', 'info');
+}
+async function carregarPainelImportacao(){
+    const body = document.getElementById('importPainelBody');
+    if(!body) return;
+    if(!_competenciaConfirmada){
+        renderizarImportBloqueado();
+        return;
+    }
+    const mes = _importContextMes, ano = _importContextAno;
+    body.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Carregando contracheques de ${MESES[mes-1]}/${ano}...</p></div>`;
+    try{
+        const { data, error } = await db
+            .from('contracheques')
+            .select('id, funcionario_nome, funcionario_id, salario_base, total_proventos, total_descontos, valor_liquido, base_calc_inss, fgts_mes, faixa_irrf, mes_referencia, ano_referencia, arquivo_nome, dados_brutos, updated_at')
+            .eq('mes_referencia', mes)
+            .eq('ano_referencia', ano)
+            .order('funcionario_nome');
+        if(error) throw error;
+        renderizarPainelImportacao(data || []);
+    }catch(e){
+        console.error(e);
+        body.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:#dc3545;"></i><p style="color:#dc3545;">Erro ao carregar</p><small>${escaparHTML(e.message || e)}</small></div>`;
+    }
+}
+function renderizarPainelImportacao(registros){
+    const body = document.getElementById('importPainelBody');
+    const mes = _importContextMes, ano = _importContextAno;
+    atualizarKpi(registros.length);
+    if(!registros || registros.length === 0){
+        body.innerHTML = `<div class="empty-state"><i class="fas fa-file-invoice"></i><p>Nenhum contracheque em ${MESES[mes-1]}/${ano}.</p><small>Clique em <strong>Importar PDF</strong> para começar.</small></div>`;
+        return;
+    }
+    let tS=0, tV=0, tD=0, tB=0, tI=0, tF=0, tIR=0, tL=0;
+    const soma = (v)=>Number(v)||0;
+    const linhas = registros.map((d, i)=>{
+        const inss = calcularINSS(soma(d.base_calc_inss));
+        tS += soma(d.salario_base); tV += soma(d.total_proventos); tD += soma(d.total_descontos);
+        tB += soma(d.base_calc_inss); tI += inss; tF += soma(d.fgts_mes); tIR += soma(d.faixa_irrf); tL += soma(d.valor_liquido);
+        return `<tr>
+            <td class="col-nome">${escaparHTML(d.funcionario_nome || '(sem nome)')}<br><span style="font-size:9px;font-weight:500;color:#7a3a00;">${escaparHTML(d.arquivo_nome || '')}</span></td>
+            <td class="num">${fmtBRL(d.salario_base)}</td>
+            <td class="num">${fmtBRL(d.total_proventos)}</td>
+            <td class="num">${fmtBRL(d.total_descontos)}</td>
+            <td class="num col-liq">${fmtBRL(d.valor_liquido)}</td>
+            <td class="num">${fmtBRL(d.base_calc_inss)}</td>
+            <td class="num">${fmtBRL(inss)}</td>
+            <td class="num">${fmtBRL(d.fgts_mes)}</td>
+            <td class="num">${fmtBRL(d.faixa_irrf)}</td>
+            <td>${temPdfRegistro(d) ? `<button type="button" class="btn-mini pdf" title="Ver PDF" onclick="abrirPdfImportado('${d.id}')"><i class="fas fa-file-pdf"></i></button>` : '<span class="sem-pdf">sem PDF</span>'}</td>
+            <td><button type="button" class="btn-mini del" title="Remover" onclick="removerContracheque('${d.id}')"><i class="fas fa-trash"></i></button></td>
+        </tr>`;
+    }).join('');
+    body.innerHTML = `
+        <div class="import-wrap">
+            <div class="import-summary">
+                <div><i class="fas fa-info-circle" style="color:#FF8C00;"></i> <strong>${registros.length}</strong> registro(s) em <strong>${MESES[mes-1]}/${ano}</strong></div>
+                <div>Competência travada <span class="badge"><i class="fas fa-lock"></i> ${MESES[mes-1]}/${ano}</span></div>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="col-nome">Colaborador</th>
+                            <th>Salário Base</th>
+                            <th>Vencimentos</th>
+                            <th>Descontos</th>
+                            <th>Líquido</th>
+                            <th>Base INSS</th>
+                            <th>INSS</th>
+                            <th>FGTS</th>
+                            <th>IRRF</th>
+                            <th>PDF</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>${linhas}</tbody>
+                    <tfoot>
+                        <tr>
+                            <td style="text-align:right;">TOTAIS</td>
+                            <td class="num">${fmtBRL(tS)}</td>
+                            <td class="num">${fmtBRL(tV)}</td>
+                            <td class="num">${fmtBRL(tD)}</td>
+                            <td class="num" style="color:#155724;">${fmtBRL(tL)}</td>
+                            <td class="num">${fmtBRL(tB)}</td>
+                            <td class="num">${fmtBRL(tI)}</td>
+                            <td class="num">${fmtBRL(tF)}</td>
+                            <td class="num">${fmtBRL(tIR)}</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>`;
+}
+async function abrirPdfImportado(id){
+    if(_competenciaConfirmada){
+        document.getElementById('verMes').value = String(_importContextMes - 1);
+        document.getElementById('verAno').value = _importContextAno;
+    }
+    await navegarParaAba('ver');
+    const idx = _verLista.findIndex(c=>String(c.id) === String(id));
+    if(idx >= 0) verSelecionar(idx);
+    else mostrarToast('⚠️ Registro não encontrado na competência atual.', 'warning');
+}
+async function removerContracheque(id){
+    if(!confirm('Remover este contracheque do banco de dados?')) return;
+    try{
+        const { error } = await db.from('contracheques').delete().eq('id', id);
+        if(error) throw error;
+        mostrarToast('🗑️ Contracheque removido.', 'info');
+        if(_competenciaConfirmada) await carregarPainelImportacao();
+        await carregarVerContracheques();
+    }catch(e){
+        console.error(e);
+        mostrarToast('❌ Erro ao remover: ' + (e.message || e), 'error');
+    }
+}
+async function limparDadosContracheque(){
+    if(!_competenciaConfirmada) return;
+    const mes = _importContextMes, ano = _importContextAno;
+    try{
+        const { data, error } = await db.from('contracheques').select('id')
+            .eq('mes_referencia', mes).eq('ano_referencia', ano);
+        if(error) throw error;
+        if(!data || data.length === 0){
+            mostrarToast('⚠️ Nenhum dado para limpar nesta competência.', 'warning');
+            return;
+        }
+        if(!confirm(`Limpar TODOS os ${data.length} contracheques de ${MESES[mes-1]}/${ano}?`)) return;
+
+        abrirProgresso('Limpando dados', `Removendo ${data.length} registro(s)...`);
+        const { error: delErr } = await db.from('contracheques').delete()
+            .eq('mes_referencia', mes).eq('ano_referencia', ano);
+        if(delErr) throw delErr;
+        _verBytesCache.clear();
+        fecharProgresso();
+        mostrarToast('🧹 Dados limpos.', 'info');
+        await carregarPainelImportacao();
+        if(parseInt(document.getElementById('verMes').value,10)+1 === mes && parseInt(document.getElementById('verAno').value,10) === ano){
+            await carregarVerContracheques();
+        }
+    }catch(e){
+        fecharProgresso();
+        console.error(e);
+        mostrarToast('❌ Erro ao limpar: ' + (e.message || e), 'error');
+    }
+}
+
+/* ============================================================
+   MODAL DE IMPORTAÇÃO
+   ============================================================ */
+function abrirModalImportacao(){
+    if(!_competenciaConfirmada){
+        mostrarToast('⚠️ Confirme a Competência antes de importar.', 'warning');
+        return;
+    }
+    resetarImportacao();
+    document.getElementById('avisoCompetenciaImportacao').classList.add('show');
+    document.getElementById('txtCompetenciaTravada').textContent = `${MESES[_importContextMes-1]} / ${_importContextAno}`;
+    document.getElementById('modalImport').classList.add('active');
+}
+function fecharModalImportacao(){
+    document.getElementById('modalImport').classList.remove('active');
+}
+function resetarImportacao(){
+    _importPreviewData = [];
+    _nomesPendentes = [];
+    _importUidSeq = 0;
+    _pdfDocAtual = null;
+    _pdfArquivoNome = '';
+    _pdfBytesAtual = null;
+    _pdfBase64Atual = '';
+    const file = document.getElementById('importFileInput');
+    if(file) file.value = '';
+    const viewer = document.getElementById('pdfViewerBody');
+    if(viewer){
+        viewer.innerHTML = `<div class="pdf-placeholder"><i class="fas fa-file-pdf"></i>Selecione um arquivo PDF e clique em <strong>Extrair e Validar Dados</strong> para visualizar.</div>`;
+    }
+    const pageInfo = document.getElementById('pdfPageInfo');
+    if(pageInfo) pageInfo.textContent = '';
+    renderizarPreviewImportacao([]);
+    mostrarStatusImport('info', 'Selecione o arquivo PDF do contracheque. O sistema tentará extrair os dados automaticamente usando a estrutura visual (coordenadas X/Y).');
+}
+function mostrarStatusImport(tipo, msgHTML){
+    const st = document.getElementById('importStatus');
+    if(!st) return;
+    st.className = 'status-box ' + (tipo === 'ok' ? 'ok' : tipo === 'warn' ? 'warn' : tipo === 'err' ? 'err' : 'info');
+    const icone = tipo === 'ok' ? 'check-circle' : tipo === 'warn' ? 'exclamation-triangle' : tipo === 'err' ? 'times-circle' : 'info-circle';
+    st.innerHTML = `<i class="fas fa-${icone}"></i><span>${msgHTML}</span>`;
+}
+async function processarPDFImportacao(){
+    const input = document.getElementById('importFileInput');
+    const file = input && input.files ? input.files[0] : null;
+    if(!file){
+        mostrarToast('⚠️ Selecione um arquivo PDF primeiro.', 'warning');
+        return;
+    }
+    mostrarStatusImport('info', '<i class="fas fa-spinner fa-spin"></i> Lendo PDF e extraindo coordenadas X/Y...');
+    const btnExtrair = document.getElementById('btnExtrairPDF');
+    if(btnExtrair) btnExtrair.disabled = true;
+
+    try{
+        const arrayBuffer = await file.arrayBuffer();
+        _pdfBytesAtual = new Uint8Array(arrayBuffer);
+        _pdfArquivoNome = file.name;
+
+        try{
+            const pdfView = await pdfjsLib.getDocument({ data: _pdfBytesAtual.slice(0) }).promise;
+            _pdfDocAtual = pdfView;
+            await renderizarPdfViewer(pdfView);
+        }catch(eView){
+            console.warn('Erro ao renderizar preview do PDF:', eView);
+        }
+
+        const pdf = await pdfjsLib.getDocument({ data: _pdfBytesAtual.slice(0) }).promise;
+        const paginas = [];
+        for(let i = 1; i <= pdf.numPages; i++){
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            paginas.push({ numero: i, items: textContent.items });
+        }
+
+        let dadosExtraidos = extrairTodosFuncionariosPorCoordenadas(paginas);
+        if(!dadosExtraidos || dadosExtraidos.length === 0){
+            let fullText = '';
+            for(let i = 1; i <= pdf.numPages; i++){
+                const page = await pdf.getPage(i);
+                const tc = await page.getTextContent();
+                fullText += tc.items.map(it=>it.str).join(' ') + '\n';
+            }
+            dadosExtraidos = extrairTodosFuncionarios(fullText);
+        }
+        if(!dadosExtraidos || dadosExtraidos.length === 0){
+            throw new Error('Não foi possível identificar dados no PDF.');
+        }
+
+        _nomesPendentes = [];
+        _importPreviewData = dadosExtraidos.map(d=>{
+            const uid = `imp_${++_importUidSeq}`;
+            const match = tentarMatchExato(d.nomePDF);
+            if(!match){
+                _nomesPendentes.push({
+                    uid,
+                    nomePDF: d.nomePDF,
+                    nomeEditavel: d.nomePDF,
+                    dados: d,
+                    sugestoes: buscarSugestoesSimilares(d.nomePDF)
+                });
+            }
+            return {
+                ...d,
+                _uid: uid,
+                funcionarioId: match && match.id ? match.id : null,
+                matchExato: !!match,
+                sugestaoNome: match ? match.nome : null,
+                nomeEditavel: match ? match.nome : (d.nomePDF || '')
+            };
+        });
+
+        const comMatch = _importPreviewData.filter(x=>x.matchExato).length;
+        const semMatch = _importPreviewData.length - comMatch;
+        renderizarPreviewImportacao(_importPreviewData);
+
+        if(semMatch === 0){
+            mostrarStatusImport('ok', `✅ <strong>${comMatch}</strong> colaborador(es) reconhecido(s) na base. Revise os valores e clique em <strong>Validar e Salvar</strong>.`);
+        }else{
+            mostrarStatusImport('warn', `⚠️ <strong>${comMatch}</strong> reconhecido(s) e <strong>${semMatch}</strong> não vinculado(s). Abrindo a tela de vínculo...`);
+            setTimeout(()=>abrirNomesPendentes(), 450);
+        }
+    }catch(error){
+        console.error('Erro ao processar PDF:', error);
+        mostrarStatusImport('err', `Erro: ${escaparHTML(error.message || error)}`);
+        mostrarToast('❌ Erro ao ler PDF: ' + (error.message || error), 'error');
+    }finally{
+        if(btnExtrair){ btnExtrair.disabled = false; }
+    }
+}
+async function renderizarPdfViewer(pdf){
+    const viewer = document.getElementById('pdfViewerBody');
+    const pageInfo = document.getElementById('pdfPageInfo');
+    if(!viewer) return;
+    viewer.innerHTML = '';
+    if(pageInfo) pageInfo.textContent = `${pdf.numPages} página(s)`;
+    for(let i = 1; i <= pdf.numPages; i++){
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.35 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.maxWidth = '100%';
+        canvas.style.height = 'auto';
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+        viewer.appendChild(canvas);
+    }
+}
+
+/* ============================================================
+   EXTRAÇÃO POR COORDENADAS (PDF)
+   ============================================================ */
+const ROTULOS_IGNORADOS_NOME = ['DEPARTAMENTO','CBO','FIAL','ADMISSAO','ADMISSÃO','NOME DO FUNCIONARIO','NOME DO FUNCIONÁRIO','FOLHA MENSAL','MENSALISTA','HORISTA','CODIGO','CÓDIGO','DESCRICAO','DESCRIÇÃO','REFERENCIA','REFERÊNCIA','VENCIMENTOS','DESCONTOS','CC','CNPJ','TOTAL DE VENCIMENTOS','TOTAL DE DESCONTOS','VALOR LIQUIDO','SALARIO BASE','SAL. CONTR. INSS','BASE CALC. FGTS','F.G.TS DO MES','BASE CALC. IRRF','FAIXA IRRF','MATRICULA INSS','MATRÍCULA INSS','ASSINATURA DO FUNCIONARIO','ASSINATURA DO FUNCIONÁRIO','DATA','DOCUMENTO','RECIBO','PAGAMENTO','J D QUINTINO','RESTAURANTE','PIRAI','PIRAÍ'];
+
+function agruparItensEmLinhas(items, toleranciaY = 3.5){
+    const arr = items.filter(it=>it.str && it.str.trim() !== '').map(it=>({
+        text: it.str.replace(/\s+/g,' ').trim(),
+        x: it.transform[4],
+        y: it.transform[5],
+        w: it.width || 0,
+        h: it.height || 0
+    }));
+    arr.sort((a,b)=>(b.y - a.y) || (a.x - b.x));
+    const linhas = [];
+    for(const item of arr){
+        let linha = linhas.find(l=>Math.abs(l.y - item.y) <= toleranciaY);
+        if(!linha){ linha = { y: item.y, itens: [] }; linhas.push(linha); }
+        linha.itens.push(item);
+    }
+    linhas.forEach(l=>l.itens.sort((a,b)=>a.x - b.x));
+    linhas.sort((a,b)=>b.y - a.y);
+    return linhas;
+}
+function acharRotulo(linhas, ...variacoes){
+    const alvos = variacoes.map(v=>normalizarNome(v));
+    for(const linha of linhas){
+        for(const item of linha.itens){
+            const t = normalizarNome(item.text);
+            if(alvos.some(a=>t === a || t.includes(a))) return { x:item.x, y:item.y, item, linha };
+        }
+    }
+    return null;
+}
+function acharXColunaDescontos(linhas){
+    for(const linha of linhas){
+        for(const item of linha.itens){
+            if(normalizarNome(item.text).includes('DESCONTOS')) return item.x;
+        }
+    }
+    return null;
+}
+function acharValorAbaixo(linhas, rotulo, toleranciaX = 60, maxLinhasAbaixo = 6){
+    if(!rotulo) return null;
+    const linhaRotuloY = rotulo.y;
+    let cont = 0;
+    for(const linha of linhas){
+        if(linha.y >= linhaRotuloY - 0.5) continue;
+        cont++;
+        if(cont > maxLinhasAbaixo) break;
+        let melhor = null, melhorDist = Infinity;
+        for(const item of linha.itens){
+            if(!/^R?\$?\s*[\d.,]+$/.test(item.text)) continue;
+            const dist = Math.abs(item.x - rotulo.x);
+            if(dist <= toleranciaX && dist < melhorDist){ melhor = item; melhorDist = dist; }
+        }
+        if(melhor) return melhor.text;
+    }
+    return null;
+}
+function acharValorNaLinha(linhas, rotulo, toleranciaY = 4, maxDistX = 500){
+    if(!rotulo) return null;
+    for(const linha of linhas){
+        if(Math.abs(linha.y - rotulo.y) > toleranciaY) continue;
+        const candidatos = linha.itens
+            .filter(it=>it.x > rotulo.x + 1)
+            .filter(it=>/^R?\$?\s*[\d.,]+$/.test(it.text))
+            .filter(it=>(it.x - rotulo.x) <= maxDistX)
+            .sort((a,b)=>a.x - b.x);
+        if(candidatos.length > 0) return candidatos[0].text;
+    }
+    return null;
+}
+function extrairNomeFuncionario(linhas, idxLinhaNome){
+    const isNomeValido = (txt)=>{
+        const n = normalizarNome(txt);
+        if(n.length < 2) return false;
+        if(ROTULOS_IGNORADOS_NOME.some(r=>n === r)) return false;
+        if(/^\d/.test(n)) return false;
+        if(!/^[A-Z]/.test(n)) return false;
+        return true;
+    };
+    for(let off = 1; off <= 2; off++){
+        const idx = idxLinhaNome + off;
+        if(idx >= linhas.length) break;
+        const linha = linhas[idx];
+        const itens = linha.itens.filter(it=>it.x < 250).filter(it=>isNomeValido(it.text)).sort((a,b)=>a.x - b.x);
+        if(itens.length > 0){
+            let nome = itens.map(it=>it.text.trim()).join(' ').replace(/\s+/g,' ').trim();
+            nome = nome.replace(/^\d+\s+/, '');
+            if(nome.length >= 5) return nome;
+        }
+    }
+    const linha = linhas[idxLinhaNome];
+    if(linha){
+        const itens = linha.itens.filter(it=>it.x < 250).filter(it=>isNomeValido(it.text)).sort((a,b)=>a.x - b.x);
+        if(itens.length > 0){
+            let nome = itens.map(it=>it.text.trim()).join(' ').replace(/\s+/g,' ').trim();
+            nome = nome.replace(/^\d+\s+/, '');
+            if(nome.length >= 5) return nome;
+        }
+    }
+    return null;
+}
+function extrairINSS(linhas){
+    const rot = acharRotulo(linhas, 'I.N.S.S.', 'INSS', 'I N S S');
+    if(!rot) return null;
+    const xDescontos = acharXColunaDescontos(linhas);
+    for(const linha of linhas){
+        if(Math.abs(linha.y - rot.y) > 4) continue;
+        let nums = linha.itens.filter(it=>/^R?\$?\s*[\d.,]+$/.test(it.text)).sort((a,b)=>a.x - b.x);
+        if(xDescontos !== null) nums = nums.filter(it=>it.x > xDescontos);
+        if(nums.length === 0) return 0;
+        return parseNumeroEstrito(nums[nums.length - 1].text);
+    }
+    return null;
+}
+function extrairIRRF(linhas){
+    const rot = acharRotulo(linhas, 'I.R.R.F.', 'IRRF', 'I R R F', 'FAIXA IRRF');
+    if(!rot) return null;
+    const xDescontos = acharXColunaDescontos(linhas);
+    for(const linha of linhas){
+        if(Math.abs(linha.y - rot.y) > 4) continue;
+        let nums = linha.itens.filter(it=>/^R?\$?\s*[\d.,]+$/.test(it.text)).sort((a,b)=>a.x - b.x);
+        if(xDescontos !== null) nums = nums.filter(it=>it.x > xDescontos);
+        if(nums.length > 0) return parseNumeroEstrito(nums[nums.length - 1].text);
+        return 0;
+    }
+    return null;
+}
+function extrairTodosFuncionariosPorCoordenadas(paginas){
+    const resultados = [];
+    const vistos = new Set();
+    for(const pag of paginas){
+        const linhas = agruparItensEmLinhas(pag.items, 3.5);
+        const linhasNome = [];
+        for(let i = 0; i < linhas.length; i++){
+            if(linhas[i].itens.some(it=>normalizarNome(it.text).includes('NOME DO FUNCIONARIO'))) linhasNome.push(i);
+        }
+        if(linhasNome.length === 0) continue;
+        for(let b = 0; b < linhasNome.length; b++){
+            const ini = linhasNome[b];
+            const fim = (b + 1 < linhasNome.length) ? linhasNome[b + 1] : linhas.length;
+            const blocoLinhas = linhas.slice(ini, fim);
+            const nomePDF = extrairNomeFuncionario(linhas, ini);
+            if(!nomePDF) continue;
+            const dados = extrairFuncionarioBloco(blocoLinhas, nomePDF);
+            if(!dados || !dados.nomePDF) continue;
+            dados.paginaPDF = pag.numero || 1;
+            const chave = normalizarNome(dados.nomePDF) + '|' + (dados.salarioBase || 0).toFixed(2) + '|' + (dados.vencimentos || 0).toFixed(2);
+            if(vistos.has(chave)) continue;
+            vistos.add(chave);
+            resultados.push(dados);
+        }
+    }
+    return resultados;
+}
+function extrairFuncionarioBloco(blocoLinhas, nomePDF){
+    const dados = { nomePDF: nomePDF.trim(), funcionarioId:null, matchExato:false, salarioBase:null, vencimentos:null, descontos:null, liquido:null, baseINSS:null, inss:null, fgts:null, irrf:null, alerta:null };
+    const rotSalario = acharRotulo(blocoLinhas, 'SALARIO BASE', 'SALÁRIO BASE');
+    const rotBaseINSS = acharRotulo(blocoLinhas, 'SAL. CONTR. INSS', 'SAL CONTR INSS');
+    const rotBaseFGTS = acharRotulo(blocoLinhas, 'BASE CALC. FGTS', 'BASE CÁLC. FGTS');
+    const rotFGTS = acharRotulo(blocoLinhas, 'F.G.TS DO MES', 'F.G.T.S DO MÊS', 'FGTS DO MES');
+    const vSalario = acharValorAbaixo(blocoLinhas, rotSalario, 90, 6);
+    const vBaseINSS = acharValorAbaixo(blocoLinhas, rotBaseINSS, 90, 6);
+    const vBaseFGTS = acharValorAbaixo(blocoLinhas, rotBaseFGTS, 90, 6);
+    const vFGTS = acharValorAbaixo(blocoLinhas, rotFGTS, 90, 6);
+    let salNum = parseNumeroEstrito(vSalario);
+    const baseINSSNum = parseNumeroEstrito(vBaseINSS);
+    const baseFGTSNum = parseNumeroEstrito(vBaseFGTS);
+    if((salNum === null || salNum < 100) && baseINSSNum && baseINSSNum >= 100) salNum = baseINSSNum;
+    else if((salNum === null || salNum < 100) && baseFGTSNum && baseFGTSNum >= 100) salNum = baseFGTSNum;
+    dados.salarioBase = salNum;
+    dados.baseINSS = baseINSSNum;
+    dados.fgts = parseNumeroEstrito(vFGTS);
+
+    const rotTotalVenc = acharRotulo(blocoLinhas, 'TOTAL DE VENCIMENTOS', 'TOTAL VENCIMENTOS');
+    const rotTotalDesc = acharRotulo(blocoLinhas, 'TOTAL DE DESCONTOS', 'TOTAL DESCONTOS');
+    let vVenc = acharValorNaLinha(blocoLinhas, rotTotalVenc, 4, 500);
+    let vDesc = acharValorNaLinha(blocoLinhas, rotTotalDesc, 4, 500);
+    if(!vVenc) vVenc = acharValorAbaixo(blocoLinhas, rotTotalVenc, 100, 4);
+    if(!vDesc) vDesc = acharValorAbaixo(blocoLinhas, rotTotalDesc, 100, 4);
+    dados.vencimentos = parseNumeroEstrito(vVenc);
+    dados.descontos = parseNumeroEstrito(vDesc);
+
+    const rotLiquido = acharRotulo(blocoLinhas, 'VALOR LIQUIDO', 'VALOR LÍQUIDO');
+    let vLiquido = acharValorNaLinha(blocoLinhas, rotLiquido, 4, 400);
+    if(!vLiquido) vLiquido = acharValorAbaixo(blocoLinhas, rotLiquido, 100, 4);
+    dados.liquido = parseNumeroEstrito(vLiquido);
+
+    dados.inss = extrairINSS(blocoLinhas);
+    if(dados.inss === null && dados.baseINSS && dados.baseINSS > 0){
+        dados.inss = calcularINSS(dados.baseINSS);
+        dados.alerta = (dados.alerta ? dados.alerta + ' | ' : '') + `INSS não lido (Calc: ${dados.inss.toFixed(2)})`;
+    }
+    dados.irrf = extrairIRRF(blocoLinhas);
+    if(dados.irrf === null) dados.irrf = 0;
+
+    if(dados.vencimentos === null && dados.salarioBase !== null) dados.vencimentos = dados.salarioBase;
+    if(dados.descontos === null) dados.descontos = dados.inss || 0;
+    if(dados.liquido === null && dados.vencimentos !== null) dados.liquido = dados.vencimentos - (dados.descontos || 0);
+    if(dados.baseINSS === null && dados.salarioBase !== null) dados.baseINSS = dados.salarioBase;
+    if(dados.fgts === null && dados.salarioBase !== null && dados.salarioBase > 0){
+        dados.fgts = calcularFGTS(dados.salarioBase);
+        dados.alerta = (dados.alerta ? dados.alerta + ' | ' : '') + `FGTS não lido (Calc: ${dados.fgts.toFixed(2)})`;
+    }
+    return dados;
+}
+function extrairTodosFuncionarios(texto){
+    const textoNorm = texto.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ');
+    const regexNomeFunc = /([A-Z][A-Z\s]{5,60}?)\s+NOME\s+DO\s+FUNCIONARIO/gi;
+    const matches = [...textoNorm.matchAll(regexNomeFunc)];
+    const nomesProcessados = [];
+    const vistos = new Set();
+    for(const match of matches){
+        let nomeBruto = match[1].trim().replace(/^\d+\s+/, '').replace(/^CODIGO\s+/, '').replace(/^\d+\s+/, '');
+        const nomeNorm = normalizarNome(nomeBruto);
+        if(nomeNorm.length < 5) continue;
+        if(ROTULOS_IGNORADOS_NOME.some(r=>nomeNorm === r)) continue;
+        if(vistos.has(nomeNorm)) continue;
+        vistos.add(nomeNorm);
+        nomesProcessados.push({ nome:nomeBruto, nomeNorm, index:match.index });
+    }
+    const resultados = [];
+    for(let i = 0; i < nomesProcessados.length; i++){
+        const atual = nomesProcessados[i];
+        const proximoIndex = (i + 1 < nomesProcessados.length) ? nomesProcessados[i + 1].index : textoNorm.length;
+        const bloco = textoNorm.substring(atual.index, proximoIndex);
+        const dados = extrairFuncionarioIndividualPorNome(bloco, atual.nome);
+        if(dados && dados.nomePDF){
+            dados.paginaPDF = 1;
+            resultados.push(dados);
+        }
+    }
+    return resultados;
+}
+function extrairFuncionarioIndividualPorNome(texto, nomeConhecido){
+    const textoUm = texto.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ');
+    let nomeLimpo = nomeConhecido.replace(/^CODIGO\s+/i,'').replace(/^\d+\s+/i,'').trim();
+    const dados = { nomePDF:nomeLimpo, funcionarioId:null, matchExato:false, salarioBase:null, vencimentos:null, descontos:null, liquido:null, baseINSS:null, inss:null, fgts:null, irrf:null, alerta:null };
+    const mSal = textoUm.match(/([\d.,]+)\s+SALARIO\s+BASE/i);
+    if(mSal) dados.salarioBase = parseNumeroEstrito(mSal[1]);
+    const mBaseINSS = textoUm.match(/SAL\.?\s*CONTR\.?\s*INSS\s+([\d.,]+)/i);
+    if(mBaseINSS) dados.baseINSS = parseNumeroEstrito(mBaseINSS[1]);
+    const mFGTS = textoUm.match(/F\.?\s*G\.?\s*T\.?\s*S\s*DO\s*MES\s+([\d.,]+)/i);
+    if(mFGTS) dados.fgts = parseNumeroEstrito(mFGTS[1]);
+    const mVenc = textoUm.match(/TOTAL\s+DE\s+VENCIMENTOS\s+([\d.,]+)/i);
+    if(mVenc) dados.vencimentos = parseNumeroEstrito(mVenc[1]);
+    const mDesc = textoUm.match(/TOTAL\s+DE\s+DESCONTOS\s+([\d.,]+)/i);
+    if(mDesc) dados.descontos = parseNumeroEstrito(mDesc[1]);
+    const mLiq = textoUm.match(/VALOR\s+LIQUIDO\s+([\d.,]+)/i);
+    if(mLiq) dados.liquido = parseNumeroEstrito(mLiq[1]);
+    const mINSS = textoUm.match(/I\.?\s*N\.?\s*S\.?\s*S\.?\s*\.?\s+[\d,.]+\s+([\d.,]+)/i);
+    if(mINSS) dados.inss = parseNumeroEstrito(mINSS[1]);
+    if(dados.salarioBase && (!dados.vencimentos || dados.vencimentos < 100)) dados.vencimentos = dados.salarioBase;
+    if(dados.inss === null && dados.baseINSS) dados.inss = calcularINSS(dados.baseINSS);
+    if(dados.fgts === null && dados.salarioBase) dados.fgts = calcularFGTS(dados.salarioBase);
+    if(dados.liquido === null && dados.vencimentos !== null) dados.liquido = dados.vencimentos - (dados.descontos || 0);
+    if(dados.irrf === null) dados.irrf = 0;
+    return dados;
+}
+
+/* ============================================================
+   MATCH DE FUNCIONÁRIOS / PREVIEW
+   ============================================================ */
+function levenshtein(a, b){
+    if(a.length === 0) return b.length;
+    if(b.length === 0) return a.length;
+    const matrix = [];
+    for(let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for(let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for(let i = 1; i <= b.length; i++){
+        for(let j = 1; j <= a.length; j++){
+            if(b.charAt(i-1) === a.charAt(j-1)) matrix[i][j] = matrix[i-1][j-1];
+            else matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, matrix[i][j-1] + 1, matrix[i-1][j] + 1);
+        }
+    }
+    return matrix[b.length][a.length];
+}
+function calcularSimilaridade(nome1, nome2){
+    const n1 = normalizarNome(nome1);
+    const n2 = normalizarNome(nome2);
+    if(!n1 || !n2) return 0;
+    if(n1 === n2) return 100;
+    const dist = levenshtein(n1, n2);
+    const maxLen = Math.max(n1.length, n2.length);
+    const sim = Math.round((1 - dist / maxLen) * 100);
+    const palavras1 = n1.split(/\s+/).filter(Boolean);
+    const palavras2 = n2.split(/\s+/).filter(Boolean);
+    let comuns = 0;
+    palavras1.forEach(p=>{ if(p.length > 2 && palavras2.includes(p)) comuns++; });
+    const bonus = comuns > 0 ? Math.min(comuns * 5, 15) : 0;
+    return Math.min(sim + bonus, 100);
+}
+function buscarSugestoesSimilares(nomePDF, limite = 5){
+    if(!nomePDF || !funcionarios.length) return [];
+    return funcionarios
+        .filter(f=>!f.desligamento)
+        .map(f=>({ funcionario:f, similaridade:calcularSimilaridade(nomePDF, f.nome) }))
+        .filter(s=>s.similaridade >= 30)
+        .sort((a,b)=>b.similaridade - a.similaridade)
+        .slice(0, limite);
+}
+function tentarMatchExato(nomePDF){
+    const alvo = normalizarNome(nomePDF);
+    if(!alvo) return null;
+    const exato = funcionarios.find(f=>normalizarNome(f.nome) === alvo);
+    if(exato) return exato;
+    const partes = alvo.split(/\s+/).filter(Boolean);
+    if(partes.length >= 2){
+        const primeiro = partes[0], ultimo = partes[partes.length-1];
+        const candidatos = funcionarios.filter(f=>{
+            const n = normalizarNome(f.nome);
+            return n.includes(primeiro) && n.includes(ultimo);
+        });
+        if(candidatos.length === 1) return candidatos[0];
+    }
+    return null;
+}
+function renderizarPreviewImportacao(registros){
+    const div = document.getElementById('importPreview');
+    const cnt = document.getElementById('importCount');
+    if(!div || !cnt) return;
+    if(!registros || registros.length === 0){
+        cnt.textContent = '0';
+        div.innerHTML = `<div class="empty-state" style="padding:45px 20px;"><i class="fas fa-inbox"></i><p>Nenhum colaborador processado.</p><small>Selecione um PDF e clique em “Extrair e Validar Dados”.</small></div>`;
+        return;
+    }
+    cnt.textContent = String(registros.length);
+    const linhas = registros.map((r, i)=>{
+        const matchLabel = r.matchExato ? '<span class="ok-badge">histórico</span>' : '<span class="pend-badge">novo</span>';
+        const alerta = r.alerta ? `<span class="alerta"><i class="fas fa-exclamation-triangle"></i> ${escaparHTML(r.alerta)}</span>` : '';
+        return `<tr>
+            <td class="nome-cell">${escaparHTML(r.nomePDF || '(sem nome)')}${matchLabel}${alerta}</td>
+            <td class="num ${r.salarioBase === null ? 'vazio' : ''}">${fmtNum(r.salarioBase)}</td>
+            <td class="num ${r.vencimentos === null ? 'vazio' : ''}">${fmtNum(r.vencimentos)}</td>
+            <td class="num ${r.descontos === null ? 'vazio' : ''}">${fmtNum(r.descontos)}</td>
+            <td class="num ${r.liquido === null ? 'vazio' : ''}" style="font-weight:800;color:#28a745;">${fmtNum(r.liquido)}</td>
+            <td class="num ${r.baseINSS === null ? 'vazio' : ''}">${fmtNum(r.baseINSS)}</td>
+            <td class="num ${r.inss === null ? 'vazio' : ''}">${fmtNum(r.inss)}</td>
+            <td class="num ${r.fgts === null ? 'vazio' : ''}">${fmtNum(r.fgts)}</td>
+            <td class="num ${r.irrf === null ? 'vazio' : ''}">${fmtNum(r.irrf)}</td>
+            <td style="text-align:center;"><button type="button" class="btn-action btn-danger btn-sm" onclick="removerLinhaPreview(${i})" title="Remover"><i class="fas fa-trash"></i></button></td>
+        </tr>`;
+    }).join('');
+    div.innerHTML = `<table>
+        <thead><tr>
+            <th style="text-align:left;min-width:170px;">Nome no PDF</th>
+            <th>Sal. Base</th>
+            <th>Vencim.</th>
+            <th>Descontos</th>
+            <th>Líquido</th>
+            <th>Base INSS</th>
+            <th>INSS</th>
+            <th>FGTS</th>
+            <th>IRRF</th>
+            <th></th>
+        </tr></thead>
+        <tbody>${linhas}</tbody>
+    </table>`;
+}
+function removerLinhaPreview(idx){
+    if(!_importPreviewData[idx]) return;
+    if(!confirm('Remover este funcionário da lista?')) return;
+    const removido = _importPreviewData[idx];
+    _importPreviewData.splice(idx, 1);
+    _nomesPendentes = _nomesPendentes.filter(p=>p.uid !== removido._uid);
+    renderizarPreviewImportacao(_importPreviewData);
+    mostrarToast('🗑️ Removido da lista.', 'info');
+}
+
+/* ============================================================
+   NOMES PENDENTES
+   ============================================================ */
+function abrirNomesPendentes(){
+    if(!_nomesPendentes || _nomesPendentes.length === 0){
+        mostrarToast('✅ Todos os nomes já foram vinculados!', 'info');
+        return;
+    }
+    renderizarNomesPendentes();
+    document.getElementById('modalNomesPendentes').classList.add('active');
+}
+function fecharNomesPendentes(){
+    document.getElementById('modalNomesPendentes').classList.remove('active');
+}
+function renderizarNomesPendentes(){
+    const lista = document.getElementById('nomesPendentesLista');
+    if(!lista) return;
+    if(!_nomesPendentes.length){
+        lista.innerHTML = '<div style="text-align:center;padding:30px;color:#28a745;"><i class="fas fa-check-circle" style="font-size:32px;display:block;margin-bottom:8px;"></i><strong>Todos os nomes foram vinculados!</strong></div>';
+        return;
+    }
+    const ativos = funcionarios.filter(f=>!f.desligamento);
+    lista.innerHTML = _nomesPendentes.map((item, idx)=>{
+        let sugestoesHTML = '';
+        if(item.sugestoes && item.sugestoes.length > 0){
+            sugestoesHTML = item.sugestoes.map(s=>{
+                const classe = s.similaridade >= 80 ? '' : s.similaridade >= 50 ? 'media' : 'baixa';
+                const mesmoNome = normalizarNome(item.nomeEditavel) === normalizarNome(s.funcionario.nome);
+                const selecionado = (item.funcionarioId && String(item.funcionarioId) === String(s.funcionario.id)) || (!s.funcionario.id && mesmoNome);
+                return `<button type="button" class="pend-sugestao ${selecionado ? 'selected' : ''}" data-item-idx="${idx}" data-func-id="${s.funcionario.id || ''}" data-nome="${escaparHTML(s.funcionario.nome)}" onclick="selecionarSugestaoPendente(${idx}, '${s.funcionario.id || ''}', this.dataset.nome)">
+                    <i class="fas fa-user"></i>
+                    <span><strong>${escaparHTML(s.funcionario.nome)}</strong> ${s.funcionario.unidade ? '(' + escaparHTML(s.funcionario.unidade) + ')' : ''}</span>
+                    <span class="pct ${classe}">${s.similaridade}%</span>
+                </button>`;
+            }).join('');
+        }else{
+            sugestoesHTML = '<div style="font-size:10.5px;color:#6c757d;padding:3px 0;"><i class="fas fa-info-circle"></i> Nenhuma sugestão automática. Digite o nome correto ou cadastre na base.</div>';
+        }
+        const selectHTML = `<select class="pend-select" id="selectPendente_${idx}" onchange="selecionarManualPendente(${idx}, this.value)">
+            <option value="">— selecione o funcionário —</option>
+            ${ativos.map(f=>{
+                const sel = item.funcionarioId && String(item.funcionarioId) === String(f.id) ? 'selected' : '';
+                return `<option value="${f.id}" ${sel}>${escaparHTML(f.nome)}${f.unidade ? ' (' + escaparHTML(f.unidade) + ')' : ''}</option>`;
+            }).join('')}
+        </select>`;
+        return `<div class="pend-item" data-idx="${idx}">
+            <div class="pend-nome"><i class="fas fa-user-slash"></i> ${escaparHTML(item.nomePDF)}</div>
+            <div class="pend-dados">
+                <span><i class="fas fa-money-bill"></i> Sal. Base: R$ ${fmtNum(item.dados.salarioBase)}</span>
+                <span><i class="fas fa-calendar"></i> Vencimentos: R$ ${fmtNum(item.dados.vencimentos)}</span>
+                <span><i class="fas fa-minus-circle"></i> Descontos: R$ ${fmtNum(item.dados.descontos)}</span>
+                <span><i class="fas fa-check-circle"></i> Líquido: R$ ${fmtNum(item.dados.liquido)}</span>
+            </div>
+            <div class="pend-nome-campo">
+                <label><i class="fas fa-pen"></i> Nome que será salvo</label>
+                <input type="text" class="pend-nome-input" id="pendNome_${idx}" value="${escaparHTML(item.nomeEditavel || item.nomePDF || '')}" oninput="atualizarNomePendente(${idx}, this.value)">
+            </div>
+            <div class="pend-label"><i class="fas fa-magic"></i> Sugestões por similaridade:</div>
+            <div class="pend-sugestoes" id="sugestoes_${idx}">${sugestoesHTML}</div>
+            <div>${selectHTML}</div>
+            <button type="button" class="btn-action btn-success btn-sm pend-cadastrar" onclick="abrirCadastroRapido(${idx})"><i class="fas fa-user-plus"></i> Cadastrar "${escaparHTML(item.nomePDF)}" na base</button>
+        </div>`;
+    }).join('');
+}
+function marcarSugestoesPendentes(itemIdx){
+    const item = _nomesPendentes[itemIdx];
+    if(!item) return;
+    document.querySelectorAll(`#sugestoes_${itemIdx} .pend-sugestao`).forEach(btn=>{
+        const mesmoId = item.funcionarioId && btn.dataset.funcId === String(item.funcionarioId);
+        const mesmoNome = !item.funcionarioId && normalizarNome(btn.dataset.nome) === normalizarNome(item.nomeEditavel);
+        btn.classList.toggle('selected', !!(mesmoId || mesmoNome));
+    });
+}
+function selecionarSugestaoPendente(itemIdx, funcId, nomeSugerido){
+    if(!_nomesPendentes[itemIdx]) return;
+    const f = funcionarios.find(x=>String(x.id) === String(funcId));
+    const nome = f ? f.nome : (nomeSugerido || '');
+    _nomesPendentes[itemIdx].funcionarioId = f && f.id ? f.id : null;
+    _nomesPendentes[itemIdx].nomeEditavel = nome;
+    const input = document.getElementById(`pendNome_${itemIdx}`);
+    if(input) input.value = nome;
+    const sel = document.getElementById(`selectPendente_${itemIdx}`);
+    if(sel) sel.value = f && f.id ? String(f.id) : '';
+    marcarSugestoesPendentes(itemIdx);
+    mostrarToast(`✓ Nome selecionado: ${nome}`, 'info');
+}
+function selecionarManualPendente(itemIdx, funcId){
+    if(!_nomesPendentes[itemIdx]) return;
+    const f = funcionarios.find(x=>String(x.id) === String(funcId));
+    _nomesPendentes[itemIdx].funcionarioId = f && f.id ? f.id : null;
+    if(f){
+        _nomesPendentes[itemIdx].nomeEditavel = f.nome;
+        const input = document.getElementById(`pendNome_${itemIdx}`);
+        if(input) input.value = f.nome;
+    }
+    marcarSugestoesPendentes(itemIdx);
+}
+function atualizarNomePendente(itemIdx, nome){
+    const item = _nomesPendentes[itemIdx];
+    if(!item) return;
+    item.nomeEditavel = nome;
+    const f = funcionarios.find(x=>normalizarNome(x.nome) === normalizarNome(nome));
+    item.funcionarioId = f && f.id ? f.id : null;
+    const sel = document.getElementById(`selectPendente_${itemIdx}`);
+    if(sel) sel.value = f && f.id ? String(f.id) : '';
+    marcarSugestoesPendentes(itemIdx);
+}
+function confirmarVinculosPendentes(){
+    const semNome = _nomesPendentes.filter(n=>!(n.nomeEditavel || '').trim());
+    if(semNome.length > 0){
+        mostrarToast(`⚠️ ${semNome.length} nome(s) ainda estão vazios. Preencha todos para continuar.`, 'warning');
+        return;
+    }
+    _nomesPendentes.forEach(n=>{
+        const item = _importPreviewData.find(p=>p._uid === n.uid);
+        if(item){
+            const nome = (n.nomeEditavel || n.nomePDF || '').trim();
+            const f = funcionarios.find(x=>normalizarNome(x.nome) === normalizarNome(nome));
+            item.funcionarioId = (f && f.id) || n.funcionarioId || null;
+            item.matchExato = !!(f || n.funcionarioId);
+            item.nomeEditavel = nome;
+            item.sugestaoNome = f ? f.nome : null;
+        }
+    });
+    _nomesPendentes = [];
+    renderizarPreviewImportacao(_importPreviewData);
+    fecharNomesPendentes();
+    const total = _importPreviewData.length;
+    mostrarStatusImport('ok', `✅ <strong>${total}</strong> nome(s) confirmados. Pronto para validar e salvar.`);
+    mostrarToast('✅ Nomes confirmados! Clique em “Validar e Salvar”.', 'info');
+}
+
+/* ============================================================
+   CADASTRO RÁPIDO
+   ============================================================ */
+function abrirCadastroRapido(itemIdx){
+    _cadastroRapidoItemIdx = itemIdx;
+    const item = _nomesPendentes[itemIdx];
+    if(!item) return;
+    document.getElementById('cadNome').value = item.nomeEditavel || item.nomePDF || '';
+    document.getElementById('cadCPF').value = '';
+    document.getElementById('cadSalario').value = item.dados.salarioBase || '';
+    document.getElementById('cadUnidade').value = '';
+    document.getElementById('cadDepartamento').value = '';
+    document.getElementById('cadCargo').value = '';
+    document.getElementById('cadPermanencia').value = '08:00';
+    document.getElementById('cadAdmissao').value = '';
+    document.getElementById('cadastroRapidoErro').style.display = 'none';
+    document.getElementById('modalCadastroRapido').classList.add('active');
+}
+function fecharCadastroRapido(){
+    document.getElementById('modalCadastroRapido').classList.remove('active');
+    _cadastroRapidoItemIdx = null;
+}
+async function salvarCadastroRapido(){
+    const erroDiv = document.getElementById('cadastroRapidoErro');
+    erroDiv.style.display = 'none';
+    const nome = (document.getElementById('cadNome').value || '').trim();
+    if(!nome || nome.length < 3){
+        erroDiv.textContent = 'Informe o nome completo do funcionário (mínimo 3 caracteres).';
+        erroDiv.style.display = 'block';
+        return;
+    }
+    const cpf = (document.getElementById('cadCPF').value || '').trim();
+    const salario = parseFloat(document.getElementById('cadSalario').value) || 0;
+    const unidade = document.getElementById('cadUnidade').value || null;
+    const departamento = (document.getElementById('cadDepartamento').value || '').trim() || null;
+    const cargo = (document.getElementById('cadCargo').value || '').trim() || null;
+    const permanencia = document.getElementById('cadPermanencia').value || '08:00';
+    const admissao = document.getElementById('cadAdmissao').value || null;
+
+    const duplicado = funcionarios.find(f=>normalizarNome(f.nome) === normalizarNome(nome));
+    if(duplicado){
+        erroDiv.textContent = `Já existe um funcionário cadastrado com este nome: "${duplicado.nome}". Selecione-o na lista.`;
+        erroDiv.style.display = 'block';
+        return;
+    }
+
+    const btn = document.querySelector('#modalCadastroRapido .btn-success');
+    if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; }
+
+    try{
+        const payload = { nome, salario: salario > 0 ? salario : 2500, permanencia };
+        if(cpf) payload.cpf = cpf;
+        if(unidade) payload.unidade = unidade;
+        if(departamento) payload.departamento = departamento;
+        if(cargo) payload.cargo = cargo;
+        if(admissao) payload.admissao = admissao;
+
+        const resp = await salvarComFallback(
+            'legacy_funcionarios',
+            (p)=>dbLegacy.from('funcionarios').insert(p).select().single(),
+            payload
+        );
+        if(!resp.ok) throw resp.error;
+        const data = resp.data;
+        if(!data || !data.id) throw new Error('Cadastro retornou sem ID. Verifique as políticas RLS da tabela.');
+
+        const novoFuncionario = { ...data, desligamento: data.desligamento || data.demissao || null };
+        funcionarios.push(novoFuncionario);
+        funcionarios.sort((a,b)=>(a.nome || '').localeCompare(b.nome || ''));
+
+        if(_cadastroRapidoItemIdx !== null && _nomesPendentes[_cadastroRapidoItemIdx]){
+            const pend = _nomesPendentes[_cadastroRapidoItemIdx];
+            pend.funcionarioId = data.id;
+            pend.nomeEditavel = data.nome;
+            pend.sugestoes = [{ funcionario:novoFuncionario, similaridade:100 }];
+            const itemPreview = _importPreviewData.find(p=>p._uid === pend.uid);
+            if(itemPreview){
+                itemPreview.funcionarioId = data.id;
+                itemPreview.nomeEditavel = data.nome;
+                itemPreview.matchExato = true;
+                itemPreview.sugestaoNome = data.nome;
+            }
+        }
+        fecharCadastroRapido();
+        renderizarNomesPendentes();
+        renderizarPreviewImportacao(_importPreviewData);
+        mostrarToast(`✅ "${data.nome}" cadastrado e vinculado com sucesso!`, '');
+    }catch(e){
+        console.error('Erro ao cadastrar funcionário:', e);
+        erroDiv.textContent = 'Erro ao cadastrar na base: ' + (e.message || e) + ' — você ainda pode cancelar e confirmar o nome digitado no pop-up.';
+        erroDiv.style.display = 'block';
+        mostrarToast('❌ Erro: ' + (e.message || e), 'error');
+    }finally{
+        if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Salvar e Vincular'; }
+    }
+}
+
+/* ============================================================
+   VALIDAÇÃO DOS CONTRACHEQUES
+   ============================================================ */
+function abrirValidacaoContracheques(){
+    if(!_importPreviewData || _importPreviewData.length === 0){
+        mostrarToast('⚠️ Nenhum colaborador extraído para validar.', 'warning');
+        return;
+    }
+    _validacaoCCData = _importPreviewData.map(r=>({
+        ...r,
+        editSalarioBase: r.salarioBase !== null && r.salarioBase !== undefined ? String(r.salarioBase) : '',
+        editVencimentos: r.vencimentos !== null && r.vencimentos !== undefined ? String(r.vencimentos) : '',
+        editDescontos: r.descontos !== null && r.descontos !== undefined ? String(r.descontos) : '',
+        editLiquido: r.liquido !== null && r.liquido !== undefined ? String(r.liquido) : '',
+        editBaseINSS: r.baseINSS !== null && r.baseINSS !== undefined ? String(r.baseINSS) : '',
+        editINSS: r.inss !== null && r.inss !== undefined ? String(r.inss) : '',
+        editFGTS: r.fgts !== null && r.fgts !== undefined ? String(r.fgts) : '',
+        editIRRF: r.irrf !== null && r.irrf !== undefined ? String(r.irrf) : '',
+        funcionarioId: r.funcionarioId || null
+    }));
+    _validacaoCCIdx = 0;
+    document.getElementById('modalValidacaoCC').classList.add('active');
+    renderizarValidacaoCC();
+}
+function fecharValidacaoCC(){
+    document.getElementById('modalValidacaoCC').classList.remove('active');
+    _validacaoCCData = [];
+    _validacaoCCIdx = 0;
+}
+function renderizarPillsValidacao(){
+    const lista = document.getElementById('validacaoCCLista');
+    if(!lista) return;
+    lista.innerHTML = _validacaoCCData.map((r,i)=>{
+        const nome = (r.nomeEditavel || r.nomePDF || '').trim();
+        const ok = !!nome;
+        return `<button type="button" class="${i === _validacaoCCIdx ? 'atual' : ''} ${ok ? 'ok' : 'pendente'}" onclick="selecionarValidacaoCC(${i})" title="${escaparHTML(nome || r.nomePDF || '')}">${i+1}. ${escaparHTML(nome || '(sem nome)')} ${ok ? '✓' : '⚠'}</button>`;
+    }).join('');
+}
+function renderizarValidacaoCC(){
+    if(!_validacaoCCData.length) return;
+    renderizarPillsValidacao();
+
+    const r = _validacaoCCData[_validacaoCCIdx];
+    document.getElementById('validacaoCCContador').textContent = `${_validacaoCCIdx + 1} / ${_validacaoCCData.length}`;
+
+    const nomeAtual = r.nomeEditavel || r.nomePDF || '';
+    const nomeNorm = normalizarNome(nomeAtual);
+    const match = funcionarios.find(f=>normalizarNome(f.nome) === nomeNorm) || null;
+    const classeNome = match ? 'ok' : 'pendente';
+    const opcoesNomes = funcionarios
+        .filter(f=>f.nome)
+        .map(f=>`<option value="${escaparHTML(f.nome)}"></option>`)
+        .join('');
+    const sugestoes = buscarSugestoesSimilares(nomeAtual, 4)
+        .filter(s=>normalizarNome(s.funcionario.nome) !== nomeNorm)
+        .slice(0, 3);
+
+    const html = `
+        <div class="val-func">
+            <label><i class="fas fa-user-check"></i> Nome do colaborador (será salvo) *</label>
+            <input type="text" id="validacaoCCNome" list="nomesConhecidos" class="${classeNome}" value="${escaparHTML(nomeAtual)}" placeholder="Nome completo do colaborador" oninput="atualizarNomeValidacaoCC(this.value)">
+            <datalist id="nomesConhecidos">${opcoesNomes}</datalist>
+            <div class="val-dica ${match ? 'ok' : 'novo'}" id="validacaoCCDica">
+                <i class="fas fa-${match ? 'check-circle' : 'info-circle'}"></i>
+                ${match ? 'Nome encontrado no histórico. O registro será vinculado a este colaborador.' : 'Nome novo. Um registro será criado para este colaborador.'}
+            </div>
+            ${sugestoes.length ? `<div class="val-sugestao"><i class="fas fa-magic"></i> Sugestões:
+                ${sugestoes.map(s=>`<button type="button" data-nome="${escaparHTML(s.funcionario.nome)}" onclick="aplicarSugestaoNomeValidacaoCC(this.dataset.nome)">${escaparHTML(s.funcionario.nome)} (${s.similaridade}%)</button>`).join('')}
+            </div>` : ''}
+        </div>
+        <div class="val-secao"><i class="fas fa-money-bill-wave"></i> Proventos e Bases</div>
+        <div class="val-grid">
+            <div class="val-campo"><label>Salário Base (R$)</label><input type="number" step="0.01" id="vcc_salarioBase" value="${r.editSalarioBase}" oninput="marcarCorrigido(this)"><small>${r.salarioBase !== null ? 'PDF: ' + fmtNum(r.salarioBase) : 'Não extraído'}</small></div>
+            <div class="val-campo"><label>Vencimentos (R$)</label><input type="number" step="0.01" id="vcc_vencimentos" value="${r.editVencimentos}" oninput="marcarCorrigido(this)"><small>${r.vencimentos !== null ? 'PDF: ' + fmtNum(r.vencimentos) : 'Não extraído'}</small></div>
+            <div class="val-campo"><label>Descontos (R$)</label><input type="number" step="0.01" id="vcc_descontos" value="${r.editDescontos}" oninput="marcarCorrigido(this)"><small>${r.descontos !== null ? 'PDF: ' + fmtNum(r.descontos) : 'Não extraído'}</small></div>
+            <div class="val-campo"><label>Líquido (R$)</label><input type="number" step="0.01" id="vcc_liquido" value="${r.editLiquido}" oninput="marcarCorrigido(this)"><small>${r.liquido !== null ? 'PDF: ' + fmtNum(r.liquido) : 'Não extraído'}</small></div>
+        </div>
+        <div class="val-secao"><i class="fas fa-calculator"></i> Impostos e Encargos</div>
+        <div class="val-grid">
+            <div class="val-campo"><label>Base INSS (R$)</label><input type="number" step="0.01" id="vcc_baseINSS" value="${r.editBaseINSS}" oninput="marcarCorrigido(this)"><small>${r.baseINSS !== null ? 'PDF: ' + fmtNum(r.baseINSS) : 'Não extraído'}</small></div>
+            <div class="val-campo"><label>INSS (R$)</label><input type="number" step="0.01" id="vcc_inss" value="${r.editINSS}" oninput="marcarCorrigido(this)"><small>${r.inss !== null ? 'PDF: ' + fmtNum(r.inss) : 'Calculado automaticamente'}</small></div>
+            <div class="val-campo"><label>FGTS (R$)</label><input type="number" step="0.01" id="vcc_fgts" value="${r.editFGTS}" oninput="marcarCorrigido(this)"><small>${r.fgts !== null ? 'PDF: ' + fmtNum(r.fgts) : 'Calculado automaticamente'}</small></div>
+            <div class="val-campo"><label>IRRF (R$)</label><input type="number" step="0.01" id="vcc_irrf" value="${r.editIRRF}" oninput="marcarCorrigido(this)"><small>${r.irrf !== null ? 'PDF: ' + fmtNum(r.irrf) : 'Não extraído'}</small></div>
+        </div>
+        ${r.alerta ? `<div class="status-box warn" style="margin-top:13px;"><i class="fas fa-exclamation-triangle"></i><span><strong>Atenção:</strong> ${escaparHTML(r.alerta)}</span></div>` : ''}
+    `;
+    document.getElementById('validacaoCCConteudo').innerHTML = html;
+}
+function marcarCorrigido(input){ if(input) input.classList.add('corrigido'); }
+function atualizarNomeValidacaoCC(nome){
+    const r = _validacaoCCData[_validacaoCCIdx];
+    if(!r) return;
+    r.nomeEditavel = nome;
+    const match = funcionarios.find(f=>normalizarNome(f.nome) === normalizarNome(nome)) || null;
+    r.funcionarioId = match && match.id ? match.id : null;
+    r.matchExato = !!match;
+    const input = document.getElementById('validacaoCCNome');
+    if(input){
+        input.classList.remove('ok','pendente');
+        input.classList.add(match ? 'ok' : 'pendente');
+    }
+    const dica = document.getElementById('validacaoCCDica');
+    if(dica){
+        dica.className = 'val-dica ' + (match ? 'ok' : 'novo');
+        dica.innerHTML = `<i class="fas fa-${match ? 'check-circle' : 'info-circle'}"></i> ${match ? 'Nome encontrado no histórico. O registro será vinculado a este colaborador.' : 'Nome novo. Um registro será criado para este colaborador.'}`;
+    }
+    renderizarPillsValidacao();
+}
+function aplicarSugestaoNomeValidacaoCC(nome){
+    const r = _validacaoCCData[_validacaoCCIdx];
+    if(!r) return;
+    salvarEdicoesValidacaoCCAtual();
+    const f = funcionarios.find(x=>normalizarNome(x.nome) === normalizarNome(nome));
+    r.nomeEditavel = f ? f.nome : nome;
+    r.funcionarioId = f && f.id ? f.id : null;
+    r.matchExato = !!f;
+    renderizarValidacaoCC();
+    mostrarToast(`✓ Nome aplicado: ${r.nomeEditavel}`, 'info');
+}
+function selecionarValidacaoCC(idx){
+    salvarEdicoesValidacaoCCAtual();
+    _validacaoCCIdx = idx;
+    renderizarValidacaoCC();
+}
+function validacaoCCProximo(){
+    salvarEdicoesValidacaoCCAtual();
+    if(_validacaoCCIdx < _validacaoCCData.length - 1){ _validacaoCCIdx++; renderizarValidacaoCC(); }
+    else mostrarToast('Último registro.', 'info');
+}
+function validacaoCCAnterior(){
+    salvarEdicoesValidacaoCCAtual();
+    if(_validacaoCCIdx > 0){ _validacaoCCIdx--; renderizarValidacaoCC(); }
+    else mostrarToast('Primeiro registro.', 'info');
+}
+function salvarEdicoesValidacaoCCAtual(){
+    const r = _validacaoCCData[_validacaoCCIdx];
+    if(!r) return;
+    const get = (id)=>{ const el = document.getElementById(id); return el ? el.value : ''; };
+    r.nomeEditavel = get('validacaoCCNome');
+    r.editSalarioBase = get('vcc_salarioBase');
+    r.editVencimentos = get('vcc_vencimentos');
+    r.editDescontos = get('vcc_descontos');
+    r.editLiquido = get('vcc_liquido');
+    r.editBaseINSS = get('vcc_baseINSS');
+    r.editINSS = get('vcc_inss');
+    r.editFGTS = get('vcc_fgts');
+    r.editIRRF = get('vcc_irrf');
+}
+function numeroDoCampo(v){
+    if(v === '' || v === null || v === undefined) return null;
+    const n = parseFloat(String(v).replace(',', '.'));
+    return isNaN(n) ? null : n;
+}
+function sanitizarNomeArquivo(nome){
+    return String(nome || 'contracheque.pdf')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/[^a-zA-Z0-9._-]/g,'_')
+        .replace(/_+/g,'_')
+        .slice(-120);
+}
+async function confirmarValidacaoCC(){
+    if(_salvandoCC) return;
+    salvarEdicoesValidacaoCCAtual();
+
+    const comNome = _validacaoCCData
+        .map(r=>({ ...r, nome:(r.nomeEditavel || r.nomePDF || '').trim() }))
+        .filter(r=>r.nome);
+    const semNome = _validacaoCCData.length - comNome.length;
+
+    if(comNome.length === 0){
+        mostrarToast('⚠️ Informe o nome do colaborador em pelo menos um registro.', 'warning');
+        return;
+    }
+    if(semNome > 0){
+        const confirmar = confirm(
+            `⚠️ ${semNome} de ${_validacaoCCData.length} registro(s) estão sem nome e serão IGNORADOS.\n\n` +
+            `Deseja salvar os ${comNome.length} registros nomeados?`
+        );
+        if(!confirmar) return;
+    }
+
+    const normalizado = comNome.map(r=>({
+        ...r,
+        salarioBase: numeroDoCampo(r.editSalarioBase),
+        vencimentos: numeroDoCampo(r.editVencimentos),
+        descontos: numeroDoCampo(r.editDescontos),
+        liquido: numeroDoCampo(r.editLiquido),
+        baseINSS: numeroDoCampo(r.editBaseINSS),
+        inss: numeroDoCampo(r.editINSS),
+        fgts: numeroDoCampo(r.editFGTS),
+        irrf: numeroDoCampo(r.editIRRF)
+    }));
+
+    // Evita salvar duas vezes o mesmo colaborador no mesmo PDF
+    const vistos = new Set();
+    const unicos = [];
+    const avisos = [];
+    for(const r of normalizado){
+        const chave = normalizarNome(r.nome);
+        if(vistos.has(chave)){
+            avisos.push(`${r.nome}: nome repetido no PDF, registro duplicado ignorado`);
+            continue;
+        }
+        vistos.add(chave);
+        unicos.push(r);
+    }
+
+    const mes = _importContextMes || (parseInt(document.getElementById('ccMes').value,10) + 1);
+    const ano = _importContextAno || (parseInt(document.getElementById('ccAno').value,10) || new Date().getFullYear());
+    const mn = MESES[mes-1];
+
+    const btn = document.getElementById('btnSalvarValidacao');
+    if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; }
+    _salvandoCC = true;
+
+    abrirProgresso('Salvando contracheques', `Gravando ${unicos.length} registro(s) de ${mn}/${ano}...`);
+    atualizarProgresso(10, 'Preparando arquivo...');
+
+    let salvos = 0, atualizados = 0;
+    const erros = [];
+    let avisoPdf = null;
+
+    try{
+        const existentesPorNome = new Map();
+        const existentesPorId = new Map();
+        const { data: existentes, error: errExistentes } = await db
+            .from('contracheques')
+            .select('id, funcionario_id, funcionario_nome, dados_brutos')
+            .eq('mes_referencia', mes)
+            .eq('ano_referencia', ano);
+        if(errExistentes) throw new Error(`Falha ao consultar registros existentes: ${errExistentes.message}`);
+        for(const e of existentes || []){
+            const chave = normalizarNome(e.funcionario_nome);
+            if(chave && !existentesPorNome.has(chave)) existentesPorNome.set(chave, e);
+            if(e.funcionario_id && !existentesPorId.has(String(e.funcionario_id))) existentesPorId.set(String(e.funcionario_id), e);
+        }
+
+        let arquivoBase64 = '';
+        try{
+            arquivoBase64 = obterPdfBase64();
+        }catch(eBase){
+            console.warn('Falha ao converter PDF para base64:', eBase);
+            avisoPdf = 'Não foi possível anexar o PDF (arquivo muito grande). Os dados foram salvos sem o arquivo.';
+        }
+
+        atualizarProgresso(18, 'Gravando registros...');
+
+        for(let i = 0; i < unicos.length; i++){
+            const r = unicos[i];
+            try{
+            const chaveNome = normalizarNome(r.nome);
+            const diretorio = funcionarios.find(f=>normalizarNome(f.nome) === chaveNome) || null;
+            let existente = existentesPorId.get(String(r.funcionarioId)) || existentesPorNome.get(chaveNome) || null;
+
+            let fid = (existente && existente.funcionario_id) || r.funcionarioId || (diretorio && diretorio.id) || gerarUUID();
+            const dadosAntigos = existente ? lerDadosBrutos(existente) : {};
+            const dadosBrutos = {
+                ...dadosAntigos,
+                nomePDF: r.nomePDF || r.nome,
+                paginaPDF: r.paginaPDF || 1
+            };
+
+            const payload = {
+                funcionario_id: fid,
+                funcionario_nome: r.nome,
+                funcionario_matricula: diretorio?.matricula || null,
+                empresa: diretorio?.empresa || null,
+                unidade: diretorio?.unidade || null,
+                departamento: diretorio?.departamento || null,
+                cbo: null,
+                cargo: diretorio?.cargo || null,
+                data_admissao: diretorio?.admissao || null,
+                data_pagamento: null,
+                salario_base: r.salarioBase ?? 0,
+                total_proventos: r.vencimentos ?? 0,
+                total_descontos: r.descontos ?? 0,
+                valor_liquido: r.liquido ?? 0,
+                base_calc_inss: r.baseINSS ?? 0,
+                base_calc_fgts: r.salarioBase ?? 0,
+                fgts_mes: r.fgts ?? 0,
+                base_calc_irrf: 0,
+                faixa_irrf: r.irrf ?? 0,
+                mes_referencia: mes,
+                ano_referencia: ano,
+                status: 'concluido',
+                inconsistencias: [],
+                dados_brutos: dadosBrutos,
+                importado_por: usuarioAtual?.nome || 'sistema',
+                arquivo_hash: `IMP_${fid}_${mes}_${ano}_${Date.now()}_${i}`
+            };
+
+            if(arquivoBase64){
+                payload.arquivo_base64 = arquivoBase64;
+                payload.arquivo_nome = _pdfArquivoNome || `import_${r.nome}_${mes}_${ano}.pdf`;
+            }else if(!existente){
+                payload.arquivo_nome = null;
+            }
+
+            const idExistente = existente && existente.id ? existente.id : null;
+            const operacao = (p)=>{
+                if(idExistente) return db.from('contracheques').update(p).eq('id', idExistente);
+                return db.from('contracheques').insert(p);
+            };
+            const resp = await salvarComFallback('contracheques', operacao, payload);
+            if(!resp.ok) throw resp.error;
+
+            if(idExistente) atualizados++; else salvos++;
+            existentesPorNome.set(chaveNome, {
+                id: idExistente,
+                funcionario_id: fid,
+                funcionario_nome: r.nome,
+                dados_brutos: dadosBrutos
+            });
+            existentesPorId.set(String(fid), {
+                id: idExistente,
+                funcionario_id: fid,
+                funcionario_nome: r.nome,
+                dados_brutos: dadosBrutos
+            });
+            }catch(eReg){
+                console.error(`Erro ao salvar "${r.nome}":`, eReg);
+                const msgErro = mensagemErroBanco(eReg);
+                erros.push(`${r.nome}: ${msgErro}`);
+                if(/Sem permissão de gravação \(RLS\)/i.test(msgErro)) break;
+            }
+            const pct = 18 + Math.round(((i + 1) / unicos.length) * 80);
+            atualizarProgresso(pct, `Salvando ${i + 1} de ${unicos.length}...`);
+        }
+    }catch(e){
+        console.error('Erro no salvamento dos contracheques:', e);
+        erros.push(mensagemErroBanco(e));
+    }finally{
+        if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Confirmar e Salvar Todos'; }
+        _salvandoCC = false;
+        fecharProgresso();
+    }
+
+    const totalGravados = salvos + atualizados;
+
+    if(totalGravados > 0 && erros.length === 0){
+        fecharValidacaoCC();
+        fecharModalImportacao();
+    }
+
+    if(erros.length === 0){
+        mostrarToast(`✅ ${totalGravados} contracheque(s) salvos para ${mn}/${ano}.`, '');
+    }else{
+        mostrarToast(`⚠️ ${totalGravados} salvo(s), ${erros.length} erro(s).`, 'warning');
+        const textoAlerta =
+            `⚠️ ${totalGravados > 0 ? 'Salvamento parcial' : 'Nenhum registro salvo'}\n\n` +
+            `✅ Salvos/atualizados: ${totalGravados}\n` +
+            `❌ Erros: ${erros.length}\n\n` +
+            `Detalhes:\n` + erros.map(e=>`• ${e}`).join('\n') +
+            (avisos.length ? `\n\nAvisos:\n` + avisos.map(e=>`• ${e}`).join('\n') : '') +
+            (avisoPdf ? `\n\nPDF: ${avisoPdf}` : '');
+        setTimeout(()=>alert(textoAlerta), 150);
+    }
+    if(avisoPdf && totalGravados > 0) mostrarToast(`⚠️ ${avisoPdf}`, 'warning');
+
+    try{ await carregarFuncionarios(); }catch(e){ console.warn(e); }
+    try{ if(_competenciaConfirmada) await carregarPainelImportacao(); }catch(e){ console.warn(e); }
+    try{
+        document.getElementById('verMes').value = String(mes - 1);
+        document.getElementById('verAno').value = ano;
+        await carregarVerContracheques();
+    }catch(e){ console.warn(e); }
+}
+
+/* ============================================================
+   CONSOLIDADOR PDF
+   ============================================================ */
+function getPdfLib(){
+    if(typeof PDFLib !== 'undefined') return PDFLib;
+    if(typeof pdfLib !== 'undefined') return pdfLib;
+    if(window.PDFLib) return window.PDFLib;
+    return null;
+}
+function consImportar(){
+    const inp = document.getElementById('consFileInput');
+    if(!inp) return;
+    inp.value = '';
+    inp.click();
+}
+function consSetStatus(tipo, html){
+    const s = document.getElementById('consStatus');
+    if(!s) return;
+    s.className = 'cons-status ' + (tipo === 'ok' ? 'ok' : tipo === 'warn' ? 'warn' : tipo === 'err' ? 'err' : 'info');
+    const ic = tipo === 'ok' ? 'check-circle' : tipo === 'warn' ? 'exclamation-triangle' : tipo === 'err' ? 'times-circle' : 'info-circle';
+    s.innerHTML = `<i class="fas fa-${ic}"></i><span>${html}</span>`;
+}
+async function consProcessar(files){
+    if(!files || files.length === 0) return;
+    consSetStatus('info', `<i class="fas fa-spinner fa-spin"></i> Processando ${files.length} arquivo(s)...`);
+    let total = 0;
+    const erros = [];
+
+    for(const file of files){
+        try{
+            const buf = await file.arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            const chave = file.name + '::' + bytes.length + '::' + file.lastModified;
+            _consBytesCache[chave] = bytes;
+
+            const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+            for(let p = 1; p <= pdf.numPages; p++){
+                const page = await pdf.getPage(p);
+                const vp = page.getViewport({ scale: 0.4 });
+                const canvas = document.createElement('canvas');
+                canvas.width = vp.width;
+                canvas.height = vp.height;
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+                const thumb = canvas.toDataURL('image/jpeg', 0.6);
+                _consPaginas.push({
+                    id: ++_consIdSeq,
+                    nome: file.name,
+                    pagina: p,
+                    totalPag: pdf.numPages,
+                    chaveBytes: chave,
+                    removida: false,
+                    thumb
+                });
+                total++;
+            }
+        }catch(e){
+            console.error('Erro ao processar PDF:', file.name, e);
+            erros.push(`${file.name}: ${e.message || e}`);
+        }
+    }
+
+    consRenderLista();
+    consAtualizarBotoes();
+    _consConsolidado = null;
+    document.getElementById('consAviso').classList.remove('active');
+
+    if(erros.length > 0){
+        consSetStatus('warn', `⚠️ ${total} página(s) adicionadas. ${erros.length} erro(s).`);
+    }else{
+        consSetStatus('ok', `✅ ${total} página(s) de ${files.length} arquivo(s) importadas.`);
+    }
+    if(total > 0){
+        const first = _consPaginas.findIndex(p=>!p.removida);
+        if(first >= 0) consSelecionar(first);
+    }
+}
+function consRenderLista(){
+    const lista = document.getElementById('consLista');
+    const contador = document.getElementById('consContador');
+    if(!lista) return;
+    if(contador) contador.textContent = String(_consPaginas.length);
+    if(_consPaginas.length === 0){
+        lista.innerHTML = `<div class="empty-state" style="padding:40px 14px;"><i class="fas fa-inbox"></i><p>Importe PDFs para começar.</p></div>`;
+        return;
+    }
+    lista.innerHTML = _consPaginas.map((p, i)=>{
+        const sel = i === _consSelIdx ? 'selected' : '';
+        const rem = p.removida ? 'removida' : '';
+        return `<div class="cons-lista-item ${sel} ${rem}" data-idx="${i}" onclick="consSelecionar(${i})">
+            <img class="cons-thumb" src="${p.thumb}" alt="pág ${p.pagina}">
+            <div class="cons-info">
+                <span class="nome" title="${escaparHTML(p.nome)}">${escaparHTML(p.nome)}</span>
+                <span class="pag">Página ${p.pagina} / ${p.totalPag}</span>
+            </div>
+            ${p.removida
+                ? `<button type="button" class="cons-mini green" onclick="event.stopPropagation();consRestaurarPagina(${i})" title="Restaurar"><i class="fas fa-undo"></i></button>`
+                : `<button type="button" class="cons-mini red" onclick="event.stopPropagation();consRemoverPagina(${i})" title="Remover"><i class="fas fa-trash"></i></button>`
+            }
+        </div>`;
+    }).join('');
+}
+function consSelecionar(idx){
+    if(idx < 0 || idx >= _consPaginas.length) return;
+    _consSelIdx = idx;
+    consRenderLista();
+    consRenderPreview(idx);
+}
+async function consRenderPreview(idx){
+    const viewer = document.getElementById('consViewer');
+    const p = _consPaginas[idx];
+    if(!viewer) return;
+    if(!p){
+        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-file-pdf"></i>Selecione uma página.</div>`;
+        return;
+    }
+    viewer.innerHTML = `<div class="placeholder"><i class="fas fa-spinner fa-spin"></i>Renderizando ${escaparHTML(p.nome)} — pág ${p.pagina}...</div>`;
+    try{
+        const bytes = _consBytesCache[p.chaveBytes];
+        const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+        const page = await pdf.getPage(p.pagina);
+        const vp = page.getViewport({ scale: 1.45 });
+        const canvas = document.createElement('canvas');
+        canvas.width = vp.width;
+        canvas.height = vp.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+        viewer.innerHTML = '';
+        viewer.appendChild(canvas);
+        const bar = document.createElement('div');
+        bar.className = 'viewer-bar';
+        bar.textContent = `${p.nome} — Página ${p.pagina} de ${p.totalPag}`;
+        viewer.appendChild(bar);
+    }catch(e){
+        console.error(e);
+        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#ff8a8a;"></i>Erro ao renderizar.<small>${escaparHTML(e.message || e)}</small></div>`;
+    }
+}
+function consRemoverPagina(idx){
+    if(!_consPaginas[idx]) return;
+    _consPaginas[idx].removida = true;
+    consRenderLista();
+    consAtualizarBotoes();
+    _consConsolidado = null;
+    document.getElementById('consAviso').classList.remove('active');
+}
+function consRestaurarPagina(idx){
+    if(!_consPaginas[idx]) return;
+    _consPaginas[idx].removida = false;
+    consRenderLista();
+    consAtualizarBotoes();
+    _consConsolidado = null;
+    document.getElementById('consAviso').classList.remove('active');
+}
+function consRemoverTodas(){
+    if(_consPaginas.length === 0) return;
+    if(!confirm('Marcar TODAS as páginas para remoção?')) return;
+    _consPaginas.forEach(p=>p.removida = true);
+    consRenderLista();
+    consAtualizarBotoes();
+}
+function consRestaurarTodas(){
+    if(_consPaginas.length === 0) return;
+    _consPaginas.forEach(p=>p.removida = false);
+    consRenderLista();
+    consAtualizarBotoes();
+    _consConsolidado = null;
+    document.getElementById('consAviso').classList.remove('active');
+}
+function consLimpar(){
+    if(_consPaginas.length === 0 && !_consConsolidado){
+        mostrarToast('⚠️ Nada para limpar.', 'warning');
+        return;
+    }
+    if(!confirm('Limpar TODOS os PDFs importados e o consolidado gerado?')) return;
+    _consPaginas = [];
+    _consSelIdx = -1;
+    _consConsolidado = null;
+    _consTotalPag = 0;
+    _consIdSeq = 0;
+    _consBytesCache = {};
+    document.getElementById('consLista').innerHTML = `<div class="empty-state" style="padding:40px 14px;"><i class="fas fa-inbox"></i><p>Importe PDFs para começar.</p></div>`;
+    document.getElementById('consViewer').innerHTML = `<div class="placeholder"><i class="fas fa-file-pdf"></i>Selecione uma página à esquerda.</div>`;
+    document.getElementById('consContador').textContent = '0';
+    document.getElementById('consAviso').classList.remove('active');
+    consSetStatus('info', 'Nenhum PDF importado. Clique em <strong>Importar PDFs</strong> para começar.');
+    consAtualizarBotoes();
+    mostrarToast('🧹 Tudo limpo.', 'info');
+}
+function consAtualizarBotoes(){
+    const selecionadas = _consPaginas.filter(p=>!p.removida);
+    const btnConsolidar = document.getElementById('btnConsolidar');
+    const btnExportar = document.getElementById('btnExportarConsolidado');
+    if(btnConsolidar) btnConsolidar.disabled = selecionadas.length === 0;
+    if(btnExportar) btnExportar.disabled = !_consConsolidado;
+}
+async function consConsolidar(){
+    const selecionadas = _consPaginas.filter(p=>!p.removida);
+    if(selecionadas.length === 0){
+        mostrarToast('⚠️ Nenhuma página selecionada para consolidar.', 'warning');
+        return;
+    }
+    const pdfLib = getPdfLib();
+    if(!pdfLib){
+        mostrarToast('❌ Biblioteca pdf-lib não carregada. Verifique a conexão.', 'error');
+        return;
+    }
+    const btn = document.getElementById('btnConsolidar');
+    if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consolidando...'; }
+
+    const total = selecionadas.length;
+    const erros = [];
+    const cacheDocs = {};
+
+    try{
+        const pdfFinal = await pdfLib.PDFDocument.create();
+        for(let i = 0; i < total; i++){
+            const p = selecionadas[i];
+            consSetStatus('info', `<i class="fas fa-spinner fa-spin"></i> Consolidando ${i+1}/${total}...`);
+            try{
+                const bytes = _consBytesCache[p.chaveBytes];
+                if(!bytes) throw new Error('bytes indisponíveis');
+                let docOrigem = cacheDocs[p.chaveBytes];
+                if(!docOrigem){
+                    docOrigem = await pdfLib.PDFDocument.load(bytes);
+                    cacheDocs[p.chaveBytes] = docOrigem;
+                }
+                const totalPag = docOrigem.getPageCount();
+                if(p.pagina < 1 || p.pagina > totalPag) throw new Error(`página ${p.pagina} fora do intervalo (${totalPag})`);
+                const [pagCopiada] = await pdfFinal.copyPages(docOrigem, [p.pagina - 1]);
+                pdfFinal.addPage(pagCopiada);
+            }catch(errPag){
+                console.warn(`Página ${p.pagina} de "${p.nome}" ignorada:`, errPag.message);
+                erros.push(`${p.nome} pág ${p.pagina}: ${errPag.message}`);
+            }
+        }
+        const processadas = total - erros.length;
+        if(processadas === 0) throw new Error('Nenhuma página pôde ser consolidada.');
+
+        _consConsolidado = await pdfFinal.save();
+        _consTotalPag = processadas;
+        const arquivosUnicos = new Set(selecionadas.map(p=>p.nome)).size;
+        document.getElementById('consTexto').textContent =
+            ` ${processadas} página(s) de ${arquivosUnicos} arquivo(s) — ${(_consConsolidado.length/1024).toFixed(1)} KB` +
+            (erros.length ? ` (⚠️ ${erros.length} ignorada(s))` : '');
+        document.getElementById('consAviso').classList.add('active');
+        consSetStatus(
+            erros.length ? 'warn' : 'ok',
+            erros.length
+                ? `⚠️ Consolidado gerado com <strong>${processadas}</strong> página(s). ${erros.length} ignorada(s).`
+                : `✅ Consolidado gerado com <strong>${processadas}</strong> página(s).`
+        );
+        mostrarToast(`✅ PDF consolidado (${processadas} páginas).`, erros.length ? 'warning' : '');
+    }catch(e){
+        console.error('Erro ao consolidar:', e);
+        consSetStatus('err', `❌ Erro ao consolidar: ${escaparHTML(e.message || e)}`);
+        mostrarToast('❌ Erro: ' + (e.message || e), 'error');
+    }finally{
+        if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fas fa-layer-group"></i> Consolidar'; }
+        consAtualizarBotoes();
+    }
+}
+async function consVisualizar(){
+    if(!_consConsolidado){
+        mostrarToast('⚠️ Gere o consolidado primeiro.', 'warning');
+        return;
+    }
+    const modal = document.getElementById('modalConsolidadoView');
+    const viewer = document.getElementById('consolidadoViewer');
+    const info = document.getElementById('consolidadoInfo');
+    if(!modal || !viewer) return;
+    if(info) info.textContent = `${_consTotalPag} página(s)`;
+    viewer.innerHTML = `<div class="placeholder"><i class="fas fa-spinner fa-spin"></i>Renderizando consolidado...</div>`;
+    modal.classList.add('active');
+    try{
+        const pdf = await pdfjsLib.getDocument({ data: _consConsolidado.slice(0) }).promise;
+        viewer.innerHTML = '';
+        for(let i = 1; i <= pdf.numPages; i++){
+            const page = await pdf.getPage(i);
+            const vp = page.getViewport({ scale: 1.35 });
+            const canvas = document.createElement('canvas');
+            canvas.width = vp.width;
+            canvas.height = vp.height;
+            canvas.style.maxWidth = '100%';
+            canvas.style.height = 'auto';
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+            viewer.appendChild(canvas);
+            const lbl = document.createElement('div');
+            lbl.className = 'viewer-bar';
+            lbl.textContent = `Página ${i} de ${pdf.numPages}`;
+            viewer.appendChild(lbl);
+        }
+    }catch(e){
+        console.error('Erro ao visualizar consolidado:', e);
+        viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#ff8a8a;"></i>Erro: ${escaparHTML(e.message || e)}</div>`;
+    }
+}
+function fecharConsolidadoView(){
+    document.getElementById('modalConsolidadoView').classList.remove('active');
+}
+function consExportar(){
+    if(!_consConsolidado){
+        mostrarToast('⚠️ Gere o consolidado primeiro.', 'warning');
+        return;
+    }
+    try{
+        const blob = new Blob([_consConsolidado], { type:'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const ts = new Date().toISOString().slice(0,19).replace(/[T:]/g,'-');
+        a.href = url;
+        a.download = `consolidado_contracheques_${ts}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 3000);
+        mostrarToast(`✅ PDF exportado (${_consTotalPag} páginas).`, '');
+    }catch(e){
+        console.error('Erro ao exportar:', e);
+        mostrarToast('❌ Erro ao exportar: ' + (e.message || e), 'error');
+    }
+}
+
+/* ============================================================
+   RECARREGAR / INICIALIZAÇÃO
+   ============================================================ */
+async function recarregarTudo(){
+    try{
+        await carregarFuncionarios();
+        mostrarToast('🔄 Funcionários atualizados.', 'info');
+    }catch(e){
+        console.warn(e);
+    }
+    if(_competenciaConfirmada) await carregarPainelImportacao();
+    if(document.getElementById('painelVer').classList.contains('active')) await carregarVerContracheques();
+    if(document.getElementById('painelConsolidador').classList.contains('active')) consAtualizarBotoes();
+}
+document.addEventListener('DOMContentLoaded', async ()=>{
+    console.log('🚀 Contracheques + Importação + Consolidador');
+    try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(raw){
+            const s = JSON.parse(raw);
+            if(s && s.nome) usuarioAtual = s;
+        }
+    }catch(e){ /* ignore */ }
+    if(!usuarioAtual) usuarioAtual = { id:'anon', nome:'Visitante', role:'viewer' };
+    document.getElementById('headerUserName').textContent = usuarioAtual.nome || 'Usuário';
+    document.getElementById('headerUserRole').textContent = ROLE_LABELS[usuarioAtual.role] || 'Visualizador';
+
+    const hoje = new Date();
+    const opcoesMes = MESES.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+    document.getElementById('verMes').innerHTML = opcoesMes;
+    document.getElementById('verMes').value = String(hoje.getMonth());
+    document.getElementById('verAno').value = hoje.getFullYear();
+
+    document.getElementById('ccMes').innerHTML = opcoesMes;
+    document.getElementById('ccMes').value = String(hoje.getMonth());
+    document.getElementById('ccAno').value = hoje.getFullYear();
+
+    document.getElementById('verMes').addEventListener('change', carregarVerContracheques);
+    document.getElementById('verAno').addEventListener('change', carregarVerContracheques);
+    document.getElementById('verBusca').addEventListener('input', aplicarFiltroVer);
+    document.getElementById('ccMes').addEventListener('change', verificarAlteracaoCompetencia);
+    document.getElementById('ccAno').addEventListener('input', verificarAlteracaoCompetencia);
+    document.getElementById('consFileInput').addEventListener('change', (e)=>consProcessar(e.target.files));
+
+    window.addEventListener('keydown', (e)=>{
+        if(e.key === 'Escape'){
+            fecharModalImportacao();
+            fecharValidacaoCC();
+            fecharNomesPendentes();
+            fecharCadastroRapido();
+            fecharConsolidadoView();
+            fecharProgresso();
+        }
+    });
+
+    atualizarBotoesCompetencia();
+    try{
+        await carregarFuncionarios();
+    }catch(e){
+        console.error('Erro ao carregar funcionários:', e);
+        mostrarToast('⚠️ Não foi possível carregar funcionários: ' + (e.message || e), 'warning');
+    }
+    await carregarVerContracheques();
+});
+</script>
+</body>
+</html>
