@@ -97,6 +97,10 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 .cc-item .cc-name{font-weight:800;font-size:12.5px;display:block;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc-item .cc-sub{font-size:10px;color:#6c757d;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc-item .cc-val{font-size:10.5px;font-weight:800;color:#28a745;margin-top:4px;display:block}
+.cc-item .cc-dl{width:32px;height:32px;border-radius:8px;border:1px solid #d9c9f5;background:#f3e8ff;color:var(--purple);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;flex-shrink:0;transition:all .2s}
+.cc-item .cc-dl:hover{background:var(--purple);color:#fff;border-color:var(--purple);transform:translateY(-1px);box-shadow:0 4px 10px rgba(111,66,193,.28)}
+.cc-item.selected .cc-dl{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.35);color:#fff}
+.cc-item.selected .cc-dl:hover{background:#fff;color:var(--purple)}
 
 .viewer{background:#3e4147;border:1px solid #2f3237;border-radius:12px;overflow:auto;min-height:480px;max-height:calc(100vh - 315px);padding:14px;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative}
 .viewer canvas{display:block;max-width:100%;height:auto;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.5);border-radius:2px}
@@ -141,6 +145,7 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
 .data-table .btn-mini{border:none;border-radius:5px;padding:5px 7px;font-size:10px;cursor:pointer;color:#fff;font-family:'Poppins',sans-serif;transition:transform .2s}
 .data-table .btn-mini:hover{transform:scale(1.08)}
 .data-table .btn-mini.pdf{background:#17a2b8}
+.data-table .btn-mini.dl{background:var(--purple)}
 .data-table .btn-mini.del{background:#dc3545}
 
 .empty-state{text-align:center;padding:60px 20px;color:var(--muted);line-height:1.65}
@@ -401,10 +406,15 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
                     <label><i class="fas fa-calendar-alt"></i> Ano</label>
                     <input type="number" id="verAno" value="2026" min="2020" max="2035">
                 </div>
+                <div class="campo" style="min-width:240px;flex:1 1 240px;max-width:400px;">
+                    <label><i class="fas fa-user-check"></i> Colaborador (baixar individual)</label>
+                    <select id="verFuncionario" onchange="verFiltrarPorFuncionario()"></select>
+                </div>
                 <div class="campo busca">
                     <label><i class="fas fa-search"></i> Buscar colaborador</label>
                     <input type="text" id="verBusca" placeholder="Nome do colaborador...">
                 </div>
+                <button type="button" class="btn-action btn-success" id="btnBaixarFuncionario" onclick="verBaixarSelecionado()" disabled><i class="fas fa-download"></i> Baixar do colaborador</button>
                 <button type="button" class="btn-action btn-primary" onclick="carregarVerContracheques()"><i class="fas fa-search"></i> Carregar</button>
                 <button type="button" class="btn-action btn-secondary" onclick="limparCacheVer()"><i class="fas fa-broom"></i> Limpar Cache</button>
             </div>
@@ -425,7 +435,7 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
                         <div class="placeholder">
                             <i class="fas fa-file-pdf"></i>
                             Selecione um contracheque à esquerda.
-                            <small>O PDF fica salvo no próprio registro do contracheque.</small>
+                            <small>Use o ícone de download de cada item (ou “Baixar do colaborador”) para baixar somente as páginas daquele funcionário.</small>
                         </div>
                     </div>
                 </div>
@@ -741,6 +751,7 @@ let _importContextAno = null;
 let _importPreviewData = [];
 let _nomesPendentes = [];
 let _importUidSeq = 0;
+let _importRegistrosAtuais = [];
 
 let _validacaoCCData = [];
 let _validacaoCCIdx = 0;
@@ -762,6 +773,7 @@ let _verPaginaAtual = 1;
 let _verTotalPaginas = 1;
 let _verReqSeq = 0;
 let _verRenderSeq = 0;
+let _verBaixando = false;
 
 let _consPaginas = [];
 let _consBytesCache = {};
@@ -1122,6 +1134,7 @@ async function carregarVerContracheques(){
         _verSelecionado = null;
         _verPdfDoc = null;
         atualizarKpi(_verListaCompleta.length);
+        atualizarSelectFuncionariosVer();
         aplicarFiltroVer();
         viewer.innerHTML = `<div class="placeholder"><i class="fas fa-file-pdf"></i>Selecione um contracheque à esquerda.<small>${_verListaCompleta.length} registro(s) em ${MESES[mes-1]}/${ano}.</small></div>`;
 
@@ -1136,10 +1149,58 @@ async function carregarVerContracheques(){
         viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#ff8a8a;"></i>Não foi possível carregar os contracheques.<small>${escaparHTML(e.message || e)}</small></div>`;
     }
 }
+function atualizarSelectFuncionariosVer(){
+    const sel = document.getElementById('verFuncionario');
+    if(!sel) return;
+    const mapa = new Map();
+    for(const c of _verListaCompleta){
+        const nome = (c.funcionario_nome || '').trim();
+        if(!nome) continue;
+        const chave = normalizarNome(nome);
+        if(!mapa.has(chave)) mapa.set(chave, nome);
+    }
+    const nomes = [...mapa.values()].sort((a,b)=>a.localeCompare(b, 'pt-BR'));
+    sel.innerHTML = `<option value="">Todos os colaboradores (${nomes.length})</option>` +
+        nomes.map(n=>`<option value="${escaparHTML(n)}">${escaparHTML(n)}</option>`).join('');
+    sel.value = '';
+}
+function verFiltrarPorFuncionario(){
+    const sel = document.getElementById('verFuncionario');
+    const nome = sel ? sel.value : '';
+    const busca = document.getElementById('verBusca');
+    if(busca) busca.value = nome || '';
+    aplicarFiltroVer();
+    if(!nome) return;
+    const idx = _verLista.findIndex(c=>normalizarNome(c.funcionario_nome) === normalizarNome(nome));
+    if(idx >= 0) verSelecionar(idx);
+    else if(_verLista.length === 0) mostrarToast('⚠️ Nenhum contracheque encontrado para este colaborador.', 'warning');
+}
+function verBuscaInput(){
+    const sel = document.getElementById('verFuncionario');
+    if(sel) sel.value = '';
+    aplicarFiltroVer();
+}
+function atualizarBotaoBaixarFuncionario(){
+    const btn = document.getElementById('btnBaixarFuncionario');
+    if(!btn) return;
+    const pronto = !!(_verSelecionado && temPdfRegistro(_verSelecionado));
+    btn.disabled = !pronto;
+    btn.title = pronto
+        ? `Baixar somente o contracheque de ${_verSelecionado.funcionario_nome || 'colaborador'}`
+        : 'Selecione um colaborador com PDF na lista';
+}
 function aplicarFiltroVer(){
     const termo = normalizarNome(document.getElementById('verBusca').value || '');
-    _verLista = !termo ? [..._verListaCompleta] : _verListaCompleta.filter(c=>normalizarNome(c.funcionario_nome).includes(termo));
+    const funcSel = normalizarNome(document.getElementById('verFuncionario')?.value || '');
+    let lista = [..._verListaCompleta];
+    if(termo) lista = lista.filter(c=>normalizarNome(c.funcionario_nome).includes(termo));
+    if(funcSel) lista = lista.filter(c=>normalizarNome(c.funcionario_nome) === funcSel);
+    _verLista = lista;
+    if(_verSelecionado && !_verLista.some(c=>String(c.id) === String(_verSelecionado.id))){
+        _verSelecionado = null;
+    }
     renderizarListaVer();
+    atualizarBotaoBaixarFuncionario();
 }
 function renderizarListaVer(){
     const box = document.getElementById('verLista');
@@ -1158,8 +1219,10 @@ function renderizarListaVer(){
                 <span class="cc-sub">Sal. Base: ${fmtBRL(c.salario_base)}</span>
                 <span class="cc-val"><i class="fas fa-${temPdf ? 'paperclip' : 'exclamation-triangle'}"></i> ${temPdf ? 'PDF disponível' : 'Sem PDF'}</span>
             </div>
+            <button type="button" class="cc-dl" ${temPdf ? '' : 'disabled style="opacity:.35;cursor:not-allowed;"'} title="${temPdf ? 'Baixar somente o contracheque deste colaborador' : 'Este registro não possui PDF'}" onclick="event.stopPropagation();verBaixarPorIndice(${i})"><i class="fas fa-download"></i></button>
         </div>`;
     }).join('');
+    atualizarBotaoBaixarFuncionario();
 }
 async function verSelecionar(idx){
     const cc = _verLista[idx];
@@ -1171,37 +1234,20 @@ async function verSelecionar(idx){
     _verPaginaAtual = 1;
     _verTotalPaginas = 1;
     try{
-        const { data: completo, error } = await db
-            .from('contracheques')
-            .select('id, arquivo_base64, arquivo_nome, dados_brutos')
-            .eq('id', cc.id)
-            .maybeSingle();
-        if(error) throw error;
-
-        let bytes = _verBytesCache.get(String(cc.id));
-        if(!bytes){
-            if(completo && completo.arquivo_base64){
-                bytes = base64ParaBytes(completo.arquivo_base64);
-            }else{
-                const caminho = caminhoPdfRegistro(completo);
-                if(!caminho) throw new Error('Este contracheque não tem PDF salvo.');
-                const { data: blob, error: errStorage } = await db.storage.from('contracheques').download(caminho);
-                if(errStorage) throw errStorage;
-                bytes = new Uint8Array(await blob.arrayBuffer());
-            }
-            _verBytesCache.set(String(cc.id), bytes);
-        }
+        const bytes = await obterBytesRegistro(cc);
         if(_verSelecionado !== cc) return;
         viewer.innerHTML = `<div class="placeholder"><i class="fas fa-spinner fa-spin"></i>Renderizando PDF...</div>`;
         const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
         _verPdfDoc = pdf;
         _verTotalPaginas = pdf.numPages;
-        const paginaRegistro = paginaPdfRegistro(completo);
+        const paginaRegistro = paginaPdfRegistro(cc);
         await verRenderPagina(Math.min(Math.max(paginaRegistro, 1), pdf.numPages));
     }catch(e){
         console.error('Erro ao abrir PDF:', e);
         if(_verSelecionado !== cc) return;
         viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#ffc107;"></i>PDF não disponível.<small>${escaparHTML(e.message || e)}</small></div>`;
+    }finally{
+        atualizarBotaoBaixarFuncionario();
     }
 }
 async function verRenderPagina(num){
@@ -1226,29 +1272,199 @@ async function verRenderPagina(num){
             <button ${num <= 1 ? 'disabled' : ''} onclick="verRenderPagina(${num-1})">◀</button>
             <span>Página ${num} de ${_verTotalPaginas}</span>
             <button ${num >= _verTotalPaginas ? 'disabled' : ''} onclick="verRenderPagina(${num+1})">▶</button>
-            <button onclick="verBaixarPdf()"><i class="fas fa-download"></i> Baixar</button>
+            <button onclick="verBaixarPdf()" title="Baixar somente as páginas deste colaborador"><i class="fas fa-download"></i> Baixar do colaborador</button>
+            <button onclick="verBaixarPdfCompleto()" title="Baixar o arquivo PDF completo, com todos os colaboradores"><i class="fas fa-file-pdf"></i> PDF completo</button>
         `;
         viewer.appendChild(bar);
     }catch(e){
         viewer.innerHTML = `<div class="placeholder"><i class="fas fa-exclamation-triangle" style="color:#ff8a8a;"></i>Erro ao renderizar página.<small>${escaparHTML(e.message || e)}</small></div>`;
     }
 }
-function verBaixarPdf(){
-    if(!_verSelecionado) return;
-    const bytes = _verBytesCache.get(String(_verSelecionado.id));
-    if(!bytes){
-        mostrarToast('⚠️ PDF ainda não carregado.', 'warning');
-        return;
+async function obterBytesRegistro(cc){
+    const chave = String(cc.id);
+    if(_verBytesCache.has(chave)) return _verBytesCache.get(chave);
+    const { data: completo, error } = await db
+        .from('contracheques')
+        .select('id, arquivo_base64, arquivo_nome, dados_brutos')
+        .eq('id', cc.id)
+        .maybeSingle();
+    if(error) throw error;
+
+    let bytes = null;
+    if(completo && completo.arquivo_base64){
+        bytes = base64ParaBytes(completo.arquivo_base64);
+    }else{
+        const caminho = caminhoPdfRegistro(completo);
+        if(!caminho) throw new Error('Este contracheque não tem PDF salvo.');
+        const { data: blob, error: errStorage } = await db.storage.from('contracheques').download(caminho);
+        if(errStorage) throw errStorage;
+        bytes = new Uint8Array(await blob.arrayBuffer());
     }
-    const blob = new Blob([bytes], {type:'application/pdf'});
+    _verBytesCache.set(chave, bytes);
+    return bytes;
+}
+function nomeArquivoContracheque(cc){
+    const nome = (cc && cc.funcionario_nome) || 'colaborador';
+    const base = nome.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0, 80) || 'colaborador';
+    const mes = parseInt(cc && cc.mes_referencia, 10) || 0;
+    const ano = parseInt(cc && cc.ano_referencia, 10) || 0;
+    return `contracheque_${base}${mes && ano ? `_${String(mes).padStart(2,'0')}-${ano}` : ''}.pdf`;
+}
+function baixarBytesPdf(bytes, nomeArquivo){
+    const blob = new Blob([bytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = _verSelecionado.arquivo_nome || `contracheque_${_verSelecionado.funcionario_nome || 'arquivo'}.pdf`;
+    a.download = nomeArquivo || 'contracheque.pdf';
     document.body.appendChild(a);
     a.click();
     a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+function fimPaginaPorGrupo(cc, inicio, pool, totalPaginas){
+    const arquivo = (cc.arquivo_nome || '').trim();
+    if(!arquivo) return totalPaginas || inicio;
+    const mes = parseInt(cc.mes_referencia, 10) || 0;
+    const ano = parseInt(cc.ano_referencia, 10) || 0;
+    const paginas = (pool || _verListaCompleta)
+        .filter(x=>String(x.id) !== String(cc.id))
+        .filter(x=>{
+            if((x.arquivo_nome || '').trim() !== arquivo) return false;
+            if((parseInt(x.mes_referencia, 10) || 0) !== mes) return false;
+            if((parseInt(x.ano_referencia, 10) || 0) !== ano) return false;
+            return true;
+        })
+        .map(x=>paginaPdfRegistro(x))
+        .filter(p=>p > inicio)
+        .sort((a,b)=>a-b);
+    return paginas.length ? paginas[0] - 1 : (totalPaginas || inicio);
+}
+function faixaPaginasContracheque(cc, totalPaginas, pool){
+    const dados = lerDadosBrutos(cc);
+    const total = totalPaginas || 1;
+    const inicio = Math.min(Math.max(1, parseInt(dados.paginaPDF, 10) || 1), total);
+    let fim = parseInt(dados.paginaFinalPDF, 10) || 0;
+    if(!fim || fim < inicio) fim = fimPaginaPorGrupo(cc, inicio, pool, total);
+    fim = Math.min(Math.max(fim, inicio), total);
+    return { inicio, fim };
+}
+function paginaCompartilhada(cc, pool){
+    const arquivo = (cc.arquivo_nome || '').trim();
+    if(!arquivo) return false;
+    const pagina = paginaPdfRegistro(cc);
+    const mes = parseInt(cc.mes_referencia, 10) || 0;
+    const ano = parseInt(cc.ano_referencia, 10) || 0;
+    return (pool || _verListaCompleta).some(x=>{
+        if(String(x.id) === String(cc.id)) return false;
+        if((x.arquivo_nome || '').trim() !== arquivo) return false;
+        if((parseInt(x.mes_referencia, 10) || 0) !== mes) return false;
+        if((parseInt(x.ano_referencia, 10) || 0) !== ano) return false;
+        return paginaPdfRegistro(x) === pagina;
+    });
+}
+async function verBaixarRegistro(cc, pool){
+    const registro = cc || _verSelecionado;
+    if(!registro){
+        mostrarToast('⚠️ Selecione um colaborador na lista.', 'warning');
+        return;
+    }
+    if(!temPdfRegistro(registro)){
+        mostrarToast('⚠️ Este contracheque não possui PDF salvo.', 'warning');
+        return;
+    }
+    if(_verBaixando){
+        mostrarToast('⏳ Aguarde, já existe um download em andamento.', 'info');
+        return;
+    }
+    _verBaixando = true;
+    try{
+        mostrarToast('⏳ Preparando o contracheque do colaborador...', 'info');
+        const bytes = await obterBytesRegistro(registro);
+        const pdfJs = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+        const total = pdfJs.numPages;
+        const faixa = faixaPaginasContracheque(registro, total, pool);
+        let bytesSaida = bytes;
+        let avisoRecorte = '';
+
+        if(faixa.inicio > 1 || faixa.fim < total){
+            try{
+                const pdfLib = getPdfLib();
+                if(!pdfLib) throw new Error('Biblioteca pdf-lib não carregada.');
+                const docOrigem = await pdfLib.PDFDocument.load(bytes);
+                const docNovo = await pdfLib.PDFDocument.create();
+                const indices = [];
+                for(let p = faixa.inicio; p <= faixa.fim; p++) indices.push(p - 1);
+                const paginas = await docNovo.copyPages(docOrigem, indices);
+                paginas.forEach(pg=>docNovo.addPage(pg));
+                bytesSaida = await docNovo.save();
+            }catch(eCrop){
+                console.warn('Não foi possível separar as páginas do colaborador:', eCrop);
+                bytesSaida = bytes;
+                avisoRecorte = 'Não foi possível separar as páginas; o arquivo completo foi baixado.';
+            }
+        }
+
+        const nomeArquivo = nomeArquivoContracheque(registro);
+        baixarBytesPdf(bytesSaida, nomeArquivo);
+        const qtdPag = faixa.fim - faixa.inicio + 1;
+
+        if(avisoRecorte){
+            mostrarToast(`⚠️ ${avisoRecorte}`, 'warning');
+        }else if(total > 1 && qtdPag === 1 && paginaCompartilhada(registro, pool)){
+            mostrarToast(`✅ Baixado: ${nomeArquivo} (esta página contém mais de um colaborador e foi baixada inteira).`, 'warning');
+        }else{
+            mostrarToast(`✅ Baixado: ${nomeArquivo} (${qtdPag} página(s) do colaborador).`, '');
+        }
+    }catch(e){
+        console.error('Erro ao baixar contracheque:', e);
+        mostrarToast('❌ Erro ao baixar: ' + (e.message || e), 'error');
+    }finally{
+        _verBaixando = false;
+    }
+}
+async function verBaixarPdf(){
+    await verBaixarRegistro(_verSelecionado);
+}
+async function verBaixarSelecionado(){
+    if(!_verSelecionado){
+        mostrarToast('⚠️ Selecione um colaborador na lista.', 'warning');
+        return;
+    }
+    await verBaixarRegistro(_verSelecionado);
+}
+async function verBaixarPorIndice(idx){
+    await verBaixarRegistro(_verLista[idx]);
+}
+async function verBaixarPdfCompleto(){
+    if(!_verSelecionado){
+        mostrarToast('⚠️ Selecione um colaborador na lista.', 'warning');
+        return;
+    }
+    if(_verBaixando){
+        mostrarToast('⏳ Aguarde, já existe um download em andamento.', 'info');
+        return;
+    }
+    _verBaixando = true;
+    try{
+        const bytes = await obterBytesRegistro(_verSelecionado);
+        const nome = _verSelecionado.arquivo_nome || nomeArquivoContracheque(_verSelecionado);
+        baixarBytesPdf(bytes, nome);
+        mostrarToast('✅ PDF completo baixado.', '');
+    }catch(e){
+        console.error('Erro ao baixar PDF completo:', e);
+        mostrarToast('❌ Erro ao baixar: ' + (e.message || e), 'error');
+    }finally{
+        _verBaixando = false;
+    }
+}
+async function baixarContrachequeImportado(id){
+    const reg = _importRegistrosAtuais.find(x=>String(x.id) === String(id));
+    if(!reg){
+        mostrarToast('⚠️ Registro não encontrado na lista atual.', 'warning');
+        return;
+    }
+    await verBaixarRegistro(reg, _importRegistrosAtuais);
 }
 function limparCacheVer(){
     _verBytesCache.clear();
@@ -1295,6 +1511,7 @@ async function carregarPainelImportacao(){
 function renderizarPainelImportacao(registros){
     const body = document.getElementById('importPainelBody');
     const mes = _importContextMes, ano = _importContextAno;
+    _importRegistrosAtuais = registros || [];
     atualizarKpi(registros.length);
     if(!registros || registros.length === 0){
         body.innerHTML = `<div class="empty-state"><i class="fas fa-file-invoice"></i><p>Nenhum contracheque em ${MESES[mes-1]}/${ano}.</p><small>Clique em <strong>Importar PDF</strong> para começar.</small></div>`;
@@ -1306,8 +1523,11 @@ function renderizarPainelImportacao(registros){
         const inss = calcularINSS(soma(d.base_calc_inss));
         tS += soma(d.salario_base); tV += soma(d.total_proventos); tD += soma(d.total_descontos);
         tB += soma(d.base_calc_inss); tI += inss; tF += soma(d.fgts_mes); tIR += soma(d.faixa_irrf); tL += soma(d.valor_liquido);
+        const dadosPdf = lerDadosBrutos(d);
+        const pIni = Math.max(1, parseInt(dadosPdf.paginaPDF, 10) || 1);
+        const pFim = Math.max(pIni, parseInt(dadosPdf.paginaFinalPDF, 10) || pIni);
         return `<tr>
-            <td class="col-nome">${escaparHTML(d.funcionario_nome || '(sem nome)')}<br><span style="font-size:9px;font-weight:500;color:#7a3a00;">${escaparHTML(d.arquivo_nome || '')}</span></td>
+            <td class="col-nome">${escaparHTML(d.funcionario_nome || '(sem nome)')}<br><span style="font-size:9px;font-weight:500;color:#7a3a00;">${escaparHTML(d.arquivo_nome || '')}</span><br><span style="font-size:8.5px;font-weight:600;color:#6c757d;">Página ${pIni}${pFim > pIni ? '–' + pFim : ''} do PDF</span></td>
             <td class="num">${fmtBRL(d.salario_base)}</td>
             <td class="num">${fmtBRL(d.total_proventos)}</td>
             <td class="num">${fmtBRL(d.total_descontos)}</td>
@@ -1316,7 +1536,14 @@ function renderizarPainelImportacao(registros){
             <td class="num">${fmtBRL(inss)}</td>
             <td class="num">${fmtBRL(d.fgts_mes)}</td>
             <td class="num">${fmtBRL(d.faixa_irrf)}</td>
-            <td>${temPdfRegistro(d) ? `<button type="button" class="btn-mini pdf" title="Ver PDF" onclick="abrirPdfImportado('${d.id}')"><i class="fas fa-file-pdf"></i></button>` : '<span class="sem-pdf">sem PDF</span>'}</td>
+            <td>
+                <div class="acoes">
+                    ${temPdfRegistro(d)
+                        ? `<button type="button" class="btn-mini pdf" title="Visualizar PDF" onclick="abrirPdfImportado('${d.id}')"><i class="fas fa-eye"></i></button>
+                           <button type="button" class="btn-mini dl" title="Baixar somente o contracheque deste colaborador" onclick="baixarContrachequeImportado('${d.id}')"><i class="fas fa-download"></i></button>`
+                        : '<span class="sem-pdf">sem PDF</span>'}
+                </div>
+            </td>
             <td><button type="button" class="btn-mini del" title="Remover" onclick="removerContracheque('${d.id}')"><i class="fas fa-trash"></i></button></td>
         </tr>`;
     }).join('');
@@ -1489,6 +1716,12 @@ async function processarPDFImportacao(){
             const textContent = await page.getTextContent();
             paginas.push({ numero: i, items: textContent.items });
         }
+        const paginasComRotulo = new Set();
+        for(const pg of paginas){
+            if((pg.items || []).some(it=>normalizarNome(it.str || '').includes('NOME DO FUNCIONARIO'))){
+                paginasComRotulo.add(pg.numero);
+            }
+        }
 
         let dadosExtraidos = extrairTodosFuncionariosPorCoordenadas(paginas);
         if(!dadosExtraidos || dadosExtraidos.length === 0){
@@ -1526,6 +1759,7 @@ async function processarPDFImportacao(){
                 nomeEditavel: match ? match.nome : (d.nomePDF || '')
             };
         });
+        calcularFaixasPaginasImportacao(pdf.numPages, paginasComRotulo);
 
         const comMatch = _importPreviewData.filter(x=>x.matchExato).length;
         const semMatch = _importPreviewData.length - comMatch;
@@ -1543,6 +1777,37 @@ async function processarPDFImportacao(){
         mostrarToast('❌ Erro ao ler PDF: ' + (error.message || error), 'error');
     }finally{
         if(btnExtrair){ btnExtrair.disabled = false; }
+    }
+}
+/* Calcula em quais páginas do PDF cada colaborador está.
+   Usado para baixar somente o contracheque do funcionário escolhido.
+   Regra: a faixa começa na página em que o nome aparece e avança apenas
+   enquanto as páginas seguintes não iniciarem outro colaborador. */
+function calcularFaixasPaginasImportacao(totalPaginas, paginasComRotulo){
+    if(!_importPreviewData || _importPreviewData.length === 0) return;
+    const total = Math.max(1, parseInt(totalPaginas, 10) || 1);
+    const labels = (paginasComRotulo && typeof paginasComRotulo.has === 'function') ? paginasComRotulo : null;
+    const porPagina = new Map();
+    for(const r of _importPreviewData){
+        const p = Math.min(Math.max(1, parseInt(r.paginaPDF, 10) || 1), total);
+        if(!porPagina.has(p)) porPagina.set(p, []);
+        porPagina.get(p).push(r);
+    }
+    for(const [inicio, registros] of porPagina){
+        let fim = inicio;
+        if(labels){
+            for(let q = inicio + 1; q <= total; q++){
+                if(labels.has(q)) break;
+                fim = q;
+            }
+        }else{
+            const paginas = [...porPagina.keys()].filter(p=>p > inicio).sort((a,b)=>a-b);
+            fim = paginas.length ? Math.min(total, paginas[0] - 1) : total;
+        }
+        for(const r of registros){
+            r.paginaInicialPDF = inicio;
+            r.paginaFinalPDF = Math.max(inicio, fim);
+        }
     }
 }
 async function renderizarPdfViewer(pdf){
@@ -1896,8 +2161,11 @@ function renderizarPreviewImportacao(registros){
     const linhas = registros.map((r, i)=>{
         const matchLabel = r.matchExato ? '<span class="ok-badge">histórico</span>' : '<span class="pend-badge">novo</span>';
         const alerta = r.alerta ? `<span class="alerta"><i class="fas fa-exclamation-triangle"></i> ${escaparHTML(r.alerta)}</span>` : '';
+        const pIni = parseInt(r.paginaPDF, 10) || 1;
+        const pFim = Math.max(pIni, parseInt(r.paginaFinalPDF, 10) || pIni);
+        const pagInfo = `<span style="display:block;font-size:8.5px;font-weight:600;color:#6c757d;margin-top:2px;"><i class="fas fa-file-pdf"></i> Página ${pIni}${pFim > pIni ? '–' + pFim : ''} do PDF</span>`;
         return `<tr>
-            <td class="nome-cell">${escaparHTML(r.nomePDF || '(sem nome)')}${matchLabel}${alerta}</td>
+            <td class="nome-cell">${escaparHTML(r.nomePDF || '(sem nome)')}${matchLabel}${alerta}${pagInfo}</td>
             <td class="num ${r.salarioBase === null ? 'vazio' : ''}">${fmtNum(r.salarioBase)}</td>
             <td class="num ${r.vencimentos === null ? 'vazio' : ''}">${fmtNum(r.vencimentos)}</td>
             <td class="num ${r.descontos === null ? 'vazio' : ''}">${fmtNum(r.descontos)}</td>
@@ -2423,7 +2691,9 @@ async function confirmarValidacaoCC(){
             const dadosBrutos = {
                 ...dadosAntigos,
                 nomePDF: r.nomePDF || r.nome,
-                paginaPDF: r.paginaPDF || 1
+                paginaPDF: r.paginaPDF || 1,
+                paginaInicialPDF: r.paginaInicialPDF || r.paginaPDF || 1,
+                paginaFinalPDF: r.paginaFinalPDF || r.paginaInicialPDF || r.paginaPDF || 1
             };
 
             const payload = {
@@ -2892,7 +3162,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
     document.getElementById('verMes').addEventListener('change', carregarVerContracheques);
     document.getElementById('verAno').addEventListener('change', carregarVerContracheques);
-    document.getElementById('verBusca').addEventListener('input', aplicarFiltroVer);
+    document.getElementById('verBusca').addEventListener('input', verBuscaInput);
     document.getElementById('ccMes').addEventListener('change', verificarAlteracaoCompetencia);
     document.getElementById('ccAno').addEventListener('input', verificarAlteracaoCompetencia);
     document.getElementById('consFileInput').addEventListener('change', (e)=>consProcessar(e.target.files));
