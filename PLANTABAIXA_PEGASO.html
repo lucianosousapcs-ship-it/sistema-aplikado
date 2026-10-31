@@ -253,6 +253,8 @@
   .modal-opt:hover { border-color:var(--gold-line); background:var(--panel-2); }
   .modal-opt b { font-size:13px; display:block; font-weight:600; }
   .modal-opt small { font-size:11px; color:var(--text-faint); }
+  .export-group { margin:14px 0 6px; font-size:9px; font-weight:700; letter-spacing:1.3px;
+    text-transform:uppercase; color:var(--text-faint); }
   .modal-close { width:100%; margin-top:10px; justify-content:center; }
 
   #textModal .modal-box { width:400px; }
@@ -424,11 +426,26 @@
 
 <div id="exportModal" class="modal-overlay">
   <div class="modal-box">
-    <h3>Exportar Desenho</h3>
-    <p>Escolha o formato desejado.</p>
-    <div class="modal-opt" onclick="exportPDF()">
-      <div><b>PDF (abrir na tela)</b><small>Visualizador interno</small></div>
+    <h3>Exportar</h3>
+    <p>Escolha o tipo de PDF e o enquadramento.</p>
+
+    <div class="export-group">PDF original</div>
+    <div class="modal-opt" onclick="exportOriginalPDF('page')">
+      <div><b>Página inteira</b><small>Arquivo importado, sem alterações</small></div>
     </div>
+    <div class="modal-opt" onclick="exportOriginalPDF('view')">
+      <div><b>Área visível</b><small>Recorte do original no enquadramento atual</small></div>
+    </div>
+
+    <div class="export-group">Desenho vetorial (não original)</div>
+    <div class="modal-opt" onclick="exportVectorPDF('page')">
+      <div><b>Planta inteira</b><small>Vetores, elementos e anotações</small></div>
+    </div>
+    <div class="modal-opt" onclick="exportVectorPDF('view')">
+      <div><b>Área visível</b><small>Somente o que está na tela</small></div>
+    </div>
+
+    <div class="export-group">Outros formatos</div>
     <div class="modal-opt" onclick="exportSVG()">
       <div><b>SVG Editável</b><small>Objetos individuais, escalável</small></div>
     </div>
@@ -436,7 +453,7 @@
       <div><b>DXF/DWG (CAD)</b><small>AutoCAD, LibreCAD e similares</small></div>
     </div>
     <div class="modal-opt" onclick="exportPNG()">
-      <div><b>PNG (Imagem)</b><small>Renderização em alta resolução (3x)</small></div>
+      <div><b>PNG (Imagem)</b><small>Renderização da área visível</small></div>
     </div>
     <button class="tb-btn modal-close" onclick="closeExportModal()">Cancelar</button>
   </div>
@@ -2449,25 +2466,157 @@ function exportPNG() {
   const a = document.createElement('a'); a.download = 'planta.png'; a.href = off.toDataURL('image/png'); a.click();
 }
 
-function exportPDF() {
-  closeExportModal();
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
-  pdf.setFillColor(255,255,255); pdf.rect(0, 0, canvas.width, canvas.height, 'F');
-  
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+function getItemsBounds() {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   items.forEach(it => {
-    const X = (val) => val * scale + offsetX;
-    const Y = (val) => val * scale + offsetY;
-    if (it.type === 'line') { pdf.line(X(it.x1), Y(it.y1), X(it.x2), Y(it.y2)); }
-    else if (it.type === 'circle') { pdf.circle(X(it.cx), Y(it.cy), it.r * scale); }
-    else if (it.type === 'text') { pdf.text(it.text, X(it.x), Y(it.y)); }
-    else if (it.type === 'path' && it.segments) {
-      it.segments.forEach(seg => {
-        for (let i = 0; i < seg.length - 1; i++) pdf.line(X(seg[i].x), Y(seg[i].y), X(seg[i+1].x), Y(seg[i+1].y));
-      });
-    }
+    const b = getBoundsRaw(it);
+    if (!b) return;
+    minX = Math.min(minX, b.x); minY = Math.min(minY, b.y);
+    maxX = Math.max(maxX, b.x + b.w); maxY = Math.max(maxY, b.y + b.h);
   });
-  const a = document.createElement('a'); a.download = 'planta.pdf'; a.href = pdf.output('datauristring'); a.click();
+  if (minX === Infinity) return null;
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+/* Recorta a imagem do PDF original (pagina inteira ou area visivel) */
+function buildOriginalCropCanvas(scope) {
+  if (!pdfOriginal || !pdfPageSize) return null;
+
+  const src = pdfOriginal.canvas;
+  const pageW = pdfPageSize.width;
+  const pageH = pdfPageSize.height;
+  let wx = 0, wy = 0, ww = pageW, wh = pageH;
+
+  if (scope === 'view') {
+    const vx = -offsetX / scale;
+    const vy = -offsetY / scale;
+    const vw = canvas.width / scale;
+    const vh = canvas.height / scale;
+    const x0 = Math.max(0, vx), y0 = Math.max(0, vy);
+    const x1 = Math.min(pageW, vx + vw), y1 = Math.min(pageH, vy + vh);
+    if (x1 - x0 < 1 || y1 - y0 < 1) return null;
+    wx = x0; wy = y0; ww = x1 - x0; wh = y1 - y0;
+  }
+
+  const fx = src.width / pageW;
+  const fy = src.height / pageH;
+  const out = document.createElement('canvas');
+  out.width = Math.max(1, Math.round(ww * fx));
+  out.height = Math.max(1, Math.round(wh * fy));
+  const octx = out.getContext('2d');
+  octx.fillStyle = '#ffffff';
+  octx.fillRect(0, 0, out.width, out.height);
+  octx.drawImage(src, wx * fx, wy * fy, ww * fx, wh * fy, 0, 0, out.width, out.height);
+
+  return { canvas: out, worldW: ww, worldH: wh };
+}
+
+/* Renderiza os vetores (planta inteira ou area visivel) em um canvas */
+function buildVectorExportCanvas(scope) {
+  let worldW, worldH, outW, outH, factor, offX, offY;
+
+  if (scope === 'view') {
+    factor = scale;
+    offX = offsetX;
+    offY = offsetY;
+    outW = canvas.width;
+    outH = canvas.height;
+    worldW = outW / factor;
+    worldH = outH / factor;
+  } else {
+    const bounds = pdfPageSize
+      ? { x: 0, y: 0, w: pdfPageSize.width, h: pdfPageSize.height }
+      : getItemsBounds();
+    if (!bounds || !bounds.w || !bounds.h) return null;
+
+    const maxPixels = 3200;
+    factor = Math.min(maxPixels / bounds.w, maxPixels / bounds.h);
+    outW = Math.max(1, Math.round(bounds.w * factor));
+    outH = Math.max(1, Math.round(bounds.h * factor));
+    offX = -bounds.x * factor;
+    offY = -bounds.y * factor;
+    worldW = bounds.w;
+    worldH = bounds.h;
+  }
+
+  const out = document.createElement('canvas');
+  out.width = outW;
+  out.height = outH;
+  const octx = out.getContext('2d');
+  octx.fillStyle = '#ffffff';
+  octx.fillRect(0, 0, outW, outH);
+  octx.save();
+  octx.translate(offX, offY);
+  octx.scale(factor, factor);
+  items.forEach(it => drawItem(octx, it, factor, items));
+  octx.restore();
+
+  return { canvas: out, worldW, worldH };
+}
+
+async function exportOriginalPDF(scope) {
+  closeExportModal();
+  if (!pdfPageRef) {
+    showToast('Importe um PDF primeiro.', true);
+    return;
+  }
+
+  /* Pagina inteira: entrega o proprio arquivo importado, sem perda */
+  if (scope === 'page') {
+    let buffer = null;
+    try { buffer = await loadPdfFile(); } catch (error) { buffer = null; }
+    if (buffer) {
+      downloadBlob(new Blob([buffer], { type: 'application/pdf' }), 'planta-original.pdf');
+      setStatus('PDF original exportado.');
+      showToast('PDF original exportado.');
+      return;
+    }
+  }
+
+  if (!pdfOriginal || !pdfPageSize) {
+    showToast('O PDF original ainda está sendo preparado. Tente novamente.', true);
+    return;
+  }
+
+  const crop = buildOriginalCropCanvas(scope);
+  if (!crop) {
+    showToast('A área visível não contém o PDF.', true);
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const orientation = crop.worldW >= crop.worldH ? 'landscape' : 'portrait';
+  const pdf = new jsPDF({ orientation, unit: 'pt', format: [crop.worldW, crop.worldH] });
+  pdf.addImage(crop.canvas.toDataURL('image/png'), 'PNG', 0, 0, crop.worldW, crop.worldH);
+  pdf.save(scope === 'page' ? 'planta-original.pdf' : 'planta-original-recorte.pdf');
+  setStatus('PDF original exportado.');
+  showToast('PDF original exportado.');
+}
+
+function exportVectorPDF(scope) {
+  closeExportModal();
+  const result = buildVectorExportCanvas(scope);
+  if (!result) {
+    showToast('Nada para exportar.', true);
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const orientation = result.worldW >= result.worldH ? 'landscape' : 'portrait';
+  const pdf = new jsPDF({ orientation, unit: 'pt', format: [result.worldW, result.worldH] });
+  pdf.addImage(result.canvas.toDataURL('image/png'), 'PNG', 0, 0, result.worldW, result.worldH);
+  pdf.save(scope === 'page' ? 'planta-vetorial.pdf' : 'planta-vetorial-recorte.pdf');
+  setStatus('PDF vetorial exportado.');
+  showToast('PDF vetorial exportado.');
 }
 
 function exportDWG() {
