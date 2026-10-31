@@ -534,6 +534,7 @@ let pdfRestoring = false;
 /* Cada modo guarda a propria vista (posicao + zoom) ao alternar */
 let vectorCamera = null;
 let originalCamera = null;
+let cameraRestored = false;
 
 let lastMousePos = { x: 0, y: 0 }; // Posição do mouse para colar no local
 
@@ -699,11 +700,20 @@ function scheduleAutoSave() {
 
 async function saveBrowser(silent) {
   clearTimeout(saveTimer);
+
+  /* Mantem a vista do modo ativo sempre atualizada antes de gravar */
+  if (showPdfOriginal) {
+    originalCamera = { scale, offsetX, offsetY };
+  } else {
+    vectorCamera = { scale, offsetX, offsetY };
+  }
+
   try {
     const data = {
       version: 'aplikado-25.0',
       items: items,
       camera: { scale, offsetX, offsetY },
+      viewCameras: { vector: vectorCamera, original: originalCamera },
       pixelPerMeter,
       showPdfOriginal: !!showPdfOriginal,
       savedAt: Date.now()
@@ -817,6 +827,11 @@ async function loadFromBrowser() {
       scale = data.camera.scale || 1;
       offsetX = data.camera.offsetX || 0;
       offsetY = data.camera.offsetY || 0;
+      cameraRestored = true;
+    }
+    if (data.viewCameras) {
+      if (data.viewCameras.vector) vectorCamera = data.viewCameras.vector;
+      if (data.viewCameras.original) originalCamera = data.viewCameras.original;
     }
     restorePdfViewFlag = data.showPdfOriginal === true;
     return true;
@@ -2284,17 +2299,25 @@ async function restorePdfFile() {
     pdfPageSize = { width: viewport.width, height: viewport.height };
     pdfRestoring = false;
 
-    /* Ao abrir, mostra sempre o PDF original, centralizado e com o mesmo zoom da vista vetorial. */
+    /* Ao abrir, mostra o PDF original na vista salva (posicao + zoom). */
     showPdfOriginal = true;
     restorePdfViewFlag = false;
-    centerPdfPage();
+
+    if (originalCamera) {
+      scale = originalCamera.scale;
+      offsetX = originalCamera.offsetX;
+      offsetY = originalCamera.offsetY;
+    } else if (!cameraRestored) {
+      fitPdfPage();
+    }
     originalCamera = { scale, offsetX, offsetY };
-    vectorCamera = null;
+    if (!vectorCamera) vectorCamera = { scale, offsetX, offsetY };
+    cameraRestored = true;
+
     renderPdfOriginal(true);
     setPdfButton();
     draw();
     setStatus('Exibindo o PDF original.');
-    scheduleAutoSave();
   } catch (error) {
     pdfRestoring = false;
     console.warn('Falha ao restaurar o PDF original:', error);
