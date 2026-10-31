@@ -215,7 +215,14 @@
   select.prop-input { cursor:pointer; }
   .empty-hint { color:var(--text-faint); font-size:12px; text-align:center; padding:26px 10px; line-height:1.6; }
   .scale-badge { background:var(--panel-2); border:1px solid var(--gold-line); color:var(--yellow);
-    padding:8px 10px; border-radius:6px; font-size:11.5px; text-align:center; font-weight:600; margin-bottom:12px; }
+    padding:8px 10px; border-radius:6px; font-size:11.5px; text-align:center; font-weight:600; margin-bottom:12px;
+    width:100%; font-family:inherit; cursor:pointer; transition:background .15s, border-color .15s; }
+  .scale-badge:hover { background:var(--gold-tint); border-color:var(--yellow); }
+  .scale-detect { width:100%; margin:-4px 0 12px; padding:7px 10px; background:transparent;
+    border:1px dashed var(--gold-line); border-radius:6px; color:var(--text-muted);
+    font-size:11px; font-family:inherit; cursor:pointer;
+    transition:background .15s, color .15s, border-color .15s; }
+  .scale-detect:hover { color:var(--text-main); border-color:var(--yellow); background:var(--gold-tint); }
 
   /* ---------- STATUS ---------- */
   #statusbar { height:30px; background:var(--panel-bg); border-top:1px solid var(--border);
@@ -493,15 +500,25 @@ let eraseCursorScreen = null;
 let pendingTextPos = null;
 let showGrid = true;
 
-/* PDF original renderizado (visualização com o formato de origem) */
+/* PDF original (renderizado sob demanda a partir do arquivo) */
 let pdfOriginal = null;
 let showPdfOriginal = false;
 let pendingOriginalView = false;
+let restorePdfViewFlag = false;
+let pdfDocRef = null;
+let pdfPageRef = null;
+let pdfPageSize = null;
+let pdfRenderScale = 0;
+let pdfRenderTask = null;
+let pdfRenderToken = 0;
+let pdfRenderTimer = null;
+let pdfRestoring = false;
 
 let lastMousePos = { x: 0, y: 0 }; // Posição do mouse para colar no local
 
 const STORAGE_KEY = 'aplikado_projeto_v25';
 const SCALE_KEY = 'aplikado_scale_v25';
+const GRID_KEY = 'aplikado_grid_v25';
 const THEME_KEY = 'aplikado_theme_v25';
 
 /* ============================================================
@@ -562,32 +579,32 @@ function clearDB() {
   });
 }
 
-/* Imagem do PDF original (guardada separada do projeto para nao pesar no autosave) */
-function savePdfImage(record) {
+/* Arquivo PDF original (guardado separado do projeto para nao pesar no autosave) */
+function savePdfFile(buffer) {
   return new Promise((resolve, reject) => {
     if (!db) { reject('DB não inicializado'); return; }
     const tx = db.transaction('projects', 'readwrite');
-    tx.objectStore('projects').put({ id: 'pdf-original', data: record });
+    tx.objectStore('projects').put({ id: 'pdf-file', data: buffer });
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject('Erro ao gravar PDF original');
+    tx.onerror = () => reject('Erro ao gravar o PDF original');
   });
 }
 
-function loadPdfImage() {
+function loadPdfFile() {
   return new Promise((resolve) => {
     if (!db) { resolve(null); return; }
     const tx = db.transaction('projects', 'readonly');
-    const req = tx.objectStore('projects').get('pdf-original');
+    const req = tx.objectStore('projects').get('pdf-file');
     req.onsuccess = () => resolve(req.result ? req.result.data : null);
     req.onerror = () => resolve(null);
   });
 }
 
-function clearPdfImage() {
+function clearPdfFile() {
   return new Promise((resolve) => {
     if (!db) { resolve(); return; }
     const tx = db.transaction('projects', 'readwrite');
-    tx.objectStore('projects').delete('pdf-original');
+    tx.objectStore('projects').delete('pdf-file');
     tx.oncomplete = () => resolve();
     tx.onerror = () => resolve();
   });
@@ -649,6 +666,9 @@ function saveScale() {
   try { localStorage.setItem(SCALE_KEY, pixelPerMeter.toFixed(4)); } catch(e) {}
 }
 loadScale();
+try {
+  if (localStorage.getItem(GRID_KEY) === '0') showGrid = false;
+} catch (error) { /* ignora */ }
 
 let saveTimer = null;
 function scheduleAutoSave() {
@@ -664,6 +684,7 @@ async function saveBrowser(silent) {
       items: items,
       camera: { scale, offsetX, offsetY },
       pixelPerMeter,
+      showPdfOriginal: !!showPdfOriginal,
       savedAt: Date.now()
     };
     
@@ -722,7 +743,10 @@ async function clearBrowser() {
     localStorage.removeItem(SCALE_KEY);
     items = []; selectedItems = [];
     pixelPerMeter = 20;
-    pdfOriginal = null; showPdfOriginal = false; setPdfButton();
+    pdfOriginal = null; showPdfOriginal = false;
+    pdfPageRef = null; pdfDocRef = null; pdfPageSize = null; pdfRenderScale = 0;
+    restorePdfViewFlag = false;
+    setPdfButton();
     pushHistory(); draw(); updatePropsPanel();
     showToast('Projeto apagado.');
     setStatus('Dados removidos.');
@@ -751,12 +775,29 @@ async function loadFromBrowser() {
     const data = JSON.parse(rawJson);
     
     items = (data.items || []).map(s => ({...s}));
-    pixelPerMeter = data.pixelPerMeter || pixelPerMeter || 20;
+
+    /* A escala do projeto e a referencia; a do navegador serve de fallback. */
+    let storedScale = NaN;
+    try { storedScale = parseFloat(localStorage.getItem(SCALE_KEY)); } catch (error) { /* ignora */ }
+    if (data.pixelPerMeter) {
+      pixelPerMeter = data.pixelPerMeter;
+    } else if (isFinite(storedScale) && storedScale > 0) {
+      pixelPerMeter = storedScale;
+    } else {
+      pixelPerMeter = pixelPerMeter || 20;
+    }
+    saveScale();
+
+    /* Elementos antigos da biblioteca passam a acompanhar a escala do sistema. */
+    items.forEach(it => {
+      if (!it.metric && it.groupId) { it.metric = true; it.scaleAt = pixelPerMeter; }
+    });
     if (data.camera) {
       scale = data.camera.scale || 1;
       offsetX = data.camera.offsetX || 0;
       offsetY = data.camera.offsetY || 0;
     }
+    restorePdfViewFlag = data.showPdfOriginal === true;
     return true;
   } catch (e) {
     console.error('Erro ao processar dados salvos:', e);
@@ -768,7 +809,7 @@ async function loadFromBrowser() {
    HISTÓRICO
    ============================================================ */
 function snapshot() {
-  return JSON.stringify({ items, pixelPerMeter });
+  return JSON.stringify({ items });
 }
 function pushHistory() {
   const s = snapshot();
@@ -787,7 +828,6 @@ function updateHistoryButtons() {
 function restoreSnapshot(str) {
   const d = JSON.parse(str);
   items = d.items;
-  if (d.pixelPerMeter) pixelPerMeter = d.pixelPerMeter;
   selectedItems = [];
   draw(); updatePropsPanel(); scheduleAutoSave();
 }
@@ -879,10 +919,12 @@ function draw() {
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  if (pdfOriginal && showPdfOriginal) {
+  if (showPdfOriginal && pdfPageSize) {
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, pdfOriginal.width, pdfOriginal.height);
-    ctx.drawImage(pdfOriginal.canvas, 0, 0, pdfOriginal.width, pdfOriginal.height);
+    ctx.fillRect(0, 0, pdfPageSize.width, pdfPageSize.height);
+    if (pdfOriginal) {
+      ctx.drawImage(pdfOriginal.canvas, 0, 0, pdfPageSize.width, pdfPageSize.height);
+    }
   }
 
   items.forEach(it => {
@@ -1135,9 +1177,9 @@ canvas.addEventListener('mousedown', e => {
       isCalibrating = false;
       if (Math.hypot(calEnd.x-calStart.x, calEnd.y-calStart.y) > 10) {
         const d = prompt('Qual a distância real desta linha em metros? (ex: 20)', '20');
-        if (d && !isNaN(parseFloat(d))) {
-          pixelPerMeter = Math.hypot(calEnd.x-calStart.x, calEnd.y-calStart.y) / parseFloat(d);
-          saveScale();
+        if (d && !isNaN(parseFloat(d)) && parseFloat(d) > 0) {
+          const nextScale = Math.hypot(calEnd.x-calStart.x, calEnd.y-calStart.y) / parseFloat(d);
+          applyScaleValue(nextScale);
           alert(`Escala calibrada: 1 metro = ${pixelPerMeter.toFixed(2)} pixels`);
         }
       }
@@ -1314,7 +1356,7 @@ canvas.addEventListener('wheel', e => {
   scale *= factor;
   offsetX = e.clientX - canvas.getBoundingClientRect().left - pos.x * scale;
   offsetY = e.clientY - canvas.getBoundingClientRect().top - pos.y * scale;
-  draw(); updateZoomInfo();
+  draw(); updateZoomInfo(); scheduleAutoSave();
 }, {passive:false});
 
 /* ============================================================
@@ -1383,9 +1425,169 @@ function renderLibrary() {
 
 function getRealDimensions(w, h) { return { w: w * pixelPerMeter, h: h * pixelPerMeter }; }
 
+/* ============================================================
+   ESCALA DOS ELEMENTOS (metros -> pixels)
+   ============================================================ */
+function scaleItemGeometry(it, factor, pivotX, pivotY) {
+  if (it.type === 'line' || it.type === 'dimension') {
+    it.x1 = pivotX + (it.x1 - pivotX) * factor;
+    it.y1 = pivotY + (it.y1 - pivotY) * factor;
+    it.x2 = pivotX + (it.x2 - pivotX) * factor;
+    it.y2 = pivotY + (it.y2 - pivotY) * factor;
+  } else if (it.type === 'circle') {
+    it.cx = pivotX + (it.cx - pivotX) * factor;
+    it.cy = pivotY + (it.cy - pivotY) * factor;
+    it.r *= factor;
+  } else if (it.type === 'path' && it.segments) {
+    it.segments = it.segments.map(seg => seg.map(p => ({
+      x: pivotX + (p.x - pivotX) * factor,
+      y: pivotY + (p.y - pivotY) * factor
+    })));
+  } else if (it.type === 'text') {
+    it.x = pivotX + (it.x - pivotX) * factor;
+    it.y = pivotY + (it.y - pivotY) * factor;
+    if (it.fontSize) it.fontSize *= factor;
+  } else {
+    it.x = pivotX + (it.x - pivotX) * factor;
+    it.y = pivotY + (it.y - pivotY) * factor;
+    it.w *= factor;
+    it.h *= factor;
+  }
+}
+
+/* Redimensiona somente elementos da biblioteca (metricos), mantendo o centro de cada grupo. */
+function rescaleMetricItems(previousScale, nextScale) {
+  if (!previousScale || !nextScale || previousScale === nextScale) return;
+  const groups = new Map();
+
+  items.forEach((it, index) => {
+    if (!it.metric) return;
+    const key = it.groupId || ('__item_' + index);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(it);
+  });
+
+  groups.forEach(list => {
+    const groupScale = list[0].scaleAt || previousScale;
+    const factor = nextScale / groupScale;
+    if (!isFinite(factor) || factor <= 0) return;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    list.forEach(it => {
+      const b = getBoundsRaw(it);
+      if (!b) return;
+      minX = Math.min(minX, b.x); minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + b.w); maxY = Math.max(maxY, b.y + b.h);
+    });
+    if (!isFinite(minX)) return;
+    const pivotX = (minX + maxX) / 2;
+    const pivotY = (minY + maxY) / 2;
+    if (factor !== 1) {
+      list.forEach(it => scaleItemGeometry(it, factor, pivotX, pivotY));
+    }
+    list.forEach(it => { it.scaleAt = nextScale; });
+  });
+}
+
+function applyScaleValue(nextScale) {
+  const previous = pixelPerMeter;
+  if (!isFinite(nextScale) || nextScale <= 0) {
+    showToast('Valor de escala inválido.', true);
+    return;
+  }
+  if (nextScale === previous) return;
+
+  pixelPerMeter = nextScale;
+  rescaleMetricItems(previous, nextScale);
+  saveScale();
+
+  /* A mudanca de escala e global: reinicia o historico para o desfazer nao misturar escalas. */
+  history = []; historyIndex = -1;
+  pushHistory();
+  saveBrowser(true);
+  updatePropsPanel();
+  draw();
+  setStatus(`Escala: 1 m = ${pixelPerMeter.toFixed(2)} px`);
+  showToast('Escala atualizada: elementos redimensionados.');
+}
+
+function editScale() {
+  const raw = prompt('Escala do sistema: px por metro (ou proporção, ex.: 1:200):', pixelPerMeter.toFixed(2));
+  if (raw === null) return;
+
+  const text = String(raw).trim().replace(',', '.');
+  const ratio = text.match(/^1\s*[:\/]\s*(\d+(?:\.\d+)?)$/);
+  const next = ratio ? scaleFromDenominator(parseFloat(ratio[1])) : parseFloat(text);
+  applyScaleValue(next);
+}
+
+/* Converte uma proporcao de plotagem (1:200) em pixels por metro.
+   1 pt = 0,3528 mm; 1 m real em 1:N = (1000/N) mm de papel. */
+function scaleFromDenominator(denominator) {
+  if (!isFinite(denominator) || denominator <= 0) return NaN;
+  return 2834.645 / denominator;
+}
+
+/* Procura "ESCALA 1:100", "1:200" etc. no texto extraido do PDF. */
+function detectScaleFromText(textItems) {
+  const candidates = [];
+  (textItems || []).forEach(item => {
+    const text = String(item && item.str ? item.str : '').toUpperCase();
+    if (!text) return;
+    const explicit = /ESCALA|SCALE|ESC\./.test(text);
+    const re = /1\s*[:\/]\s*(\d{1,4})/g;
+    let match;
+    while ((match = re.exec(text)) !== null) {
+      const denom = parseInt(match[1], 10);
+      if (denom >= 20 && denom <= 5000) candidates.push({ denom, explicit });
+    }
+  });
+
+  if (!candidates.length) return null;
+  const explicit = candidates.find(candidate => candidate.explicit);
+  if (explicit) return explicit.denom;
+
+  const counts = new Map();
+  candidates.forEach(candidate => counts.set(candidate.denom, (counts.get(candidate.denom) || 0) + 1));
+  let best = null;
+  let bestCount = 0;
+  counts.forEach((count, denom) => {
+    if (count > bestCount) { best = denom; bestCount = count; }
+  });
+  return best;
+}
+
+async function detectPdfScale() {
+  if (!pdfPageRef) {
+    showToast('Importe um PDF para detectar a escala.', true);
+    return;
+  }
+  try {
+    const textContent = await pdfPageRef.getTextContent();
+    const denom = detectScaleFromText(textContent.items || []);
+    if (!denom) {
+      showToast('Escala não encontrada no PDF. Use "Definir escala".', true);
+      setStatus('Escala não encontrada no PDF.');
+      return;
+    }
+    const next = scaleFromDenominator(denom);
+    applyScaleValue(next);
+    setStatus(`Escala detectada 1:${denom} · 1 m = ${next.toFixed(2)} px`);
+    showToast(`Escala 1:${denom} aplicada.`);
+  } catch (error) {
+    console.warn('Falha ao detectar a escala do PDF:', error);
+    showToast('Falha ao ler o texto do PDF.', true);
+  }
+}
+
 function addGroupedItems(newItems) {
   const groupId = 'g_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-  newItems.forEach(it => { it.groupId = groupId; items.push(it); });
+  newItems.forEach(it => {
+    it.groupId = groupId;
+    it.metric = true;
+    it.scaleAt = pixelPerMeter;
+    items.push(it);
+  });
   selectedItems = newItems;
   updatePropsPanel();
   pushHistory(); draw();
@@ -1394,7 +1596,7 @@ function addGroupedItems(newItems) {
 function insertRect(w, h) {
   const cx = canvas.width/2, cy = canvas.height/2;
   const x = (cx - offsetX)/scale - w/2, y = (cy - offsetY)/scale - h/2;
-  items.push({type:'rect', x, y, w, h, stroke:'#000', lineWidth:1, fill:'none'});
+  items.push({type:'rect', x, y, w, h, stroke:'#000', lineWidth:1, fill:'none', metric:true, scaleAt:pixelPerMeter});
   pushHistory(); draw(); setStatus('Elemento inserido.');
 }
 
@@ -1738,35 +1940,24 @@ function importPdf(file) {
   setStatus('Extraindo vetores do PDF...');
 
   file.arrayBuffer().then(buf => {
+    try {
+      savePdfFile(buf.slice(0)).catch(err => console.warn('Não foi possível guardar o PDF:', err));
+    } catch (err) {
+      console.warn('Não foi possível guardar o PDF:', err);
+    }
     pdfjsLib.getDocument({data: buf}).promise.then(pdf => {
       pdf.getPage(1).then(page => {
 
-        /* Renderiza a pagina original (imagens, fontes e cores) para o modo "PDF original" */
+        /* Referencia a pagina para renderizar o original sob demanda */
+        pdfDocRef = pdf;
+        pdfPageRef = page;
+        pdfOriginal = null;
+        pdfRenderScale = 0;
         const baseViewport = page.getViewport({ scale: 1 });
-        const renderScale = Math.min(2, 2400 / Math.max(baseViewport.width, baseViewport.height));
-        const hiViewport = page.getViewport({ scale: renderScale });
-        const offCanvas = document.createElement('canvas');
-        offCanvas.width = Math.max(1, Math.round(hiViewport.width));
-        offCanvas.height = Math.max(1, Math.round(hiViewport.height));
-        const offCtx = offCanvas.getContext('2d');
-        offCtx.fillStyle = '#ffffff';
-        offCtx.fillRect(0, 0, offCanvas.width, offCanvas.height);
-        page.render({ canvasContext: offCtx, viewport: hiViewport }).promise.then(() => {
-          pdfOriginal = { canvas: offCanvas, width: baseViewport.width, height: baseViewport.height };
-          if (pendingOriginalView) { showPdfOriginal = true; pendingOriginalView = false; }
-          setPdfButton();
-          draw();
-          setStatus(showPdfOriginal ? 'Exibindo o PDF original.' : 'PDF original pronto. Use "Ver PDF original" na barra lateral.');
-          try {
-            const dataUrl = offCanvas.toDataURL('image/jpeg', 0.85);
-            savePdfImage({ dataUrl, width: baseViewport.width, height: baseViewport.height })
-              .catch(err => console.warn('Não foi possível guardar a imagem do PDF:', err));
-          } catch (err) {
-            console.warn('Não foi possível gerar a imagem do PDF:', err);
-          }
-        }).catch(error => {
-          console.warn('Falha ao renderizar o PDF original:', error);
-        });
+        pdfPageSize = { width: baseViewport.width, height: baseViewport.height };
+        if (pendingOriginalView) { showPdfOriginal = true; pendingOriginalView = false; }
+        setPdfButton();
+        renderPdfOriginal(true);
 
         page.getOperatorList().then(opList => {
           const OPS = pdfjsLib.OPS;
@@ -1846,15 +2037,32 @@ function importPdf(file) {
             }
             items = newItems;
             selectedItems = [];
-            centerView();
+
+            /* Detecta a escala de plotagem no texto do PDF (ex.: ESCALA 1:200). */
+            const detectedDenom = detectScaleFromText(textContent.items || []);
+            if (detectedDenom) {
+              const detectedScale = scaleFromDenominator(detectedDenom);
+              if (isFinite(detectedScale) && detectedScale > 0) {
+                pixelPerMeter = detectedScale;
+                saveScale();
+              }
+            }
+
+            if (pdfPageSize) fitPdfPage(); else centerView();
             pushHistory();
             updatePropsPanel();
-            setStatus(`PDF importado: ${newItems.length} elementos.`);
-            showToast(`PDF importado: ${newItems.length} elementos.`);
+            if (detectedDenom) {
+              setStatus(`PDF importado · escala detectada 1:${detectedDenom} (1 m = ${pixelPerMeter.toFixed(2)} px)`);
+              showToast(`PDF importado · escala 1:${detectedDenom}.`);
+            } else {
+              setStatus(`PDF importado: ${newItems.length} elementos.`);
+              showToast(`PDF importado: ${newItems.length} elementos.`);
+            }
             document.getElementById('loading').style.display = 'none';
           }).catch(() => {
             items = newItems;
-            centerView(); pushHistory(); updatePropsPanel();
+            if (pdfPageSize) fitPdfPage(); else centerView();
+            pushHistory(); updatePropsPanel();
             document.getElementById('loading').style.display = 'none';
           });
         });
@@ -1892,21 +2100,73 @@ function setMode(m) {
 /* ============================================================
    PDF ORIGINAL (visualizacao com o formato de origem)
    ============================================================ */
+function pdfAvailable() { return !!(pdfPageRef || pdfOriginal); }
+
 function setPdfButton() {
   const btn = document.getElementById('btnPdfOriginal');
   if (!btn) return;
-  const on = !!(pdfOriginal && showPdfOriginal);
+  const on = !!(showPdfOriginal && pdfPageSize);
   btn.disabled = false;
   btn.classList.toggle('active', on);
   btn.setAttribute('aria-pressed', String(on));
   btn.textContent = on ? 'Ocultar PDF original' : 'Ver PDF original';
-  btn.title = pdfOriginal
+  btn.title = pdfAvailable()
     ? 'Alternar entre o PDF original e os vetores'
     : 'Selecione o PDF para visualizar o original';
 }
 
+/* Resolucao necessaria para o original ficar nitido no zoom atual */
+function desiredPdfRenderScale() {
+  if (!pdfPageSize) return 1;
+  const dpr = window.devicePixelRatio || 1;
+  const area = Math.max(1, pdfPageSize.width * pdfPageSize.height);
+  const maxPixels = 12000000;
+  const cap = Math.min(4, Math.sqrt(maxPixels / area));
+  const target = Math.max(0.4, scale * dpr * 1.25);
+  return Math.min(cap, target);
+}
+
+function schedulePdfRender() {
+  if (!pdfPageRef || !showPdfOriginal) return;
+  clearTimeout(pdfRenderTimer);
+  pdfRenderTimer = setTimeout(() => renderPdfOriginal(false), 240);
+}
+
+function renderPdfOriginal(force) {
+  if (!pdfPageRef || !pdfPageSize) return;
+
+  const target = desiredPdfRenderScale();
+  if (!force && pdfOriginal && target <= pdfRenderScale * 1.15) return;
+
+  const token = ++pdfRenderToken;
+  if (pdfRenderTask) { try { pdfRenderTask.cancel(); } catch (error) { /* ignora */ } }
+
+  const viewport = pdfPageRef.getViewport({ scale: target });
+  const canvasEl = document.createElement('canvas');
+  canvasEl.width = Math.max(1, Math.round(viewport.width));
+  canvasEl.height = Math.max(1, Math.round(viewport.height));
+  const context = canvasEl.getContext('2d');
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, canvasEl.width, canvasEl.height);
+
+  const task = pdfPageRef.render({ canvasContext: context, viewport });
+  pdfRenderTask = task;
+
+  task.promise.then(() => {
+    if (token !== pdfRenderToken) return;
+    pdfOriginal = { canvas: canvasEl };
+    pdfRenderScale = target;
+    setPdfButton();
+    draw();
+    if (showPdfOriginal) setStatus('Exibindo o PDF original.');
+  }).catch(error => {
+    if (error && error.name === 'RenderingCancelledException') return;
+    console.warn('Falha ao renderizar o PDF original:', error);
+  });
+}
+
 function togglePdfOriginal() {
-  if (!pdfOriginal) {
+  if (!pdfPageRef && !pdfOriginal) {
     pendingOriginalView = true;
     showToast('Selecione o PDF para visualizar o original.');
     setStatus('Selecione o PDF para visualizar o original.');
@@ -1914,36 +2174,57 @@ function togglePdfOriginal() {
     if (input) input.click();
     return;
   }
+
   showPdfOriginal = !showPdfOriginal;
   selectedItems = [];
+
+  if (showPdfOriginal) renderPdfOriginal(false);
   setPdfButton();
   draw();
   updatePropsPanel();
-  setStatus(showPdfOriginal ? 'Exibindo o PDF original.' : 'Exibindo os vetores extraídos.');
+  scheduleAutoSave();
+
+  if (!showPdfOriginal) setStatus('Exibindo os vetores extraídos.');
+  else if (pdfOriginal) setStatus('Exibindo o PDF original.');
+  else setStatus('Preparando o PDF original...');
 }
 
-/* Recupera a imagem do PDF original guardada no navegador */
-async function restorePdfImage() {
-  let record = null;
-  try { record = await loadPdfImage(); } catch (error) { record = null; }
-  if (!record || !record.dataUrl) { setPdfButton(); return; }
-  const img = new Image();
-  img.onload = () => {
-    try {
-      const off = document.createElement('canvas');
-      off.width = img.naturalWidth;
-      off.height = img.naturalHeight;
-      off.getContext('2d').drawImage(img, 0, 0);
-      pdfOriginal = { canvas: off, width: record.width, height: record.height };
-      setPdfButton();
-      draw();
-      setStatus('PDF original disponível.');
-    } catch (error) {
-      console.warn('Falha ao restaurar o PDF original:', error);
-    }
-  };
-  img.onerror = () => setPdfButton();
-  img.src = record.dataUrl;
+/* Recupera o PDF guardado no navegador e re-renderiza a pagina */
+async function restorePdfFile() {
+  let buffer = null;
+  try { buffer = await loadPdfFile(); } catch (error) { buffer = null; }
+  if (!buffer) { setPdfButton(); return; }
+
+  pdfRestoring = true;
+  try {
+    const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+    const page = await doc.getPage(1);
+    const viewport = page.getViewport({ scale: 1 });
+    pdfDocRef = doc;
+    pdfPageRef = page;
+    pdfPageSize = { width: viewport.width, height: viewport.height };
+    pdfRestoring = false;
+    if (restorePdfViewFlag) { showPdfOriginal = true; }
+    restorePdfViewFlag = false;
+    renderPdfOriginal(true);
+    setPdfButton();
+    draw();
+    setStatus(showPdfOriginal ? 'Exibindo o PDF original.' : 'PDF original disponível.');
+  } catch (error) {
+    pdfRestoring = false;
+    console.warn('Falha ao restaurar o PDF original:', error);
+    setPdfButton();
+  }
+}
+
+/* Enquadra a folha do PDF (mantem o mesmo enquadramento nos dois modos) */
+function fitPdfPage() {
+  if (!pdfPageSize) { centerView(); return; }
+  const margin = 0.94;
+  scale = Math.min(canvas.width / pdfPageSize.width, canvas.height / pdfPageSize.height) * margin;
+  offsetX = (canvas.width - pdfPageSize.width * scale) / 2;
+  offsetY = (canvas.height - pdfPageSize.height * scale) / 2;
+  draw(); updateZoomInfo();
 }
 
 function centerView() {
@@ -1959,13 +2240,21 @@ function centerView() {
   scale = Math.min(canvas.width / w, canvas.height / h) * 0.9;
   offsetX = (canvas.width - w * scale) / 2 - minX * scale;
   offsetY = (canvas.height - h * scale) / 2 - minY * scale;
-  draw(); updateZoomInfo();
+  draw(); updateZoomInfo(); scheduleAutoSave();
 }
 
-function zoomCanvas(f) { scale *= f; draw(); updateZoomInfo(); }
-function updateZoomInfo() { document.getElementById('zoomInfo').textContent = 'Zoom: ' + Math.round(scale*100) + '%'; }
+function zoomCanvas(f) { scale *= f; draw(); updateZoomInfo(); scheduleAutoSave(); }
+function updateZoomInfo() {
+  document.getElementById('zoomInfo').textContent = 'Zoom: ' + Math.round(scale*100) + '%';
+  schedulePdfRender();
+}
 function setStatus(msg) { document.getElementById('statusText').textContent = msg; }
-function toggleGrid() { showGrid = !showGrid; document.getElementById('btnGrid').style.opacity = showGrid ? 1 : 0.4; draw(); }
+function toggleGrid() {
+  showGrid = !showGrid;
+  document.getElementById('btnGrid').style.opacity = showGrid ? 1 : 0.4;
+  try { localStorage.setItem(GRID_KEY, showGrid ? '1' : '0'); } catch (error) { /* ignora */ }
+  draw();
+}
 
 /* ============================================================
    PAINEL DE PROPRIEDADES (COM PREENCHIMENTO)
@@ -1974,14 +2263,16 @@ function updatePropsPanel() {
   const p = document.getElementById('propsPanel');
   if (selectedItems.length === 0) {
     p.innerHTML = `
-      <div class="scale-badge">Escala: 1 m = ${pixelPerMeter.toFixed(2)} px</div>
+      <button type="button" class="scale-badge" onclick="editScale()" title="Clique para ajustar a escala (px por metro)">Escala: 1 m = ${pixelPerMeter.toFixed(2)} px · editar</button>
+      <button type="button" class="scale-detect" onclick="detectPdfScale()" title="Ler a escala no texto do PDF importado">Detectar escala do PDF</button>
       <div class="empty-hint">Selecione um elemento para editar.</div>`;
     document.getElementById('selInfo').textContent = '';
     return;
   }
 
   const it = selectedItems[0];
-  let html = `<div class="scale-badge">Escala: 1 m = ${pixelPerMeter.toFixed(2)} px</div>`;
+  let html = `<button type="button" class="scale-badge" onclick="editScale()" title="Clique para ajustar a escala (px por metro)">Escala: 1 m = ${pixelPerMeter.toFixed(2)} px · editar</button>`;
+  html += `<button type="button" class="scale-detect" onclick="detectPdfScale()" title="Ler a escala no texto do PDF importado">Detectar escala do PDF</button>`;
   html += `<div class="empty-hint">${selectedItems.length} elemento(s) agrupado(s).</div>`;
   
   if (it.type === 'text' && selectedItems.length === 1) {
@@ -2167,7 +2458,7 @@ document.getElementById('openProject').addEventListener('change', e => {
       const data = JSON.parse(ev.target.result);
       if (data.items) {
         items = data.items;
-        if (data.pixelPerMeter) pixelPerMeter = data.pixelPerMeter;
+        if (data.pixelPerMeter) { pixelPerMeter = data.pixelPerMeter; saveScale(); }
         if (data.camera) {
           scale = data.camera.scale || 1;
           offsetX = data.camera.offsetX || 0;
@@ -2175,8 +2466,11 @@ document.getElementById('openProject').addEventListener('change', e => {
         }
         selectedItems = [];
         history = []; historyIndex = -1;
-        pdfOriginal = null; showPdfOriginal = false; setPdfButton();
-        clearPdfImage();
+        pdfOriginal = null; showPdfOriginal = false;
+        pdfPageRef = null; pdfDocRef = null; pdfPageSize = null; pdfRenderScale = 0;
+        restorePdfViewFlag = false;
+        setPdfButton();
+        clearPdfFile();
         pushHistory();
         draw();
         updatePropsPanel();
@@ -2198,11 +2492,20 @@ async function initApp() {
   resizeCanvas();
   renderLibrary();
   setMode('select');
+  document.getElementById('btnGrid').style.opacity = showGrid ? 1 : 0.4;
   
   try {
     await initDB();
   } catch (e) {
     console.warn('IndexedDB indisponível, usando apenas localStorage');
+  }
+
+  /* Remove o registro antigo (imagem JPEG) de versões anteriores */
+  if (db) {
+    try {
+      const cleanup = db.transaction('projects', 'readwrite');
+      cleanup.objectStore('projects').delete('pdf-original');
+    } catch (error) { /* ignora */ }
   }
 
   const loaded = await loadFromBrowser();
@@ -2214,7 +2517,7 @@ async function initApp() {
   updatePropsPanel();
   updateZoomInfo();
   setPdfButton();
-  restorePdfImage();
+  restorePdfFile();
   
   if (loaded) {
     setStatus('Projeto restaurado do navegador (' + items.length + ' elementos).');
