@@ -514,6 +514,10 @@ let pdfRenderToken = 0;
 let pdfRenderTimer = null;
 let pdfRestoring = false;
 
+/* Cada modo guarda a propria vista (posicao + zoom) ao alternar */
+let vectorCamera = null;
+let originalCamera = null;
+
 let lastMousePos = { x: 0, y: 0 }; // Posição do mouse para colar no local
 
 const STORAGE_KEY = 'aplikado_projeto_v25';
@@ -1025,7 +1029,7 @@ function drawItem(c, it, sc, allItems) {
   c.save();
   
   if (it.rotation) {
-    let b = it.groupId ? getGroupBounds(it.groupId, allItems) : getBoundsRaw(it);
+    let b = it.groupId ? getGroupBaseBounds(it.groupId, allItems) : getBaseBounds(it);
     if (b) {
       const cx = b.x + b.w/2, cy = b.y + b.h/2;
       c.translate(cx, cy);
@@ -1065,7 +1069,7 @@ function drawItem(c, it, sc, allItems) {
   c.restore();
 }
 
-function getBoundsRaw(it) {
+function getBaseBounds(it) {
   if (it.type === 'rect') return {x:it.x, y:it.y, w:it.w, h:it.h};
   if (it.type === 'line' || it.type === 'dimension') return {x:Math.min(it.x1,it.x2), y:Math.min(it.y1,it.y2), w:Math.abs(it.x2-it.x1), h:Math.abs(it.y2-it.y1)};
   if (it.type === 'circle') return {x:it.cx-it.r, y:it.cy-it.r, w:it.r*2, h:it.r*2};
@@ -1084,6 +1088,41 @@ function getBoundsRaw(it) {
     return {x:minX, y:minY, w:maxX-minX, h:maxY-minY};
   }
   return null;
+}
+
+function rotateBounds(b, rotation, cx, cy) {
+  const rad = rotation * Math.PI / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+  const corners = [[b.x,b.y],[b.x+b.w,b.y],[b.x+b.w,b.y+b.h],[b.x,b.y+b.h]];
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  corners.forEach(point => {
+    const rx = cx + (point[0] - cx) * cos - (point[1] - cy) * sin;
+    const ry = cy + (point[0] - cx) * sin + (point[1] - cy) * cos;
+    minX = Math.min(minX, rx); minY = Math.min(minY, ry);
+    maxX = Math.max(maxX, rx); maxY = Math.max(maxY, ry);
+  });
+  return {x:minX, y:minY, w:maxX-minX, h:maxY-minY};
+}
+
+function getGroupBaseBounds(groupId, itemsList = items) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  itemsList.forEach(it => {
+    if (it.groupId !== groupId) return;
+    const b = getBaseBounds(it);
+    if (!b) return;
+    minX = Math.min(minX, b.x); minY = Math.min(minY, b.y);
+    maxX = Math.max(maxX, b.x + b.w); maxY = Math.max(maxY, b.y + b.h);
+  });
+  if (minX === Infinity) return null;
+  return {x:minX, y:minY, w:maxX-minX, h:maxY-minY};
+}
+
+function getBoundsRaw(it) {
+  const base = getBaseBounds(it);
+  if (!base || !it.rotation) return base;
+  const pivot = it.groupId ? getGroupBaseBounds(it.groupId) : base;
+  if (!pivot) return base;
+  return rotateBounds(base, it.rotation, pivot.x + pivot.w/2, pivot.y + pivot.h/2);
 }
 
 function getGroupBounds(groupId, itemsList = items) {
@@ -1586,6 +1625,7 @@ function addGroupedItems(newItems) {
     it.groupId = groupId;
     it.metric = true;
     it.scaleAt = pixelPerMeter;
+    it.rotation = 90;
     items.push(it);
   });
   selectedItems = newItems;
@@ -1596,7 +1636,7 @@ function addGroupedItems(newItems) {
 function insertRect(w, h) {
   const cx = canvas.width/2, cy = canvas.height/2;
   const x = (cx - offsetX)/scale - w/2, y = (cy - offsetY)/scale - h/2;
-  items.push({type:'rect', x, y, w, h, stroke:'#000', lineWidth:1, fill:'none', metric:true, scaleAt:pixelPerMeter});
+  items.push({type:'rect', x, y, w, h, stroke:'#000', lineWidth:1, fill:'none', metric:true, scaleAt:pixelPerMeter, rotation:90});
   pushHistory(); draw(); setStatus('Elemento inserido.');
 }
 
@@ -1955,7 +1995,8 @@ function importPdf(file) {
         pdfRenderScale = 0;
         const baseViewport = page.getViewport({ scale: 1 });
         pdfPageSize = { width: baseViewport.width, height: baseViewport.height };
-        if (pendingOriginalView) { showPdfOriginal = true; pendingOriginalView = false; }
+        showPdfOriginal = true;
+        pendingOriginalView = false;
         setPdfButton();
         renderPdfOriginal(true);
 
@@ -2049,6 +2090,8 @@ function importPdf(file) {
             }
 
             if (pdfPageSize) fitPdfPage(); else centerView();
+            originalCamera = { scale, offsetX, offsetY };
+            vectorCamera = { scale, offsetX, offsetY };
             pushHistory();
             updatePropsPanel();
             if (detectedDenom) {
@@ -2175,6 +2218,25 @@ function togglePdfOriginal() {
     return;
   }
 
+  /* Guarda a vista atual e restaura a vista do modo que vai aparecer */
+  if (showPdfOriginal) {
+    originalCamera = { scale, offsetX, offsetY };
+    if (vectorCamera) {
+      scale = vectorCamera.scale;
+      offsetX = vectorCamera.offsetX;
+      offsetY = vectorCamera.offsetY;
+    }
+  } else {
+    vectorCamera = { scale, offsetX, offsetY };
+    if (originalCamera) {
+      scale = originalCamera.scale;
+      offsetX = originalCamera.offsetX;
+      offsetY = originalCamera.offsetY;
+    } else {
+      centerPdfPage();
+    }
+  }
+
   showPdfOriginal = !showPdfOriginal;
   selectedItems = [];
 
@@ -2204,17 +2266,30 @@ async function restorePdfFile() {
     pdfPageRef = page;
     pdfPageSize = { width: viewport.width, height: viewport.height };
     pdfRestoring = false;
-    if (restorePdfViewFlag) { showPdfOriginal = true; }
+
+    /* Ao abrir, mostra sempre o PDF original, centralizado e com o mesmo zoom da vista vetorial. */
+    showPdfOriginal = true;
     restorePdfViewFlag = false;
+    centerPdfPage();
+    originalCamera = { scale, offsetX, offsetY };
+    vectorCamera = null;
     renderPdfOriginal(true);
     setPdfButton();
     draw();
-    setStatus(showPdfOriginal ? 'Exibindo o PDF original.' : 'PDF original disponível.');
+    setStatus('Exibindo o PDF original.');
+    scheduleAutoSave();
   } catch (error) {
     pdfRestoring = false;
     console.warn('Falha ao restaurar o PDF original:', error);
     setPdfButton();
   }
+}
+
+/* Centraliza a folha do PDF mantendo o zoom atual */
+function centerPdfPage() {
+  if (!pdfPageSize) return;
+  offsetX = (canvas.width - pdfPageSize.width * scale) / 2;
+  offsetY = (canvas.height - pdfPageSize.height * scale) / 2;
 }
 
 /* Enquadra a folha do PDF (mantem o mesmo enquadramento nos dois modos) */
