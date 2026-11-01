@@ -167,6 +167,25 @@ main{position:relative;z-index:10;flex:1;display:flex;flex-direction:column;max-
   border-color:rgba(243,111,39,.2);
   color:var(--sbm-orange);
 }
+
+/* ✅ Ícone de link externo */
+.cc-link-icon{
+  width:20px;height:20px;border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--text-dim);
+  flex-shrink:0;
+  transition:all .3s var(--ease);
+}
+.compact-card:hover .cc-link-icon{
+  background:rgba(243,111,39,.12);
+  border-color:rgba(243,111,39,.25);
+  color:var(--sbm-orange);
+  transform:translateX(2px);
+}
+
 .compact-card .cc-num{
   font-family:'Poppins',sans-serif;font-size:11px;font-weight:700;
   color:var(--text-dim);letter-spacing:.5px;flex-shrink:0;
@@ -383,11 +402,13 @@ function iconFor(cat){
   return 'fas fa-wrench';
 }
 
+/* ✅ Constrói card com ícone de link se tiver href */
 function buildCompactCard(c){
   var pinnedNow = isPinned(c.id);
+  var hasLink = !!c.href;
 
   var el;
-  if(c.href){
+  if(hasLink){
     el=document.createElement('a');
     el.className='compact-card'+(pinnedNow?' pinned':'');
   }else{
@@ -395,10 +416,16 @@ function buildCompactCard(c){
     el.className='compact-card'+(pinnedNow?' pinned':'');
   }
 
+  /* Monta o topo: ícone + número OU ícone de link */
+  var topRight = hasLink 
+    ? '<span class="cc-link-icon" title="Abrir ferramenta"><i class="fas fa-external-link-alt"></i></span>'
+    : '<span class="cc-num">'+c.n+'</span>';
+
   el.innerHTML=
     (pinnedNow?'<span class="pin-badge">Destacado</span>':'')+
     '<div class="cc-top">'+
       '<span class="cc-icon"><i class="'+iconFor(c.cat)+'"></i></span>'+
+      topRight+
       '<button class="pin-btn'+(pinnedNow?' active':'')+'" title="'+(pinnedNow?'Remover destaque':'Destacar card')+'" aria-label="Destacar"><i class="fas fa-thumbtack"></i></button>'+
     '</div>'+
     '<h3>'+c.title+'</h3>'+
@@ -411,7 +438,7 @@ function buildCompactCard(c){
     togglePin(c.id);
   });
 
-  if(!c.href){
+  if(!hasLink){
     el.addEventListener('click',function(ev){
       if(ev.target.closest('.pin-btn')) return;
       openModal(c);
@@ -450,7 +477,7 @@ function renderSections(){
         '<a href="'+PLANTA.href+'" class="compact-card" style="width:480px;min-height:200px;padding:24px 26px">'+
           '<div class="cc-top">'+
             '<span class="cc-icon"><i class="fas fa-map"></i></span>'+
-            '<span class="cc-num">'+PLANTA.n+'</span>'+
+            '<span class="cc-link-icon"><i class="fas fa-external-link-alt"></i></span>'+
           '</div>'+
           '<h3 style="font-size:20px;margin-bottom:10px">'+PLANTA.title+'</h3>'+
           '<p style="font-size:13px;line-height:1.65;-webkit-line-clamp:4">'+PLANTA.text+'</p>'+
