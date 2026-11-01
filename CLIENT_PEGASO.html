@@ -50,7 +50,8 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;back
 
 .h-right{display:flex;align-items:center;gap:10px}
 
-.btn-back{display:inline-flex;align-items:center;gap:8px;padding:7px 16px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.02);color:var(--text-sec);font-size:10px;font-weight:700;text-decoration:none;letter-spacing:.6px;text-transform:uppercase;transition:all .3s var(--ease)}
+/* ✅ Botão Voltar do Header */
+.btn-back{display:inline-flex;align-items:center;gap:8px;padding:7px 16px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.02);color:var(--text-sec);font-size:10px;font-weight:700;text-decoration:none;letter-spacing:.6px;text-transform:uppercase;transition:all .3s var(--ease);cursor:pointer;}
 .btn-back:hover{background:rgba(255,255,255,.06);color:#fff;border-color:var(--border-hover);transform:translateY(-1px)}
 .btn-back i{font-size:9px;transition:transform .3s var(--ease)}
 .btn-back:hover i{transform:translateX(-2px)}
@@ -86,7 +87,8 @@ header::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;back
     </div>
   </div>
   <div class="h-right">
-    <a href="index.html" class="btn-back"><i class="fas fa-arrow-left"></i> <span>Voltar</span></a>
+    <!-- ✅ Botão Voltar agora chama a função JS -->
+    <button class="btn-back" onclick="handleBack()"><i class="fas fa-arrow-left"></i> <span>Voltar</span></button>
     <div class="view-toggle">
       <button class="view-btn active" id="btnOverview" onclick="switchView('overview')"><i class="fas fa-th-large"></i> Painel</button>
       <button class="view-btn" id="btnSbm" onclick="switchView('sbm')"><i class="fas fa-ship"></i> SBM</button>
@@ -301,31 +303,32 @@ footer strong{color:var(--text-dim);font-weight:700}
 .client-modal.open .client-box{transform:scale(1)}
 .client-box::before{content:'';position:absolute;top:0;left:32px;right:32px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)}
 
-/* ✅ Botão Fechar do Modal de Cliente */
-.client-close-btn{
+/* ✅ Botão Voltar do Modal de Cliente */
+.client-back-btn{
   position:absolute;
   top:20px;
-  right:20px;
-  width:36px;
-  height:36px;
-  display:flex;
+  left:20px;
+  display:inline-flex;
   align-items:center;
-  justify-content:center;
+  gap:8px;
+  padding:8px 16px;
   background:rgba(255,255,255,.03);
   border:1px solid var(--border);
   border-radius:10px;
-  color:var(--text-dim);
+  color:var(--text-sec);
+  font-size:11px;
+  font-weight:600;
   cursor:pointer;
-  font-size:14px;
   transition:all .25s var(--ease);
   z-index:10;
+  text-decoration:none;
 }
-.client-close-btn:hover{
+.client-back-btn:hover{
   color:#fff;
   background:rgba(255,255,255,.08);
   border-color:var(--border-hover);
-  transform:rotate(90deg);
 }
+.client-back-btn i{font-size:10px;}
 
 .client-header{text-align:center;margin-bottom:36px}
 .client-header h2{font-family:'Poppins',sans-serif;font-size:28px;font-weight:700;color:#fff;margin-bottom:8px;letter-spacing:-.5px}
@@ -408,7 +411,7 @@ footer strong{color:var(--text-dim);font-weight:700}
   .modal-actions{flex-direction:column}
   .client-box{padding:32px 24px}
   .client-header h2{font-size:22px}
-  .client-close-btn{top:12px;right:12px;width:32px;height:32px;font-size:12px}
+  .client-back-btn{top:12px;left:12px;padding:6px 12px;font-size:10px}
 }
 </style>
 
@@ -439,10 +442,10 @@ footer strong{color:var(--text-dim);font-weight:700}
 <!-- ✅ MODAL DE SELEÇÃO DE CLIENTE -->
 <div class="client-modal" id="clientModal">
   <div class="client-box">
-    <!-- ✅ Botão Fechar adicionado aqui -->
-    <button class="client-close-btn" onclick="closeClientModal()" title="Fechar seleção">
-      <i class="fas fa-times"></i>
-    </button>
+    <!-- ✅ Botão Voltar para index.html -->
+    <a href="index.html" class="client-back-btn">
+      <i class="fas fa-arrow-left"></i> Voltar
+    </a>
 
     <div class="client-header">
       <h2>Selecione o Cliente</h2>
@@ -706,9 +709,19 @@ function showClientModal(){
   document.getElementById('clientModal').classList.add('open');
 }
 
-/* ✅ Função para fechar o modal de cliente */
 function closeClientModal(){
   document.getElementById('clientModal').classList.remove('open');
+}
+
+/* ✅ Lógica do Botão Voltar Principal */
+function handleBack(){
+  /* Se estivermos na view SBM, volta para overview */
+  if(currentView === 'sbm'){
+    switchView('overview');
+  } else {
+    /* Caso contrário, abre o modal de seleção de cliente */
+    showClientModal();
+  }
 }
 
 function selectClient(client){
