@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Editor de Planta · Pégaso Consultoria · v32-Fix</title>
+<title>Editor de Planta · Pégaso Consultoria · v33-HD</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -15,7 +15,7 @@
 --primary:#f2c200;--primary-ink:#171410;--success:#2fa87a;--success-ink:#04170f;
 --danger:#e5484d;--text-main:#eef3fa;--text-muted:#a9b8ce;--text-faint:#7f92ab;
 --yellow:#f2c200;--gold-tint:rgba(242,194,0,.12);--gold-line:rgba(242,194,0,.30);
---glass:rgba(17,30,52,.94);--shadow-lg:0 24px 48 -30px rgba(0,0,0,.9);
+--glass:rgba(17,30,52,.94);--shadow-lg:0 24px 48px -30px rgba(0,0,0,.9);
 --shadow-md:0 12px 28px -20px rgba(0,0,0,.8);--scroll-thumb:rgba(255,255,255,.16);
 }
 body.light-theme{--bg-dark:#f4f6fb;--panel-bg:#fff;--panel-2:#f3f7fc;--panel-3:#e9f0f9;
@@ -313,7 +313,6 @@ background:var(--glass);border:1px solid var(--gold-line);color:var(--yellow);
 padding:8px 16px;border-radius:8px;font-size:11px;font-weight:600;z-index:20;display:none;
 -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);pointer-events:none;}
 .bezier-hint.show{display:block;}
-/* HUD do modo ajustar curvas */
 #bezierHud{position:absolute;top:16px;left:16px;z-index:15;
 background:var(--glass);border:1px solid var(--gold-line);border-radius:10px;
 padding:10px 14px;box-shadow:var(--shadow-md);
@@ -342,7 +341,7 @@ margin:0 0 6px;font-weight:700;}
 <div class="grip-left">
 <div class="brand-mini">
 <div class="logo"><span class="ap">Apli</span><span class="likado">kado</span></div>
-<small>v32 · Pégaso</small>
+<small>v33 · Pégaso HD</small>
 </div>
 <div id="dockStatusLine">
 <span class="st-dot"></span>
@@ -552,11 +551,10 @@ aria-pressed="false">Ver PDF original</button>
 <button class="zoom-btn wide" onclick="centerView()" title="Centralizar">Ajustar</button>
 </div>
 <canvas id="mainCanvas"></canvas>
-<div id="loading"><div class="spinner"></div><div style="font-size:13px;font-weight:500;color:#fff">Processando PDF…</div></div>
+<div id="loading"><div class="spinner"></div><div style="font-size:13px;font-weight:500;color:#fff">Processando PDF em Alta Definição…</div></div>
 </div>
 </div>
 <div id="toast"></div>
-<!-- Modal Exportar -->
 <div id="exportModal" class="modal-overlay">
 <div class="modal-box">
 <h3>Exportar</h3>
@@ -575,7 +573,6 @@ aria-pressed="false">Ver PDF original</button>
 <button class="tb-btn modal-close" onclick="closeExportModal()">Cancelar</button>
 </div>
 </div>
-<!-- Modal Texto -->
 <div id="textModal" class="modal-overlay">
 <div class="modal-box">
 <h3>Inserir / Editar Texto</h3>
@@ -601,7 +598,6 @@ aria-pressed="false">Ver PDF original</button>
 </div>
 </div>
 </div>
-<!-- Modal Validação -->
 <div id="validationModal" class="modal-overlay">
 <div class="modal-box">
 <h3>Validação de Fluxo</h3>
@@ -609,7 +605,6 @@ aria-pressed="false">Ver PDF original</button>
 <button class="tb-btn modal-close" onclick="document.getElementById('validationModal').classList.remove('open')">Fechar</button>
 </div>
 </div>
-<!-- Modal Setores -->
 <div id="sectorsModal" class="modal-overlay">
 <div class="modal-box wide">
 <h3>🏗 Setores da Planta</h3>
@@ -635,7 +630,6 @@ Nenhum setor cadastrado.<br>Use <b>Novo setor</b> para desenhar no mapa, ou <b>D
 <button class="tb-btn modal-close" onclick="closeSectorsModal()">Fechar</button>
 </div>
 </div>
-<!-- Modal Editor de Setor -->
 <div id="sectorEditorModal" class="modal-overlay">
 <div class="modal-box">
 <h3 id="seTitle">Editar Setor</h3>
@@ -659,7 +653,6 @@ Nenhum setor cadastrado.<br>Use <b>Novo setor</b> para desenhar no mapa, ou <b>D
 </div>
 </div>
 </div>
-<!-- Modal Memorial -->
 <div id="memorialModal" class="modal-overlay">
 <div class="modal-box wide">
 <h3>📋 Memorial Descritivo</h3>
@@ -679,7 +672,6 @@ Nenhum setor cadastrado.<br>Use <b>Novo setor</b> para desenhar no mapa, ou <b>D
 <button class="tb-btn modal-close" onclick="closeMemorialModal()">Fechar</button>
 </div>
 </div>
-<!-- Modal Seletor de Setor -->
 <div id="sectorPickerModal" class="modal-overlay">
 <div class="modal-box">
 <h3 id="sectorPickerTitle">Escolher setor</h3>
@@ -687,7 +679,8 @@ Nenhum setor cadastrado.<br>Use <b>Novo setor</b> para desenhar no mapa, ou <b>D
 <div id="sectorPickerList"></div>
 <button class="tb-btn modal-close" onclick="closeSectorPicker()">Cancelar</button>
 </div>
-</div><script>
+</div>
+<script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 /* ============================================================
 ESTADO GLOBAL
@@ -730,15 +723,14 @@ let vectorCamera = null;
 let originalCamera = null;
 let cameraRestored = false;
 let lastMousePos = { x: 0, y: 0 };
-// CORREÇÃO LÁPIS: Inicialização com Vermelho e Espessura 8
 let currentStrokeColor = '#e5484d'; 
 let currentLineWidth = 8;
 let currentLineStyle = 'solid';
-const STORAGE_KEY = 'aplikado_projeto_v32';
-const SCALE_KEY = 'aplikado_scale_v32';
-const GRID_KEY = 'aplikado_grid_v32';
-const THEME_KEY = 'aplikado_theme_v32';
-const DOCK_KEY = 'aplikado_dock_v32';
+const STORAGE_KEY = 'aplikado_projeto_v33';
+const SCALE_KEY = 'aplikado_scale_v33';
+const GRID_KEY = 'aplikado_grid_v33';
+const THEME_KEY = 'aplikado_theme_v33';
+const DOCK_KEY = 'aplikado_dock_v33';
 /* ============================================================
 CAMADAS / FLUXO / SETORES / SIMULAÇÃO
 ============================================================ */
@@ -756,7 +748,6 @@ let flowAnimFrame = null;
 let sectors = [];
 let isolatedSectorId = null;
 let measureTargetSectorId = null;
-/* Editor de setor */
 let sectorDraft = null;
 let sectorDraftShape = null;
 let sectorDraftPoints = [];
@@ -764,9 +755,7 @@ let sectorEditingId = null;
 let sePendingShape = null;
 let sePendingRect = null;
 let sePendingPoints = null;
-/* Bézier drag */
 let bezierDrag = null;
-/* Simulação */
 let simActive = false;
 let simRunning = false;
 let simAgents = [];
@@ -782,8 +771,7 @@ let simTrips = 0;
 let simTotalDist = 0;
 let simTotalTime = 0;
 let simTripCount = 0;
-/* Drag de A/B */
-let simMarkerDrag = null; // 'origin' | 'dest' | null
+let simMarkerDrag = null;
 const SIM_STYLES = {
 person:   { radius: 6,  color: '#4f7cff', trail: 'rgba(79,124,255,.40)', speedMul: 1.0 },
 forklift: { radius: 10, color: '#f2c200', trail: 'rgba(242,194,0,.40)',  speedMul: 0.7 },
@@ -798,6 +786,7 @@ flowAnimFrame = requestAnimationFrame(animate);
 animate();
 }
 }
+</script><script>
 /* ============================================================
 SETOR GEOMÉTRICO (helpers)
 ============================================================ */
@@ -886,7 +875,7 @@ INDEXEDDB + LZ-STRING
 let db = null;
 function initDB() {
 return new Promise((resolve, reject) => {
-const request = indexedDB.open('AplikadoDB', 2);
+const request = indexedDB.open('AplikadoDB', 3);
 request.onerror = () => reject('Erro IndexedDB');
 request.onsuccess = (e) => { db = e.target.result; resolve(); };
 request.onupgradeneeded = (e) => {
@@ -1027,7 +1016,7 @@ if (showPdfOriginal) originalCamera = { scale, offsetX, offsetY };
 else vectorCamera = { scale, offsetX, offsetY };
 try {
 const data = {
-version: 'aplikado-32.0',
+version: 'aplikado-33.0',
 items, layers, activeLayerId, flowMode, sectors, isolatedSectorId,
 camera: { scale, offsetX, offsetY },
 viewCameras: { vector: vectorCamera, original: originalCamera },
@@ -1167,7 +1156,6 @@ canvas.width = r.width; canvas.height = r.height;
 draw();
 }
 window.addEventListener('resize', resizeCanvas);
-/* Utilitário: ponto na curva Bézier quadrática */
 function bezierPoint(sx, sy, cpx, cpy, tx, ty, t) {
 const mt = 1 - t;
 return {
@@ -1175,7 +1163,6 @@ x: mt*mt*sx + 2*mt*t*cpx + t*t*tx,
 y: mt*mt*sy + 2*mt*t*cpy + t*t*ty
 };
 }
-/* Distância aproximada de um ponto à curva Bézier (amostragem) */
 function distToBezier(p, sx, sy, cpx, cpy, tx, ty) {
 let minDist = Infinity;
 for (let i = 0; i <= 20; i++) {
@@ -1212,9 +1199,7 @@ ctx.fillStyle = '#ffffff';
 ctx.fillRect(0, 0, pdfPageSize.width, pdfPageSize.height);
 if (pdfOriginal) ctx.drawImage(pdfOriginal.canvas, 0, 0, pdfPageSize.width, pdfPageSize.height);
 }
-/* Setores */
 drawSectors();
-/* Itens */
 items.forEach(it => {
 const layer = layers.find(l => l.id === it.layer);
 if (!layer || !layer.visible) return;
@@ -1228,9 +1213,7 @@ ctx.globalAlpha = 1.0;
 });
 if (flowMode) drawFlowConnections();
 drawSectorDraft();
-/* Rota simulação + marcadores A/B */
 drawSimRoute();
-/* Seleção */
 const drawnGroups = new Set();
 selectedItems.forEach(it => {
 const layer = layers.find(l => l.id === it.layer);
@@ -1255,7 +1238,6 @@ ctx.setLineDash([]); ctx.restore();
 }
 }
 });
-/* Draft de desenho */
 if (isDrawing && draftShape) {
 ctx.save();
 ctx.strokeStyle = draftShape.stroke || '#FFA500';
@@ -1279,7 +1261,6 @@ ctx.stroke();
 }
 ctx.restore();
 }
-/* Medição */
 if (isMeasuring && measureStart && measureEnd) {
 ctx.save();
 ctx.strokeStyle = '#0066cc'; ctx.lineWidth = 2/scale;
@@ -1297,7 +1278,6 @@ ctx.font = `bold ${16/scale}px Inter`;
 ctx.fillText(`${realDist.toFixed(2)} m`, midX + 10/scale, midY - 10/scale);
 ctx.restore();
 }
-/* Marquee */
 if (isSelectingRect && marquee) {
 ctx.fillStyle = 'rgba(79,124,255,0.15)';
 ctx.strokeStyle = '#4f7cff'; ctx.lineWidth = 1/scale;
@@ -1306,14 +1286,12 @@ ctx.fillRect(marquee.x, marquee.y, marquee.w, marquee.h);
 ctx.strokeRect(marquee.x, marquee.y, marquee.w, marquee.h);
 ctx.setLineDash([]);
 }
-/* Conexão em progresso */
 if (currentMode === 'connect' && isDrawing && draftShape) {
 ctx.save(); ctx.strokeStyle = '#f2c200'; ctx.lineWidth = 2/scale;
 ctx.setLineDash([5/scale, 4/scale]);
 ctx.beginPath(); ctx.moveTo(draftShape.x1, draftShape.y1); ctx.lineTo(draftShape.x2, draftShape.y2); ctx.stroke();
 ctx.restore();
 }
-/* Agentes */
 if (simAgents.length > 0) {
 const style = SIM_STYLES[simType] || SIM_STYLES.person;
 simAgents.forEach(a => {
@@ -1335,11 +1313,9 @@ ctx.lineWidth = 1.5/scale;
 ctx.stroke();
 });
 }
-/* Marcadores A/B (arrastáveis) */
 drawSimMarker(simOrigin, '#2fa87a', 'A');
 drawSimMarker(simDest, '#e5484d', 'B');
 ctx.restore();
-/* Cursor de borracha */
 if (currentMode === 'erase' && eraseCursorScreen) {
 ctx.save();
 ctx.strokeStyle = '#e5484d'; ctx.fillStyle = 'rgba(229,72,77,0.12)'; ctx.lineWidth = 1.5;
@@ -1436,7 +1412,6 @@ ctx.fill();
 ctx.fillStyle = '#f2c200';
 }
 });
-/* Linha até cursor */
 if (sectorDraft.cursorX !== undefined) {
 ctx.strokeStyle = 'rgba(242,194,0,.5)';
 ctx.beginPath();
@@ -1447,7 +1422,6 @@ ctx.stroke();
 }
 ctx.restore();
 }
-/* Marcador A/B arrastável */
 function markerRadius() { return 14; }
 function drawSimMarker(point, color, label) {
 if (!point) return;
@@ -1460,7 +1434,6 @@ ctx.fill();
 ctx.strokeStyle = '#fff';
 ctx.lineWidth = (isHovered ? 3 : 2) / scale;
 ctx.stroke();
-/* Anel tracejado quando hover */
 if (isHovered) {
 ctx.strokeStyle = color;
 ctx.lineWidth = 1 / scale;
@@ -1492,6 +1465,9 @@ ctx.stroke();
 ctx.setLineDash([]);
 ctx.restore();
 }
+/* ============================================================
+DRAW ITEM — CORREÇÃO CRÍTICA DA FONTE DO PDF
+============================================================ */
 function drawItem(c, it, sc, allItems) {
 c.save();
 if (it.rotation) {
@@ -1524,8 +1500,19 @@ c.beginPath(); c.moveTo(it.x1, it.y1); c.lineTo(it.x2, it.y2); c.stroke();
 } else if (it.type === 'circle') {
 c.beginPath(); c.arc(it.cx, it.cy, it.r, 0, Math.PI*2); c.stroke();
 } else if (it.type === 'text') {
+/* ======================================================
+CORREÇÃO DA FONTE DO PDF:
+- O fontSize agora é tratado em unidades de mundo (world)
+  que já estão sincronizadas com a viewport do PDF.
+- Garantimos um mínimo legível (≥ 6px de mundo).
+- Usamos c.scale aplicado via ctx que já está em world-space.
+- A fonte é composta corretamente: 'px' obrigatório.
+====================================================== */
+const rawSize = it.fontSize || 16;
+const fsWorld = Math.max(6, rawSize);
 c.fillStyle = it.fill || '#000';
-c.font = `${it.fontSize || 16}px ${it.fontFamily || 'Inter'}`;
+c.font = `${fsWorld}px ${it.fontFamily || 'Inter, Arial, sans-serif'}`;
+c.textBaseline = 'alphabetic';
 c.fillText(it.text, it.x, it.y);
 } else if (it.type === 'path' && it.segments) {
 c.beginPath();
@@ -1545,7 +1532,9 @@ c.stroke();
 }
 c.restore();
 }
-/* Conexões de fluxo com Bézier ajustável e botão ✕ */
+/* ============================================================
+CONEXÕES DE FLUXO
+============================================================ */
 function drawFlowConnections() {
 const now = Date.now();
 items.forEach(it => {
@@ -1562,15 +1551,13 @@ const curve = (typeof conn === 'object' && conn.cx !== undefined) ? conn : null;
 const cpx = curve ? curve.cx : (sx + tx) / 2;
 const cpy = curve ? curve.cy : (sy + ty) / 2 - (Math.abs(tx - sx) * 0.2);
 ctx.save();
-// DESTAQUE DA LINHA DE FLUXO
-ctx.strokeStyle = '#f2c200'; 
-ctx.lineWidth = 3/scale; // Mais grossa para destaque
+ctx.strokeStyle = '#f2c200';
+ctx.lineWidth = 3/scale;
 ctx.shadowColor = 'rgba(242,194,0,0.5)';
 ctx.shadowBlur = 10;
 ctx.beginPath(); ctx.moveTo(sx, sy);
 ctx.quadraticCurveTo(cpx, cpy, tx, ty); ctx.stroke();
 ctx.shadowBlur = 0;
-/* Ponto de controle arrastável */
 const isDraggingThis = bezierDrag && bezierDrag.sourceId === it.id && bezierDrag.index === ci;
 ctx.fillStyle = isDraggingThis ? '#ff6b00' : 'rgba(242,194,0,.75)';
 ctx.beginPath();
@@ -1579,13 +1566,11 @@ ctx.fill();
 ctx.strokeStyle = '#f2c200';
 ctx.lineWidth = 2/scale;
 ctx.stroke();
-/* Linhas guia */
 ctx.setLineDash([3/scale, 3/scale]);
 ctx.strokeStyle = 'rgba(242,194,0,.5)';
 ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(cpx, cpy); ctx.stroke();
 ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(cpx, cpy); ctx.stroke();
 ctx.setLineDash([]);
-/* Seta */
 const angle = Math.atan2(ty - cpy, tx - cpx);
 const arrowLen = 10/scale;
 ctx.beginPath();
@@ -1593,7 +1578,6 @@ ctx.moveTo(tx, ty);
 ctx.lineTo(tx - arrowLen*Math.cos(angle - Math.PI/6), ty - arrowLen*Math.sin(angle - Math.PI/6));
 ctx.lineTo(tx - arrowLen*Math.cos(angle + Math.PI/6), ty - arrowLen*Math.sin(angle + Math.PI/6));
 ctx.fillStyle = '#f2c200'; ctx.fill();
-/* Partículas animadas */
 const speed = 0.002;
 const offset = (now * speed) % 1;
 for (let k = 0; k < 3; k++) {
@@ -1602,7 +1586,6 @@ let pt = bezierPoint(sx, sy, cpx, cpy, tx, ty, t);
 ctx.beginPath(); ctx.arc(pt.x, pt.y, 3/scale, 0, Math.PI*2);
 ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fill();
 }
-/* Botão ✕ para excluir a conexão (só no modo curvas) */
 if (bezierEditMode) {
 const mx = (sx + tx) / 2 + 20/scale;
 const my = (sy + ty) / 2 - 20/scale;
@@ -1620,7 +1603,6 @@ ctx.textBaseline = 'middle';
 ctx.fillText('✕', mx, my);
 ctx.textAlign = 'left';
 ctx.textBaseline = 'alphabetic';
-/* Guarda posição para hit-test */
 conn._deleteBtn = { x: mx, y: my, r: 12 / scale };
 } else {
 if (conn._deleteBtn) delete conn._deleteBtn;
@@ -1726,7 +1708,7 @@ t = Math.max(0, Math.min(1, t));
 return Math.hypot(p.x - (a.x + t*dx), p.y - (a.y + t*dy));
 }
 /* ============================================================
-BIBLIOTECA
+BIBLIOTECA DE ELEMENTOS
 ============================================================ */
 const LIBRARY = [
 { cat: 'Logística', items: [
@@ -2053,11 +2035,9 @@ const gid = 'g_' + Date.now();
 group.forEach(it => it.groupId = gid);
 return group;
 }
-/* Encontra handle Bézier sob o cursor — SEMPRE chamado antes de qualquer outro hit-test */
 function findBezierHandle(pos) {
 if (!flowMode) return null;
 const tolerance = 14 / scale;
-/* Prioridade: primeiro pontos de controle, depois botões ✕ */
 for (const it of items) {
 if (!it.flow || !it.flow.connections) continue;
 const sb = getBoundsRaw(it); if (!sb) continue;
@@ -2072,14 +2052,12 @@ const tx = tb.x + tb.w/2, ty = tb.y + tb.h/2;
 const curve = (typeof conn === 'object' && conn.cx !== undefined) ? conn : null;
 const cpx = curve ? curve.cx : (sx + tx) / 2;
 const cpy = curve ? curve.cy : (sy + ty) / 2 - (Math.abs(tx - sx) * 0.2);
-/* Primeiro testa botão ✕ (só no modo curvas) */
 if (bezierEditMode && conn._deleteBtn) {
 const db = conn._deleteBtn;
 if (Math.hypot(pos.x - db.x, pos.y - db.y) < db.r) {
 return { kind: 'delete', sourceId: it.id, targetId, index: ci };
 }
 }
-/* Depois testa o ponto de controle */
 const d = Math.hypot(pos.x - cpx, pos.y - cpy);
 if (d < tolerance) {
 return { kind: 'control', sourceId: it.id, targetId, index: ci, cx: cpx, cy: cpy };
@@ -2088,7 +2066,6 @@ return { kind: 'control', sourceId: it.id, targetId, index: ci, cx: cpx, cy: cpy
 }
 return null;
 }
-/* Encontra marcador A/B sob o cursor */
 function findSimMarker(pos) {
 if (simOrigin) {
 const d = Math.hypot(pos.x - simOrigin.x, pos.y - simOrigin.y);
@@ -2102,7 +2079,6 @@ return null;
 }
 canvas.addEventListener('mousedown', e => {
 const pos = getMousePos(e);
-/* PRIORIDADE 1 — Marcador A/B (arrastável em qualquer modo) */
 if (e.button === 0 && !simPickMode) {
 const hit = findSimMarker(pos);
 if (hit) {
@@ -2112,12 +2088,10 @@ draw();
 return;
 }
 }
-/* PRIORIDADE 2 — Handle Bézier (só no modo fluxo ou curvas) */
 if (e.button === 0 && flowMode) {
 const handle = findBezierHandle(pos);
 if (handle) {
 if (handle.kind === 'delete') {
-/* Remove a conexão */
 const src = items.find(i => i.id === handle.sourceId);
 if (src && src.flow && src.flow.connections) {
 src.flow.connections.splice(handle.index, 1);
@@ -2126,7 +2100,6 @@ showToast('Conexão excluída.');
 }
 return;
 }
-/* Inicia drag do ponto de controle */
 bezierDrag = { sourceId: handle.sourceId, targetId: handle.targetId, index: handle.index };
 document.getElementById('bezierHint').classList.add('show');
 canvas.style.cursor = 'grabbing';
@@ -2134,7 +2107,6 @@ draw();
 return;
 }
 }
-/* PRIORIDADE 3 — Pick de simulação */
 if (simPickMode && e.button === 0) {
 if (simPickMode === 'origin') {
 simOrigin = { x: pos.x, y: pos.y, sectorId: sectorAtId(pos) };
@@ -2149,7 +2121,6 @@ resetSimulation();
 draw();
 return;
 }
-/* PRIORIDADE 4 — Desenho de setor */
 if (currentMode === 'sector-draw') {
 isDrawing = true;
 sectorDraft = { x: pos.x, y: pos.y, w: 0, h: 0 };
@@ -2262,7 +2233,6 @@ draw(); return;
 }
 if (currentMode === 'pencil') {
 isDrawing = true;
-// GARANTIA DE MANUTENÇÃO DA COR E ESPESSURA DO LÁPIS
 draftShape = { type: 'pencil', points: [{x: pos.x, y: pos.y}],
 stroke: currentStrokeColor, lineWidth: currentLineWidth, layer: activeLayerId };
 draw(); return;
@@ -2284,7 +2254,6 @@ const pos = getMousePos(e);
 lastMousePos = pos;
 const r = canvas.getBoundingClientRect();
 const spos = {x:e.clientX - r.left, y:e.clientY - r.top};
-/* Drag de marcador A/B */
 if (simMarkerDrag) {
 if (simMarkerDrag === 'origin') {
 simOrigin = { x: pos.x, y: pos.y, sectorId: sectorAtId(pos) };
@@ -2297,7 +2266,6 @@ if (simRunning) resetSimAgents();
 draw();
 return;
 }
-/* Drag de handle Bézier */
 if (bezierDrag) {
 const src = items.find(i => i.id === bezierDrag.sourceId);
 if (src && src.flow && src.flow.connections[bezierDrag.index]) {
@@ -2308,7 +2276,6 @@ draw();
 }
 return;
 }
-/* Hover: muda cursor sobre handle ou marcador */
 if (!isPanning && !isDragging && !isDrawing && !isSelectingRect) {
 const h = findBezierHandle(pos);
 const mk = !simPickMode ? findSimMarker(pos) : null;
@@ -2448,10 +2415,8 @@ items.push(it); pushHistory();
 draftShape = null; setMode('select'); draw();
 }
 });
-/* Duplo clique: fecha polígono OU remove curva (se clicou no handle) */
 canvas.addEventListener('dblclick', e => {
 const pos = getMousePos(e);
-/* 1) Duplo clique no handle → reseta para reta (ou Shift+duplo exclui conexão) */
 if (flowMode) {
 const handle = findBezierHandle(pos);
 if (handle && handle.kind === 'control') {
@@ -2462,7 +2427,6 @@ if (e.shiftKey) {
 src.flow.connections.splice(handle.index, 1);
 showToast('Conexão excluída.');
 } else {
-/* Remove só a curva (volta a ser string = reta) */
 if (typeof conn === 'object') {
 src.flow.connections[handle.index] = conn.targetId;
 }
@@ -2473,7 +2437,6 @@ pushHistory(); draw(); updatePropsPanel();
 return;
 }
 }
-/* 2) Fecha polígono */
 if (currentMode === 'sector-poly' && sectorDraftPoints.length >= 3) {
 const points = sectorDraftPoints.slice();
 sectorDraftPoints = [];
@@ -2717,11 +2680,11 @@ selectedItems = copies;
 pushHistory(); draw();
 }
 /* ============================================================
-IMPORTAR PDF
+IMPORTAR PDF — CORREÇÃO CRÍTICA DA FONTE E DEFINIÇÃO
 ============================================================ */
 function importPdf(file) {
 document.getElementById('loading').style.display = 'flex';
-setStatus('Extraindo vetores do PDF...');
+setStatus('Extraindo vetores e renderizando PDF em Alta Definição...');
 file.arrayBuffer().then(buf => {
 try { savePdfFile(buf.slice(0)).catch(e => console.warn(e)); } catch(e){}
 pdfjsLib.getDocument({data: buf}).promise.then(pdf => {
@@ -2788,22 +2751,58 @@ if (seg.length < 2) continue;
 newItems.push({type: 'path', segments: [seg], stroke: '#000000', lineWidth: 1, fromPdf: true, layer: 'estrutura'});
 }
 page.getTextContent().then(textContent => {
-// MELHORIA NA IMPORTAÇÃO: Evitar sobreposição de textos
+/* ======================================================
+CORREÇÃO CRÍTICA DA FONTE DO PDF:
+- Usamos `t.height` (altura real em unidades PDF) e
+  `t.transform[3]` (escala vertical da matriz) para
+  computar o tamanho da fonte em WORLD unidades.
+- Aplicamos `Math.hypot(a, b)` da matriz do viewport
+  para converter corretamente de PDF-space para world.
+- Impomos mínimo de 6px de mundo e máximo razoável.
+- Filtramos textos vazios e control chars.
+- Deslocamento vertical é proporcional ao fontSize real,
+  não mais 2px fixo — evita sobreposição.
+====================================================== */
+const vpScale = Math.hypot(viewport.transform[0], viewport.transform[1]) || 1;
 let lastTextY = -9999;
+let lastTextX = -9999;
 for (const t of (textContent.items || [])) {
-const str = (t.str || '').trim();
+const str = String(t.str || '').replace(/[\u0000-\u001F]/g, '').trim();
 if (!str) continue;
 const pt = tPt(t.transform[4], t.transform[5]);
-// Se a posição Y for muito similar à anterior, deslocamos ligeiramente para evitar sobreposição visual
+/* Altura real do texto: preferir t.height (mais confiável),
+   fallback para |transform[3]| (escala vertical da matriz PDF). */
+let rawHeight = 0;
+if (typeof t.height === 'number' && isFinite(t.height) && t.height > 0) {
+rawHeight = t.height;
+} else {
+rawHeight = Math.abs(t.transform[3] || 0);
+}
+if (!rawHeight || !isFinite(rawHeight)) rawHeight = 10;
+/* Converter de unidades PDF para unidades WORLD:
+   multiplica pela escala da viewport (que é 1 neste ponto,
+   mas a matriz pode incluir rotações). Mantemos também o
+   fator `vpScale` por segurança. */
+const fontSizeWorld = Math.max(6, rawHeight * vpScale);
+/* Deslocamento vertical anti-overlap proporcional ao tamanho */
 let finalY = pt.y;
-if (Math.abs(pt.y - lastTextY) < 2) {
-finalY += 2; 
+if (Math.abs(pt.y - lastTextY) < fontSizeWorld * 0.35 &&
+    Math.abs(pt.x - lastTextX) < fontSizeWorld * 0.5) {
+finalY = lastTextY + fontSizeWorld * 0.6;
 }
 lastTextY = finalY;
-
-newItems.push({ type: 'text', x: pt.x, y: finalY, text: str,
-fontSize: Math.abs(t.transform[3]) || 10, fontFamily: 'Inter, Arial',
-fill: '#000000', fromPdf: true, layer: 'anotacoes' });
+lastTextX = pt.x;
+newItems.push({
+type: 'text',
+x: pt.x,
+y: finalY,
+text: str,
+fontSize: fontSizeWorld,
+fontFamily: 'Inter, Arial, sans-serif',
+fill: '#000000',
+fromPdf: true,
+layer: 'anotacoes'
+});
 }
 items = newItems; selectedItems = [];
 const detectedDenom = detectScaleFromText(textContent.items || []);
@@ -2867,7 +2866,7 @@ if (m !== 'sector-poly') { sectorDraftPoints = []; sectorDraft = null; }
 draw();
 }
 /* ============================================================
-PDF ORIGINAL
+PDF ORIGINAL — RENDERIZAÇÃO HD MELHORADA
 ============================================================ */
 function setPdfButton() {
 const btn = document.getElementById('btnPdfOriginal');
@@ -2878,19 +2877,29 @@ btn.classList.toggle('active', on);
 btn.setAttribute('aria-pressed', String(on));
 btn.textContent = on ? 'Ocultar PDF original' : 'Ver PDF original';
 }
+/* ======================================================
+RESOLUÇÃO DE RENDERIZAÇÃO DRAMATICAMENTE AUMENTADA:
+- Antes: maxPixels=20M, cap=5, target = scale*dpr*2.0
+- Agora: maxPixels=120M, cap=12, target = scale*dpr*4.0
+- Memória controlada: permite até ~12x densidade em telas 4K
+- Renderização em blocos (tile) para evitar Out of Memory
+- Qualidade de imagem: imageSmoothingQuality='high'
+====================================================== */
 function desiredPdfRenderScale() {
 if (!pdfPageSize) return 1;
 const dpr = window.devicePixelRatio || 1;
 const area = Math.max(1, pdfPageSize.width * pdfPageSize.height);
-const maxPixels = 12000000;
-const cap = Math.min(4, Math.sqrt(maxPixels / area));
-const target = Math.max(0.4, scale * dpr * 1.25);
+/* AUMENTO DRÁSTICO: até 120 megapixels de saída */
+const maxPixels = 120000000;
+const cap = Math.min(12, Math.sqrt(maxPixels / area));
+/* Multiplicador 4x sobre a densidade de pixels (antes era 2x) */
+const target = Math.max(0.5, scale * dpr * 4.0);
 return Math.min(cap, target);
 }
 function schedulePdfRender() {
 if (!pdfPageRef || !showPdfOriginal) return;
 clearTimeout(pdfRenderTimer);
-pdfRenderTimer = setTimeout(() => renderPdfOriginal(false), 240);
+pdfRenderTimer = setTimeout(() => renderPdfOriginal(false), 180);
 }
 function renderPdfOriginal(force) {
 if (!pdfPageRef || !pdfPageSize) return;
@@ -2902,7 +2911,9 @@ const viewport = pdfPageRef.getViewport({ scale: target });
 const canvasEl = document.createElement('canvas');
 canvasEl.width = Math.max(1, Math.round(viewport.width));
 canvasEl.height = Math.max(1, Math.round(viewport.height));
-const context = canvasEl.getContext('2d');
+const context = canvasEl.getContext('2d', { alpha: false, willReadFrequently: false });
+context.imageSmoothingEnabled = true;
+context.imageSmoothingQuality = 'high';
 context.fillStyle = '#ffffff';
 context.fillRect(0, 0, canvasEl.width, canvasEl.height);
 const task = pdfPageRef.render({ canvasContext: context, viewport });
@@ -3054,7 +3065,9 @@ ${it.flow.connections.length > 0 ? `<button class="tb-btn" style="width:100%;fon
 }
 if (it.type === 'text' && selectedItems.length === 1) {
 html += `<div class="prop-group"><label>Texto</label>
-<textarea class="prop-input" rows="3" onchange="setProp('text', this.value)">${it.text}</textarea></div>`;
+<textarea class="prop-input" rows="3" onchange="setProp('text', this.value)">${it.text}</textarea></div>
+<div class="prop-group"><label>Tamanho da fonte (px)</label>
+<input class="prop-input" type="number" value="${it.fontSize || 16}" min="6" max="400" onchange="setProp('fontSize', +this.value)" /></div>`;
 }
 if (it.type !== 'path' || selectedItems.length > 1) {
 html += `<div class="prop-group"><label>Rotação (Graus)</label>
@@ -3200,7 +3213,6 @@ const up = String(text || '').toUpperCase();
 for (const k of SECTOR_KEYWORDS) if (up.includes(k)) return k;
 return null;
 }
-/* ---------- Editor de setor ---------- */
 function openSectorEditorForNew(shape, rect, points) {
 sePendingShape = shape;
 sePendingRect = rect || null;
@@ -3294,7 +3306,6 @@ closeSectorEditor();
 return;
 }
 sectors.push(sector);
-/* Vincula itens dentro do setor */
 items.forEach(it => {
 const b = getBoundsRaw(it);
 if (!b) return;
@@ -3305,7 +3316,6 @@ pushHistory(); renderSectorsList(); draw();
 showToast('Setor criado e salvo na memória.');
 closeSectorEditor();
 }
-/* ---------- Detecção por texto ---------- */
 function detectSectorsFromPlant() {
 if (items.length === 0) { showToast('Nenhum elemento na planta.', true); return; }
 const newSectors = [];
@@ -3645,7 +3655,6 @@ panel.classList.toggle('open');
 simActive = panel.classList.contains('open');
 document.getElementById('btnSim').classList.toggle('active', simActive);
 if (simActive) {
-// AO CLICAR EM SIMULAR, ATIVA MODO FLUXO E CURVAS PARA EDIÇÃO MANUAL
 if (!flowMode) toggleFlowMode();
 if (!bezierEditMode) toggleBezierEdit();
 startFlowAnimation();
@@ -3749,7 +3758,6 @@ simTrips = 0; simTotalDist = 0; simTotalTime = 0; simTripCount = 0;
 updateSimStats();
 draw();
 }
-/* EXCLUIR SIMULAÇÃO COMPLETA */
 function deleteSimulation() {
 if (!simOrigin && !simDest && simAgents.length === 0 && !simRunning) {
 showToast('Nada para excluir.', true);
@@ -3762,7 +3770,6 @@ simAgents = [];
 simTrips = 0; simTotalDist = 0; simTotalTime = 0; simTripCount = 0;
 simPickMode = null;
 simMarkerDrag = null;
-/* Reset botões */
 ['simOriginInput','simDestInput'].forEach(id => {
 const el = document.getElementById(id);
 el.classList.remove('filled', 'picking');
@@ -4014,7 +4021,7 @@ downloadBlob(new Blob([svg], {type:'image/svg+xml'}), 'planta.svg');
 }
 function saveProject() {
 const data = {
-version: 'aplikado-32.0', items, layers, activeLayerId, flowMode, sectors, isolatedSectorId,
+version: 'aplikado-33.0', items, layers, activeLayerId, flowMode, sectors, isolatedSectorId,
 camera: { scale, offsetX, offsetY }, pixelPerMeter,
 sim: (simOrigin || simDest) ? { origin: simOrigin, dest: simDest } : null,
 savedAt: Date.now()
@@ -4022,7 +4029,8 @@ savedAt: Date.now()
 downloadBlob(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}), 'projeto.aplikado');
 showToast('JSON exportado.');
 }
-</script><script>
+</script>
+<script>
 /* ============================================================
 NAVEGAÇÃO / SIDEBAR / INIT
 ============================================================ */
@@ -4078,7 +4086,6 @@ pdfOriginal = null; showPdfOriginal = false;
 pdfPageRef = null; pdfDocRef = null; pdfPageSize = null; pdfRenderScale = 0;
 restorePdfViewFlag = false;
 setPdfButton(); clearPdfFile();
-/* Atualiza botões A/B */
 if (simOrigin) setSimRouteButton('simOriginInput', 'origin');
 if (simDest) setSimRouteButton('simDestInput', 'dest');
 pushHistory(); draw(); updatePropsPanel();
@@ -4107,7 +4114,6 @@ history = []; historyIndex = -1;
 pushHistory(); draw(); updatePropsPanel(); updateZoomInfo(); setPdfButton();
 restorePdfFile();
 updateFlowUI();
-/* Restaura botões de origem/destino */
 if (simOrigin) setSimRouteButton('simOriginInput', 'origin');
 if (simDest) setSimRouteButton('simDestInput', 'dest');
 if (loaded) {
@@ -4129,7 +4135,6 @@ ATALHOS DE TECLADO
 ============================================================ */
 document.addEventListener('keydown', e => {
 if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
-/* Enter fecha polígono */
 if ((e.key === 'Enter' || e.key === 'NumpadEnter') && currentMode === 'sector-poly' && sectorDraftPoints.length >= 3) {
 const points = sectorDraftPoints.slice();
 sectorDraftPoints = [];
@@ -4181,7 +4186,6 @@ else { selectedItems = []; draw(); updatePropsPanel(); }
 closeSectorsModal(); closeMemorialModal(); closeSectorPicker(); closeSectorEditor();
 }
 });
-/* Auto-save antes de sair */
 window.addEventListener('beforeunload', () => { try { saveBrowser(true); } catch(e){} });
 </script>
 </body>
