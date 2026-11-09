@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Editor de Planta · Pégaso Consultoria · v34-HD</title>
+<title>Editor de Planta · Pégaso Consultoria · v35-HD</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
 --bg-dark:#0c1526;--panel-bg:#111e34;--panel-2:#182742;--panel-3:#1e3050;
@@ -74,6 +75,7 @@ font-family:inherit;flex-shrink:0;}
 .dock-btn:active{transform:translateY(1px);}
 .dock-btn:disabled{opacity:.32;cursor:not-allowed;}
 .dock-btn .ico{font-size:14px;line-height:1;display:inline-block;}
+.dock-btn .ico svg{display:block;width:15px;height:15px;}
 .dock-btn.primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);font-weight:600;}
 .dock-btn.primary:hover{filter:brightness(1.08);background:var(--primary);color:var(--primary-ink);}
 .dock-btn.success{background:var(--success);border-color:var(--success);color:var(--success-ink);font-weight:600;}
@@ -359,6 +361,53 @@ opacity:0;transition:opacity .15s;line-height:1.4;}
 #annotTooltip .tt-title{font-weight:700;color:var(--yellow);margin-bottom:3px;}
 #annotTooltip .tt-desc{color:var(--text-muted);font-size:11px;}
 
+/* === PLANTAS · Supabase (v35) === */
+#plantasModal .modal-box{width:840px;}
+.plantas-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+.plantas-toolbar .dock-btn{height:34px;font-size:11px;border:1px solid var(--border);}
+.plantas-status{font-size:11px;color:var(--text-faint);margin-left:auto;font-variant-numeric:tabular-nums;}
+.plantas-skel{padding:26px;text-align:center;color:var(--text-faint);font-size:12px;line-height:1.6;}
+.planta-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:10px;align-items:center;
+padding:10px;border:1px solid var(--border);border-radius:9px;margin-bottom:8px;background:var(--panel-2);
+transition:border-color .15s,background .15s;}
+.planta-row:hover{background:var(--panel-3);}
+.planta-row.is-current{border-color:var(--gold-line);background:var(--gold-tint);}
+.planta-ico{width:34px;height:34px;border-radius:8px;background:var(--panel-bg);border:1px solid var(--border-soft);
+display:flex;align-items:center;justify-content:center;font-size:16px;}
+.planta-body{min-width:0;display:flex;flex-direction:column;gap:5px;}
+.planta-name-row{display:flex;align-items:center;gap:7px;min-width:0;}
+.planta-name{flex:1;min-width:0;background:var(--panel-bg);border:1px solid var(--border);color:var(--text-main);
+border-radius:6px;padding:6px 9px;font-size:12.5px;font-family:inherit;font-weight:600;}
+.planta-name:focus{outline:none;border-color:var(--yellow);box-shadow:0 0 0 2px var(--gold-tint);}
+.planta-badge{font-size:8.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;
+background:var(--yellow);color:var(--primary-ink);border-radius:4px;padding:3px 6px;white-space:nowrap;}
+.planta-meta{font-size:10.5px;color:var(--text-faint);display:flex;gap:9px;flex-wrap:wrap;min-width:0;}
+.planta-meta span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:230px;}
+.planta-actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;}
+.pl-btn{height:30px;padding:0 9px;border:1px solid var(--border);background:transparent;color:var(--text-muted);
+border-radius:6px;cursor:pointer;font-size:10.5px;font-family:inherit;font-weight:600;transition:.15s;white-space:nowrap;}
+.pl-btn:hover{border-color:var(--gold-line);color:var(--yellow);background:var(--gold-tint);}
+.pl-btn.primary{background:var(--yellow);border-color:var(--yellow);color:var(--primary-ink);}
+.pl-btn.primary:hover{filter:brightness(1.08);color:var(--primary-ink);background:var(--yellow);}
+.pl-btn.del:hover{border-color:var(--danger);color:var(--danger);background:rgba(229,72,77,.1);}
+.pl-btn:disabled{opacity:.45;cursor:not-allowed;}
+#plantaNomeModal .modal-box{width:470px;}
+#plantaNomeModal label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.6px;
+color:var(--text-faint);margin:10px 0 5px;font-weight:600;}
+.planta-file-info{background:var(--panel-2);border:1px solid var(--border-soft);border-radius:7px;padding:10px 12px;
+font-size:11px;color:var(--text-muted);line-height:1.55;margin-top:10px;word-break:break-word;}
+.planta-file-info b{color:var(--yellow);}
+.dock-btn .pl-count{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;
+padding:0 4px;border-radius:8px;background:var(--yellow);color:var(--primary-ink);font-size:9px;font-weight:800;line-height:1;}
+#dockStatusLine .st-planta{color:var(--yellow);font-weight:600;max-width:200px;overflow:hidden;
+text-overflow:ellipsis;white-space:nowrap;}
+@media (max-width:760px){
+.planta-row{grid-template-columns:1fr;}
+.planta-ico{display:none;}
+.planta-actions{justify-content:flex-start;}
+.plantas-status{margin-left:0;width:100%;}
+}
+
 @media (max-height:760px){
 .ft-btn{height:28px;font-size:10.5px;}
 .tool-grid{gap:4px;padding:8px 12px 3px;}
@@ -379,12 +428,13 @@ opacity:0;transition:opacity .15s;line-height:1.4;}
 <div class="grip-left">
 <div class="brand-mini">
 <div class="logo"><span class="ap">Apli</span><span class="likado">kado</span></div>
-<small>v34 · Pégaso HD</small>
+<small>v35 · Pégaso HD + BD</small>
 </div>
 <div id="dockStatusLine">
 <span class="st-dot"></span>
 <span id="statusText">Pronto.</span>
 <span class="st-sel" id="selInfo"></span>
+<span class="st-planta" id="plantaAtualNome" style="display:none" title="Planta atual"></span>
 <span class="st-zoom" id="zoomInfo">Zoom: 80%</span>
 </div>
 </div>
@@ -399,6 +449,9 @@ opacity:0;transition:opacity .15s;line-height:1.4;}
 </button>
 <button class="dock-btn primary" onclick="document.getElementById('fileInput').click()" title="Importar PDF">
 <span class="ico">📄</span><span class="lbl">Importar PDF</span>
+</button>
+<button class="dock-btn yellow" id="btnPlantas" onclick="openPlantasModal()" title="Plantas arquitetônicas importadas (salvas no banco de dados)">
+<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 12h7V3"/><path d="M14 21v-9h7"/><path d="M10 21v-4"/></svg></span><span class="lbl">Plantas</span><span class="pl-count" id="plantasCount" style="display:none"></span>
 </button>
 <input type="file" id="fileInput" accept="application/pdf" />
 <button class="dock-btn success" onclick="manualSave()" title="Salvar">
@@ -616,6 +669,35 @@ aria-pressed="false">Ver PDF original</button>
 </div>
 </div>
 <div id="toast"></div>
+<div id="plantasModal" class="modal-overlay">
+<div class="modal-box wide">
+<h3>📐 Plantas importadas</h3>
+<p>Todas as plantas ficam salvas no Supabase (PDF no Storage + projeto na tabela). A última planta aberta continua na tela principal ao recarregar o sistema.</p>
+<div class="plantas-toolbar">
+<button class="dock-btn yellow" onclick="document.getElementById('fileInput').click()"><span class="ico">📄</span> Importar PDF</button>
+<button class="dock-btn" onclick="carregarPlantasLista(true)"><span class="ico">↻</span> Atualizar</button>
+<span class="plantas-status" id="plantasStatus">—</span>
+</div>
+<div id="plantasList"></div>
+<div id="plantasEmpty" class="empty-hint" style="display:none;"></div>
+<button class="tb-btn modal-close" onclick="closePlantasModal()">Fechar</button>
+</div>
+</div>
+<div id="plantaNomeModal" class="modal-overlay">
+<div class="modal-box">
+<h3>💾 Salvar planta no banco</h3>
+<p>Dê um nome para encontrar esta planta depois. O PDF e o projeto (elementos, setores e apontamentos) serão salvos no Supabase.</p>
+<label>Nome da planta</label>
+<input type="text" id="plantaNomeInput" class="prop-input" maxlength="80" placeholder="Ex: Planta CD Logística — Doca 1" />
+<div class="planta-file-info" id="plantaFileInfo"></div>
+<div class="modal-actions">
+<button class="tb-btn" id="plantaNomeCancel" onclick="cancelarNomePlanta()">Usar nome do arquivo</button>
+<button class="tb-btn primary" id="plantaNomeSalvar" onclick="confirmarNomePlanta(false)">Salvar planta</button>
+</div>
+<button class="tb-btn" style="width:100%;margin-top:8px;font-size:11px;color:var(--text-faint);" onclick="pularNomePlanta()">Continuar sem salvar no banco</button>
+</div>
+</div>
+
 <!-- Modais serão inseridos na PARTE 2 --><div id="exportModal" class="modal-overlay">
 <div class="modal-box">
 <h3>Exportar</h3>
@@ -2247,11 +2329,14 @@ function setMode(m){
    PDF — impressão/importação
    ============================================================ */
 function importPdf(file){
+  prepararImportacaoPlanta(file);
   document.getElementById('loading').style.display='flex';
   setStatus('Extraindo PDF em Alta Definição...');
   file.arrayBuffer().then(buf=>{
+    if(ultimaImportacao) ultimaImportacao.buf=buf.slice(0);
     try{savePdfFile(buf.slice(0)).catch(e=>console.warn(e));}catch(e){}
     pdfjsLib.getDocument({data:buf}).promise.then(pdf=>{
+      if(ultimaImportacao){ ultimaImportacao.pdf=pdf; ultimaImportacao.paginas=pdf.numPages||1; }
       pdf.getPage(1).then(page=>{
         pdfDocRef=pdf;pdfPageRef=page;pdfOriginal=null;pdfRenderScale=0;
         const bvp=page.getViewport({scale:1});
@@ -2305,10 +2390,11 @@ function importPdf(file){
             if(denom){setStatus(`PDF importado · escala 1:${denom}`);showToast(`PDF importado · escala 1:${denom}.`);}
             else{setStatus(`PDF importado: ${newItems.length} elementos.`);showToast(`PDF importado: ${newItems.length} elementos.`);}
             document.getElementById('loading').style.display='none';
-          }).catch(()=>{items=newItems;if(pdfPageSize)fitPdfPage();else centerView();pushHistory();updatePropsPanel();document.getElementById('loading').style.display='none';});
+            try{registrarPlantaImportada();}catch(e){console.warn(e);}
+          }).catch(()=>{items=newItems;if(pdfPageSize)fitPdfPage();else centerView();pushHistory();updatePropsPanel();document.getElementById('loading').style.display='none';try{registrarPlantaImportada();}catch(e){console.warn(e);}});
         });
       });
-    }).catch(err=>{alert('Erro: '+err.message);document.getElementById('loading').style.display='none';});
+    }).catch(err=>{ultimaImportacao=null;alert('Erro: '+err.message);document.getElementById('loading').style.display='none';});
   });
 }
 
@@ -2593,7 +2679,7 @@ function eraseAt(pos){
    PERSISTÊNCIA (save/load)
    ============================================================ */
 let saveTimer=null;
-function scheduleAutoSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveBrowser(true),2000);}
+function scheduleAutoSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveBrowser(true),2000);try{agendarSyncPlanta();}catch(e){}}
 async function saveBrowser(silent){
   clearTimeout(saveTimer);
   if(showPdfOriginal)originalCamera={scale,offsetX,offsetY};else vectorCamera={scale,offsetX,offsetY};
@@ -2614,7 +2700,7 @@ async function saveBrowser(silent){
     return saved;
   }catch(e){if(!silent)showToast('Erro: '+e.message,true);return false;}
 }
-async function manualSave(){await saveBrowser(false);}
+async function manualSave(){await saveBrowser(false);try{await salvarProjetoPlantaAtual();}catch(e){console.warn(e);}}
 async function clearBrowser(){
   if(!confirm('Apagar todo o projeto?'))return;
   try{
@@ -2886,12 +2972,556 @@ async function initApp(){
   if(db){try{const c=db.transaction('projects','readwrite');c.objectStore('projects').delete('pdf-original');}catch(e){}}
   const loaded=await loadFromBrowser();
   history=[];historyIndex=-1;pushHistory();draw();updatePropsPanel();updateZoomInfo();setPdfButton();
-  restorePdfFile();updateFlowUI();
+  let plantaBanco=false;
+  try{ plantaBanco=await carregarPlantaAtualDoBanco(); }catch(e){ console.warn('[Plantas] restauração:',e); }
+  if(!plantaBanco) restorePdfFile();
+  updateFlowUI();
   if(simOrigin)setSimRouteButton('simOriginInput','origin');
   if(simDest)setSimRouteButton('simDestInput','dest');
-  if(loaded){setStatus(`Restaurado: ${items.length} elem, ${sectors.length} setores, ${annotations.length} apont.`);showToast(`Restaurado: ${items.length} elem · ${annotations.length} apontamentos.`);}
+  if(plantaBanco){setStatus(`Planta do banco: ${plantaAtualNome} · ${items.length} elementos`);}
+  else if(loaded){setStatus(`Restaurado: ${items.length} elem, ${sectors.length} setores, ${annotations.length} apont.`);showToast(`Restaurado: ${items.length} elem · ${annotations.length} apontamentos.`);}
   else{setStatus('Pronto. Nenhum projeto salvo.');}
+  if(plantasDB) setTimeout(()=>{ carregarPlantasLista(false); }, 900);
   document.getElementById('fileInput').addEventListener('change',e=>{const f=e.target.files[0];if(f)importPdf(f);e.target.value='';});
+}
+
+/* ============================================================
+   PLANTAS · Supabase (v35)
+   Tabela: public.plantas  ·  Storage bucket: plantas
+   ============================================================ */
+const SUPABASE_URL = 'https://xjthmombfstowozbmsdc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_4qsEv8mvtxTkH9EElKRV3Q_1l2-8GT-';
+const PLANTA_BUCKET = 'plantas';
+
+let plantasDB = null;
+try{
+  if(window.supabase && SUPABASE_KEY && SUPABASE_KEY.indexOf('COLE_') === -1){
+    plantasDB = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+  }
+}catch(e){
+  console.warn('[Plantas] falha ao iniciar cliente Supabase:', e);
+  plantasDB = null;
+}
+
+if (!plantasDB) console.warn('[Plantas] supabase-js indisponível — recurso de plantas desativado.');
+
+let plantaAtualId = null;
+let plantaAtualNome = '';
+let plantasCache = [];
+let ultimaImportacao = null;
+let pendenteNomePlanta = null;
+let syncPlantaTimer = null;
+let salvandoPlantaNoBanco = false;
+
+/* ---------------- helpers ---------------- */
+function supabaseErroMsg(err){
+  if(!err) return 'erro desconhecido';
+  if(typeof err === 'string') return err;
+  return err.message || err.error_description || err.details || err.hint || String(err);
+}
+function formatarBytes(n){
+  n = Number(n) || 0;
+  if(n < 1024) return n + ' B';
+  if(n < 1024 * 1024) return (n / 1024).toFixed(1).replace('.', ',') + ' KB';
+  return (n / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB';
+}
+function formatarDataHora(v){
+  try{ return new Date(v).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' }); }
+  catch(e){ return ''; }
+}
+function nomePadraoDaPlanta(arquivo){
+  const base = String(arquivo || 'Planta').replace(/\.pdf$/i, '').replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return (base || 'Planta').slice(0, 80);
+}
+function snapshotProjetoPlanta(){
+  return {
+    items, layers, activeLayerId, flowMode, sectors, annotations,
+    isolatedSectorId, pixelPerMeter,
+    showPdfOriginal: !!showPdfOriginal,
+    camera: { scale, offsetX, offsetY },
+    sim: (simOrigin || simDest) ? { origin: simOrigin, dest: simDest } : null,
+    savedAt: Date.now()
+  };
+}
+/* Projetos grandes (muitos vetores do PDF) são comprimidos com LZString
+   para caber com folga no limite de payload do PostgREST. */
+function empacotarProjeto(obj){
+  try{
+    const json = JSON.stringify(obj);
+    if(json.length > 3000000 && window.LZString && LZString.compressToBase64){
+      return { __lz: LZString.compressToBase64(json), __v: 1, bytes: json.length };
+    }
+  }catch(e){ console.warn('[Plantas] empacotar', e); }
+  return obj;
+}
+function desempacotarProjeto(p){
+  if(p && typeof p === 'object' && typeof p.__lz === 'string'){
+    try{
+      const json = LZString.decompressFromBase64(p.__lz);
+      if(json) return JSON.parse(json);
+    }catch(e){ console.warn('[Plantas] desempacotar', e); }
+    return {};
+  }
+  return (p && typeof p === 'object') ? p : {};
+}
+function atualizarContadorPlantas(n){
+  const el = document.getElementById('plantasCount');
+  if(!el) return;
+  const total = (typeof n === 'number') ? n : plantasCache.length;
+  el.textContent = total > 0 ? String(total) : '';
+  el.style.display = total > 0 ? 'inline-flex' : 'none';
+}
+function atualizarNomePlantaNaTela(){
+  const el = document.getElementById('plantaAtualNome');
+  if(el){
+    el.textContent = plantaAtualNome || '';
+    el.title = plantaAtualNome ? ('Planta atual: ' + plantaAtualNome) : '';
+    el.style.display = plantaAtualNome ? '' : 'none';
+  }
+  document.title = plantaAtualNome
+    ? (plantaAtualNome + ' · Editor de Planta · Pégaso')
+    : 'Editor de Planta · Pégaso Consultoria · v35-HD';
+}
+
+/* ---------------- modal / lista ---------------- */
+function openPlantasModal(){
+  document.getElementById('plantasModal').classList.add('open');
+  const list = document.getElementById('plantasList');
+  if(list && !plantasCache.length) list.innerHTML = '<div class="plantas-skel">Buscando plantas no Supabase…</div>';
+  carregarPlantasLista(false);
+}
+function closePlantasModal(){
+  document.getElementById('plantasModal').classList.remove('open');
+}
+async function carregarPlantasLista(mostrarToast){
+  const list = document.getElementById('plantasList');
+  const empty = document.getElementById('plantasEmpty');
+  const status = document.getElementById('plantasStatus');
+  if(!plantasDB){
+    if(status) status.textContent = 'Supabase indisponível';
+    if(list) list.innerHTML = '';
+    if(empty){
+      empty.style.display = 'block';
+      empty.innerHTML = 'Não foi possível conectar ao Supabase.<br>Confira a chave publicável e a conexão.';
+    }
+    return;
+  }
+  if(status) status.textContent = 'Carregando…';
+  try{
+    const { data, error } = await plantasDB.from('plantas')
+      .select('id,nome,arquivo_nome,arquivo_path,tamanho_bytes,paginas,escala_pxm,ultima,created_at,updated_at')
+      .order('created_at', { ascending: false });
+    if(error) throw error;
+    plantasCache = data || [];
+    renderPlantasLista();
+    atualizarContadorPlantas(plantasCache.length);
+    if(status) status.textContent = plantasCache.length ? `${plantasCache.length} planta(s) no banco` : 'Nenhuma planta ainda';
+    if(mostrarToast) showToast(`${plantasCache.length} planta(s) carregada(s).`);
+  }catch(err){
+    console.error('[Plantas] carregar lista', err);
+    if(status) status.textContent = 'Erro ao carregar';
+    if(list) list.innerHTML = '';
+    if(empty){
+      empty.style.display = 'block';
+      empty.innerHTML = `Erro ao ler a tabela <b>plantas</b>:<br><span style="color:var(--danger)">${escapeHtml(supabaseErroMsg(err))}</span><br><br>Execute o SQL de criação no Supabase (arquivo <b>20261109000000_plantas.sql</b>).`;
+    }
+    if(mostrarToast) showToast('Erro ao carregar plantas: ' + supabaseErroMsg(err), true);
+  }
+}
+function renderPlantasLista(){
+  const list = document.getElementById('plantasList');
+  const empty = document.getElementById('plantasEmpty');
+  if(!list) return;
+  if(!plantasCache.length){
+    list.innerHTML = '';
+    if(empty){
+      empty.style.display = 'block';
+      empty.innerHTML = 'Nenhuma planta importada ainda.<br>Use <b>Importar PDF</b> para enviar a primeira — ela ficará na tela principal.';
+    }
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  list.innerHTML = plantasCache.map(p => {
+    const atual = (p.id === plantaAtualId) || (!plantaAtualId && !!p.ultima);
+    return `<div class="planta-row ${atual ? 'is-current' : ''}" data-planta-id="${p.id}">
+      <div class="planta-ico">${atual ? '📌' : '📄'}</div>
+      <div class="planta-body">
+        <div class="planta-name-row">
+          <input class="planta-name" id="pn-${p.id}" value="${escapeHtml(p.nome || '')}" maxlength="80"
+                 title="Edite o nome e clique em Salvar nome"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();renomearPlanta('${p.id}');}" />
+          ${atual ? '<span class="planta-badge">Na tela</span>' : ''}
+        </div>
+        <div class="planta-meta">
+          <span>📄 ${escapeHtml(p.arquivo_nome || 'arquivo.pdf')}</span>
+          <span>${formatarBytes(p.tamanho_bytes)}</span>
+          <span>${p.paginas || 1} pág.</span>
+          <span>🕒 ${formatarDataHora(p.created_at)}</span>
+          ${p.updated_at && p.updated_at !== p.created_at ? `<span>✎ ${formatarDataHora(p.updated_at)}</span>` : ''}
+        </div>
+      </div>
+      <div class="planta-actions">
+        <button class="pl-btn" onclick="renomearPlanta('${p.id}')">Salvar nome</button>
+        <button class="pl-btn primary" onclick="abrirPlanta('${p.id}')">${atual ? 'Recarregar' : 'Abrir'}</button>
+        <button class="pl-btn del" onclick="excluirPlanta('${p.id}')" title="Excluir planta">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function renomearPlanta(id){
+  if(!plantasDB) return;
+  const inp = document.getElementById('pn-' + id);
+  const nome = (inp ? inp.value : '').trim().slice(0, 80);
+  if(!nome){
+    showToast('Informe um nome para a planta.', true);
+    if(inp) inp.focus();
+    return;
+  }
+  try{
+    const { error } = await plantasDB.from('plantas').update({ nome }).eq('id', id);
+    if(error) throw error;
+    const p = plantasCache.find(x => x.id === id);
+    if(p) p.nome = nome;
+    if(plantaAtualId === id){
+      plantaAtualNome = nome;
+      atualizarNomePlantaNaTela();
+    }
+    renderPlantasLista();
+    showToast('Nome atualizado.');
+  }catch(err){
+    console.error('[Plantas] renomear', err);
+    showToast('Erro ao renomear: ' + supabaseErroMsg(err), true);
+  }
+}
+
+async function excluirPlanta(id){
+  if(!plantasDB) return;
+  const p = plantasCache.find(x => x.id === id);
+  if(!confirm(`Excluir a planta "${p ? p.nome : 'selecionada'}"?\nO PDF e o projeto serão removidos do banco.`)) return;
+  const eraAtual = (plantaAtualId === id) || !!(p && p.ultima);
+  try{
+    if(p && p.arquivo_path){
+      try{ await plantasDB.storage.from(PLANTA_BUCKET).remove([p.arquivo_path]); }catch(e){ console.warn(e); }
+    }
+    const { error } = await plantasDB.from('plantas').delete().eq('id', id);
+    if(error) throw error;
+    plantasCache = plantasCache.filter(x => x.id !== id);
+    if(plantaAtualId === id){ plantaAtualId = null; plantaAtualNome = ''; }
+    atualizarContadorPlantas(plantasCache.length);
+    atualizarNomePlantaNaTela();
+    renderPlantasLista();
+    showToast('Planta excluída.');
+    if(eraAtual && plantasCache.length){
+      showToast('Abrindo a planta mais recente…');
+      await abrirPlanta(plantasCache[0].id);
+    }
+  }catch(err){
+    console.error('[Plantas] excluir', err);
+    showToast('Erro ao excluir: ' + supabaseErroMsg(err), true);
+  }
+}
+
+/* ---------------- abrir / aplicar ---------------- */
+async function baixarPdfDaPlanta(row){
+  if(!row.arquivo_path) throw new Error('Esta planta não tem PDF salvo no Storage.');
+  const { data, error } = await plantasDB.storage.from(PLANTA_BUCKET).download(row.arquivo_path);
+  if(error) throw error;
+  return await data.arrayBuffer();
+}
+
+async function aplicarPlantaNaTela(row, buf){
+  // pdf.js pode transferir/destacar o ArrayBuffer; passamos uma cópia.
+  const doc = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise;
+  const page = await doc.getPage(1);
+  const vp = page.getViewport({ scale: 1 });
+
+  pdfDocRef = doc;
+  pdfPageRef = page;
+  pdfPageSize = { width: vp.width, height: vp.height };
+  pdfOriginal = null;
+  pdfRenderScale = 0;
+  pdfRenderToken++;
+  const proj = desempacotarProjeto(row.projeto);
+  showPdfOriginal = (typeof proj.showPdfOriginal === 'boolean') ? proj.showPdfOriginal : true;
+  pendingOriginalView = false;
+
+  if(Array.isArray(proj.items)) items = proj.items.map(s => ({ ...s }));
+  if(Array.isArray(proj.layers) && proj.layers.length) layers = proj.layers;
+  if(proj.activeLayerId && layers.some(l => l.id === proj.activeLayerId)) activeLayerId = proj.activeLayerId;
+  flowMode = !!proj.flowMode;
+  sectors = Array.isArray(proj.sectors) ? proj.sectors : [];
+  annotations = Array.isArray(proj.annotations) ? proj.annotations : [];
+  isolatedSectorId = null;
+  measureTargetSectorId = null;
+  selectedItems = [];
+  pixelPerMeter = Number(proj.pixelPerMeter || row.escala_pxm || 20) || 20;
+  saveScale();
+  simOrigin = (proj.sim && proj.sim.origin) ? proj.sim.origin : null;
+  simDest = (proj.sim && proj.sim.dest) ? proj.sim.dest : null;
+
+  plantaAtualId = row.id;
+  plantaAtualNome = row.nome || '';
+
+  if(proj.camera && isFinite(proj.camera.scale) && proj.camera.scale > 0){
+    scale = proj.camera.scale;
+    offsetX = Number(proj.camera.offsetX) || 0;
+    offsetY = Number(proj.camera.offsetY) || 0;
+  } else {
+    fitPdfPage();
+  }
+  if(!isFinite(scale) || scale <= 0) fitPdfPage();
+
+  originalCamera = { scale, offsetX, offsetY };
+  vectorCamera = { scale, offsetX, offsetY };
+
+  renderPdfOriginal(true);
+  setPdfButton();
+  updateFlowUI();
+  updateZoomInfo();
+  if(simOrigin) setSimRouteButton('simOriginInput', 'origin');
+  if(simDest) setSimRouteButton('simDestInput', 'dest');
+  updatePropsPanel();
+
+  history = [];
+  historyIndex = -1;
+  pushHistory();
+
+  try{ await savePdfFile(buf.slice(0)); }catch(e){ console.warn(e); }
+  try{ await saveBrowser(true); }catch(e){ console.warn(e); }
+
+  atualizarContadorPlantas();
+  atualizarNomePlantaNaTela();
+  draw();
+}
+
+async function marcarPlantaAtual(id){
+  if(!plantasDB) return;
+  try{
+    const { error } = await plantasDB.rpc('definir_planta_atual', { p_id: id });
+    if(error) throw error;
+  }catch(err){
+    console.warn('[Plantas] RPC definir_planta_atual indisponível, usando fallback', err);
+    try{
+      await plantasDB.from('plantas').update({ ultima: false }).eq('ultima', true).neq('id', id);
+      await plantasDB.from('plantas').update({ ultima: true }).eq('id', id);
+    }catch(e2){ console.warn('[Plantas] fallback ultima', e2); }
+  }
+  plantasCache.forEach(p => { p.ultima = (p.id === id); });
+  plantaAtualId = id;
+  const p = plantasCache.find(x => x.id === id);
+  if(p) plantaAtualNome = p.nome;
+  atualizarNomePlantaNaTela();
+  if(document.getElementById('plantasModal').classList.contains('open')) renderPlantasLista();
+  atualizarContadorPlantas();
+}
+
+async function abrirPlanta(id){
+  if(!plantasDB){ showToast('Supabase indisponível.', true); return; }
+  if(!id) return;
+  const overlay = document.getElementById('loading');
+  if(overlay) overlay.style.display = 'flex';
+  setStatus('Carregando planta do banco…');
+  try{
+    if(plantaAtualId && plantaAtualId !== id){
+      try{ await salvarProjetoPlantaAtual(); }catch(e){}
+    }
+    const { data, error } = await plantasDB.from('plantas').select('*').eq('id', id).single();
+    if(error) throw error;
+    const buf = await baixarPdfDaPlanta(data);
+    await marcarPlantaAtual(id);           // marca antes de aplicar (cache/título)
+    await aplicarPlantaNaTela(data, buf);
+    closePlantasModal();
+    setStatus(`Planta: ${data.nome} · ${items.length} elementos`);
+    showToast(`Planta aberta: ${data.nome}`);
+  }catch(err){
+    console.error('[Plantas] abrir', err);
+    alert('Não foi possível abrir a planta:\n' + supabaseErroMsg(err));
+    setStatus('Falha ao abrir planta.');
+  }finally{
+    if(overlay) overlay.style.display = 'none';
+  }
+}
+
+async function carregarPlantaAtualDoBanco(){
+  if(!plantasDB) return false;
+  try{
+    let { data, error } = await plantasDB.from('plantas').select('*').eq('ultima', true).limit(1).maybeSingle();
+    if(error) throw error;
+    if(!data){
+      const r = await plantasDB.from('plantas').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if(r.error) throw r.error;
+      data = r.data;
+    }
+    if(!data) return false;
+    const buf = await baixarPdfDaPlanta(data);
+    await aplicarPlantaNaTela(data, buf);
+    if(!data.ultima) await marcarPlantaAtual(data.id);
+    console.info('[Plantas] planta restaurada do banco:', data.nome);
+    return true;
+  }catch(err){
+    console.warn('[Plantas] não foi possível restaurar do banco:', err);
+    return false;
+  }
+}
+
+/* ---------------- importação / salvamento ---------------- */
+function prepararImportacaoPlanta(file){
+  try{ if(plantaAtualId) salvarProjetoPlantaAtual(); }catch(e){}
+  plantaAtualId = null;
+  plantaAtualNome = '';
+  ultimaImportacao = {
+    arquivoNome: (file && file.name) || 'planta.pdf',
+    tamanho: (file && file.size) || 0,
+    buf: null, pdf: null, paginas: 1
+  };
+  return ultimaImportacao;
+}
+
+function registrarPlantaImportada(){
+  if(!ultimaImportacao || !ultimaImportacao.buf) return;
+  const nomePadrao = nomePadraoDaPlanta(ultimaImportacao.arquivoNome);
+  pendenteNomePlanta = {
+    nomePadrao,
+    arquivoNome: ultimaImportacao.arquivoNome,
+    tamanho: ultimaImportacao.tamanho || ultimaImportacao.buf.byteLength || 0,
+    paginas: (ultimaImportacao.pdf && ultimaImportacao.pdf.numPages) || ultimaImportacao.paginas || 1
+  };
+  if(!plantasDB){
+    showToast('Supabase indisponível: PDF mantido apenas neste navegador.', true);
+    return;
+  }
+  const inp = document.getElementById('plantaNomeInput');
+  if(inp) inp.value = nomePadrao;
+  const info = document.getElementById('plantaFileInfo');
+  if(info){
+    info.innerHTML = `<b>${escapeHtml(pendenteNomePlanta.arquivoNome)}</b><br>` +
+      `${formatarBytes(pendenteNomePlanta.tamanho)} · ${pendenteNomePlanta.paginas} página(s)`;
+  }
+  const btn = document.getElementById('plantaNomeSalvar');
+  if(btn){ btn.disabled = false; btn.textContent = 'Salvar planta'; }
+  const cancel = document.getElementById('plantaNomeCancel');
+  if(cancel) cancel.disabled = false;
+  document.getElementById('plantaNomeModal').classList.add('open');
+  setTimeout(() => { if(inp){ inp.focus(); inp.select(); } }, 90);
+}
+
+async function confirmarNomePlanta(usarPadrao){
+  if(!pendenteNomePlanta || !ultimaImportacao || !plantasDB || salvandoPlantaNoBanco) return;
+  const inp = document.getElementById('plantaNomeInput');
+  let nome = usarPadrao
+    ? pendenteNomePlanta.nomePadrao
+    : ((inp && inp.value.trim()) || pendenteNomePlanta.nomePadrao);
+  nome = nome.slice(0, 80);
+  const buf = ultimaImportacao.buf;
+  const id = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : ('p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10));
+  const path = `${id}.pdf`;
+  salvandoPlantaNoBanco = true;
+  const btnSalvar = document.getElementById('plantaNomeSalvar');
+  const btnCancel = document.getElementById('plantaNomeCancel');
+  if(btnSalvar){ btnSalvar.disabled = true; btnSalvar.textContent = 'Salvando…'; }
+  if(btnCancel) btnCancel.disabled = true;
+  try{
+    if(plantaAtualId) { try{ await salvarProjetoPlantaAtual(); }catch(e){} }
+    const blob = new Blob([buf], { type: 'application/pdf' });
+    const up = await plantasDB.storage.from(PLANTA_BUCKET).upload(path, blob, { contentType: 'application/pdf', upsert: true });
+    if(up.error) throw up.error;
+
+    // garante que nenhuma outra planta esteja marcada como "última"
+    const clear = await plantasDB.from('plantas').update({ ultima: false }).eq('ultima', true);
+    if(clear.error) console.warn('[Plantas] limpar ultima:', clear.error);
+
+    const ins = await plantasDB.from('plantas').insert({
+      id,
+      nome,
+      arquivo_nome: pendenteNomePlanta.arquivoNome,
+      arquivo_path: path,
+      tamanho_bytes: pendenteNomePlanta.tamanho || buf.byteLength || 0,
+      paginas: pendenteNomePlanta.paginas || 1,
+      escala_pxm: pixelPerMeter || 20,
+      projeto: empacotarProjeto(snapshotProjetoPlanta()),
+      ultima: true
+    }).select('id,nome,ultima,created_at').single();
+    if(ins.error) throw ins.error;
+
+    plantaAtualId = id;
+    plantaAtualNome = nome;
+    ultimaImportacao = null;
+    pendenteNomePlanta = null;
+    document.getElementById('plantaNomeModal').classList.remove('open');
+    atualizarNomePlantaNaTela();
+    await carregarPlantasLista(false);
+    setStatus(`Planta salva no banco: ${nome}`);
+    showToast(`Planta "${nome}" salva no Supabase.`);
+  }catch(err){
+    console.error('[Plantas] salvar', err);
+    const msg = supabaseErroMsg(err);
+    let dica = '';
+    if(/bucket|Object not found|not found/i.test(msg)) dica = '\n\nVerifique se o bucket "plantas" foi criado (SQL incluído).';
+    if(/row-level security|policy|permission/i.test(msg)) dica = '\n\nAs políticas RLS precisam ser aplicadas (SQL incluído).';
+    alert('Não foi possível salvar a planta no Supabase:\n' + msg + dica);
+    if(btnSalvar){ btnSalvar.disabled = false; btnSalvar.textContent = 'Tentar novamente'; }
+    if(btnCancel) btnCancel.disabled = false;
+    try{ await plantasDB.storage.from(PLANTA_BUCKET).remove([path]); }catch(e){}
+  }finally{
+    salvandoPlantaNoBanco = false;
+  }
+}
+
+function cancelarNomePlanta(){
+  confirmarNomePlanta(true);
+}
+
+function pularNomePlanta(){
+  const modal = document.getElementById('plantaNomeModal');
+  if(modal) modal.classList.remove('open');
+  pendenteNomePlanta = null;
+  ultimaImportacao = null;
+  atualizarNomePlantaNaTela();
+  showToast('Planta mantida apenas neste navegador.', true);
+}
+
+/* Esc fecha os modais de plantas (o de nomear equivale a "continuar sem salvar") */
+document.addEventListener('keydown', function(e){
+  if(e.key !== 'Escape') return;
+  const nomeModal = document.getElementById('plantaNomeModal');
+  if(nomeModal && nomeModal.classList.contains('open')){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    pularNomePlanta();
+    return;
+  }
+  const listaModal = document.getElementById('plantasModal');
+  if(listaModal && listaModal.classList.contains('open')){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    closePlantasModal();
+  }
+});
+
+async function salvarProjetoPlantaAtual(){
+  if(!plantasDB || !plantaAtualId) return false;
+  const id = plantaAtualId;
+  const projeto = empacotarProjeto(snapshotProjetoPlanta());
+  try{
+    const { error } = await plantasDB.from('plantas').update({
+      projeto,
+      escala_pxm: pixelPerMeter,
+      updated_at: new Date().toISOString()
+    }).eq('id', id);
+    if(error) throw error;
+    return true;
+  }catch(err){
+    console.warn('[Plantas] sync projeto', err);
+    return false;
+  }
+}
+function agendarSyncPlanta(){
+  if(!plantasDB || !plantaAtualId) return;
+  clearTimeout(syncPlantaTimer);
+  syncPlantaTimer = setTimeout(() => { salvarProjetoPlantaAtual(); }, 3500);
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initApp);else initApp();
