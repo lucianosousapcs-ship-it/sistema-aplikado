@@ -8,6 +8,9 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+
 <style>
 /* ===== SUB-ABAS DE RECIBOS ===== */
 .recibo-subtab-content{display:none;padding:20px;overflow-y:auto;flex:1;background:#fff}
@@ -2003,6 +2006,9 @@ body{background:linear-gradient(135deg,#ffe0b0 0%,#ffb84d 30%,#FF8C00 60%,#e0700
         <div class="rel-header">
             <h2><i class="fas fa-file-alt"></i> Relatório de Ponto</h2>
             <div class="rel-header-actions">
+
+<button type="button" class="rel-btn" style="background:#217346;color:#fff;" onclick="baixarRelatorioExcel()"><i class="fas fa-file-excel"></i> Baixar Excel</button>
+
                 <button type="button" class="rel-btn rel-btn-pdf" onclick="baixarRelatorioPdf()"><i class="fas fa-download"></i> Baixar PDF</button>
                 <button type="button" class="rel-btn rel-btn-print" onclick="imprimirRelatorioPonto()"><i class="fas fa-print"></i> Imprimir</button>
                 <button type="button" class="rel-btn rel-btn-close" onclick="fecharRelatorioPonto()"><i class="fas fa-times"></i> Fechar</button>
@@ -8606,7 +8612,325 @@ async function carregarRecibosColaborador(id){
         </div>`;
     }
 }
+/* ============================================================
+   ★★★ EXPORTAÇÃO EXCEL DO RELATÓRIO DE PONTO ★★★
+   Colunas numéricas com FÓRMULAS nativas para verificação
+   ============================================================ */
+function timeToFraction(hhmm){
+    if(!hhmm) return null;
+    const p = String(hhmm).split(':');
+    if(p.length < 2) return null;
+    const h = parseInt(p[0], 10);
+    const m = parseInt(p[1], 10);
+    if(isNaN(h) || isNaN(m)) return null;
+    return (h * 60 + m) / (24 * 60);
+}
 
+async function baixarRelatorioExcel(){
+    mostrarToast('📊 Preparando Excel...', 'info');
+    try{
+        const mes = document.getElementById('relMes').value;
+        const ano = parseInt(document.getElementById('relAno').value);
+        const u   = document.getElementById('relUnidade').value;
+        const e   = document.getElementById('relEmpresa').value;
+        const fid = document.getElementById('relFuncionario').value;
+        const mi  = MESES.indexOf(mes);
+        const td  = new Date(ano, mi + 1, 0).getDate();
+
+        /* ---- Buscar funcionários ---- */
+        let q = supabaseClient.from('funcionarios').select('*');
+        if(u)   q = q.eq('unidade', u);
+        if(e)   q = q.eq('departamento', e);
+        if(fid) q = q.eq('id', fid);
+        const { data: fs, error } = await q.order('nome');
+        if(error) throw error;
+
+        const cand = (fs || []).filter(f => !f.sem_controle_ponto && !f.desligamento);
+
+        /* ---- Filtrar somente quem tem marcação ---- */
+        const comM = [];
+        for(const f of cand){
+            if(await funcionarioTemMarcacao(f.id, mes, ano)) comM.push(f);
+        }
+        if(comM.length === 0){
+            mostrarToast('⚠️ Nenhum funcionário com marcação no período.', 'warning');
+            return;
+        }
+
+        /* ---- Pré-carregar dados (otimização) ---- */
+        const empIds = comM.map(f => f.id);
+        const iISO = `${ano}-${String(mi+1).padStart(2,'0')}-01`;
+        const fISO = `${ano}-${String(mi+1).padStart(2,'0')}-${String(td).padStart(2,'0')}`;
+
+        const { data: todosPontos } = await supabaseClient
+            .from('marcacoes_ponto').select('*')
+            .in('funcionario_id', empIds).eq('mes', mes).eq('ano', ano);
+        const mapaPontos = {};
+        (todosPontos || []).forEach(p => {
+            try{
+                mapaPontos[p.funcionario_id] = typeof p.dados === 'string' ? JSON.parse(p.dados) : p.dados;
+            }catch(err){
+                mapaPontos[p.funcionario_id] = {};
+            }
+        });
+
+        const { data: todosAtest } = await supabaseClient
+            .from('atestados').select('*')
+            .in('funcionario_id', empIds)
+            .lte('data_inicio', fISO).gte('data_fim', iISO);
+        const mapaAbonados = {};
+        comM.forEach(f => { mapaAbonados[f.id] = new Set(); });
+        (todosAtest || []).forEach(a => {
+            const d1 = parseDataLocal(a.data_inicio), d2 = parseDataLocal(a.data_fim);
+            if(!d1 || !d2) return;
+            for(let d = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate()); d <= d2; d = addDia(d)){
+                if(d.getMonth() === mi && d.getFullYear() === ano && mapaAbonados[a.funcionario_id]){
+                    mapaAbonados[a.funcionario_id].add(d.getDate());
+                }
+            }
+        });
+        comM.forEach(f => {
+            const dd = mapaPontos[f.id] || {};
+            Object.keys(dd).forEach(k => {
+                if(dd[k]?.falta_atestado) mapaAbonados[f.id].add(parseInt(k));
+            });
+        });
+
+        /* ---- Agrupar por unidade ---- */
+        const grupos = {};
+        comM.forEach(f => {
+            const un = f.unidade || 'Sem Unidade';
+            if(!grupos[un]) grupos[un] = [];
+            grupos[un].push(f);
+        });
+
+        /* ---- Criar workbook ---- */
+        const wb = new ExcelJS.Workbook();
+        wb.creator = 'ApliKado';
+        wb.created = new Date();
+
+        for(const un of Object.keys(grupos).sort()){
+            const ws = wb.addWorksheet(un.substring(0, 31));
+
+            ws.columns = [
+                { width: 12 }, // A - Dia
+                { width: 10 }, // B - 1ª Entrada
+                { width: 10 }, // C - 1ª Saída
+                { width: 11 }, // D - Total 1º
+                { width: 10 }, // E - 2ª Entrada
+                { width: 10 }, // F - 2ª Saída
+                { width: 11 }, // G - Total 2º
+                { width: 10 }, // H - Extra Entrada
+                { width: 10 }, // I - Extra Saída
+                { width: 11 }, // J - Total Extra
+                { width: 12 }, // K - Total Dia
+                { width: 12 }, // L - Hora Extra
+                { width: 40 }  // M - Observação
+            ];
+
+            let rowIdx = 1;
+
+            /* Título da aba */
+            ws.getCell(rowIdx, 1).value = `RELATÓRIO DE PONTO — ${un} — ${mes}/${ano}`;
+            ws.getCell(rowIdx, 1).font = { bold: true, size: 14 };
+            ws.mergeCells(rowIdx, 1, rowIdx, 13);
+            ws.getCell(rowIdx, 1).alignment = { horizontal: 'center' };
+            rowIdx += 2;
+
+            for(const f of grupos[un]){
+                const dd   = mapaPontos[f.id] || {};
+                const ab   = mapaAbonados[f.id] || new Set();
+                const permMin = getPermanenciaMinutos(f);
+                const ph   = Math.floor(permMin / 60);
+                const pm   = permMin % 60;
+                const permLabel = getPermanenciaLabel(f);
+                const timeFormula = `TIME(${ph},${pm},0)`;
+
+                /* Cabeçalho do funcionário */
+                ws.getCell(rowIdx, 1).value = `${f.nome} — CPF: ${f.cpf || '-'} — Cargo: ${f.cargo || '-'} — Permanência: ${permLabel}`;
+                ws.getCell(rowIdx, 1).font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+                ws.getCell(rowIdx, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF8C00' } };
+                ws.mergeCells(rowIdx, 1, rowIdx, 13);
+                rowIdx++;
+
+                /* Cabeçalho da tabela */
+                const headers = ['Dia','1ª Entrada','1ª Saída','Total 1º','2ª Entrada','2ª Saída','Total 2º','Extra Entrada','Extra Saída','Total Extra','Total Dia','Hora Extra','Observação'];
+                headers.forEach((h, i) => {
+                    const cell = ws.getCell(rowIdx, i + 1);
+                    cell.value = h;
+                    cell.font = { bold: true, size: 10 };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD8D8D8' } };
+                    cell.border = {
+                        top: {style:'thin'}, left: {style:'thin'},
+                        bottom: {style:'thin'}, right: {style:'thin'}
+                    };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                });
+                rowIdx++;
+
+                const startRow = rowIdx;
+
+                /* Linhas diárias */
+                for(let dia = 1; dia <= td; dia++){
+                    const x    = dd[dia] || {};
+                    const ds   = getDiaSemana(dia, mi, ano);
+                    const fer  = isFeriado(dia, mi, ano);
+                    const abon = ab.has(dia) || x.falta_atestado;
+                    const fpe  = x.falta_periodo;
+                    const fBH  = x.folga_bh;
+                    const ta   = x.abono;
+
+                    let ob = '';
+                    if(fpe) ob = 'FALTA';
+                    else if(ta){
+                        let lb = 'ABONO';
+                        if(x.abono_inicio && x.abono_fim) lb = `ABONO ${x.abono_inicio}-${x.abono_fim}`;
+                        else if(x.abono_horas) lb = `ABONO ${x.abono_horas}`;
+                        ob = lb + (x.abono_motivo ? ' - ' + x.abono_motivo : '');
+                    }
+                    else if(abon) ob = 'ATESTADO';
+                    else if(fBH) ob = 'HORAS BH';
+                    else if(fer) ob = 'FERIADO';
+
+                    ws.getCell(rowIdx, 1).value = `${String(dia).padStart(2,'0')} ${ds}`;
+
+                    const setTime = (col, val) => {
+                        const cell = ws.getCell(rowIdx, col);
+                        if(val && /^\d{1,2}:\d{2}$/.test(val)){
+                            cell.value = timeToFraction(val);
+                            cell.numFmt = 'hh:mm';
+                        } else if(val && val !== '—'){
+                            cell.value = val;
+                        }
+                    };
+
+                    setTime(2, x.e1);
+                    setTime(3, x.s1);
+                    setTime(5, x.e2);
+                    setTime(6, x.s2);
+                    setTime(8, x.extra_e1);
+                    setTime(9, x.extra_s1);
+
+                    /* FÓRMULAS NATIVAS (verificáveis no Excel) */
+                    ws.getCell(rowIdx, 4).value = { formula: `IF(AND(ISNUMBER(B${rowIdx}),ISNUMBER(C${rowIdx})),MOD(C${rowIdx}-B${rowIdx},1),0)` };
+                    ws.getCell(rowIdx, 4).numFmt = '[h]:mm';
+
+                    ws.getCell(rowIdx, 7).value = { formula: `IF(AND(ISNUMBER(E${rowIdx}),ISNUMBER(F${rowIdx})),MOD(F${rowIdx}-E${rowIdx},1),0)` };
+                    ws.getCell(rowIdx, 7).numFmt = '[h]:mm';
+
+                    ws.getCell(rowIdx, 10).value = { formula: `IF(AND(ISNUMBER(H${rowIdx}),ISNUMBER(I${rowIdx})),MOD(I${rowIdx}-H${rowIdx},1),0)` };
+                    ws.getCell(rowIdx, 10).numFmt = '[h]:mm';
+
+                    ws.getCell(rowIdx, 11).value = { formula: `D${rowIdx}+G${rowIdx}+J${rowIdx}` };
+                    ws.getCell(rowIdx, 11).numFmt = '[h]:mm';
+                    ws.getCell(rowIdx, 11).font = { bold: true };
+
+                    ws.getCell(rowIdx, 12).value = { formula: `IF(K${rowIdx}>${timeFormula},K${rowIdx}-${timeFormula},0)` };
+                    ws.getCell(rowIdx, 12).numFmt = '[h]:mm';
+                    ws.getCell(rowIdx, 12).font = { bold: true, color: { argb: 'FF28A745' } };
+
+                    ws.getCell(rowIdx, 13).value = ob;
+                    ws.getCell(rowIdx, 13).font = { size: 10 };
+
+                    for(let c = 1; c <= 13; c++){
+                        const cell = ws.getCell(rowIdx, c);
+                        cell.border = {
+                            top: {style:'thin'}, left: {style:'thin'},
+                            bottom: {style:'thin'}, right: {style:'thin'}
+                        };
+                        if(c !== 13) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                    }
+                    rowIdx++;
+                }
+
+                const endRow = rowIdx - 1;
+
+                /* Linha TOTAIS com fórmulas SUM */
+                ws.getCell(rowIdx, 1).value = 'TOTAIS';
+                ws.getCell(rowIdx, 1).font = { bold: true, size: 11 };
+                ws.mergeCells(rowIdx, 1, rowIdx, 3);
+
+                [[4,'D'],[7,'G'],[10,'J'],[11,'K'],[12,'L']].forEach(([col, letter]) => {
+                    const cell = ws.getCell(rowIdx, col);
+                    cell.value = { formula: `SUM(${letter}${startRow}:${letter}${endRow})` };
+                    cell.numFmt = '[h]:mm';
+                    cell.font = { bold: true, size: 11 };
+                });
+
+                for(let c = 1; c <= 13; c++){
+                    const cell = ws.getCell(rowIdx, c);
+                    cell.border = {
+                        top: {style:'thin'}, left: {style:'thin'},
+                        bottom: {style:'thin'}, right: {style:'thin'}
+                    };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                }
+                const totalRowIdx = rowIdx;
+                rowIdx += 2;
+
+                /* Bloco RESUMO com fórmulas derivadas */
+                ws.getCell(rowIdx, 1).value = 'RESUMO (fórmulas verificáveis)';
+                ws.getCell(rowIdx, 1).font = { bold: true, size: 11, color: { argb: 'FF6F42C1' } };
+                ws.mergeCells(rowIdx, 1, rowIdx, 3);
+                rowIdx++;
+
+                const resumo = [
+                    ['Dias Trabalhados',  { formula: `COUNTIF(K${startRow}:K${endRow},">0")` },               null],
+                    ['Hora Extra Total',  { formula: `L${totalRowIdx}` },                                     '[h]:mm'],
+                    ['Folgas BH',         { formula: `COUNTIF(M${startRow}:M${endRow},"HORAS BH")` },         null],
+                    ['Faltas c/ Atestado',{ formula: `COUNTIF(M${startRow}:M${endRow},"ATESTADO")` },         null],
+                    ['Faltas no Período', { formula: `COUNTIF(M${startRow}:M${endRow},"FALTA")` },            null],
+                    ['Compensação BH',    { formula: `-COUNTIF(M${startRow}:M${endRow},"HORAS BH")*${timeFormula}` }, '[h]:mm'],
+                    ['Horas Abonadas',    { formula: `SUMPRODUCT((ISNUMBER(SEARCH("ABONO",M${startRow}:M${endRow})))*(K${startRow}:K${endRow}))+COUNTIF(M${startRow}:M${endRow},"ATESTADO")*${timeFormula}` }, '[h]:mm']
+                ];
+
+                resumo.forEach(([label, formula, fmt]) => {
+                    const cL = ws.getCell(rowIdx, 1);
+                    cL.value = label;
+                    cL.font = { bold: true, size: 10 };
+                    ws.mergeCells(rowIdx, 1, rowIdx, 2);
+
+                    const cV = ws.getCell(rowIdx, 3);
+                    cV.value = formula;
+                    cV.font = { bold: true, size: 10 };
+                    cV.alignment = { horizontal: 'center' };
+                    if(fmt) cV.numFmt = fmt;
+                    cV.border = {
+                        top: {style:'thin'}, left: {style:'thin'},
+                        bottom: {style:'thin'}, right: {style:'thin'}
+                    };
+                    rowIdx++;
+                });
+
+                rowIdx += 2;
+            }
+        }
+
+        /* ---- Download ---- */
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        let nomeArq = 'Relatorio_Ponto_' + mes + '_' + ano;
+        if(fid){
+            const f = funcionarios.find(x => String(x.id) === String(fid));
+            if(f) nomeArq += '_' + sanitizarNomeArquivo(f.nome);
+        }
+        if(u) nomeArq += '_' + sanitizarNomeArquivo(u);
+        link.download = nomeArq + '.xlsx';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        mostrarToast('✅ Excel gerado com fórmulas verificáveis!');
+    }catch(err){
+        console.error(err);
+        mostrarToast('❌ Erro: ' + err.message, 'error');
+    }
+}
 /* ============================================================
    INICIALIZAÇÃO
    ============================================================ */
