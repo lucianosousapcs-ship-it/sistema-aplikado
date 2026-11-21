@@ -3887,11 +3887,8 @@ function recalcularIndicadoresExecutivosTrimestre() {
         setTimeout(() => aplicarFiltroTrimestreCompleto(), 1500);
     }
 })();
-
 // ============================================================
-// RELATÓRIO EXECUTIVO ANALÍTICO - VERSÃO DEFINITIVA
-// (Preto e Branco, Sincronizado com a Tela, Rico em Análises)
-// Incluir no FINAL do script
+// RELATÓRIO EXECUTIVO ANALÍTICO - VERSÃO DEFINITIVA (SINCRO TOTAL)
 // ============================================================
 
 function getLabelPeriodoRelatorio() {
@@ -3906,52 +3903,78 @@ function getLabelPeriodoRelatorio() {
 }
 
 /**
- * Recalcula tudo do zero garantindo sincronia absoluta com a tabela DRE
+ * LÊ DIRETAMENTE A TABELA HTML DO DRE NA TELA.
+ * Isso garante 100% de sincronia, pois copia o que já foi calculado.
  */
-function calcularDadosRelatorio() {
+function extrairDadosDaTelaDRE() {
     const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
     
     let totalReceita = 0;
     let totalDespesas = 0;
-    let contasReceita = {};
-    let contasDespesa = {};
+    let resultadoOperacional = 0;
+    let lucroBruto = 0;
+    let custosFixos = 0;
+    
     let receitaMensal = Array(12).fill(0);
     let despesaMensal = Array(12).fill(0);
+    let topDespesasMap = {};
 
-    // 1. Processar Receitas (receitasDataReais + movimentosExtraData)
-    const processarReceita = (dataStr, valor, plano) => {
-        const mes = extrairMes(dataStr);
-        if (!mesesAtivos.includes(mes)) return;
-        const val = Math.abs(Number(valor) || 0);
-        totalReceita += val;
-        receitaMensal[mes] += val;
-        const nomePlano = plano || 'Outras Receitas';
-        contasReceita[nomePlano] = (contasReceita[nomePlano] || 0) + val;
-    };
+    // Lê todas as linhas da tabela DRE na tela
+    const tbody = document.getElementById('corpoDRE');
+    if (!tbody) return null;
 
-    for (const r of receitasDataReais) processarReceita(r.data, r.valor, r.plano);
-    for (const m of movimentosExtraData) {
-        if (m.tipo === 'RECEITA' || m.tipo === 'ENTRADA') processarReceita(m.data, m.total_nota, m.plano_contas);
-    }
+    const linhas = tbody.querySelectorAll('tr');
+    let secaoAtual = '';
 
-    // 2. Processar Despesas (despesasDataReais + contasExtrasData + movimentosExtraData)
-    const processarDespesa = (dataStr, valor, plano) => {
-        const mes = extrairMes(dataStr);
-        if (!mesesAtivos.includes(mes)) return;
-        const val = Math.abs(Number(valor) || 0);
-        totalDespesas += val;
-        despesaMensal[mes] += val;
-        const nomePlano = plano || 'Outras Despesas';
-        contasDespesa[nomePlano] = (contasDespesa[nomePlano] || 0) + val;
-    };
+    linhas.forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length < 14) return; // Garante que é uma linha completa (12 meses + nome + total)
 
-    for (const d of despesasDataReais) processarDespesa(d.data, d.valor, d.plano);
-    for (const s of contasExtrasData) processarDespesa(s.dt_pagto, s.valor, s.plano);
-    for (const m of movimentosExtraData) {
-        if (m.tipo === 'DESPESA' || m.tipo === 'SAIDA') processarDespesa(m.data, m.total_nota, m.plano_contas);
-    }
+        const nomeLinha = tds[0].textContent.trim();
+        
+        // Identifica as seções para saber o que é receita e o que é despesa
+        if (nomeLinha.includes('RECEITAS') || nomeLinha.includes('RECEITA')) secaoAtual = 'RECEITA';
+        if (nomeLinha.includes('CUSTOS') || nomeLinha.includes('DESPESAS') || nomeLinha.includes('CUSTOS VARIÁVEIS')) secaoAtual = 'DESPESA';
 
-    // 3. Top Clientes (se vendasData existir)
+        // Captura os valores de Totais específicos
+        const valorTotalTexto = tds[13].textContent.trim();
+        const valorTotalNum = parseValorBR(valorTotalTexto);
+
+        if (nomeLinha.includes('LUCRO BRUTO')) lucroBruto = valorTotalNum;
+        if (nomeLinha.includes('RESULTADO OPERACIONAL')) resultadoOperacional = valorTotalNum;
+        if (nomeLinha.includes('CUSTOS FIXOS')) custosFixos = valorTotalNum;
+
+        // Soma receitas e despesas
+        if (secaoAtual === 'RECEITA' && !nomeLinha.includes('TOTAL') && !nomeLinha.includes('LUCRO BRUTO')) {
+            totalReceita += valorTotalNum;
+            // Soma mensal
+            mesesAtivos.forEach(mes => {
+                receitaMensal[mes] += parseValorBR(tds[mes + 1].textContent);
+            });
+        } 
+        else if (secaoAtual === 'DESPESA' && !nomeLinha.includes('TOTAL') && !nomeLinha.includes('RESULTADO OPERACIONAL') && !nomeLinha.includes('CUSTOS FIXOS')) {
+            const valAbs = Math.abs(valorTotalNum);
+            totalDespesas += valAbs;
+            
+            // Soma mensal (absoluto)
+            mesesAtivos.forEach(mes => {
+                despesaMensal[mes] += Math.abs(parseValorBR(tds[mes + 1].textContent));
+            });
+
+            // Alimenta o Top Despesas (ignorando agrupadores pai vazios)
+            if (valAbs > 0 && nomeLinha.length > 5) {
+                topDespesasMap[nomeLinha] = (topDespesasMap[nomeLinha] || 0) + valAbs;
+            }
+        }
+    });
+
+    // Formata Top Despesas
+    const topDespesas = Object.entries(topDespesasMap)
+        .map(([nome, valor]) => ({ nome, valor }))
+        .sort((a, b) => b.valor - a.valor)
+        .slice(0, 8);
+
+    // Top Clientes (mantido do código anterior, pois não fica no DRE)
     let topClientes = [];
     if (typeof vendasData !== 'undefined' && vendasData.length > 0) {
         const clientesMap = {};
@@ -3967,13 +3990,14 @@ function calcularDadosRelatorio() {
             .slice(0, 5);
     }
 
-    // 4. Ordenar Top Contas
-    const topReceitas = Object.entries(contasReceita).map(([n, v]) => ({nome: n, valor: v})).sort((a,b) => b.valor - a.valor).slice(0, 5);
-    const topDespesas = Object.entries(contasDespesa).map(([n, v]) => ({nome: n, valor: v})).sort((a,b) => b.valor - a.valor).slice(0, 5);
+    // Fallback de segurança para receitas se o DRE nao tiver o agrupamento claro
+    if (totalReceita === 0) {
+        totalReceita = resultadoOperacional + totalDespesas; 
+    }
 
     return {
-        mesesAtivos, totalReceita, totalDespesas, receitaMensal, despesaMensal,
-        topReceitas, topDespesas, topClientes
+        mesesAtivos, totalReceita, totalDespesas, resultadoOperacional, lucroBruto, custosFixos,
+        receitaMensal, despesaMensal, topDespesas, topClientes
     };
 }
 
@@ -3981,13 +4005,17 @@ function calcularDadosRelatorio() {
  * Abre o relatório com layout executivo analítico - 100% Preto e Branco
  */
 function abrirRelatorioExecutivoCorrigido() {
-    const dados = calcularDadosRelatorio();
+    const dados = extrairDadosDaTelaDRE();
+    if (!dados) {
+        alert("Aguarde o carregamento da tabela DRE para gerar o relatório.");
+        return;
+    }
+
     const labelPeriodo = getLabelPeriodoRelatorio();
     const dataGeracao = new Date().toLocaleString('pt-BR');
     
     // Cálculos Estratégicos
-    const resultado = dados.totalReceita - dados.totalDespesas;
-    const margemLiq = dados.totalReceita > 0 ? (resultado / dados.totalReceita) * 100 : 0;
+    const margemLiq = dados.totalReceita > 0 ? (dados.resultadoOperacional / dados.totalReceita) * 100 : 0;
     const eficiencia = dados.totalDespesas > 0 ? (dados.totalReceita / dados.totalDespesas) * 100 : 0;
     const custoReceita = dados.totalReceita > 0 ? (dados.totalDespesas / dados.totalReceita) * 100 : 0;
 
@@ -4019,7 +4047,7 @@ function abrirRelatorioExecutivoCorrigido() {
                 </div>
                 <div class="relatorio-quadrante">
                     <div class="quad-label">Resultado Operacional</div>
-                    <div class="quad-valor">${formatarMoeda(resultado)}</div>
+                    <div class="quad-valor">${formatarMoeda(dados.resultadoOperacional)}</div>
                     <div class="quad-sub">Margem líquida: ${margemLiq.toFixed(1)}%</div>
                 </div>
             </div>
@@ -4039,6 +4067,8 @@ function abrirRelatorioExecutivoCorrigido() {
                     <tr><td>Margem Líquida</td><td class="num">${margemLiq.toFixed(1)}%</td><td>${margemLiq > 15 ? 'Excelente rentabilidade.' : margemLiq > 8 ? 'Boa rentabilidade.' : margemLiq > 0 ? 'Abaixo do ideal. Necessita revisão de custos.' : 'Prejuízo. Despesas superam receitas.'}</td></tr>
                     <tr><td>Eficiência Operacional</td><td class="num">${eficiencia.toFixed(1)}%</td><td>${eficiencia > 150 ? 'Altíssima eficiência. Cada R$ 1 gasto gera mais de R$ 1,50.' : eficiencia > 100 ? 'Boa eficiência. Receita supera as despesas.' : 'Alerta: despesas próximas ou superiores à receita.'}</td></tr>
                     <tr><td>Comprometimento da Receita</td><td class="num">${custoReceita.toFixed(1)}%</td><td>${custoReceita < 60 ? 'Excelente controle de custos.' : custoReceita < 80 ? 'Atenção: custos consomem a maior parte da receita.' : 'Crítico: margem de manobra muito estreita.'}</td></tr>
+                    <tr><td>Lucro Bruto (Faturamento)</td><td class="num">${formatarMoeda(dados.lucroBruto)}</td><td>Resultado antes das despesas fixas</td></tr>
+                    <tr><td>Custos Fixos</td><td class="num">${formatarMoeda(dados.custosFixos)}</td><td>Estrutura operacional</td></tr>
                 </tbody>
             </table>
         </div>
@@ -4080,32 +4110,20 @@ function abrirRelatorioExecutivoCorrigido() {
     });
     html += `</tbody></table></div>`;
 
-    // 4. Top 5 Receitas e Despesas
+    // 4. Top 8 Despesas (Extração Direta do DRE)
     html += `
         <div class="relatorio-section">
-            <h2>4. Principais Movimentações</h2>
-            <div style="display: flex; gap: 20px;">
-                <div style="flex: 1;">
-                    <table class="relatorio-table">
-                        <thead><tr><th>Top Receitas (Plano de Contas)</th><th class="num">Valor</th></tr></thead>
-                        <tbody>
-                            ${dados.topReceitas.map(r => `<tr><td>${escapeHtml(r.nome)}</td><td class="num">${formatarMoeda(r.valor)}</td></tr>`).join('') || '<tr><td colspan="2">Sem dados</td></tr>'}
-                        </tbody>
-                    </table>
-                </div>
-                <div style="flex: 1;">
-                    <table class="relatorio-table">
-                        <thead><tr><th>Top Despesas (Plano de Contas)</th><th class="num">Valor</th></tr></thead>
-                        <tbody>
-                            ${dados.topDespesas.map(d => `<tr><td>${escapeHtml(d.nome)}</td><td class="num">${formatarMoeda(d.valor)}</td></tr>`).join('') || '<tr><td colspan="2">Sem dados</td></tr>'}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <h2>4. Maiores Despesas (Top 8 Contas)</h2>
+            <table class="relatorio-table">
+                <thead><tr><th>Conta / Descrição</th><th class="num">Valor Total</th></tr></thead>
+                <tbody>
+                    ${dados.topDespesas.map(d => `<tr><td>${escapeHtml(d.nome)}</td><td class="num">${formatarMoeda(d.valor)}</td></tr>`).join('') || '<tr><td colspan="2">Sem dados</td></tr>'}
+                </tbody>
+            </table>
         </div>
     `;
 
-    // 5. Top Clientes (Se houver)
+    // 5. Top Clientes
     if (dados.topClientes.length > 0) {
         html += `
             <div class="relatorio-section">
@@ -4125,12 +4143,12 @@ function abrirRelatorioExecutivoCorrigido() {
 
     // 6. Diagnóstico Final
     let diagText = '';
-    if (resultado >= 0) {
-        diagText = `No <strong>${labelPeriodo}</strong>, a operação registrou <strong>lucro de ${formatarMoeda(resultado)}</strong>. A receita de ${formatarMoeda(dados.totalReceita)} foi suficiente para cobrir ${formatarMoeda(dados.totalDespesas)} em despesas, gerando uma margem líquida de ${margemLiq.toFixed(1)}%. `;
+    if (dados.resultadoOperacional >= 0) {
+        diagText = `No <strong>${labelPeriodo}</strong>, a operação registrou <strong>lucro de ${formatarMoeda(dados.resultadoOperacional)}</strong>. A receita de ${formatarMoeda(dados.totalReceita)} foi suficiente para cobrir ${formatarMoeda(dados.totalDespesas)} em despesas, gerando uma margem líquida de ${margemLiq.toFixed(1)}%. `;
         if (custoReceita > 80) diagText += `Atenção: o índice de comprometimento da receita está em ${custoReceita.toFixed(1)}%, o que exige cautela com novos gastos.`;
         else diagText += `O índice de comprometimento da receita está saudável em ${custoReceita.toFixed(1)}%.`;
     } else {
-        diagText = `No <strong>${labelPeriodo}</strong>, a operação registrou <strong>prejuízo de ${formatarMoeda(Math.abs(resultado))}</strong>. As despesas de ${formatarMoeda(dados.totalDespesas)} superaram o faturamento de ${formatarMoeda(dados.totalReceita)}. `;
+        diagText = `No <strong>${labelPeriodo}</strong>, a operação registrou <strong>prejuízo de ${formatarMoeda(Math.abs(dados.resultadoOperacional))}</strong>. As despesas de ${formatarMoeda(dados.totalDespesas)} superaram o faturamento de ${formatarMoeda(dados.totalReceita)}. `;
         diagText += `É fundamental revisar imediatamente os custos fixos e renegociar contratos para retomar a saúde financeira.`;
     }
 
@@ -4162,7 +4180,6 @@ function abrirRelatorioExecutivoCorrigido() {
         btn.removeAttribute('onclick');
         btn.addEventListener('click', abrirRelatorioExecutivoCorrigido);
     });
-})();
-</script>
+})();</script>
 </body>
 </html>
