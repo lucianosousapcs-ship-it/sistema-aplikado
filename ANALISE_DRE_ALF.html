@@ -3183,6 +3183,462 @@ buscarUltimaAtualizacao();
 esconderLoading();
 console.log('Aplikado DRE - OK!');
 });
+// ============================================================
+// AJUSTE FINAL — FORÇAR TRIMESTRE 2 + RELATÓRIO SÓ TABELAS
+// Cole este bloco NO FINAL do <script>, após o DOMContentLoaded atual
+// ============================================================
+
+(function forcarTrimestreDoisAoAbrir() {
+    function aplicar() {
+        const select = document.getElementById('filtroTrimestre');
+        if (select) {
+            select.value = '2';
+            trimestreSelecionado = 2;
+        }
+        const lblRec = document.getElementById('lblPeriodoRec');
+        const lblChart = document.getElementById('lblPeriodoChart');
+        if (lblRec) lblRec.innerText = '2º Trimestre';
+        if (lblChart) lblChart.innerText = '2º Trimestre';
+
+        const mesesAtivos = [3, 4, 5];
+        document.querySelectorAll('.dre-table th[data-mes]').forEach(th => {
+            const mesIdx = parseInt(th.getAttribute('data-mes'));
+            if (mesesAtivos.includes(mesIdx)) {
+                th.style.opacity = '1';
+                th.style.borderBottomColor = 'var(--accent-gold)';
+            } else {
+                th.style.opacity = '0.3';
+                th.style.borderBottomColor = 'var(--border-color)';
+            }
+        });
+
+        if (typeof gerarDREComSupabase === 'function') {
+            try { gerarDREComSupabase(); } catch (e) { /* ignora se ainda não carregou */ }
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', aplicar);
+    } else {
+        aplicar();
+    }
+    // Reaplica após o carregamento dos dados do Supabase
+    window.addEventListener('load', () => setTimeout(aplicar, 800));
+})();
+
+// ============================================================
+// RELATÓRIO EXECUTIVO — SOMENTE TABELAS, FONTE PRETA, SEM CARDS
+// ============================================================
+function abrirRelatorioExecutivo() {
+    const container = document.getElementById('relatorioConteudo');
+    const nomesTri = ["Ano Completo", "1º Trimestre", "2º Trimestre", "3º Trimestre", "4º Trimestre"];
+    const periodoLabel = nomesTri[trimestreSelecionado] || "Ano Completo";
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+    const mesesLabels = mesesAtivos.map(m => mesesNomes[m]).join(', ');
+
+    // --- Recalcular base de dados para o período ---
+    const receitasMensal = Array(12).fill(0);
+    const custosVarMensal = Array(12).fill(0);
+    const custosFixMensal = Array(12).fill(0);
+
+    const contasReceita = [];
+    for (const t of [1, 2, 3]) {
+        for (const c of ESTRUTURA_OPERACOES[t].contas) contasReceita.push(`${c.cod} - ${c.nome}`);
+    }
+    for (const nome of contasReceita) {
+        for (let m = 0; m < 12; m++) receitasMensal[m] += calcularValorPorPlano(nome, m);
+    }
+    for (const [tipo, info] of Object.entries(ESTRUTURA_OPERACOES)) {
+        const t = parseInt(tipo);
+        if (t === 1 || t === 2 || t === 3) continue;
+        for (const conta of info.contas) {
+            const nome = `${conta.cod} - ${conta.nome}`;
+            for (let m = 0; m < 12; m++) {
+                const v = calcularValorPorPlano(nome, m);
+                if (t === 19 || t === 20) custosVarMensal[m] += v;
+                else if (t >= 4 && t <= 12) custosFixMensal[m] += v;
+            }
+        }
+    }
+    const lucroBrutoMensal = Array(12).fill(0).map((_, m) => receitasMensal[m] - Math.abs(custosVarMensal[m]));
+    const resultadoMensal = Array(12).fill(0).map((_, m) => lucroBrutoMensal[m] - Math.abs(custosFixMensal[m]));
+
+    const totalReceita = mesesAtivos.reduce((s, m) => s + receitasMensal[m], 0);
+    const totalCV = mesesAtivos.reduce((s, m) => s + Math.abs(custosVarMensal[m]), 0);
+    const totalCF = mesesAtivos.reduce((s, m) => s + Math.abs(custosFixMensal[m]), 0);
+    const totalResultado = mesesAtivos.reduce((s, m) => s + resultadoMensal[m], 0);
+    const custosTotais = totalCV + totalCF;
+    const margemLiq = totalReceita > 0 ? (totalResultado / totalReceita) * 100 : 0;
+    const margemContrib = totalReceita > 0 ? ((totalReceita - totalCV) / totalReceita) * 100 : 0;
+    const eficiencia = custosTotais > 0 ? (totalReceita / custosTotais) * 100 : 0;
+    const ebitda = totalResultado + totalCF * 0.05;
+    const roi = custosTotais > 0 ? (totalResultado / custosTotais) * 100 : 0;
+    const pontoEquilibrio = totalReceita > 0 ? totalCF / (1 - (totalCV / totalReceita)) : 0;
+    const giroAtivo = totalReceita > 0 ? totalReceita / (totalReceita * 0.6) : 0;
+
+    const vendasFiltradas = vendasData.filter(v => mesesAtivos.includes(extrairMes(v.data_nota)));
+    const totalVendas = vendasFiltradas.reduce((s, v) => s + v.total, 0);
+    const ticketMedio = vendasFiltradas.length > 0 ? totalVendas / vendasFiltradas.length : 0;
+    const clientesUnicos = new Set(vendasFiltradas.map(v => v.cliente).filter(Boolean)).size;
+
+    // --- Helper de linha de DRE ---
+    function linhaDre(label, valoresMensais, isTotal = false) {
+        let total = 0;
+        let html = `<tr${isTotal ? ' class="total-row"' : ''}><td${isTotal ? ' class="bold"' : ''}>${label}</td>`;
+        for (const m of mesesAtivos) {
+            total += valoresMensais[m];
+            html += `<td class="num">${formatarMoeda(valoresMensais[m])}</td>`;
+        }
+        html += `<td class="num bold">${formatarMoeda(total)}</td></tr>`;
+        return html;
+    }
+
+    // --- Seção 1: Resumo de Indicadores (tabela) ---
+    const indicadores = [
+        ['Receita Total', formatarMoeda(totalReceita)],
+        ['Lucro Operacional', formatarMoeda(totalResultado)],
+        ['Margem Líquida', margemLiq.toFixed(2) + '%'],
+        ['Margem de Contribuição', margemContrib.toFixed(2) + '%'],
+        ['EBITDA Estimado', formatarMoeda(ebitda)],
+        ['Custos Totais', formatarMoeda(custosTotais)],
+        ['Eficiência Operacional', eficiencia.toFixed(2) + '%'],
+        ['Ponto de Equilíbrio', formatarMoeda(pontoEquilibrio)],
+        ['ROI Estimado', roi.toFixed(2) + '%'],
+        ['Giro do Ativo', giroAtivo.toFixed(2) + 'x'],
+        ['Ticket Médio (Vendas)', formatarMoeda(ticketMedio)],
+        ['Total Vendas (R$)', formatarMoeda(totalVendas)],
+        ['Clientes Únicos', clientesUnicos.toString()]
+    ];
+    let indHtml = '<tr><th>Indicador</th><th class="num">Valor</th></tr>';
+    for (const [l, v] of indicadores) indHtml += `<tr><td>${l}</td><td class="num bold">${v}</td></tr>`;
+
+    // --- Seção 2: DRE mensal ---
+    let dreHeader = '<tr><th>Descrição</th>';
+    for (const m of mesesAtivos) dreHeader += `<th class="num">${mesesNomes[m]}</th>`;
+    dreHeader += '<th class="num">Total</th></tr>';
+
+    let dreHtml = '';
+    dreHtml += linhaDre('RECEITA BRUTA', receitasMensal, true);
+    dreHtml += linhaDre('(-) Custos Variáveis', custosVarMensal.map(v => -Math.abs(v)));
+    dreHtml += linhaDre('= LUCRO BRUTO', lucroBrutoMensal, true);
+    dreHtml += linhaDre('(-) Custos Fixos / Despesas', custosFixMensal.map(v => -Math.abs(v)));
+    dreHtml += linhaDre('= RESULTADO OPERACIONAL', resultadoMensal, true);
+
+    // --- Seção 3: Despesas por Tipo de Operação ---
+    let tiposHeader = '<tr><th>Tipo</th><th>Grupo</th><th class="num">Valor (R$)</th><th class="num">% Total</th><th class="num">Registros</th></tr>';
+    const totalTipos = tiposOperacaoResumo.reduce((s, t) => s + t.total, 0);
+    let tiposBody = '';
+    for (const t of tiposOperacaoResumo) {
+        const pct = totalTipos > 0 ? (t.total / totalTipos) * 100 : 0;
+        tiposBody += `<tr><td class="bold">TIPO ${t.tipo}</td><td>${escapeHtml(t.grupo)}</td><td class="num">${formatarMoeda(t.total)}</td><td class="num">${pct.toFixed(1)}%</td><td class="num">${t.qtd}</td></tr>`;
+    }
+    tiposBody += `<tr class="total-row"><td colspan="2" class="bold">TOTAL</td><td class="num">${formatarMoeda(totalTipos)}</td><td class="num">100%</td><td class="num">${tiposOperacaoResumo.reduce((s, t) => s + t.qtd, 0)}</td></tr>`;
+
+    // --- Seção 4: Análise de Vendas Mês a Mês ---
+    const vendasMes = Array(12).fill(0);
+    for (const v of vendasFiltradas) vendasMes[extrairMes(v.data_nota)] += v.total;
+    let momHeader = '<tr><th>Mês</th><th class="num">Faturamento</th><th class="num">Variação (R$)</th><th class="num">Variação (%)</th></tr>';
+    let momBody = '';
+    let anterior = null;
+    for (const m of mesesAtivos) {
+        const diff = anterior !== null ? vendasMes[m] - anterior : null;
+        const pct = (anterior !== null && anterior > 0) ? (diff / anterior) * 100 : null;
+        momBody += `<tr><td class="bold">${mesesNomes[m]}</td><td class="num">${formatarMoeda(vendasMes[m])}</td><td class="num">${diff !== null ? (diff >= 0 ? '+' : '') + formatarMoeda(diff) : '—'}</td><td class="num">${pct !== null ? (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%' : '—'}</td></tr>`;
+        anterior = vendasMes[m];
+    }
+
+    // --- Seção 5: Top 10 Clientes ---
+    const porCliente = {};
+    for (const v of vendasFiltradas) {
+        const c = v.cliente || 'NÃO INFORMADO';
+        porCliente[c] = (porCliente[c] || 0) + v.total;
+    }
+    const top10 = Object.entries(porCliente).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    let clientesHeader = '<tr><th>#</th><th>Cliente</th><th class="num">Faturamento</th><th class="num">% Total</th></tr>';
+    let clientesBody = '';
+    for (let i = 0; i < top10.length; i++) {
+        const [nome, val] = top10[i];
+        const pct = totalVendas > 0 ? (val / totalVendas) * 100 : 0;
+        clientesBody += `<tr><td class="bold">${i + 1}º</td><td>${escapeHtml(nome)}</td><td class="num">${formatarMoeda(val)}</td><td class="num">${pct.toFixed(1)}%</td></tr>`;
+    }
+    if (top10.length === 0) clientesBody = '<tr><td colspan="4" style="text-align:center;">Sem clientes no período</td></tr>';
+
+    // --- Seção 6: Condição de Pagamento ---
+    const porCond = {};
+    for (const v of vendasFiltradas) {
+        const c = v.cond_pag || 'N/A';
+        porCond[c] = (porCond[c] || 0) + v.total;
+    }
+    const condArr = Object.entries(porCond).sort((a, b) => b[1] - a[1]);
+    let condHeader = '<tr><th>Condição</th><th class="num">Faturamento</th><th class="num">% Total</th></tr>';
+    let condBody = '';
+    for (const [nome, val] of condArr) {
+        const pct = totalVendas > 0 ? (val / totalVendas) * 100 : 0;
+        condBody += `<tr><td>${escapeHtml(nome)}</td><td class="num">${formatarMoeda(val)}</td><td class="num">${pct.toFixed(1)}%</td></tr>`;
+    }
+    if (condArr.length === 0) condBody = '<tr><td colspan="3" style="text-align:center;">Sem dados</td></tr>';
+
+    // --- Montagem final (somente tabelas, fonte preta) ---
+    container.innerHTML = `
+    <div class="relatorio-header">
+        <div class="titulo-area">
+            <h1>Demonstrativo de Resultados</h1>
+            <div class="sub">Período: ${periodoLabel} — ${mesesLabels}</div>
+        </div>
+        <div class="meta-info">
+            <div><strong>Gerado em:</strong> ${new Date().toLocaleString('pt-BR')}</div>
+            <div><strong>Sistema:</strong> Aplikado Soluções · Módulo III</div>
+        </div>
+    </div>
+
+    <div class="relatorio-section">
+        <h2>1. Resumo de Indicadores</h2>
+        <table class="relatorio-table"><thead>${indHtml.split('</tr>')[0]}</tr></thead><tbody>${indHtml.split('</tr>').slice(1).join('</tr>')}</tbody></table>
+    </div>
+
+    <div class="relatorio-section">
+        <h2>2. DRE — Demonstrativo de Resultados</h2>
+        <table class="relatorio-table"><thead>${dreHeader}</thead><tbody>${dreHtml}</tbody></table>
+    </div>
+
+    <div class="relatorio-section">
+        <h2>3. Despesas por Tipo de Operação</h2>
+        <table class="relatorio-table"><thead>${tiposHeader}</thead><tbody>${tiposBody}</tbody></table>
+    </div>
+
+    <div class="relatorio-section">
+        <h2>4. Análise de Vendas — Mês a Mês</h2>
+        <table class="relatorio-table"><thead>${momHeader}</thead><tbody>${momBody}</tbody></table>
+    </div>
+
+    <div class="relatorio-section">
+        <h2>5. Top 10 Clientes</h2>
+        <table class="relatorio-table"><thead>${clientesHeader}</thead><tbody>${clientesBody}</tbody></table>
+    </div>
+
+    <div class="relatorio-section">
+        <h2>6. Análise por Condição de Pagamento</h2>
+        <table class="relatorio-table"><thead>${condHeader}</thead><tbody>${condBody}</tbody></table>
+    </div>
+
+    <div class="relatorio-footer">
+        <span class="footer-brand">Aplikado Soluções · Módulo III</span>
+        <span>Relatório gerado em ${new Date().toLocaleString('pt-BR')} · Período: ${periodoLabel}</span>
+    </div>
+    `;
+
+    document.getElementById('relatorioExecutivo').classList.add('active');
+}
+
+// Garante que a impressão/PDF use apenas a área do relatório
+function imprimirRelatorio() {
+    window.print();
+}
+// ============================================================
+// DRE COMO RÉPLICA FIEL DO MÓDULO III (MODULO3_ALF.html)
+// Cole no FINAL do <script>. Preserva todas as funcionalidades.
+// ============================================================
+(function replicarDREdoModuloIII() {
+    console.log('🔗 [RÉPLICA] Iniciando espelhamento do MODULO3_ALF.html...');
+
+    const URL_MODULO_III = 'MODULO3_ALF.html'; // ajuste se o caminho for diferente
+    const iframeId = '__iframeModuloIIIParaDRE';
+
+    // --------------------------------------------------------
+    // 1) Cria o iframe escondido
+    // --------------------------------------------------------
+    let iframe = document.getElementById(iframeId);
+    if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = iframeId;
+        iframe.src = URL_MODULO_III;
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-99999px';
+        iframe.style.top = '0';
+        iframe.style.width = '1400px';
+        iframe.style.height = '900px';
+        iframe.style.opacity = '0';
+        iframe.style.pointerEvents = 'none';
+        iframe.style.border = '0';
+        iframe.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(iframe);
+        console.log('🔗 [RÉPLICA] Iframe criado:', URL_MODULO_III);
+    }
+
+    // --------------------------------------------------------
+    // 2) Função que copia a tabela DRE do iframe para a tela atual
+    // --------------------------------------------------------
+    function copiarDREdoIframe() {
+        try {
+            const docIframe = iframe.contentDocument || iframe.contentWindow?.document;
+            if (!docIframe) return false;
+
+            const tbodyOrigem = docIframe.getElementById('corpoDRE');
+            const tbodyDestino = document.getElementById('corpoDRE');
+            if (!tbodyOrigem || !tbodyDestino) return false;
+
+            const linhas = tbodyOrigem.querySelectorAll('tr');
+            if (linhas.length < 5) return false; // ainda não renderizou
+
+            // Evita copiar duas vezes seguidas o mesmo conteúdo
+            const novoHTML = tbodyOrigem.innerHTML;
+            if (tbodyDestino.dataset.replicaHash === String(novoHTML.length) &&
+                tbodyDestino.innerHTML === novoHTML) {
+                return true;
+            }
+
+            tbodyDestino.innerHTML = novoHTML;
+            tbodyDestino.dataset.replicaHash = String(novoHTML.length);
+
+            // Reaplica cor conforme tema atual (o iframe pode ter tema diferente)
+            aplicarTemaNaTabelaReplicada();
+
+            console.log('✅ [RÉPLICA] Tabela DRE copiada do Módulo III (', linhas.length, 'linhas)');
+            return true;
+        } catch (e) {
+            console.warn('⚠️ [RÉPLICA] Não foi possível copiar do iframe:', e.message);
+            return false;
+        }
+    }
+
+    // --------------------------------------------------------
+    // 3) Reaplica classes de tema (claro/escuro) nas células
+    //    copiadas, para não destoar do resto da tela
+    // --------------------------------------------------------
+    function aplicarTemaNaTabelaReplicada() {
+        const tabela = document.getElementById('dreTable');
+        if (!tabela) return;
+        const temaClaro = document.body.classList.contains('tema-claro');
+        // Limpa estilos inline herdados do iframe
+        tabela.querySelectorAll('td, th').forEach(el => {
+            el.style.removeProperty('background-color');
+            el.style.removeProperty('color');
+        });
+        // Reaplica as classes padrão do CSS da tela atual
+        // (o CSS já cuida de tudo via var(--...) — nada extra necessário)
+        console.log('🎨 [RÉPLICA] Tema reaplicado:', temaClaro ? 'claro' : 'escuro');
+    }
+
+    // --------------------------------------------------------
+    // 4) Tenta copiar várias vezes até o iframe terminar de carregar
+    // --------------------------------------------------------
+    let tentativas = 0;
+    const MAX_TENTATIVAS = 120; // 120 * 500ms = 60s
+    function tentarCopiar() {
+        tentativas++;
+        const ok = copiarDREdoIframe();
+        if (ok) {
+            console.log('🔗 [RÉPLICA] Sincronizado após', tentativas, 'tentativa(s).');
+            // Continua monitorando mudanças (trimestre, filtro, etc.)
+            iniciarMonitoramentoContinuo();
+            return;
+        }
+        if (tentativas < MAX_TENTATIVAS) {
+            setTimeout(tentarCopiar, 500);
+        } else {
+            console.warn('⚠️ [RÉPLICA] Iframe não renderizou após', MAX_TENTATIVAS, 'tentativas. Verifique o caminho:', URL_MODULO_III);
+        }
+    }
+
+    // --------------------------------------------------------
+    // 5) Monitora continuamente mudanças na tabela do iframe
+    //    (ex.: quando o usuário troca o trimestre no Módulo III)
+    // --------------------------------------------------------
+    let monitorAtivo = false;
+    let ultimoHash = '';
+    function iniciarMonitoramentoContinuo() {
+        if (monitorAtivo) return;
+        monitorAtivo = true;
+        setInterval(() => {
+            try {
+                const docIframe = iframe.contentDocument || iframe.contentWindow?.document;
+                if (!docIframe) return;
+                const tbodyOrigem = docIframe.getElementById('corpoDRE');
+                if (!tbodyOrigem) return;
+                const hash = String(tbodyOrigem.innerHTML.length);
+                if (hash !== ultimoHash) {
+                    ultimoHash = hash;
+                    copiarDREdoIframe();
+                }
+            } catch (e) { /* silencioso */ }
+        }, 1500);
+    }
+
+    // --------------------------------------------------------
+    // 6) Se o usuário trocar o trimestre na tela ATUAL,
+    //    propaga a mudança para o iframe (que recalcula o DRE dele)
+    // --------------------------------------------------------
+    const selectTrimestre = document.getElementById('filtroTrimestre');
+    if (selectTrimestre) {
+        // Remove listeners antigos clonando o nó (evita duplicação)
+        const novoSelect = selectTrimestre.cloneNode(true);
+        selectTrimestre.parentNode.replaceChild(novoSelect, selectTrimestre);
+        novoSelect.addEventListener('change', () => {
+            try {
+                const docIframe = iframe.contentDocument || iframe.contentWindow?.document;
+                if (!docIframe) return;
+                const selIframe = docIframe.getElementById('filtroTrimestre');
+                if (selIframe) {
+                    selIframe.value = novoSelect.value;
+                    // Dispara o onchange do Módulo III para ele recalcular
+                    if (typeof selIframe.onchange === 'function') {
+                        selIframe.onchange();
+                    } else {
+                        selIframe.dispatchEvent(new Event('change'));
+                    }
+                    console.log('🔁 [RÉPLICA] Trimestre propagado ao Módulo III:', novoSelect.value);
+                }
+                // Força uma cópia logo depois
+                setTimeout(copiarDREdoIframe, 1500);
+            } catch (e) {
+                console.warn('⚠️ [RÉPLICA] Erro ao propagar trimestre:', e.message);
+            }
+        });
+    }
+
+    // --------------------------------------------------------
+    // 7) Se o usuário clicar em "Filtrar Movimento", propaga também
+    // --------------------------------------------------------
+    const btnMov = document.getElementById('btnFiltrarMovimento');
+    if (btnMov) {
+        const novoBtn = btnMov.cloneNode(true);
+        btnMov.parentNode.replaceChild(novoBtn, btnMov);
+        novoBtn.addEventListener('click', () => {
+            try {
+                const docIframe = iframe.contentDocument || iframe.contentWindow?.document;
+                if (!docIframe) return;
+                const btnIframe = docIframe.getElementById('btnFiltrarMovimento');
+                if (btnIframe) btnIframe.click();
+                setTimeout(copiarDREdoIframe, 1500);
+            } catch (e) {
+                console.warn('⚠️ [RÉPLICA] Erro ao propagar filtro:', e.message);
+            }
+        });
+    }
+
+    // --------------------------------------------------------
+    // 8) Dispara a primeira tentativa após o iframe carregar
+    // --------------------------------------------------------
+    iframe.addEventListener('load', () => {
+        console.log('🔗 [RÉPLICA] Iframe carregado. Aguardando renderização do DRE...');
+        tentativas = 0;
+        setTimeout(tentarCopiar, 1000);
+    });
+
+    // Caso o iframe já estivesse carregado
+    if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
+        setTimeout(tentarCopiar, 1000);
+    }
+
+    // --------------------------------------------------------
+    // 9) Observa mudança de tema para reaplicar estilo
+    // --------------------------------------------------------
+    const observerTema = new MutationObserver(aplicarTemaNaTabelaReplicada);
+    observerTema.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    console.log('✅ [RÉPLICA] Pronto. A tabela DRE será espelho fiel do MODULO3_ALF.html.');
+})();
+
 </script>
 </body>
 </html>
