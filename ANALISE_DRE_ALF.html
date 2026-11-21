@@ -2011,6 +2011,238 @@ document.addEventListener('DOMContentLoaded',async()=>{
   esconderLoading();
   console.log('✅ Aplikado DRE · filtro unificado:',getLabelPeriodoLongo(),STATE.ano);
 });
+  // ============================================================
+// PATCH SINCRONIZAÇÃO — Cards executivos espelham a DRE
+// Fonte única: __construirMatrizDRE() → soma por grupo
+// ============================================================
+
+// ---------- 1) Calcula todos os indicadores a partir da MESMA matriz da DRE ----------
+window.__calcularIndicadoresDaDRE = function () {
+  const ativos = window.__mesesAtivos();
+  const soma = window.__construirMatrizDRE();
+
+  // Soma um grupo de planos, respeitando apenas meses ativos
+  const somarGrupo = (planos) => {
+    let total = 0;
+    for (const p of planos) {
+      const arr = soma[p.nome];
+      if (!arr) continue;
+      for (let i = 0; i < 12; i++) {
+        if (ativos.includes(i)) total += arr[i];
+      }
+    }
+    return total;
+  };
+
+  // Soma um único plano
+  const somarPlano = (nome) => {
+    const arr = soma[nome];
+    if (!arr) return 0;
+    let t = 0;
+    for (let i = 0; i < 12; i++) if (ativos.includes(i)) t += arr[i];
+    return t;
+  };
+
+  // --- Valores base (mesma matemática da DRE) ---
+  const receitaTotal    = somarGrupo(estruturaDRE.receitas);
+  const custosVariaveis = somarGrupo(estruturaDRE.custosVariaveis); // negativo
+  const custosFixos     = somarGrupo(estruturaDRE.custosFixos);     // negativo
+
+  const lucroBruto        = receitaTotal + custosVariaveis;
+  const resultadoOperacional = lucroBruto + custosFixos;  // <-- igual à linha "RESULTADO OPERACIONAL" da DRE
+
+  const custosTotais  = Math.abs(custosVariaveis) + Math.abs(custosFixos);
+  const margemLiquida = receitaTotal > 0 ? (resultadoOperacional / receitaTotal) * 100 : 0;
+  const margemContrib = receitaTotal > 0 ? ((receitaTotal - Math.abs(custosVariaveis)) / receitaTotal) * 100 : 0;
+  const eficiencia    = custosTotais > 0 ? (receitaTotal / custosTotais) * 100 : 0;
+  const pontoEquilibrio = (receitaTotal > 0 && Math.abs(custosVariaveis) < receitaTotal)
+    ? Math.abs(custosFixos) / (1 - Math.abs(custosVariaveis) / receitaTotal)
+    : 0;
+  const roi      = custosTotais > 0 ? (resultadoOperacional / custosTotais) * 100 : 0;
+  const ebitda   = resultadoOperacional + Math.abs(custosFixos) * 0.05;
+  const giroAtivo = receitaTotal > 0 ? receitaTotal / (receitaTotal * 0.6) : 0; // mesma fórmula original
+
+  // Vendas filtradas (ticket médio coerente com o período)
+  const vendasFiltradas = window.__filtrarPorMes(vendasData || [], 'data_nota');
+  const totalVendas = vendasFiltradas.reduce((s, v) => s + (Number(v.total) || 0), 0);
+  const ticketMedio = vendasFiltradas.length ? totalVendas / vendasFiltradas.length : 0;
+
+  // Crescimento: último mês ativo vs. mês ativo anterior
+  const receitaMes = Array(12).fill(0);
+  for (const p of estruturaDRE.receitas) {
+    const arr = soma[p.nome]; if (!arr) continue;
+    for (let i = 0; i < 12; i++) if (ativos.includes(i)) receitaMes[i] += arr[i];
+  }
+  const mesesAtivosOrd = ativos.slice().sort((a, b) => a - b);
+  let crescimentoAnual = 0;
+  if (mesesAtivosOrd.length >= 2) {
+    const ult = mesesAtivosOrd[mesesAtivosOrd.length - 1];
+    const pen = mesesAtivosOrd[mesesAtivosOrd.length - 2];
+    if (receitaMes[pen] > 0) crescimentoAnual = ((receitaMes[ult] - receitaMes[pen]) / receitaMes[pen]) * 100;
+  }
+
+  return {
+    receitaTotal, custosVariaveis, custosFixos, custosTotais,
+    lucroBruto, resultadoOperacional,
+    margemLiquida, margemContrib, eficiencia, pontoEquilibrio,
+    roi, ebitda, giroAtivo, ticketMedio, crescimentoAnual
+  };
+};
+
+// ---------- 2) Preenche os cards executivos usando SOMENTE a fonte acima ----------
+window.__preencherCardsExecutivos = function () {
+  const k = window.__calcularIndicadoresDaDRE();
+  const set = (id, txt) => { const e = document.getElementById(id); if (e) e.innerText = txt; };
+  const setHTML = (id, txt) => { const e = document.getElementById(id); if (e) e.innerHTML = txt; };
+  const badge = (id, txt, cls) => {
+    const e = document.getElementById(id); if (!e) return;
+    e.innerText = txt;
+    e.classList.remove('up', 'down', 'stable');
+    if (cls) e.classList.add(cls);
+  };
+
+  // Valores monetários / percentuais — idênticos aos totais da DRE
+  set('execReceitaTotal',      formatarMoeda(k.receitaTotal));
+  set('execLucroOperacional',  formatarMoeda(k.resultadoOperacional));
+  set('execMargemLiquida',     k.margemLiquida.toFixed(1) + '%');
+  set('execEBITDA',            formatarMoeda(k.ebitda));
+  set('execCustosTotais',      formatarMoeda(k.custosTotais));
+  set('execTicketMedio',       formatarMoeda(k.ticketMedio));
+  set('execCrescimentoAnual',  k.crescimentoAnual.toFixed(1) + '%');
+  set('execEficiencia',        k.eficiencia.toFixed(1) + '%');
+  set('execPontoEquilibrio',   formatarMoeda(k.pontoEquilibrio));
+  set('execROI',               k.roi.toFixed(1) + '%');
+  set('execMargemContribuicao',k.margemContrib.toFixed(1) + '%');
+  set('execGiroAtivo',         k.giroAtivo.toFixed(2) + 'x');
+
+  // Cores condicionais do lucro operacional
+  const elLucro = document.getElementById('execLucroOperacional');
+  if (elLucro) {
+    elLucro.classList.remove('green', 'red', 'gold', 'blue', 'purple', 'cyan', 'pink');
+    elLucro.classList.add(k.resultadoOperacional >= 0 ? 'green' : 'red');
+  }
+
+  // Badge de crescimento
+  badge('execCrescimentoBadge',
+    k.crescimentoAnual > 5  ? 'Crescendo' :
+    k.crescimentoAnual < -5 ? 'Em queda' : 'Estável',
+    k.crescimentoAnual > 5  ? 'up' :
+    k.crescimentoAnual < -5 ? 'down' : 'stable'
+  );
+
+  // Diagnósticos — coerentes com os números exibidos
+  setHTML('diagReceitaText',
+    k.receitaTotal === 0
+      ? 'Nenhuma receita registrada no período.'
+      : `Receita total de <strong>${formatarMoeda(k.receitaTotal)}</strong> no período selecionado.`);
+
+  setHTML('diagLucroOpText',
+    k.resultadoOperacional >= 0
+      ? `Lucro operacional positivo de <strong>${formatarMoeda(k.resultadoOperacional)}</strong>.`
+      : `Prejuízo operacional de <strong>${formatarMoeda(Math.abs(k.resultadoOperacional))}</strong>.`);
+
+  setHTML('diagMargemText',
+    k.margemLiquida > 15 ? `Margem líquida de <strong>${k.margemLiquida.toFixed(1)}%</strong> — excelente.` :
+    k.margemLiquida > 8  ? `Margem líquida de <strong>${k.margemLiquida.toFixed(1)}%</strong> — boa.` :
+    k.margemLiquida > 3  ? `Margem líquida de <strong>${k.margemLiquida.toFixed(1)}%</strong> — abaixo do ideal.` :
+                           `Margem líquida de <strong>${k.margemLiquida.toFixed(1)}%</strong> — crítica.`);
+
+  setHTML('diagEBTDAText',
+    k.ebitda > 0
+      ? `EBITDA de <strong>${formatarMoeda(k.ebitda)}</strong>${k.receitaTotal > 0 ? ` (${((k.ebitda/k.receitaTotal)*100).toFixed(1)}% da receita)` : ''}.`
+      : `EBITDA negativo de <strong>${formatarMoeda(Math.abs(k.ebitda))}</strong>.`);
+
+  const relCustos = k.receitaTotal > 0 ? (k.custosTotais / k.receitaTotal) * 100 : 0;
+  setHTML('diagCustosText',
+    `Custos representam <strong>${relCustos.toFixed(1)}%</strong> da receita.${relCustos > 80 ? ' <strong>Alto comprometimento.</strong>' : ''}`);
+
+  setHTML('diagTicketText',
+    k.ticketMedio > 0 ? `Ticket médio de <strong>${formatarMoeda(k.ticketMedio)}</strong>.` : 'Sem vendas no período.');
+
+  setHTML('diagCrescimentoText',
+    `Variação do último mês ativo sobre o anterior: <strong>${k.crescimentoAnual.toFixed(1)}%</strong>.`);
+
+  setHTML('diagEficienciaText',
+    k.eficiencia > 150 ? `Eficiência de <strong>${k.eficiencia.toFixed(1)}%</strong> — excelente.` :
+    k.eficiencia > 100 ? `Eficiência de <strong>${k.eficiencia.toFixed(1)}%</strong> — boa.` :
+                         `Eficiência de <strong>${k.eficiencia.toFixed(1)}%</strong> — abaixo do ideal.`);
+
+  setHTML('diagPontoEqText',
+    k.pontoEquilibrio > 0 && k.receitaTotal > 0
+      ? `Ponto de equilíbrio em <strong>${formatarMoeda(k.pontoEquilibrio)}</strong>.`
+      : 'Não calculado no período.');
+
+  setHTML('diagROIText',
+    k.roi > 30 ? `ROI de <strong>${k.roi.toFixed(1)}%</strong> — excelente.` :
+    k.roi > 15 ? `ROI de <strong>${k.roi.toFixed(1)}%</strong> — bom.` :
+    k.roi > 0  ? `ROI de <strong>${k.roi.toFixed(1)}%</strong> — abaixo do ideal.` :
+                 `ROI negativo de <strong>${k.roi.toFixed(1)}%</strong>.`);
+
+  setHTML('diagMargemContribText',
+    k.margemContrib > 50 ? `Margem de contribuição de <strong>${k.margemContrib.toFixed(1)}%</strong> — excelente.` :
+    k.margemContrib > 30 ? `Margem de contribuição de <strong>${k.margemContrib.toFixed(1)}%</strong> — boa.` :
+                           `Margem de contribuição de <strong>${k.margemContrib.toFixed(1)}%</strong> — <strong>baixa.</strong>`);
+
+  setHTML('diagGiroAtivoText',
+    k.giroAtivo > 2 ? `Giro do ativo de <strong>${k.giroAtivo.toFixed(2)}x</strong> — excelente.` :
+    k.giroAtivo > 1 ? `Giro do ativo de <strong>${k.giroAtivo.toFixed(2)}x</strong> — razoável.` :
+                      `Giro do ativo de <strong>${k.giroAtivo.toFixed(2)}x</strong> — baixo.`);
+};
+
+// ---------- 3) Sobe a sincronização no pipeline de re-render ----------
+(function patchPipelineExecutivos() {
+  const anterior = window.__reRenderizarTudo;
+
+  window.__reRenderizarTudo = function () {
+    // 1) DRE
+    window.__forceDRE = true;
+    try { window.renderizarDREFiltrada(); } catch (e) { console.warn('DRE:', e); }
+
+    // 2) Cards executivos — DEPOIS da DRE, usando a mesma matriz
+    try { window.__preencherCardsExecutivos(); } catch (e) { console.warn('Cards executivos:', e); }
+
+    // 3) Demais painéis (não afetam os cards principais)
+    try { if (typeof atualizarTiposOperacao === 'function') atualizarTiposOperacao(); } catch (e) {}
+    try { if (typeof atualizarAnaliseVendas === 'function') atualizarAnaliseVendas(); } catch (e) {}
+    try { if (typeof atualizarTopContas === 'function') atualizarTopContas(); } catch (e) {}
+    try { if (typeof atualizarTopReceitasDespesas === 'function') atualizarTopReceitasDespesas(); } catch (e) {}
+    try { if (typeof window.atualizarGraficos === 'function') window.atualizarGraficos(); } catch (e) {}
+  };
+})();
+
+// ---------- 4) Neutraliza funções antigas que poderiam sobrescrever os cards ----------
+// Qualquer chamada a essas funções passa a usar a fonte única
+['atualizarIndicadoresExecutivos','atualizarExecutivos','gerarDiagnosticos','atualizarExecutivosLocal']
+  .forEach(nome => {
+    try {
+      if (typeof window[nome] === 'function') {
+        const orig = window[nome];
+        window[nome] = function () {
+          try { orig.apply(this, arguments); } catch (e) {}
+          try { window.__preencherCardsExecutivos(); } catch (e) {}
+        };
+      }
+    } catch (e) {}
+  });
+
+// ---------- 5) Também garante consistência no relatório executivo ----------
+(function patchRelatorioConsistencia() {
+  const anteriorRel = window.abrirRelatorioExecutivo;
+  window.abrirRelatorioExecutivo = function () {
+    // força cálculo pelos mesmos indicadores antes de montar o PDF
+    try { window.__preencherCardsExecutivos(); } catch (e) {}
+    if (typeof anteriorRel === 'function') return anteriorRel.apply(this, arguments);
+  };
+})();
+
+// ---------- 6) Reaplica tudo assim que o patch carregar ----------
+setTimeout(() => {
+  try {
+    const sel = document.getElementById('filtroTrimestre');
+    if (sel) trimestreSelecionado = parseInt(sel.value, 10) || 0;
+    window.__reRenderizarTudo();
+  } catch (e) { console.warn('Patch sync init:', e); }
+}, 1600);
 </script>
 </body>
 </html>
