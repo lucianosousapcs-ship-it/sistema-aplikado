@@ -298,18 +298,6 @@ text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
 .top-account-row .account-bar .fill { height: 100%; border-radius: 10px; background: var(--accent-gold); transition: width 0.6s ease; }
 .top-account-row .account-bar .fill.receita { background: var(--accent-green); }
 .top-account-row .account-bar .fill.despesa { background: var(--accent-red); }
-
-/* Remove resquícios de cards no relatório */
-#relatorioConteudo .relatorio-quadrante,
-#relatorioConteudo .relatorio-sumario-grid { display: none !important; }
-#relatorioConteudo .relatorio-table { page-break-inside: auto; }
-#relatorioConteudo .relatorio-table tr { page-break-inside: avoid; page-break-after: auto; }
-@media print {
-  #relatorioConteudo .relatorio-table { font-size: 10px; }
-  #relatorioConteudo .relatorio-section { page-break-inside: auto; }
-}
-
-
 /* ============================================================
 ANÁLISE TÉCNICA DE VENDAS
 ============================================================ */
@@ -3899,10 +3887,127 @@ function recalcularIndicadoresExecutivosTrimestre() {
         setTimeout(() => aplicarFiltroTrimestreCompleto(), 1500);
     }
 })();
+
 // ============================================================
-// RELATÓRIO EXECUTIVO ANALÍTICO - VERSÃO DEFINITIVA (SINCRO TOTAL)
+// CORREÇÃO DO RELATÓRIO EXECUTIVO (PDF) — RESPEITAR TRIMESTRE
+// Incluir no FINAL do script, após todas as funções existentes
 // ============================================================
 
+/**
+ * Soma receitas brutas do período selecionado (trimestre).
+ * Usa as MESMAS fontes de dados que a tela (calcularValorPorPlano).
+ */
+function somarReceitasPeriodo() {
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+    let total = 0;
+
+    for (const r of receitasDataReais) {
+        if (mesesAtivos.includes(extrairMes(r.data))) {
+            total += Number(r.valor) || 0;
+        }
+    }
+    for (const m of movimentosExtraData) {
+        if ((m.tipo === 'RECEITA' || m.tipo === 'ENTRADA') &&
+            mesesAtivos.includes(extrairMes(m.data))) {
+            total += Math.abs(Number(m.total_nota) || 0);
+        }
+    }
+    return total;
+}
+
+/**
+ * Soma despesas brutas do período selecionado (trimestre).
+ */
+function somarDespesasPeriodo() {
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+    let total = 0;
+
+    for (const d of despesasDataReais) {
+        if (mesesAtivos.includes(extrairMes(d.data))) {
+            total += Math.abs(Number(d.valor) || 0);
+        }
+    }
+    for (const s of contasExtrasData) {
+        if (mesesAtivos.includes(extrairMes(s.dt_pagto))) {
+            total += Math.abs(Number(s.valor) || 0);
+        }
+    }
+    for (const m of movimentosExtraData) {
+        if ((m.tipo === 'DESPESA' || m.tipo === 'SAIDA') &&
+            mesesAtivos.includes(extrairMes(m.data))) {
+            total += Math.abs(Number(m.total_nota) || 0);
+        }
+    }
+    return total;
+}
+
+/**
+ * Soma despesas por tipo de operação (para o relatório).
+ * Recalcula do zero com base no trimestre — não usa tiposOperacaoResumo cacheado.
+ */
+function calcularTiposOperacaoPeriodo() {
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+    const tipos = {};
+
+    for (let i = 1; i <= 20; i++) {
+        tipos[i] = {
+            tipo: i,
+            grupo: ESTRUTURA_OPERACOES[i].nome,
+            total: 0,
+            qtd: 0
+        };
+    }
+
+    for (const d of despesasDataReais) {
+        if (!mesesAtivos.includes(extrairMes(d.data))) continue;
+        const info = identificarTipoOperacao(d.operacao || '');
+        if (!info.tipo || info.tipo < 1 || info.tipo > 20) continue;
+        tipos[info.tipo].total += Math.abs(Number(d.valor) || 0);
+        tipos[info.tipo].qtd++;
+    }
+    for (const s of contasExtrasData) {
+        if (!mesesAtivos.includes(extrairMes(s.dt_pagto))) continue;
+        const info = identificarTipoOperacao(s.operacao || 'Sangria');
+        if (!info.tipo || info.tipo < 1 || info.tipo > 20) continue;
+        tipos[info.tipo].total += Math.abs(Number(s.valor) || 0);
+        tipos[info.tipo].qtd++;
+    }
+    for (const m of movimentosExtraData) {
+        if (m.tipo === 'RECEITA' || m.tipo === 'ENTRADA') continue;
+        if (!mesesAtivos.includes(extrairMes(m.data))) continue;
+        const info = identificarTipoOperacao(m.plano_contas || m.operadora || 'Outros');
+        if (!info.tipo || info.tipo < 1 || info.tipo > 20) continue;
+        tipos[info.tipo].total += Math.abs(Number(m.total_nota) || 0);
+        tipos[info.tipo].qtd++;
+    }
+
+    return Object.values(tipos)
+        .filter(t => t.total > 0)
+        .sort((a, b) => b.total - a.total);
+}
+
+/**
+ * Calcula KPIs de vendas do período (para o relatório).
+ */
+function calcularVendasPeriodo() {
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+    const vendasFiltradas = vendasData.filter(v => {
+        const data = v.data || v.dt_venda || v.data_venda;
+        return mesesAtivos.includes(extrairMes(data));
+    });
+    const total = vendasFiltradas.reduce((s, v) => s + (Number(v.total) || 0), 0);
+    const qtd = vendasFiltradas.length;
+    return {
+        total,
+        qtd,
+        ticketMedio: qtd > 0 ? total / qtd : 0
+    };
+}
+
+/**
+ * Retorna o rótulo do período atual (já definido em aplicarFiltroTrimestreCompleto,
+ * mas repetido aqui para garantir disponibilidade).
+ */
 function getLabelPeriodoRelatorio() {
     const labels = [
         "Ano Completo (Jan-Dez)",
@@ -3915,122 +4020,55 @@ function getLabelPeriodoRelatorio() {
 }
 
 /**
- * LÊ DIRETAMENTE A TABELA HTML DO DRE NA TELA.
- * Isso garante 100% de sincronia, pois copia o que já foi calculado.
- */
-function extrairDadosDaTelaDRE() {
-    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
-    
-    let totalReceita = 0;
-    let totalDespesas = 0;
-    let resultadoOperacional = 0;
-    let lucroBruto = 0;
-    let custosFixos = 0;
-    
-    let receitaMensal = Array(12).fill(0);
-    let despesaMensal = Array(12).fill(0);
-    let topDespesasMap = {};
-
-    // Lê todas as linhas da tabela DRE na tela
-    const tbody = document.getElementById('corpoDRE');
-    if (!tbody) return null;
-
-    const linhas = tbody.querySelectorAll('tr');
-    let secaoAtual = '';
-
-    linhas.forEach(tr => {
-        const tds = tr.querySelectorAll('td');
-        if (tds.length < 14) return; // Garante que é uma linha completa (12 meses + nome + total)
-
-        const nomeLinha = tds[0].textContent.trim();
-        
-        // Identifica as seções para saber o que é receita e o que é despesa
-        if (nomeLinha.includes('RECEITAS') || nomeLinha.includes('RECEITA')) secaoAtual = 'RECEITA';
-        if (nomeLinha.includes('CUSTOS') || nomeLinha.includes('DESPESAS') || nomeLinha.includes('CUSTOS VARIÁVEIS')) secaoAtual = 'DESPESA';
-
-        // Captura os valores de Totais específicos
-        const valorTotalTexto = tds[13].textContent.trim();
-        const valorTotalNum = parseValorBR(valorTotalTexto);
-
-        if (nomeLinha.includes('LUCRO BRUTO')) lucroBruto = valorTotalNum;
-        if (nomeLinha.includes('RESULTADO OPERACIONAL')) resultadoOperacional = valorTotalNum;
-        if (nomeLinha.includes('CUSTOS FIXOS')) custosFixos = valorTotalNum;
-
-        // Soma receitas e despesas
-        if (secaoAtual === 'RECEITA' && !nomeLinha.includes('TOTAL') && !nomeLinha.includes('LUCRO BRUTO')) {
-            totalReceita += valorTotalNum;
-            // Soma mensal
-            mesesAtivos.forEach(mes => {
-                receitaMensal[mes] += parseValorBR(tds[mes + 1].textContent);
-            });
-        } 
-        else if (secaoAtual === 'DESPESA' && !nomeLinha.includes('TOTAL') && !nomeLinha.includes('RESULTADO OPERACIONAL') && !nomeLinha.includes('CUSTOS FIXOS')) {
-            const valAbs = Math.abs(valorTotalNum);
-            totalDespesas += valAbs;
-            
-            // Soma mensal (absoluto)
-            mesesAtivos.forEach(mes => {
-                despesaMensal[mes] += Math.abs(parseValorBR(tds[mes + 1].textContent));
-            });
-
-            // Alimenta o Top Despesas (ignorando agrupadores pai vazios)
-            if (valAbs > 0 && nomeLinha.length > 5) {
-                topDespesasMap[nomeLinha] = (topDespesasMap[nomeLinha] || 0) + valAbs;
-            }
-        }
-    });
-
-    // Formata Top Despesas
-    const topDespesas = Object.entries(topDespesasMap)
-        .map(([nome, valor]) => ({ nome, valor }))
-        .sort((a, b) => b.valor - a.valor)
-        .slice(0, 8);
-
-    // Top Clientes (mantido do código anterior, pois não fica no DRE)
-    let topClientes = [];
-    if (typeof vendasData !== 'undefined' && vendasData.length > 0) {
-        const clientesMap = {};
-        for (const v of vendasData) {
-            const data = v.data || v.dt_venda || v.data_venda;
-            if (!mesesAtivos.includes(extrairMes(data))) continue;
-            const nome = v.cliente || v.nome_cliente || 'Cliente Não Identificado';
-            clientesMap[nome] = (clientesMap[nome] || 0) + (Number(v.total) || 0);
-        }
-        topClientes = Object.entries(clientesMap)
-            .map(([nome, valor]) => ({ nome, valor }))
-            .sort((a, b) => b.valor - a.valor)
-            .slice(0, 5);
-    }
-
-    // Fallback de segurança para receitas se o DRE nao tiver o agrupamento claro
-    if (totalReceita === 0) {
-        totalReceita = resultadoOperacional + totalDespesas; 
-    }
-
-    return {
-        mesesAtivos, totalReceita, totalDespesas, resultadoOperacional, lucroBruto, custosFixos,
-        receitaMensal, despesaMensal, topDespesas, topClientes
-    };
-}
-
-/**
- * Abre o relatório com layout executivo analítico - 100% Preto e Branco
+ * Versão corrigida do relatório executivo.
+ * Recalcula TODOS os valores com base no trimestre selecionado.
+ * NÃO usa tiposOperacaoResumo cacheado nem variáveis globais antigas.
  */
 function abrirRelatorioExecutivoCorrigido() {
-    const dados = extrairDadosDaTelaDRE();
-    if (!dados) {
-        alert("Aguarde o carregamento da tabela DRE para gerar o relatório.");
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+
+    // ---- Recalcula tudo do zero com base no trimestre ----
+    const totalReceita = somarReceitasPeriodo();
+    const totalDespesas = somarDespesasPeriodo();
+    const resultado = totalReceita - totalDespesas;
+    const margemLiq = totalReceita > 0 ? (resultado / totalReceita) * 100 : 0;
+    const eficiencia = totalDespesas > 0 ? (totalReceita / totalDespesas) * 100 : 0;
+    const pontoEq = totalReceita > 0 && totalDespesas > 0
+        ? totalDespesas / (1 - (0 / totalReceita))
+        : 0;
+    const roi = totalDespesas > 0 ? (resultado / totalDespesas) * 100 : 0;
+
+    const tiposPeriodo = calcularTiposOperacaoPeriodo();
+    const vendasPeriodo = calcularVendasPeriodo();
+
+    // ---- Monta o HTML do relatório ----
+    const labelPeriodo = getLabelPeriodoRelatorio();
+    const dataGeracao = new Date().toLocaleString('pt-BR');
+    const el = document.getElementById('relatorioConteudo');
+    if (!el) {
+        console.warn('Container do relatório não encontrado.');
         return;
     }
 
-    const labelPeriodo = getLabelPeriodoRelatorio();
-    const dataGeracao = new Date().toLocaleString('pt-BR');
-    
-    // Cálculos Estratégicos
-    const margemLiq = dados.totalReceita > 0 ? (dados.resultadoOperacional / dados.totalReceita) * 100 : 0;
-    const eficiencia = dados.totalDespesas > 0 ? (dados.totalReceita / dados.totalDespesas) * 100 : 0;
-    const custoReceita = dados.totalReceita > 0 ? (dados.totalDespesas / dados.totalReceita) * 100 : 0;
+    // Top 5 despesas por operação
+    const topDespesas = tiposPeriodo.slice(0, 5);
 
+    // Top 5 receitas por condição de pagamento (se houver dados)
+    const topReceitasCond = [];
+    if (typeof receitasDataReais !== 'undefined') {
+        const mapaCond = {};
+        for (const r of receitasDataReais) {
+            if (!mesesAtivos.includes(extrairMes(r.data))) continue;
+            const cond = r.condicao_pagamento || r.condicao || 'Não informada';
+            mapaCond[cond] = (mapaCond[cond] || 0) + (Number(r.valor) || 0);
+        }
+        Object.entries(mapaCond)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .forEach(([nome, valor]) => topReceitasCond.push({ nome, valor }));
+    }
+
+    // ---- Cabeçalho ----
     let html = `
         <div class="relatorio-header">
             <div class="titulo-area">
@@ -4040,777 +4078,162 @@ function abrirRelatorioExecutivoCorrigido() {
             <div class="meta-info">
                 <div><strong>Período:</strong> ${labelPeriodo}</div>
                 <div><strong>Gerado em:</strong> ${dataGeracao}</div>
-                <div><strong>Meses:</strong> ${dados.mesesAtivos.map(m => mesesNomes[m]).join(', ')}</div>
+                <div><strong>Meses considerados:</strong> ${mesesAtivos.map(m => mesesNomes[m]).join(', ')}</div>
             </div>
         </div>
+    `;
 
+    // ---- Sumário (quadrantes) ----
+    html += `
         <div class="relatorio-section">
-            <h2>1. Sumário Executivo</h2>
+            <h2>Sumário Executivo</h2>
             <div class="relatorio-sumario-grid">
                 <div class="relatorio-quadrante">
                     <div class="quad-label">Receita Total</div>
-                    <div class="quad-valor">${formatarMoeda(dados.totalReceita)}</div>
-                    <div class="quad-sub">Faturamento no período</div>
+                    <div class="quad-valor" style="color:#10B981;">${formatarMoeda(totalReceita)}</div>
+                    <div class="quad-sub">${vendasPeriodo.qtd} venda(s) no período</div>
+                    <div class="quad-detalhe">Ticket médio: ${formatarMoeda(vendasPeriodo.ticketMedio)}</div>
                 </div>
                 <div class="relatorio-quadrante">
                     <div class="quad-label">Despesas Totais</div>
-                    <div class="quad-valor">${formatarMoeda(dados.totalDespesas)}</div>
-                    <div class="quad-sub">Comprometem ${custoReceita.toFixed(1)}% da receita</div>
+                    <div class="quad-valor" style="color:#EF4444;">${formatarMoeda(totalDespesas)}</div>
+                    <div class="quad-sub">${totalReceita > 0 ? ((totalDespesas / totalReceita) * 100).toFixed(1) : '0,0'}% da receita</div>
+                    <div class="quad-detalhe">${tiposPeriodo.reduce((s, t) => s + t.qtd, 0)} lançamento(s)</div>
                 </div>
                 <div class="relatorio-quadrante">
                     <div class="quad-label">Resultado Operacional</div>
-                    <div class="quad-valor">${formatarMoeda(dados.resultadoOperacional)}</div>
+                    <div class="quad-valor" style="color:${resultado >= 0 ? '#10B981' : '#EF4444'};">
+                        ${formatarMoeda(resultado)}
+                    </div>
                     <div class="quad-sub">Margem líquida: ${margemLiq.toFixed(1)}%</div>
+                    <div class="quad-detalhe">Eficiência: ${eficiencia.toFixed(1)}%</div>
                 </div>
             </div>
         </div>
+    `;
 
+    // ---- Indicadores ----
+    html += `
         <div class="relatorio-section">
-            <h2>2. Indicadores de Desempenho</h2>
+            <h2>Indicadores Estratégicos</h2>
             <table class="relatorio-table">
                 <thead>
                     <tr>
-                        <th style="width:30%;">Indicador</th>
-                        <th class="num" style="width:20%;">Valor</th>
-                        <th style="width:50%;">Diagnóstico</th>
+                        <th style="width:40%;">Indicador</th>
+                        <th class="num" style="width:25%;">Valor</th>
+                        <th style="width:35%;">Interpretação</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr><td>Margem Líquida</td><td class="num">${margemLiq.toFixed(1)}%</td><td>${margemLiq > 15 ? 'Excelente rentabilidade.' : margemLiq > 8 ? 'Boa rentabilidade.' : margemLiq > 0 ? 'Abaixo do ideal. Necessita revisão de custos.' : 'Prejuízo. Despesas superam receitas.'}</td></tr>
-                    <tr><td>Eficiência Operacional</td><td class="num">${eficiencia.toFixed(1)}%</td><td>${eficiencia > 150 ? 'Altíssima eficiência. Cada R$ 1 gasto gera mais de R$ 1,50.' : eficiencia > 100 ? 'Boa eficiência. Receita supera as despesas.' : 'Alerta: despesas próximas ou superiores à receita.'}</td></tr>
-                    <tr><td>Comprometimento da Receita</td><td class="num">${custoReceita.toFixed(1)}%</td><td>${custoReceita < 60 ? 'Excelente controle de custos.' : custoReceita < 80 ? 'Atenção: custos consomem a maior parte da receita.' : 'Crítico: margem de manobra muito estreita.'}</td></tr>
-                    <tr><td>Lucro Bruto (Faturamento)</td><td class="num">${formatarMoeda(dados.lucroBruto)}</td><td>Resultado antes das despesas fixas</td></tr>
-                    <tr><td>Custos Fixos</td><td class="num">${formatarMoeda(dados.custosFixos)}</td><td>Estrutura operacional</td></tr>
+                    <tr><td>Receita Total</td><td class="num">${formatarMoeda(totalReceita)}</td><td>Faturamento do período</td></tr>
+                    <tr><td>Custos Totais</td><td class="num">${formatarMoeda(totalDespesas)}</td><td>${totalReceita > 0 ? ((totalDespesas / totalReceita) * 100).toFixed(1) : 0}% da receita</td></tr>
+                    <tr><td>Resultado Operacional</td><td class="num">${formatarMoeda(resultado)}</td><td>${resultado >= 0 ? 'Lucro' : 'Prejuízo'} no período</td></tr>
+                    <tr><td>Margem Líquida</td><td class="num">${margemLiq.toFixed(1)}%</td><td>${margemLiq > 15 ? 'Excelente' : margemLiq > 8 ? 'Boa' : margemLiq > 3 ? 'Abaixo do ideal' : 'Crítica'}</td></tr>
+                    <tr><td>Eficiência Operacional</td><td class="num">${eficiencia.toFixed(1)}%</td><td>${eficiencia > 150 ? 'Excelente' : eficiencia > 100 ? 'Boa' : 'Abaixo do ideal'}</td></tr>
+                    <tr><td>Ponto de Equilíbrio</td><td class="num">${formatarMoeda(pontoEq)}</td><td>Receita mínima para cobrir custos</td></tr>
+                    <tr><td>ROI Estimado</td><td class="num">${roi.toFixed(1)}%</td><td>${roi > 30 ? 'Excelente' : roi > 15 ? 'Bom' : roi > 0 ? 'Abaixo do ideal' : 'Negativo'}</td></tr>
+                    <tr><td>Ticket Médio</td><td class="num">${formatarMoeda(vendasPeriodo.ticketMedio)}</td><td>${vendasPeriodo.qtd} venda(s)</td></tr>
                 </tbody>
             </table>
         </div>
     `;
 
-    // 3. Análise Mês a Mês
+    // ---- Top despesas por operação ----
     html += `
         <div class="relatorio-section">
-            <h2>3. Fluxo de Caixa Mensal (Receitas x Despesas)</h2>
+            <h2>Top Despesas por Operação</h2>
             <table class="relatorio-table">
                 <thead>
                     <tr>
-                        <th>Mês</th>
-                        <th class="num">Receita</th>
-                        <th class="num">Despesas</th>
-                        <th class="num">Resultado</th>
-                        <th class="num">Margem</th>
+                        <th style="width:10%;">Tipo</th>
+                        <th style="width:45%;">Grupo</th>
+                        <th class="num" style="width:20%;">Valor</th>
+                        <th class="num" style="width:25%;">% das Despesas</th>
                     </tr>
                 </thead>
                 <tbody>
     `;
-    
-    dados.mesesAtivos.forEach(mes => {
-        const r = dados.receitaMensal[mes];
-        const d = dados.despesaMensal[mes];
-        const res = r - d;
-        const mrg = r > 0 ? (res / r) * 100 : 0;
-        if (r === 0 && d === 0) return; // Pula meses sem movimentação
-        
-        html += `
-            <tr>
-                <td>${mesesNomes[mes]}</td>
-                <td class="num">${formatarMoeda(r)}</td>
-                <td class="num">${formatarMoeda(d)}</td>
-                <td class="num">${formatarMoeda(res)}</td>
-                <td class="num">${mrg.toFixed(1)}%</td>
-            </tr>
-        `;
-    });
+    if (topDespesas.length === 0) {
+        html += `<tr><td colspan="4" style="text-align:center;">Nenhuma despesa no período</td></tr>`;
+    } else {
+        for (const t of topDespesas) {
+            const pct = totalDespesas > 0 ? (t.total / totalDespesas) * 100 : 0;
+            html += `<tr>
+                <td>${t.tipo}</td>
+                <td>${escapeHtml(t.grupo)}</td>
+                <td class="num">${formatarMoeda(t.total)}</td>
+                <td class="num">${pct.toFixed(1)}%</td>
+            </tr>`;
+        }
+    }
     html += `</tbody></table></div>`;
 
-    // 4. Top 8 Despesas (Extração Direta do DRE)
-    html += `
-        <div class="relatorio-section">
-            <h2>4. Maiores Despesas (Top 8 Contas)</h2>
-            <table class="relatorio-table">
-                <thead><tr><th>Conta / Descrição</th><th class="num">Valor Total</th></tr></thead>
-                <tbody>
-                    ${dados.topDespesas.map(d => `<tr><td>${escapeHtml(d.nome)}</td><td class="num">${formatarMoeda(d.valor)}</td></tr>`).join('') || '<tr><td colspan="2">Sem dados</td></tr>'}
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    // 5. Top Clientes
-    if (dados.topClientes.length > 0) {
+    // ---- Top receitas por condição ----
+    if (topReceitasCond.length > 0) {
         html += `
             <div class="relatorio-section">
-                <h2>5. Concentração de Receita (Top 5 Clientes)</h2>
+                <h2>Top Receitas por Condição de Pagamento</h2>
                 <table class="relatorio-table">
-                    <thead><tr><th>Cliente</th><th class="num">Valor</th><th class="num">% da Receita</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th style="width:60%;">Condição</th>
+                            <th class="num" style="width:20%;">Valor</th>
+                            <th class="num" style="width:20%;">% da Receita</th>
+                        </tr>
+                    </thead>
                     <tbody>
-                        ${dados.topClientes.map(c => {
-                            const pct = dados.totalReceita > 0 ? (c.valor / dados.totalReceita) * 100 : 0;
-                            return `<tr><td>${escapeHtml(c.nome)}</td><td class="num">${formatarMoeda(c.valor)}</td><td class="num">${pct.toFixed(1)}%</td></tr>`;
-                        }).join('')}
-                    </tbody>
-                </table>
-            </div>
         `;
+        for (const r of topReceitasCond) {
+            const pct = totalReceita > 0 ? (r.valor / totalReceita) * 100 : 0;
+            html += `<tr>
+                <td>${escapeHtml(r.nome)}</td>
+                <td class="num">${formatarMoeda(r.valor)}</td>
+                <td class="num">${pct.toFixed(1)}%</td>
+            </tr>`;
+        }
+        html += `</tbody></table></div>`;
     }
 
-    // 6. Diagnóstico Final
-    let diagText = '';
-    if (dados.resultadoOperacional >= 0) {
-        diagText = `No <strong>${labelPeriodo}</strong>, a operação registrou <strong>lucro de ${formatarMoeda(dados.resultadoOperacional)}</strong>. A receita de ${formatarMoeda(dados.totalReceita)} foi suficiente para cobrir ${formatarMoeda(dados.totalDespesas)} em despesas, gerando uma margem líquida de ${margemLiq.toFixed(1)}%. `;
-        if (custoReceita > 80) diagText += `Atenção: o índice de comprometimento da receita está em ${custoReceita.toFixed(1)}%, o que exige cautela com novos gastos.`;
-        else diagText += `O índice de comprometimento da receita está saudável em ${custoReceita.toFixed(1)}%.`;
-    } else {
-        diagText = `No <strong>${labelPeriodo}</strong>, a operação registrou <strong>prejuízo de ${formatarMoeda(Math.abs(dados.resultadoOperacional))}</strong>. As despesas de ${formatarMoeda(dados.totalDespesas)} superaram o faturamento de ${formatarMoeda(dados.totalReceita)}. `;
-        diagText += `É fundamental revisar imediatamente os custos fixos e renegociar contratos para retomar a saúde financeira.`;
-    }
+    // ---- Diagnóstico final ----
+    const diagFinal = resultado >= 0
+        ? `No <strong>${labelPeriodo}</strong>, a empresa apresentou <strong>lucro operacional de ${formatarMoeda(resultado)}</strong>, com margem líquida de <strong>${margemLiq.toFixed(1)}%</strong> sobre uma receita de <strong>${formatarMoeda(totalReceita)}</strong>. As despesas representaram <strong>${totalReceita > 0 ? ((totalDespesas / totalReceita) * 100).toFixed(1) : 0}%</strong> do faturamento.`
+        : `No <strong>${labelPeriodo}</strong>, a empresa apresentou <strong>prejuízo operacional de ${formatarMoeda(Math.abs(resultado))}</strong>, com margem líquida negativa de <strong>${margemLiq.toFixed(1)}%</strong> sobre uma receita de <strong>${formatarMoeda(totalReceita)}</strong>. As despesas superaram a receita em <strong>${((totalDespesas / Math.max(totalReceita, 1)) * 100).toFixed(1)}%</strong>.`;
 
     html += `
         <div class="relatorio-section">
-            <h2>6. Diagnóstico Financeiro</h2>
-            <div class="relatorio-diagnostico">
-                ${diagText}
-            </div>
-        </div>
-        
-        <div class="relatorio-footer">
-            <div class="footer-brand">Aplikado Soluções · Módulo III</div>
-            <div>Relatório Analítico gerado em ${dataGeracao}</div>
+            <h2>Diagnóstico</h2>
+            <div class="relatorio-diagnostico">${diagFinal}</div>
         </div>
     `;
 
-    const el = document.getElementById('relatorioConteudo');
-    if (el) el.innerHTML = html;
-    
+    // ---- Rodapé ----
+    html += `
+        <div class="relatorio-footer">
+            <div class="footer-brand">Aplikado Soluções · Módulo III</div>
+            <div>Relatório gerado em ${dataGeracao}</div>
+        </div>
+    `;
+
+    el.innerHTML = html;
+
+    // Abre o overlay
     const overlay = document.getElementById('relatorioExecutivo');
     if (overlay) overlay.classList.add('active');
 }
 
-// Sobrescreve a função original e os botões
+// ============================================================
+// REDIRECIONA O BOTÃO "RELATÓRIO" PARA A VERSÃO CORRIGIDA
+// ============================================================
 (function substituirHandlerRelatorio() {
+    // Sobrescreve a função global para que o onclick inline use a corrigida
     window.abrirRelatorioExecutivo = abrirRelatorioExecutivoCorrigido;
+
+    // Garante que o botão do topbar aponte para a nova função
     document.querySelectorAll('button[onclick*="abrirRelatorioExecutivo"]').forEach(btn => {
         btn.removeAttribute('onclick');
         btn.addEventListener('click', abrirRelatorioExecutivoCorrigido);
     });
 })();
-
-// ============================================================
-// PATCH DE CORREÇÃO — Filtro trimestre robusto, sem travamento, PDF em tabelas
-// Cole no FINAL do <script> (sobrescreve funções anteriores)
-// ============================================================
-
-// ---------- 1) Helpers de filtro (fonte única de verdade) ----------
-window.__mesesAtivos = function () {
-  return obterMesesDoTrimestre(trimestreSelecionado);
-};
-window.__filtrarPorMes = function (arr, campoData) {
-  const ativos = window.__mesesAtivos();
-  if (trimestreSelecionado === 0) return arr.slice();
-  return arr.filter(item => ativos.includes(extrairMes(item[campoData])));
-};
-
-// ---------- 2) aplicarFiltroTrimestre SEM recarregar Supabase ----------
-window.aplicarFiltroTrimestre = function () {
-  const select = document.getElementById('filtroTrimestre');
-  trimestreSelecionado = parseInt(select.value, 10) || 0;
-
-  const nomes = ["Ano Completo","1º Trimestre","2º Trimestre","3º Trimestre","4º Trimestre"];
-  const label = nomes[trimestreSelecionado] || "Ano Completo";
-  const l1 = document.getElementById('lblPeriodoRec');
-  const l2 = document.getElementById('lblPeriodoChart');
-  if (l1) l1.innerText = label;
-  if (l2) l2.innerText = label;
-
-  // Destaca colunas
-  const ativos = window.__mesesAtivos();
-  document.querySelectorAll('.dre-table th[data-mes]').forEach(th => {
-    const idx = parseInt(th.getAttribute('data-mes'), 10);
-    const on = ativos.includes(idx);
-    th.style.opacity = on ? '1' : '0.3';
-    th.style.borderBottomColor = on ? 'var(--accent-gold)' : 'var(--border-color)';
-  });
-  // Marca células inativas
-  document.querySelectorAll('.dre-table td[data-mes]').forEach(td => {
-    const idx = parseInt(td.getAttribute('data-mes'), 10);
-    td.classList.toggle('mes-inativo', !ativos.includes(idx));
-  });
-
-  // Re-renderiza SÓ com dados em memória (não chama Supabase)
-  window.__reRenderizarTudo();
-};
-
-// ---------- 3) Re-render unificado (sem fetch) ----------
-window.__reRenderizarTudo = function () {
-  try {
-    // DRE
-    if (typeof montarTabelaDRE === 'function') {
-      montarTabelaDRE();
-    } else if (typeof renderizarDRE === 'function') {
-      renderizarDRE();
-    } else if (typeof gerarDRE === 'function') {
-      gerarDRE();
-    } else {
-      // fallback: se nenhuma função de render existir, apenas re-executa o cálculo local
-      window.__calcularERenderizarLocal();
-    }
-  } catch (e) { console.warn('DRE render:', e); }
-
-  // Indicadores executivos
-  try { if (typeof atualizarIndicadoresExecutivos === 'function') atualizarIndicadoresExecutivos(); } catch (e) {}
-  try { if (typeof atualizarExecutivos === 'function') atualizarExecutivos(); } catch (e) {}
-
-  // Tipos de operação
-  try { if (typeof atualizarTiposOperacao === 'function') atualizarTiposOperacao(); } catch (e) {}
-
-  // Análise de vendas
-  try { if (typeof atualizarAnaliseVendas === 'function') atualizarAnaliseVendas(); } catch (e) {}
-
-  // Top receitas/despesas
-  try { if (typeof atualizarTopContas === 'function') atualizarTopContas(); } catch (e) {}
-  try { if (typeof atualizarTopReceitasDespesas === 'function') atualizarTopReceitasDespesas(); } catch (e) {}
-
-  // Gráficos (re-render com dados filtrados)
-  try { if (typeof atualizarGraficos === 'function') atualizarGraficos(); } catch (e) {}
-};
-
-// ---------- 4) Cálculo local de fallback (se não houver render pronto) ----------
-window.__calcularERenderizarLocal = function () {
-  const ativos = window.__mesesAtivos();
-  const receitasMes = Array(12).fill(0);
-  const custosMes = Array(12).fill(0);
-
-  for (const r of receitasDataReais) {
-    const m = extrairMes(r.data);
-    if (ativos.includes(m)) receitasMes[m] += Number(r.valor) || 0;
-  }
-  for (const d of despesasDataReais) {
-    const m = extrairMes(d.data);
-    if (ativos.includes(m)) custosMes[m] += Number(d.valor) || 0;
-  }
-  for (const s of contasExtrasData) {
-    const m = extrairMes(s.dt_pagto);
-    if (ativos.includes(m)) custosMes[m] += Number(s.valor) || 0;
-  }
-  for (const mv of movimentosExtraData) {
-    const m = extrairMes(mv.data);
-    if (!ativos.includes(m)) continue;
-    const v = Math.abs(Number(mv.total_nota) || 0);
-    if (mv.tipo === 'RECEITA' || mv.tipo === 'ENTRADA') receitasMes[m] += v;
-    else custosMes[m] += v;
-  }
-
-  const totalRec = receitasMes.reduce((a,b)=>a+b,0);
-  const totalCus = custosMes.reduce((a,b)=>a+b,0);
-  const lucro = totalRec - totalCus;
-  const margem = totalRec > 0 ? (lucro/totalRec)*100 : 0;
-
-  const set = (id, txt) => { const e = document.getElementById(id); if (e) e.innerText = txt; };
-  set('execReceitaTotal', formatarMoeda(totalRec));
-  set('execCustosTotais', formatarMoeda(totalCus));
-  set('execLucroOperacional', formatarMoeda(lucro));
-  set('execMargemLiquida', margem.toFixed(1) + '%');
-};
-
-// ---------- 5) Atualização de gráficos respeitando trimestre ----------
-window.atualizarGraficos = function () {
-  const ativos = window.__mesesAtivos();
-  const receita = Array(12).fill(0);
-  const lucroBruto = Array(12).fill(0);
-  const resultadoOp = Array(12).fill(0);
-  const custoVar = Array(12).fill(0);
-  const custoFix = Array(12).fill(0);
-
-  for (const r of receitasDataReais) {
-    const m = extrairMes(r.data);
-    if (ativos.includes(m)) receita[m] += Number(r.valor) || 0;
-  }
-  for (const d of despesasDataReais) {
-    const m = extrairMes(d.data);
-    if (!ativos.includes(m)) continue;
-    const v = Number(d.valor) || 0;
-    // heurística: tipo 20 (fornecedores) = variável; demais = fixo
-    const info = identificarTipoOperacao(d.operacao || '');
-    if (info.tipo === 20 || info.tipo === 19) custoVar[m] += Math.abs(v);
-    else custoFix[m] += Math.abs(v);
-  }
-  for (const s of contasExtrasData) {
-    const m = extrairMes(s.dt_pagto);
-    if (ativos.includes(m)) custoVar[m] += Math.abs(Number(s.valor) || 0);
-  }
-  for (const mv of movimentosExtraData) {
-    const m = extrairMes(mv.data);
-    if (!ativos.includes(m)) continue;
-    const v = Math.abs(Number(mv.total_nota) || 0);
-    if (mv.tipo === 'RECEITA' || mv.tipo === 'ENTRADA') receita[m] += v;
-    else custoVar[m] += v;
-  }
-  for (let i=0;i<12;i++){
-    lucroBruto[i] = receita[i] - custoVar[i];
-    resultadoOp[i] = lucroBruto[i] - custoFix[i];
-  }
-
-  const labels = mesesNomes;
-  const cfgBase = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { ticks: { color: '#94A3B8', font:{size:10} }, grid:{display:false} },
-      y: { ticks: { color: '#94A3B8', font:{size:10} }, grid:{color:'rgba(255,255,255,0.05)'} }
-    }
-  };
-
-  const c1 = document.getElementById('chartReceitaResultado');
-  if (c1 && window.Chart) {
-    if (chartReceitaResultado) chartReceitaResultado.destroy();
-    chartReceitaResultado = new Chart(c1.getContext('2d'), {
-      type: 'bar',
-      data: { labels, datasets: [
-        { label:'Receita', data:receita, backgroundColor:'#F59E0B' },
-        { label:'Lucro Bruto', data:lucroBruto, backgroundColor:'#10B981' },
-        { label:'Resultado Op.', data:resultadoOp, type:'line', borderColor:'#3B82F6', backgroundColor:'#3B82F6', tension:0.3, fill:false, pointRadius:3 }
-      ]},
-      options: cfgBase
-    });
-  }
-
-  const c2 = document.getElementById('chartCustos');
-  if (c2 && window.Chart) {
-    if (chartCustos) chartCustos.destroy();
-    chartCustos = new Chart(c2.getContext('2d'), {
-      type: 'doughnut',
-      data: {
-        labels: ['Custos Variáveis','Custos Fixos'],
-        datasets: [{ data: [custoVar.reduce((a,b)=>a+b,0), custoFix.reduce((a,b)=>a+b,0)],
-          backgroundColor: ['#EF4444','#06B6D4'], borderWidth: 0 }]
-      },
-      options: { responsive:true, maintainAspectRatio:false,
-        plugins: { legend: { display:false } }, cutout:'62%' }
-    });
-  }
-};
-
-// ---------- 6) Guard de segurança: evita loops no Supabase ----------
-window.__supabaseFetchEmAndamento = window.__supabaseFetchEmAndamento || false;
-
-// ---------- 7) RELATÓRIO EXECUTIVO EM TABELAS (sem cards) ----------
-window.abrirRelatorioExecutivo = function () {
-  const overlay = document.getElementById('relatorioExecutivo');
-  const cont = document.getElementById('relatorioConteudo');
-  if (!overlay || !cont) return;
-
-  const ativos = window.__mesesAtivos();
-  const nomes = ["Ano Completo","1º Trimestre","2º Trimestre","3º Trimestre","4º Trimestre"];
-  const periodoLabel = nomes[trimestreSelecionado] || "Ano Completo";
-
-  // Agregações filtradas
-  const receitasMes = Array(12).fill(0);
-  const custosMes = Array(12).fill(0);
-  const custoVarMes = Array(12).fill(0);
-  const custoFixMes = Array(12).fill(0);
-
-  for (const r of receitasDataReais) {
-    const m = extrairMes(r.data);
-    if (ativos.includes(m)) receitasMes[m] += Number(r.valor) || 0;
-  }
-  for (const d of despesasDataReais) {
-    const m = extrairMes(d.data);
-    if (!ativos.includes(m)) continue;
-    const v = Math.abs(Number(d.valor) || 0);
-    custosMes[m] += v;
-    const info = identificarTipoOperacao(d.operacao || '');
-    if (info.tipo === 19 || info.tipo === 20) custoVarMes[m] += v; else custoFixMes[m] += v;
-  }
-  for (const s of contasExtrasData) {
-    const m = extrairMes(s.dt_pagto);
-    if (!ativos.includes(m)) continue;
-    const v = Math.abs(Number(s.valor) || 0);
-    custosMes[m] += v; custoVarMes[m] += v;
-  }
-  for (const mv of movimentosExtraData) {
-    const m = extrairMes(mv.data);
-    if (!ativos.includes(m)) continue;
-    const v = Math.abs(Number(mv.total_nota) || 0);
-    if (mv.tipo === 'RECEITA' || mv.tipo === 'ENTRADA') receitasMes[m] += v;
-    else { custosMes[m] += v; custoVarMes[m] += v; }
-  }
-
-  const totalRec = receitasMes.reduce((a,b)=>a+b,0);
-  const totalCus = custosMes.reduce((a,b)=>a+b,0);
-  const totalVar = custoVarMes.reduce((a,b)=>a+b,0);
-  const totalFix = custoFixMes.reduce((a,b)=>a+b,0);
-  const lucro = totalRec - totalCus;
-  const margem = totalRec > 0 ? (lucro/totalRec)*100 : 0;
-  const margemContrib = totalRec > 0 ? ((totalRec - totalVar)/totalRec)*100 : 0;
-  const eficiencia = totalCus > 0 ? (totalRec/totalCus)*100 : 0;
-  const pontoEq = totalRec > 0 && totalVar < totalRec ? totalFix / (1 - totalVar/totalRec) : 0;
-  const roi = totalCus > 0 ? (lucro/totalCus)*100 : 0;
-  const ebitda = lucro + totalFix * 0.05;
-
-  // Vendas filtradas
-  const vendasFiltradas = window.__filtrarPorMes(vendasData || [], 'data_nota');
-  const totalVendas = vendasFiltradas.reduce((s,v)=>s+v.total,0);
-  const ticketMedio = vendasFiltradas.length ? totalVendas/vendasFiltradas.length : 0;
-
-  const meta = new Date().toLocaleString('pt-BR');
-  const rowsIndicadores = [
-    ['Receita Total', formatarMoeda(totalRec)],
-    ['Custos Totais', formatarMoeda(totalCus)],
-    ['Custos Variáveis', formatarMoeda(totalVar)],
-    ['Custos Fixos', formatarMoeda(totalFix)],
-    ['Lucro Operacional', formatarMoeda(lucro)],
-    ['Margem Líquida', margem.toFixed(1)+'%'],
-    ['Margem de Contribuição', margemContrib.toFixed(1)+'%'],
-    ['Eficiência Operacional', eficiencia.toFixed(1)+'%'],
-    ['Ponto de Equilíbrio', formatarMoeda(pontoEq)],
-    ['ROI Estimado', roi.toFixed(1)+'%'],
-    ['EBITDA Estimado', formatarMoeda(ebitda)],
-    ['Ticket Médio', formatarMoeda(ticketMedio)]
-  ];
-
-  // Tabela mensal
-  const linhasMes = [];
-  for (let i=0;i<12;i++){
-    if (!ativos.includes(i)) continue;
-    const r = receitasMes[i];
-    const c = custosMes[i];
-    const l = r - c;
-    linhasMes.push([mesesNomes[i], formatarMoeda(r), formatarMoeda(c), formatarMoeda(l),
-      (r>0?((l/r)*100).toFixed(1):'0.0')+'%']);
-  }
-  linhasMes.push(['TOTAL', formatarMoeda(totalRec), formatarMoeda(totalCus), formatarMoeda(lucro),
-    (totalRec>0?((lucro/totalRec)*100).toFixed(1):'0.0')+'%']);
-
-  // Tipos de operação (filtrados)
-  const tiposFiltrados = (typeof tiposOperacaoResumo !== 'undefined' && tiposOperacaoResumo.length)
-    ? tiposOperacaoResumo : [];
-  const linhasTipos = tiposFiltrados.map(t => [ 'TIPO '+t.tipo, t.grupo, String(t.qtd), formatarMoeda(t.total) ]);
-
-  const tabelaIndicadores = `
-    <table class="relatorio-table">
-      <thead><tr><th>Indicador</th><th class="num">Valor</th></tr></thead>
-      <tbody>${rowsIndicadores.map(r=>`<tr><td>${r[0]}</td><td class="num">${r[1]}</td></tr>`).join('')}</tbody>
-    </table>`;
-
-  const tabelaMensal = `
-    <table class="relatorio-table">
-      <thead><tr><th>Mês</th><th class="num">Receita</th><th class="num">Custos</th><th class="num">Resultado</th><th class="num">Margem</th></tr></thead>
-      <tbody>${linhasMes.map((r,i)=>`<tr class="${i===linhasMes.length-1?'total-row':''}">${r.map((c,j)=>`<td class="${j>0?'num':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody>
-    </table>`;
-
-  const tabelaTipos = linhasTipos.length ? `
-    <table class="relatorio-table">
-      <thead><tr><th>Tipo</th><th>Grupo</th><th class="num">Registros</th><th class="num">Total</th></tr></thead>
-      <tbody>${linhasTipos.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="num">${r[2]}</td><td class="num">${r[3]}</td></tr>`).join('')}</tbody>
-    </table>` : '<p>Sem dados de tipos no período.</p>';
-
-  cont.innerHTML = `
-    <div class="relatorio-header">
-      <div class="titulo-area">
-        <h1>Relatório Executivo — DRE</h1>
-        <div class="sub">Aplikado · Período: ${periodoLabel}</div>
-      </div>
-      <div class="meta-info">
-        <div><strong>Gerado em:</strong> ${meta}</div>
-        <div><strong>Registros:</strong> Receitas ${receitasDataReais.length} · Despesas ${despesasDataReais.length}</div>
-      </div>
-    </div>
-
-    <div class="relatorio-section">
-      <h2>Indicadores Estratégicos</h2>
-      ${tabelaIndicadores}
-    </div>
-
-    <div class="relatorio-section">
-      <h2>Demonstrativo Mensal</h2>
-      ${tabelaMensal}
-    </div>
-
-    <div class="relatorio-section">
-      <h2>Despesas por Tipo de Operação</h2>
-      ${tabelaTipos}
-    </div>
-
-    <div class="relatorio-footer">
-      <span class="footer-brand">Aplikado Soluções</span>
-      <span>Relatório gerado automaticamente — ${meta}</span>
-    </div>
-  `;
-
-  overlay.classList.add('active');
-};
-
-// ---------- 8) Reaplica o filtro atual assim que este patch carregar ----------
-setTimeout(() => {
-  try {
-    const sel = document.getElementById('filtroTrimestre');
-    if (sel) {
-      trimestreSelecionado = parseInt(sel.value, 10) || 0;
-      window.aplicarFiltroTrimestre();
-    }
-  } catch (e) { console.warn('Patch init:', e); }
-}, 1200);
-// ============================================================
-// PATCH DRE — Renderização 100% local respeitando o trimestre
-// Sem fetch, sem reload, sem piscar a tela
-// ============================================================
-
-// ---------- 1) Cache do último render para evitar re-render desnecessário ----------
-window.__ultimoTrimestreRenderizado = -1;
-
-// ---------- 2) Constrói a matriz DRE filtrada a partir da memória ----------
-window.__construirMatrizDRE = function () {
-  const ativos = window.__mesesAtivos();
-
-  // Soma por plano (identificador) e mês
-  const somaPlano = {}; // identificador -> array[12]
-
-  const addValor = (identificador, mes, valor) => {
-    if (!ativos.includes(mes)) return;
-    if (!somaPlano[identificador]) somaPlano[identificador] = Array(12).fill(0);
-    somaPlano[identificador][mes] += Number(valor) || 0;
-  };
-
-  // Receitas reais
-  for (const r of receitasDataReais) {
-    const m = extrairMes(r.data);
-    if (!ativos.includes(m)) continue;
-    // encontra plano da estrutura que corresponde
-    for (const plano of estruturaDRE.receitas) {
-      if (planoCorresponde(r.plano, plano.nome)) {
-        addValor(plano.nome, m, r.valor);
-        break;
-      }
-    }
-  }
-  // Despesas reais
-  for (const d of despesasDataReais) {
-    const m = extrairMes(d.data);
-    if (!ativos.includes(m)) continue;
-    const todos = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
-    for (const plano of todos) {
-      if (planoCorresponde(d.plano, plano.nome)) {
-        addValor(plano.nome, m, d.valor);
-        break;
-      }
-    }
-  }
-  // Contas extras
-  for (const s of contasExtrasData) {
-    const m = extrairMes(s.dt_pagto);
-    if (!ativos.includes(m)) continue;
-    const todos = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
-    for (const plano of todos) {
-      if (planoCorresponde(s.plano, plano.nome)) {
-        addValor(plano.nome, m, s.valor);
-        break;
-      }
-    }
-  }
-  // Movimentos extra
-  for (const mv of movimentosExtraData) {
-    const m = extrairMes(mv.data);
-    if (!ativos.includes(m)) continue;
-    const val = Math.abs(Number(mv.total_nota) || 0);
-    if (mv.tipo === 'RECEITA' || mv.tipo === 'ENTRADA') {
-      for (const plano of estruturaDRE.receitas) {
-        if (planoCorresponde(mv.plano, plano.nome)) { addValor(plano.nome, m, val); break; }
-      }
-    } else {
-      const todos = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
-      for (const plano of todos) {
-        if (planoCorresponde(mv.plano, plano.nome)) { addValor(plano.nome, m, -val); break; }
-      }
-    }
-  }
-
-  return somaPlano;
-};
-
-// ---------- 3) Renderiza a tabela DRE (substitui a original) ----------
-window.renderizarDREFiltrada = function () {
-  const tbody = document.getElementById('corpoDRE');
-  if (!tbody) return;
-
-  // Evita re-render idêntico (anti-travamento)
-  if (window.__ultimoTrimestreRenderizado === trimestreSelecionado &&
-      tbody.children.length > 0 &&
-      !window.__forceDRE) {
-    return;
-  }
-  window.__forceDRE = false;
-
-  const ativos = window.__mesesAtivos();
-  const soma = window.__construirMatrizDRE();
-
-  // Helpers
-  const valMes = (plano, m) => {
-    const arr = soma[plano];
-    return arr ? arr[m] : 0;
-  };
-  const linha = (planoArr, m) => {
-    const arr = Array(12).fill(0);
-    for (const p of planoArr) {
-      const s = soma[p.nome];
-      if (!s) continue;
-      for (let i = 0; i < 12; i++) if (ativos.includes(i)) arr[i] += s[i];
-    }
-    return arr;
-  };
-  const totalArr = arr => arr.reduce((a, b) => a + b, 0);
-  const fmt = v => formatarMoeda(v);
-  const cls = v => v < 0 ? 'valor-negativo' : '';
-
-  // Monta as linhas
-  const receitasArr = linha(estruturaDRE.receitas, 0);
-  const custosVarArr = linha(estruturaDRE.custosVariaveis, 0);
-  const custosFixArr = linha(estruturaDRE.custosFixos, 0);
-
-  const lucroBrutoArr = receitasArr.map((v, i) => v + custosVarArr[i]);
-  const resultadoOpArr = lucroBrutoArr.map((v, i) => v + custosFixArr[i]);
-  const margemArr = resultadoOpArr.map((v, i) => receitasArr[i] !== 0 ? (v / receitasArr[i]) * 100 : 0);
-
-  // Cabeçalho de mês (já está no thead, apenas células)
-  const celulaMeses = (arr, extraCls = '') => {
-    let html = '';
-    for (let i = 0; i < 12; i++) {
-      const inativo = !ativos.includes(i);
-      html += `<td class="${inativo ? 'mes-inativo' : ''} ${extraCls}">${fmt(arr[i])}</td>`;
-    }
-    html += `<td class="${extraCls}"><strong>${fmt(totalArr(arr))}</strong></td>`;
-    return html;
-  };
-
-  let html = '';
-
-  // Grupo RECEITAS
-  html += `<tr class="dre-group-title"><td colspan="14">RECEITAS</td></tr>`;
-  for (const p of estruturaDRE.receitas) {
-    const arr = soma[p.nome] || Array(12).fill(0);
-    if (totalArr(arr) === 0) continue;
-    html += `<tr><td>${escapeHtml(p.nome)}</td>${celulaMeses(arr)}</tr>`;
-  }
-  html += `<tr class="dre-total-row"><td>RECEITA TOTAL</td>${celulaMeses(receitasArr, 'valor-positivo')}</tr>`;
-
-  // Grupo CUSTOS VARIÁVEIS
-  html += `<tr class="dre-group-title"><td colspan="14">CUSTOS VARIÁVEIS</td></tr>`;
-  for (const p of estruturaDRE.custosVariaveis) {
-    const arr = soma[p.nome] || Array(12).fill(0);
-    if (totalArr(arr) === 0) continue;
-    html += `<tr><td>${escapeHtml(p.nome)}</td>${celulaMeses(arr)}</tr>`;
-  }
-  html += `<tr class="dre-total-row"><td>TOTAL CUSTOS VARIÁVEIS</td>${celulaMeses(custosVarArr, 'valor-negativo')}</tr>`;
-
-  // LUCRO BRUTO
-  html += `<tr class="dre-total-row"><td>LUCRO BRUTO</td>${celulaMeses(lucroBrutoArr, lucroBrutoArr.reduce((a,b)=>a+b,0) < 0 ? 'valor-negativo' : 'valor-positivo')}</tr>`;
-
-  // Grupo CUSTOS FIXOS
-  html += `<tr class="dre-group-title"><td colspan="14">CUSTOS FIXOS</td></tr>`;
-  for (const p of estruturaDRE.custosFixos) {
-    const arr = soma[p.nome] || Array(12).fill(0);
-    if (totalArr(arr) === 0) continue;
-    html += `<tr><td>${escapeHtml(p.nome)}</td>${celulaMeses(arr)}</tr>`;
-  }
-  html += `<tr class="dre-total-row"><td>TOTAL CUSTOS FIXOS</td>${celulaMeses(custosFixArr, 'valor-negativo')}</tr>`;
-
-  // RESULTADO OPERACIONAL
-  const resOpTotal = resultadoOpArr.reduce((a, b) => a + b, 0);
-  html += `<tr class="dre-total-row"><td>RESULTADO OPERACIONAL</td>${celulaMeses(resultadoOpArr, resOpTotal < 0 ? 'valor-negativo' : 'valor-positivo')}</tr>`;
-
-  // MARGEM %
-  let margemHtml = '';
-  for (let i = 0; i < 12; i++) {
-    const inativo = !ativos.includes(i);
-    margemHtml += `<td class="${inativo ? 'mes-inativo' : ''}">${margemArr[i].toFixed(1)}%</td>`;
-  }
-  const margemTotal = receitasArr.reduce((a,b)=>a+b,0) !== 0
-    ? (resOpTotal / receitasArr.reduce((a,b)=>a+b,0)) * 100
-    : 0;
-  margemHtml += `<td><strong>${margemTotal.toFixed(1)}%</strong></td>`;
-  html += `<tr class="dre-total-row"><td>MARGEM OPERACIONAL</td>${margemHtml}</tr>`;
-
-  tbody.innerHTML = html;
-  window.__ultimoTrimestreRenderizado = trimestreSelecionado;
-};
-
-// ---------- 4) Sobrescreve QUALQUER função de render antiga ----------
-// (garante que o patch vence, independente do nome original)
-['gerarDREComSupabase','gerarDRE','renderizarDRE','montarTabelaDRE','montarDRE','atualizarDRE']
-  .forEach(nome => { try { window[nome] = window.renderizarDREFiltrada; } catch(e){} });
-
-// ---------- 5) Re-render unificado (reescreve o do patch anterior) ----------
-window.__reRenderizarTudo = function () {
-  window.__forceDRE = true;
-  try { window.renderizarDREFiltrada(); } catch (e) { console.warn('DRE:', e); }
-
-  try { if (typeof atualizarIndicadoresExecutivos === 'function') atualizarIndicadoresExecutivos(); } catch(e){}
-  try { if (typeof atualizarExecutivos === 'function') atualizarExecutivos(); } catch(e){}
-  try { if (typeof atualizarTiposOperacao === 'function') atualizarTiposOperacao(); } catch(e){}
-  try { if (typeof atualizarAnaliseVendas === 'function') atualizarAnaliseVendas(); } catch(e){}
-  try { if (typeof atualizarTopContas === 'function') atualizarTopContas(); } catch(e){}
-  try { if (typeof atualizarTopReceitasDespesas === 'function') atualizarTopReceitasDespesas(); } catch(e){}
-  try { if (typeof window.atualizarGraficos === 'function') window.atualizarGraficos(); } catch(e){}
-
-  // Atualiza indicadores executivos a partir da matriz filtrada
-  try { window.__atualizarExecutivosLocal(); } catch(e){}
-};
-
-// ---------- 6) Indicadores executivos calculados da matriz filtrada ----------
-window.__atualizarExecutivosLocal = function () {
-  const ativos = window.__mesesAtivos();
-  const soma = window.__construirMatrizDRE();
-
-  const somarGrupo = (planos) => {
-    const arr = Array(12).fill(0);
-    for (const p of planos) {
-      const s = soma[p.nome];
-      if (!s) continue;
-      for (let i = 0; i < 12; i++) if (ativos.includes(i)) arr[i] += s[i];
-    }
-    return arr.reduce((a,b)=>a+b,0);
-  };
-
-  const totalRec = somarGrupo(estruturaDRE.receitas);
-  const totalVar = somarGrupo(estruturaDRE.custosVariaveis);
-  const totalFix = somarGrupo(estruturaDRE.custosFixos);
-  const totalCus = Math.abs(totalVar) + Math.abs(totalFix);
-  const lucro = totalRec + totalVar + totalFix;
-  const margem = totalRec > 0 ? (lucro/totalRec)*100 : 0;
-  const margemContrib = totalRec > 0 ? ((totalRec - Math.abs(totalVar))/totalRec)*100 : 0;
-  const eficiencia = totalCus > 0 ? (totalRec/totalCus)*100 : 0;
-  const pontoEq = totalRec > 0 && Math.abs(totalVar) < totalRec
-    ? Math.abs(totalFix)/(1 - Math.abs(totalVar)/totalRec) : 0;
-  const roi = totalCus > 0 ? (lucro/totalCus)*100 : 0;
-  const ebitda = lucro + Math.abs(totalFix)*0.05;
-
-  const vendasFiltradas = window.__filtrarPorMes(vendasData || [], 'data_nota');
-  const totalVendas = vendasFiltradas.reduce((s,v)=>s+v.total,0);
-  const ticketMedio = vendasFiltradas.length ? totalVendas/vendasFiltradas.length : 0;
-
-  const set = (id, val) => { const e = document.getElementById(id); if (e) e.innerText = val; };
-  set('execReceitaTotal', formatarMoeda(totalRec));
-  set('execCustosTotais', formatarMoeda(totalCus));
-  set('execLucroOperacional', formatarMoeda(lucro));
-  set('execMargemLiquida', margem.toFixed(1)+'%');
-  set('execEBITDA', formatarMoeda(ebitda));
-  set('execTicketMedio', formatarMoeda(ticketMedio));
-  set('execEficiencia', eficiencia.toFixed(1)+'%');
-  set('execPontoEquilibrio', formatarMoeda(pontoEq));
-  set('execROI', roi.toFixed(1)+'%');
-  set('execMargemContribuicao', margemContrib.toFixed(1)+'%');
-};
-
-// ---------- 7) Reaplica filtro assim que este patch carregar ----------
-setTimeout(() => {
-  try {
-    const sel = document.getElementById('filtroTrimestre');
-    if (sel) {
-      trimestreSelecionado = parseInt(sel.value, 10) || 0;
-      // força render único
-      window.__forceDRE = true;
-      window.aplicarFiltroTrimestre();
-    }
-  } catch (e) { console.warn('Patch DRE init:', e); }
-}, 1400);
 </script>
 </body>
 </html>
