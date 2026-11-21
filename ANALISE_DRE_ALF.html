@@ -3639,201 +3639,254 @@ function imprimirRelatorio() {
     console.log('✅ [RÉPLICA] Pronto. A tabela DRE será espelho fiel do MODULO3_ALF.html.');
 })();
 // ============================================================
-// FILTRO DE MOVIMENTO + INTEGRAÇÃO COM TRIMESTRE
-// Adicionar no FINAL do script, antes do fechamento </script>
+// FILTRO DE TRIMESTRE — DRE, GRÁFICOS E INDICADORES
+// Incluir no FINAL do script (após todas as funções existentes)
 // ============================================================
 
-// Garante que o filtro de movimento comece ATIVO
-filtroMovimentoAtivo = true;
-
-// Atualiza o visual do botão de filtro de movimento
-function atualizarVisualBotaoMovimento() {
-    const btn = document.getElementById('btnFiltrarMovimento');
-    if (!btn) return;
-    if (filtroMovimentoAtivo) {
-        btn.classList.add('btn-primary');
-        btn.classList.remove('btn-outline');
-        btn.textContent = '✓ Filtrar Movimento';
-        btn.style.background = 'var(--accent-gold)';
-        btn.style.color = '#0B0E14';
-        btn.style.borderColor = 'var(--accent-gold)';
-    } else {
-        btn.classList.remove('btn-primary');
-        btn.classList.add('btn-outline');
-        btn.textContent = 'Filtrar Movimento';
-        btn.style.background = '';
-        btn.style.color = '';
-        btn.style.borderColor = '';
-    }
+/**
+ * Retorna o rótulo do período selecionado
+ */
+function getLabelPeriodo() {
+    const labels = ["Ano Completo", "1º Trimestre (Jan-Mar)", "2º Trimestre (Abr-Jun)", 
+                    "3º Trimestre (Jul-Set)", "4º Trimestre (Out-Dez)"];
+    return labels[trimestreSelecionado] || "Ano Completo";
 }
 
-// Toggle do filtro de movimento - re-renderiza o DRE
-function toggleFiltroMovimento() {
-    filtroMovimentoAtivo = !filtroMovimentoAtivo;
-    atualizarVisualBotaoMovimento();
-    // Re-renderiza o DRE com o novo filtro
-    gerarDREComSupabase();
+/**
+ * Verifica se um mês está ativo no trimestre selecionado
+ */
+function mesEstaAtivo(mes) {
+    return obterMesesDoTrimestre(trimestreSelecionado).includes(mes);
 }
 
-// Verifica se um item deve ser incluído no filtro de movimento
-// (considera o trimestre selecionado)
-function itemDeveSerIncluido(dataStr) {
-    if (!dataStr) return false;
-    const mes = extrairMes(dataStr);
+/**
+ * Destaca as colunas do trimestre no cabeçalho e corpo do DRE
+ */
+function destacarColunasTrimestreDRE() {
     const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
-    return mesesAtivos.includes(mes);
-}
+    
+    // Cabeçalho
+    document.querySelectorAll('.dre-table th[data-mes]').forEach(th => {
+        const mesIdx = parseInt(th.getAttribute('data-mes'));
+        if (mesesAtivos.includes(mesIdx)) {
+            th.classList.remove('mes-inativo');
+            th.style.opacity = '1';
+            th.style.background = 'rgba(245, 158, 11, 0.12)';
+            th.style.borderBottomColor = 'var(--accent-gold)';
+            th.style.color = 'var(--accent-gold)';
+            th.style.fontWeight = '800';
+        } else {
+            th.classList.add('mes-inativo');
+            th.style.opacity = '0.35';
+            th.style.background = '';
+            th.style.borderBottomColor = 'var(--border-color)';
+            th.style.color = 'var(--text-muted)';
+            th.style.fontWeight = '600';
+        }
+    });
 
-// Recalcula o total de uma linha do DRE respeitando o trimestre
-// e o filtro de movimento (se ativo)
-function calcularTotalLinhaPorTrimestre(identificador) {
-    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
-    let total = 0;
-
-    // Receitas
-    for (const r of receitasDataReais) {
-        const mes = extrairMes(r.data);
-        if (!mesesAtivos.includes(mes)) continue;
-        if (!planoCorresponde(r.plano, identificador)) continue;
-        if (filtroMovimentoAtivo && Number(r.valor) === 0) continue;
-        total += Number(r.valor) || 0;
-    }
-
-    // Despesas
-    for (const d of despesasDataReais) {
-        const mes = extrairMes(d.data);
-        if (!mesesAtivos.includes(mes)) continue;
-        if (!planoCorresponde(d.plano, identificador)) continue;
-        if (filtroMovimentoAtivo && Number(d.valor) === 0) continue;
-        total += Number(d.valor) || 0;
-    }
-
-    // Contas extras (sangrias)
-    for (const s of contasExtrasData) {
-        const mes = extrairMes(s.dt_pagto);
-        if (!mesesAtivos.includes(mes)) continue;
-        if (!planoCorresponde(s.plano, identificador)) continue;
-        if (filtroMovimentoAtivo && Number(s.valor) === 0) continue;
-        total += Number(s.valor) || 0;
-    }
-
-    // Movimentos extra
-    for (const m of movimentosExtraData) {
-        const mes = extrairMes(m.data);
-        if (!mesesAtivos.includes(mes)) continue;
-        if (!planoCorresponde(m.plano, identificador)) continue;
-        let val = Number(m.total_nota) || 0;
-        if (m.tipo === 'DESPESA' || m.tipo === 'SAIDA') val = -Math.abs(val);
-        if (filtroMovimentoAtivo && val === 0) continue;
-        total += val;
-    }
-
-    return total;
-}
-
-// Aplica máscara visual nos meses inativos da tabela DRE
-function aplicarMascaraMesesInativos() {
-    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
-    document.querySelectorAll('.dre-table td').forEach(td => {
-        // Pula a primeira coluna (descrição) e a última (total)
-        const cellIndex = td.cellIndex;
-        if (cellIndex >= 1 && cellIndex <= 12) {
-            const mesIdx = cellIndex - 1; // 0-11
-            if (!mesesAtivos.includes(mesIdx)) {
+    // Células do corpo
+    document.querySelectorAll('.dre-table tbody tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        // As colunas de meses começam no índice 1 (após a primeira coluna de descrição)
+        // e vão até o índice 12 (Jan a Dez). A última (Total) é índice 13.
+        for (let i = 1; i <= 12; i++) {
+            const td = tds[i];
+            if (!td) continue;
+            const mesIdx = i - 1;
+            if (mesesAtivos.includes(mesIdx)) {
+                td.classList.remove('mes-inativo');
+                td.style.opacity = '1';
+                td.style.background = 'rgba(245, 158, 11, 0.06)';
+            } else {
                 td.classList.add('mes-inativo');
                 td.style.opacity = '0.3';
-                td.style.pointerEvents = 'none';
-            } else {
-                td.classList.remove('mes-inativo');
-                td.style.opacity = '';
-                td.style.pointerEvents = '';
+                td.style.background = '';
             }
         }
     });
 }
 
-// Formata o total da linha considerando o trimestre
-function formatarTotalLinha(valor) {
-    if (valor === 0) return '-';
-    const classe = valor < 0 ? 'valor-negativo' : 'valor-positivo';
-    return `<span class="${classe}">${formatarMoeda(valor)}</span>`;
-}
+/**
+ * Recalcula os totais exibidos no rodapé/linhas de total do DRE
+ * somando apenas os meses ativos do trimestre.
+ * Deve ser chamado APÓS gerarDREComSupabase() para corrigir a coluna "Total".
+ */
+function recalcularTotaisTrimestreDRE() {
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+    const tbody = document.getElementById('corpoDRE');
+    if (!tbody) return;
 
-// Recalcula e injeta a coluna TOTAL do DRE após renderização
-// (deve ser chamada após gerarDREComSupabase)
-function recalcularColunaTotal() {
-    const tabela = document.getElementById('dreTable');
-    if (!tabela) return;
+    tbody.querySelectorAll('tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length < 14) return; // precisa ter as 12 colunas de meses + total
 
-    const corpo = tabela.querySelector('tbody');
-    if (!corpo) return;
+        let somaTotal = 0;
+        let temValor = false;
 
-    const linhas = corpo.querySelectorAll('tr');
-    linhas.forEach(tr => {
-        const primeiraCelula = tr.cells[0];
-        if (!primeiraCelula) return;
+        // Soma apenas os meses ativos (índices 1..12)
+        for (let i = 1; i <= 12; i++) {
+            const mesIdx = i - 1;
+            const td = tds[i];
+            if (!td) continue;
+            const txt = td.textContent.trim();
+            // Extrai o valor numérico do texto formatado (ex: "R$ 1.234,56" ou "-R$ 1.234,56")
+            const num = parseValorBR(txt);
+            if (mesesAtivos.includes(mesIdx)) {
+                somaTotal += num;
+                if (num !== 0) temValor = true;
+            }
+        }
 
-        // Pega o identificador da linha (código - nome)
-        const textoDesc = primeiraCelula.textContent.trim();
-        // Extrai código e nome: "001 - RECEITAS" ou similar
-        const match = textoDesc.match(/^(\d+)\s*-\s*(.+)$/);
-        if (!match) return;
-        const identificador = `${match[1]} - ${match[2]}`;
-
-        // Pega a última célula (Total)
-        const ultimaCelula = tr.cells[tr.cells.length - 1];
-        if (!ultimaCelula) return;
-
-        const total = calcularTotalLinhaPorTrimestre(identificador);
-        ultimaCelula.innerHTML = formatarTotalLinha(total);
-    });
-}
-
-// Sobrescreve a função gerarDREComSupabase para aplicar filtros
-// após a renderização original (usa setTimeout para garantir ordem)
-const _gerarDREComSupabaseOriginal = window.gerarDREComSupabase;
-if (typeof _gerarDREComSupabaseOriginal === 'function') {
-    window.gerarDREComSupabase = function() {
-        _gerarDREComSupabaseOriginal.apply(this, arguments);
-        // Após a renderização, aplica máscara e recalcula totais
-        setTimeout(() => {
-            aplicarMascaraMesesInativos();
-            recalcularColunaTotal();
-        }, 50);
-    };
-}
-
-// ============================================================
-// INICIALIZAÇÃO: aplica filtro ativo após carregar os dados
-// ============================================================
-// Observa quando o loading desaparece (dados carregados) e aplica filtros
-(function inicializarFiltros() {
-    const observer = new MutationObserver((mutations) => {
-        const overlay = document.getElementById('loadingOverlay');
-        if (!overlay || overlay.classList.contains('hidden')) {
-            observer.disconnect();
-            // Dados carregados - aplica filtro ativo e visual do botão
-            filtroMovimentoAtivo = true;
-            atualizarVisualBotaoMovimento();
-            setTimeout(() => {
-                aplicarMascaraMesesInativos();
-                recalcularColunaTotal();
-            }, 300);
+        // Atualiza a coluna Total (última td)
+        const tdTotal = tds[13];
+        if (tdTotal) {
+            tdTotal.textContent = formatarMoeda(somaTotal);
+            tdTotal.style.opacity = '1';
+            tdTotal.style.background = 'rgba(245, 158, 11, 0.10)';
+            tdTotal.style.fontWeight = '700';
         }
     });
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) {
-        observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+}
+
+/**
+ * Converte texto formatado em BRL para número.
+ * Ex: "R$ 1.234,56" -> 1234.56 | "-R$ 1.234,56" -> -1234.56
+ */
+function parseValorBR(txt) {
+    if (!txt) return 0;
+    let s = txt.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').replace(/\s/g, '');
+    if (s === '' || s === '-') return 0;
+    const n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+}
+
+/**
+ * Aplica o filtro de trimestre de forma completa:
+ * 1) Atualiza labels
+ * 2) Recalcula DRE
+ * 3) Destaca colunas e recalcula totais da coluna "Total"
+ * 4) Recalcula gráficos e KPIs
+ */
+function aplicarFiltroTrimestreCompleto() {
+    const select = document.getElementById('filtroTrimestre');
+    if (select) trimestreSelecionado = parseInt(select.value) || 0;
+
+    const label = getLabelPeriodo();
+
+    // Atualiza labels visuais
+    const lblRec = document.getElementById('lblPeriodoRec');
+    const lblChart = document.getElementById('lblPeriodoChart');
+    if (lblRec) lblRec.innerText = label;
+    if (lblChart) lblChart.innerText = label;
+
+    // Recalcula DRE (função original do sistema)
+    if (typeof gerarDREComSupabase === 'function') {
+        gerarDREComSupabase();
+    }
+
+    // Após o DRE ser gerado, aplica destaque + recálculo da coluna Total
+    // Usa requestAnimationFrame para garantir que o DOM já foi atualizado
+    requestAnimationFrame(() => {
+        destacarColunasTrimestreDRE();
+        recalcularTotaisTrimestreDRE();
+
+        // Recalcula gráficos e KPIs com base no trimestre
+        if (typeof atualizarGraficos === 'function') atualizarGraficos();
+        if (typeof atualizarTiposOperacao === 'function') atualizarTiposOperacao();
+        if (typeof atualizarAnaliseVendas === 'function') atualizarAnaliseVendas();
+        if (typeof atualizarPerdasMom === 'function') atualizarPerdasMom();
+
+        // Recalcula indicadores executivos
+        recalcularIndicadoresExecutivosTrimestre();
+    });
+}
+
+/**
+ * Recalcula os indicadores executivos (cards do topo) com base no trimestre.
+ * Usa os dados brutos já carregados (receitasDataReais, despesasDataReais, contasExtrasData, movimentosExtraData)
+ * e a função calcularValorPorPlano() que já respeita o trimestre.
+ */
+function recalcularIndicadoresExecutivosTrimestre() {
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+
+    // Soma receitas do período
+    let totalReceita = 0;
+    for (const r of receitasDataReais) {
+        if (mesesAtivos.includes(extrairMes(r.data))) totalReceita += Number(r.valor) || 0;
+    }
+    for (const m of movimentosExtraData) {
+        if ((m.tipo === 'RECEITA' || m.tipo === 'ENTRADA') && mesesAtivos.includes(extrairMes(m.data))) {
+            totalReceita += Math.abs(Number(m.total_nota) || 0);
+        }
+    }
+
+    // Soma despesas do período
+    let totalDespesas = 0;
+    for (const d of despesasDataReais) {
+        if (mesesAtivos.includes(extrairMes(d.data))) totalDespesas += Math.abs(Number(d.valor) || 0);
+    }
+    for (const s of contasExtrasData) {
+        if (mesesAtivos.includes(extrairMes(s.dt_pagto))) totalDespesas += Math.abs(Number(s.valor) || 0);
+    }
+    for (const m of movimentosExtraData) {
+        if ((m.tipo === 'DESPESA' || m.tipo === 'SAIDA') && mesesAtivos.includes(extrairMes(m.data))) {
+            totalDespesas += Math.abs(Number(m.total_nota) || 0);
+        }
+    }
+
+    const resultado = totalReceita - totalDespesas;
+    const margemLiq = totalReceita > 0 ? (resultado / totalReceita) * 100 : 0;
+    const eficiencia = totalDespesas > 0 ? (totalReceita / totalDespesas) * 100 : 0;
+    const pontoEq = totalReceita > 0 && totalDespesas > 0
+        ? totalDespesas / (1 - (0 / totalReceita)) // simplificado: custos fixos não separados aqui
+        : 0;
+
+    const el = id => document.getElementById(id);
+
+    if (el('execReceitaTotal')) el('execReceitaTotal').textContent = formatarMoeda(totalReceita);
+    if (el('execCustosTotais')) el('execCustosTotais').textContent = formatarMoeda(totalDespesas);
+    if (el('execLucroOperacional')) el('execLucroOperacional').textContent = formatarMoeda(resultado);
+    if (el('execMargemLiquida')) el('execMargemLiquida').textContent = margemLiq.toFixed(1) + '%';
+    if (el('execEficiencia')) el('execEficiencia').textContent = eficiencia.toFixed(1) + '%';
+    if (el('execPontoEquilibrio')) el('execPontoEquilibrio').textContent = formatarMoeda(pontoEq);
+
+    // Diagnósticos rápidos
+    const diagRec = el('diagReceitaText');
+    if (diagRec) diagRec.innerHTML = `Receita de <strong>${formatarMoeda(totalReceita)}</strong> no ${getLabelPeriodo()}.`;
+
+    const diagCustos = el('diagCustosText');
+    if (diagCustos) {
+        const pct = totalReceita > 0 ? (totalDespesas / totalReceita * 100) : 0;
+        diagCustos.innerHTML = `Custos representam <strong>${pct.toFixed(1)}%</strong> da receita.`;
+    }
+
+    const diagMargem = el('diagMargemText');
+    if (diagMargem) {
+        const classe = margemLiq > 15 ? 'excelente' : margemLiq > 8 ? 'boa' : margemLiq > 3 ? 'abaixo do ideal' : 'crítica';
+        diagMargem.innerHTML = `Margem líquida de <strong>${margemLiq.toFixed(1)}%</strong> - ${classe}.`;
+    }
+}
+
+// ============================================================
+// SUBSTITUIÇÃO DO onchange DO SELECT (garante a versão completa)
+// ============================================================
+(function substituirHandlerTrimestre() {
+    const select = document.getElementById('filtroTrimestre');
+    if (!select) return;
+    // Remove o handler inline antigo e adiciona o novo
+    select.onchange = null;
+    select.removeAttribute('onchange');
+    select.addEventListener('change', aplicarFiltroTrimestreCompleto);
+
+    // Se já houver um valor selecionado ao carregar, aplica
+    const valorInicial = parseInt(select.value) || 0;
+    if (valorInicial !== 0) {
+        trimestreSelecionado = valorInicial;
+        // Aplica após o carregamento inicial dos dados
+        setTimeout(() => aplicarFiltroTrimestreCompleto(), 1500);
     }
 })();
-
-// Também garante aplicação após 2s (fallback)
-setTimeout(() => {
-    filtroMovimentoAtivo = true;
-    atualizarVisualBotaoMovimento();
-    aplicarMascaraMesesInativos();
-    recalcularColunaTotal();
-}, 2000);
 </script>
 </body>
 </html>
