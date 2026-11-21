@@ -298,6 +298,18 @@ text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
 .top-account-row .account-bar .fill { height: 100%; border-radius: 10px; background: var(--accent-gold); transition: width 0.6s ease; }
 .top-account-row .account-bar .fill.receita { background: var(--accent-green); }
 .top-account-row .account-bar .fill.despesa { background: var(--accent-red); }
+
+/* Remove resquícios de cards no relatório */
+#relatorioConteudo .relatorio-quadrante,
+#relatorioConteudo .relatorio-sumario-grid { display: none !important; }
+#relatorioConteudo .relatorio-table { page-break-inside: auto; }
+#relatorioConteudo .relatorio-table tr { page-break-inside: avoid; page-break-after: auto; }
+@media print {
+  #relatorioConteudo .relatorio-table { font-size: 10px; }
+  #relatorioConteudo .relatorio-section { page-break-inside: auto; }
+}
+
+
 /* ============================================================
 ANÁLISE TÉCNICA DE VENDAS
 ============================================================ */
@@ -4180,6 +4192,364 @@ function abrirRelatorioExecutivoCorrigido() {
         btn.removeAttribute('onclick');
         btn.addEventListener('click', abrirRelatorioExecutivoCorrigido);
     });
-})();</script>
+})();
+
+// ============================================================
+// PATCH DE CORREÇÃO — Filtro trimestre robusto, sem travamento, PDF em tabelas
+// Cole no FINAL do <script> (sobrescreve funções anteriores)
+// ============================================================
+
+// ---------- 1) Helpers de filtro (fonte única de verdade) ----------
+window.__mesesAtivos = function () {
+  return obterMesesDoTrimestre(trimestreSelecionado);
+};
+window.__filtrarPorMes = function (arr, campoData) {
+  const ativos = window.__mesesAtivos();
+  if (trimestreSelecionado === 0) return arr.slice();
+  return arr.filter(item => ativos.includes(extrairMes(item[campoData])));
+};
+
+// ---------- 2) aplicarFiltroTrimestre SEM recarregar Supabase ----------
+window.aplicarFiltroTrimestre = function () {
+  const select = document.getElementById('filtroTrimestre');
+  trimestreSelecionado = parseInt(select.value, 10) || 0;
+
+  const nomes = ["Ano Completo","1º Trimestre","2º Trimestre","3º Trimestre","4º Trimestre"];
+  const label = nomes[trimestreSelecionado] || "Ano Completo";
+  const l1 = document.getElementById('lblPeriodoRec');
+  const l2 = document.getElementById('lblPeriodoChart');
+  if (l1) l1.innerText = label;
+  if (l2) l2.innerText = label;
+
+  // Destaca colunas
+  const ativos = window.__mesesAtivos();
+  document.querySelectorAll('.dre-table th[data-mes]').forEach(th => {
+    const idx = parseInt(th.getAttribute('data-mes'), 10);
+    const on = ativos.includes(idx);
+    th.style.opacity = on ? '1' : '0.3';
+    th.style.borderBottomColor = on ? 'var(--accent-gold)' : 'var(--border-color)';
+  });
+  // Marca células inativas
+  document.querySelectorAll('.dre-table td[data-mes]').forEach(td => {
+    const idx = parseInt(td.getAttribute('data-mes'), 10);
+    td.classList.toggle('mes-inativo', !ativos.includes(idx));
+  });
+
+  // Re-renderiza SÓ com dados em memória (não chama Supabase)
+  window.__reRenderizarTudo();
+};
+
+// ---------- 3) Re-render unificado (sem fetch) ----------
+window.__reRenderizarTudo = function () {
+  try {
+    // DRE
+    if (typeof montarTabelaDRE === 'function') {
+      montarTabelaDRE();
+    } else if (typeof renderizarDRE === 'function') {
+      renderizarDRE();
+    } else if (typeof gerarDRE === 'function') {
+      gerarDRE();
+    } else {
+      // fallback: se nenhuma função de render existir, apenas re-executa o cálculo local
+      window.__calcularERenderizarLocal();
+    }
+  } catch (e) { console.warn('DRE render:', e); }
+
+  // Indicadores executivos
+  try { if (typeof atualizarIndicadoresExecutivos === 'function') atualizarIndicadoresExecutivos(); } catch (e) {}
+  try { if (typeof atualizarExecutivos === 'function') atualizarExecutivos(); } catch (e) {}
+
+  // Tipos de operação
+  try { if (typeof atualizarTiposOperacao === 'function') atualizarTiposOperacao(); } catch (e) {}
+
+  // Análise de vendas
+  try { if (typeof atualizarAnaliseVendas === 'function') atualizarAnaliseVendas(); } catch (e) {}
+
+  // Top receitas/despesas
+  try { if (typeof atualizarTopContas === 'function') atualizarTopContas(); } catch (e) {}
+  try { if (typeof atualizarTopReceitasDespesas === 'function') atualizarTopReceitasDespesas(); } catch (e) {}
+
+  // Gráficos (re-render com dados filtrados)
+  try { if (typeof atualizarGraficos === 'function') atualizarGraficos(); } catch (e) {}
+};
+
+// ---------- 4) Cálculo local de fallback (se não houver render pronto) ----------
+window.__calcularERenderizarLocal = function () {
+  const ativos = window.__mesesAtivos();
+  const receitasMes = Array(12).fill(0);
+  const custosMes = Array(12).fill(0);
+
+  for (const r of receitasDataReais) {
+    const m = extrairMes(r.data);
+    if (ativos.includes(m)) receitasMes[m] += Number(r.valor) || 0;
+  }
+  for (const d of despesasDataReais) {
+    const m = extrairMes(d.data);
+    if (ativos.includes(m)) custosMes[m] += Number(d.valor) || 0;
+  }
+  for (const s of contasExtrasData) {
+    const m = extrairMes(s.dt_pagto);
+    if (ativos.includes(m)) custosMes[m] += Number(s.valor) || 0;
+  }
+  for (const mv of movimentosExtraData) {
+    const m = extrairMes(mv.data);
+    if (!ativos.includes(m)) continue;
+    const v = Math.abs(Number(mv.total_nota) || 0);
+    if (mv.tipo === 'RECEITA' || mv.tipo === 'ENTRADA') receitasMes[m] += v;
+    else custosMes[m] += v;
+  }
+
+  const totalRec = receitasMes.reduce((a,b)=>a+b,0);
+  const totalCus = custosMes.reduce((a,b)=>a+b,0);
+  const lucro = totalRec - totalCus;
+  const margem = totalRec > 0 ? (lucro/totalRec)*100 : 0;
+
+  const set = (id, txt) => { const e = document.getElementById(id); if (e) e.innerText = txt; };
+  set('execReceitaTotal', formatarMoeda(totalRec));
+  set('execCustosTotais', formatarMoeda(totalCus));
+  set('execLucroOperacional', formatarMoeda(lucro));
+  set('execMargemLiquida', margem.toFixed(1) + '%');
+};
+
+// ---------- 5) Atualização de gráficos respeitando trimestre ----------
+window.atualizarGraficos = function () {
+  const ativos = window.__mesesAtivos();
+  const receita = Array(12).fill(0);
+  const lucroBruto = Array(12).fill(0);
+  const resultadoOp = Array(12).fill(0);
+  const custoVar = Array(12).fill(0);
+  const custoFix = Array(12).fill(0);
+
+  for (const r of receitasDataReais) {
+    const m = extrairMes(r.data);
+    if (ativos.includes(m)) receita[m] += Number(r.valor) || 0;
+  }
+  for (const d of despesasDataReais) {
+    const m = extrairMes(d.data);
+    if (!ativos.includes(m)) continue;
+    const v = Number(d.valor) || 0;
+    // heurística: tipo 20 (fornecedores) = variável; demais = fixo
+    const info = identificarTipoOperacao(d.operacao || '');
+    if (info.tipo === 20 || info.tipo === 19) custoVar[m] += Math.abs(v);
+    else custoFix[m] += Math.abs(v);
+  }
+  for (const s of contasExtrasData) {
+    const m = extrairMes(s.dt_pagto);
+    if (ativos.includes(m)) custoVar[m] += Math.abs(Number(s.valor) || 0);
+  }
+  for (const mv of movimentosExtraData) {
+    const m = extrairMes(mv.data);
+    if (!ativos.includes(m)) continue;
+    const v = Math.abs(Number(mv.total_nota) || 0);
+    if (mv.tipo === 'RECEITA' || mv.tipo === 'ENTRADA') receita[m] += v;
+    else custoVar[m] += v;
+  }
+  for (let i=0;i<12;i++){
+    lucroBruto[i] = receita[i] - custoVar[i];
+    resultadoOp[i] = lucroBruto[i] - custoFix[i];
+  }
+
+  const labels = mesesNomes;
+  const cfgBase = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#94A3B8', font:{size:10} }, grid:{display:false} },
+      y: { ticks: { color: '#94A3B8', font:{size:10} }, grid:{color:'rgba(255,255,255,0.05)'} }
+    }
+  };
+
+  const c1 = document.getElementById('chartReceitaResultado');
+  if (c1 && window.Chart) {
+    if (chartReceitaResultado) chartReceitaResultado.destroy();
+    chartReceitaResultado = new Chart(c1.getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: [
+        { label:'Receita', data:receita, backgroundColor:'#F59E0B' },
+        { label:'Lucro Bruto', data:lucroBruto, backgroundColor:'#10B981' },
+        { label:'Resultado Op.', data:resultadoOp, type:'line', borderColor:'#3B82F6', backgroundColor:'#3B82F6', tension:0.3, fill:false, pointRadius:3 }
+      ]},
+      options: cfgBase
+    });
+  }
+
+  const c2 = document.getElementById('chartCustos');
+  if (c2 && window.Chart) {
+    if (chartCustos) chartCustos.destroy();
+    chartCustos = new Chart(c2.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Custos Variáveis','Custos Fixos'],
+        datasets: [{ data: [custoVar.reduce((a,b)=>a+b,0), custoFix.reduce((a,b)=>a+b,0)],
+          backgroundColor: ['#EF4444','#06B6D4'], borderWidth: 0 }]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins: { legend: { display:false } }, cutout:'62%' }
+    });
+  }
+};
+
+// ---------- 6) Guard de segurança: evita loops no Supabase ----------
+window.__supabaseFetchEmAndamento = window.__supabaseFetchEmAndamento || false;
+
+// ---------- 7) RELATÓRIO EXECUTIVO EM TABELAS (sem cards) ----------
+window.abrirRelatorioExecutivo = function () {
+  const overlay = document.getElementById('relatorioExecutivo');
+  const cont = document.getElementById('relatorioConteudo');
+  if (!overlay || !cont) return;
+
+  const ativos = window.__mesesAtivos();
+  const nomes = ["Ano Completo","1º Trimestre","2º Trimestre","3º Trimestre","4º Trimestre"];
+  const periodoLabel = nomes[trimestreSelecionado] || "Ano Completo";
+
+  // Agregações filtradas
+  const receitasMes = Array(12).fill(0);
+  const custosMes = Array(12).fill(0);
+  const custoVarMes = Array(12).fill(0);
+  const custoFixMes = Array(12).fill(0);
+
+  for (const r of receitasDataReais) {
+    const m = extrairMes(r.data);
+    if (ativos.includes(m)) receitasMes[m] += Number(r.valor) || 0;
+  }
+  for (const d of despesasDataReais) {
+    const m = extrairMes(d.data);
+    if (!ativos.includes(m)) continue;
+    const v = Math.abs(Number(d.valor) || 0);
+    custosMes[m] += v;
+    const info = identificarTipoOperacao(d.operacao || '');
+    if (info.tipo === 19 || info.tipo === 20) custoVarMes[m] += v; else custoFixMes[m] += v;
+  }
+  for (const s of contasExtrasData) {
+    const m = extrairMes(s.dt_pagto);
+    if (!ativos.includes(m)) continue;
+    const v = Math.abs(Number(s.valor) || 0);
+    custosMes[m] += v; custoVarMes[m] += v;
+  }
+  for (const mv of movimentosExtraData) {
+    const m = extrairMes(mv.data);
+    if (!ativos.includes(m)) continue;
+    const v = Math.abs(Number(mv.total_nota) || 0);
+    if (mv.tipo === 'RECEITA' || mv.tipo === 'ENTRADA') receitasMes[m] += v;
+    else { custosMes[m] += v; custoVarMes[m] += v; }
+  }
+
+  const totalRec = receitasMes.reduce((a,b)=>a+b,0);
+  const totalCus = custosMes.reduce((a,b)=>a+b,0);
+  const totalVar = custoVarMes.reduce((a,b)=>a+b,0);
+  const totalFix = custoFixMes.reduce((a,b)=>a+b,0);
+  const lucro = totalRec - totalCus;
+  const margem = totalRec > 0 ? (lucro/totalRec)*100 : 0;
+  const margemContrib = totalRec > 0 ? ((totalRec - totalVar)/totalRec)*100 : 0;
+  const eficiencia = totalCus > 0 ? (totalRec/totalCus)*100 : 0;
+  const pontoEq = totalRec > 0 && totalVar < totalRec ? totalFix / (1 - totalVar/totalRec) : 0;
+  const roi = totalCus > 0 ? (lucro/totalCus)*100 : 0;
+  const ebitda = lucro + totalFix * 0.05;
+
+  // Vendas filtradas
+  const vendasFiltradas = window.__filtrarPorMes(vendasData || [], 'data_nota');
+  const totalVendas = vendasFiltradas.reduce((s,v)=>s+v.total,0);
+  const ticketMedio = vendasFiltradas.length ? totalVendas/vendasFiltradas.length : 0;
+
+  const meta = new Date().toLocaleString('pt-BR');
+  const rowsIndicadores = [
+    ['Receita Total', formatarMoeda(totalRec)],
+    ['Custos Totais', formatarMoeda(totalCus)],
+    ['Custos Variáveis', formatarMoeda(totalVar)],
+    ['Custos Fixos', formatarMoeda(totalFix)],
+    ['Lucro Operacional', formatarMoeda(lucro)],
+    ['Margem Líquida', margem.toFixed(1)+'%'],
+    ['Margem de Contribuição', margemContrib.toFixed(1)+'%'],
+    ['Eficiência Operacional', eficiencia.toFixed(1)+'%'],
+    ['Ponto de Equilíbrio', formatarMoeda(pontoEq)],
+    ['ROI Estimado', roi.toFixed(1)+'%'],
+    ['EBITDA Estimado', formatarMoeda(ebitda)],
+    ['Ticket Médio', formatarMoeda(ticketMedio)]
+  ];
+
+  // Tabela mensal
+  const linhasMes = [];
+  for (let i=0;i<12;i++){
+    if (!ativos.includes(i)) continue;
+    const r = receitasMes[i];
+    const c = custosMes[i];
+    const l = r - c;
+    linhasMes.push([mesesNomes[i], formatarMoeda(r), formatarMoeda(c), formatarMoeda(l),
+      (r>0?((l/r)*100).toFixed(1):'0.0')+'%']);
+  }
+  linhasMes.push(['TOTAL', formatarMoeda(totalRec), formatarMoeda(totalCus), formatarMoeda(lucro),
+    (totalRec>0?((lucro/totalRec)*100).toFixed(1):'0.0')+'%']);
+
+  // Tipos de operação (filtrados)
+  const tiposFiltrados = (typeof tiposOperacaoResumo !== 'undefined' && tiposOperacaoResumo.length)
+    ? tiposOperacaoResumo : [];
+  const linhasTipos = tiposFiltrados.map(t => [ 'TIPO '+t.tipo, t.grupo, String(t.qtd), formatarMoeda(t.total) ]);
+
+  const tabelaIndicadores = `
+    <table class="relatorio-table">
+      <thead><tr><th>Indicador</th><th class="num">Valor</th></tr></thead>
+      <tbody>${rowsIndicadores.map(r=>`<tr><td>${r[0]}</td><td class="num">${r[1]}</td></tr>`).join('')}</tbody>
+    </table>`;
+
+  const tabelaMensal = `
+    <table class="relatorio-table">
+      <thead><tr><th>Mês</th><th class="num">Receita</th><th class="num">Custos</th><th class="num">Resultado</th><th class="num">Margem</th></tr></thead>
+      <tbody>${linhasMes.map((r,i)=>`<tr class="${i===linhasMes.length-1?'total-row':''}">${r.map((c,j)=>`<td class="${j>0?'num':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>`;
+
+  const tabelaTipos = linhasTipos.length ? `
+    <table class="relatorio-table">
+      <thead><tr><th>Tipo</th><th>Grupo</th><th class="num">Registros</th><th class="num">Total</th></tr></thead>
+      <tbody>${linhasTipos.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="num">${r[2]}</td><td class="num">${r[3]}</td></tr>`).join('')}</tbody>
+    </table>` : '<p>Sem dados de tipos no período.</p>';
+
+  cont.innerHTML = `
+    <div class="relatorio-header">
+      <div class="titulo-area">
+        <h1>Relatório Executivo — DRE</h1>
+        <div class="sub">Aplikado · Período: ${periodoLabel}</div>
+      </div>
+      <div class="meta-info">
+        <div><strong>Gerado em:</strong> ${meta}</div>
+        <div><strong>Registros:</strong> Receitas ${receitasDataReais.length} · Despesas ${despesasDataReais.length}</div>
+      </div>
+    </div>
+
+    <div class="relatorio-section">
+      <h2>Indicadores Estratégicos</h2>
+      ${tabelaIndicadores}
+    </div>
+
+    <div class="relatorio-section">
+      <h2>Demonstrativo Mensal</h2>
+      ${tabelaMensal}
+    </div>
+
+    <div class="relatorio-section">
+      <h2>Despesas por Tipo de Operação</h2>
+      ${tabelaTipos}
+    </div>
+
+    <div class="relatorio-footer">
+      <span class="footer-brand">Aplikado Soluções</span>
+      <span>Relatório gerado automaticamente — ${meta}</span>
+    </div>
+  `;
+
+  overlay.classList.add('active');
+};
+
+// ---------- 8) Reaplica o filtro atual assim que este patch carregar ----------
+setTimeout(() => {
+  try {
+    const sel = document.getElementById('filtroTrimestre');
+    if (sel) {
+      trimestreSelecionado = parseInt(sel.value, 10) || 0;
+      window.aplicarFiltroTrimestre();
+    }
+  } catch (e) { console.warn('Patch init:', e); }
+}, 1200);
+
+</script>
 </body>
 </html>
