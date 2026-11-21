@@ -2117,6 +2117,237 @@ localStorage.setItem('dre_ocultar_inativos', STATE.ocultarMesesInativos ? '1' : 
 }
 
 })();
+  /* ============================================================================
+PATCH PERFORMANCE + SPINNER — DRE SEM TRAVAR A TELA
+1) Spinner girando (canto superior direito, não bloqueia cliques).
+2) Overlay de loading deixa de bloquear a tela (pointer-events:none).
+3) Carga em PARALELO (Promise.all) em vez de sequencial.
+4) Cálculo INDEXADO por mês/plano — elimina a varredura O(n²) que travava.
+5) Filtro da tabela em lotes via requestAnimationFrame (UI nunca congela).
+6) Cache de sessão (10 min): reabrir a página é quase instantâneo.
+============================================================================ */
+(function(){
+'use strict';
+
+/* ---------- 1) SPINNER GIRANDO ---------- */
+const st=document.createElement('style');
+st.textContent=`
+@keyframes __spin{to{transform:rotate(360deg)}}
+#__dreSpinner{position:fixed;top:74px;right:18px;z-index:99999;display:none;
+align-items:center;gap:10px;padding:8px 16px;border-radius:999px;
+background:var(--bg-card,#fff);border:1px solid var(--border-color,#ddd);
+box-shadow:0 6px 24px rgba(0,0,0,.18);font-size:12px;font-weight:600;
+color:var(--text-primary,#111);pointer-events:none}
+#__dreSpinner.on{display:flex}
+#__dreSpinner .ring{width:18px;height:18px;border-radius:50%;flex-shrink:0;
+border:3px solid rgba(120,120,120,.25);border-top-color:#F59E0B;
+animation:__spin .8s linear infinite}
+#loadingOverlay{pointer-events:none!important;background:transparent!important}
+#loadingOverlay .loading-progress-wrap{background:var(--bg-card,#fff);
+padding:16px 20px;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+`;
+document.head.appendChild(st);
+const sp=document.createElement('div');
+sp.id='__dreSpinner';
+sp.innerHTML='<span class="ring"></span><span id="__dreSpinnerTxt">Carregando…</span>';
+document.body.appendChild(sp);
+let __busy=0;
+window.__dreSpin=function(on,txt){
+__busy=Math.max(0,__busy+(on?1:-1));
+if(txt){const t=document.getElementById('__dreSpinnerTxt');if(t)t.textContent=txt;}
+sp.classList.toggle('on',__busy>0);
+};
+
+/* ---------- 2) ÍNDICE DE LANÇAMENTOS (cálculo instantâneo) ----------
+   Antes: cada célula da DRE varria TODOS os lançamentos (milhões de comparações).
+   Agora: 1 varredura única → Map(mês → Map(plano → soma)), com o MESMO
+   critério de correspondência do planoCorresponde original (vínculo preservado). */
+let __idx=null,__idxStamp='';
+function __stamp(){
+return [receitasDataReais.length,despesasDataReais.length,contasExtrasData.length,
+movimentosExtraData.length,STATE.ano,STATE.trimestre,
+estruturaDRE.receitas.length,estruturaDRE.custosVariaveis.length,estruturaDRE.custosFixos.length].join('|');
+}
+function __norm(s){return String(s||'').replace(/^\d+\s*-\s*/,'').trim().toUpperCase();}
+function __buildIndex(){
+const stamp=__stamp();
+if(__idx&&__idxStamp===stamp)return __idx;
+const idx=new Map();
+const add=(dataStr,plano,val)=>{
+const dt=parseDataBr(dataStr);if(!dt)return;
+if(STATE.ano&&dt.getFullYear()!==STATE.ano)return;
+const m=dt.getMonth();if(!mesEstaAtivo(m))return;
+if(!idx.has(m))idx.set(m,new Map());
+const mp=idx.get(m),k=__norm(plano);
+mp.set(k,(mp.get(k)||0)+(Number(val)||0));
+};
+receitasDataReais.forEach(r=>add(r.data,r.plano,r.valor));
+despesasDataReais.forEach(d=>add(d.data,d.plano,d.valor));
+contasExtrasData.forEach(s=>add(s.dt_pagto,s.plano,s.valor));
+movimentosExtraData.forEach(m=>{
+let v=Number(m.total_nota)||0;
+if(m.tipo==='DESPESA'||m.tipo==='SAIDA')v=-Math.abs(v);
+add(m.data,m.plano,v);});
+/* pré-resolve cada plano do DRE contra as chaves (mesma lógica do match original) */
+const todos=[...estruturaDRE.receitas,...estruturaDRE.custosVariaveis,...estruturaDRE.custosFixos];
+const resolve=new Map();
+const chaves=new Set();idx.forEach(mp=>mp.forEach((_,k)=>chaves.add(k)));
+const nomesRec=estruturaDRE.receitas.map(p=>__norm(p.nome));
+todos.forEach(p=>{
+const id=p.identificador||(p.cod+' - '+p.nome),nd=__norm(id),cod=(String(id).match(/^(\d+)/)||[])[1];
+const hits=[];
+chaves.forEach(k=>{
+if(k===nd){hits.push(k);return;}
+if(k.includes(nd)||nd.includes(k)){
+let conf=0;
+for(const nr of nomesRec){if(nr!==nd&&(k.includes(nr)||nr.includes(k)))conf++;}
+if(conf===0)hits.push(k);return;
+}
+const ck=(k.match(/^(\d+)/)||[])[1];
+if(cod&&ck&&cod===ck)hits.push(k);
+});
+resolve.set(id,hits);
+});
+__idx={idx,resolve};__idxStamp=stamp;
+return __idx;
+}
+calcularValorPorPlano=function(identificador,mes){
+if(!mesEstaAtivo(mes))return 0;
+const r=__buildIndex();
+const mp=r.idx.get(mes);if(!mp)return 0;
+const hits=r.resolve.get(identificador);if(!hits||!hits.length)return 0;
+let t=0;for(const k of hits)t+=mp.get(k)||0;
+return t;
+};
+
+/* ---------- 3) FILTRO DA TABELA EM LOTES (não congela a UI) ---------- */
+let __filtroRAF=null;
+aplicarFiltroNaTabela=function(){
+if(__filtroRAF)cancelAnimationFrame(__filtroRAF);
+__filtroRAF=requestAnimationFrame(()=>{
+__filtroRAF=null;
+const mA=mesesAtivos();
+montarCabecalhoDRE();
+const trs=[...el('corpoDRE').querySelectorAll('tr')];
+const LOTE=60;let pos=0;
+function passo(){
+const fim=Math.min(pos+LOTE,trs.length);
+for(;pos<fim;pos++){
+const tr=trs[pos],tds=tr.querySelectorAll('td');
+if(tds.length<2)continue;
+while(tr.querySelectorAll('td').length<14)tr.insertAdjacentHTML('beforeend','<td>—</td>');
+const cells=tr.querySelectorAll('td');
+let soma=0,temMov=false;
+for(let i=1;i<=12;i++){
+const td=cells[i],mes=i-1,ativo=mA.includes(mes);
+const v=ativo?parseValorBR(td.textContent):0;
+td.setAttribute('data-mes',String(mes));
+td.classList.toggle('mes-inativo',!ativo);
+td.classList.toggle('col-ativa',ativo);
+td.classList.remove('valor-positivo','valor-negativo','valor-zero');
+td.classList.add(v>0?'valor-positivo':v<0?'valor-negativo':'valor-zero');
+td.textContent=formatarMoeda(v);
+td.style.display=(STATE.ocultarMesesInativos&&!ativo)?'none':'';
+if(ativo){soma+=v;if(v!==0)temMov=true;}
+}
+const tdT=cells[13];
+tdT.setAttribute('data-total','1');tdT.classList.add('col-total');
+tdT.classList.remove('valor-positivo','valor-negativo','valor-zero');
+tdT.classList.add(soma>=0?'valor-positivo':'valor-negativo');
+tdT.textContent=formatarMoeda(soma);
+tr.classList.toggle('linha-com-movimentacao',temMov||tr.classList.contains('dre-total-row'));
+}
+if(pos<trs.length)requestAnimationFrame(passo);
+else{aplicarFiltroMovimentoVisual();try{sincronizarCardsComDRE();}catch(e){}}
+}
+passo();
+});
+};
+
+/* ---------- 4) CARGA EM PARALELO + CACHE DE SESSÃO ---------- */
+const __CACHE_KEY='dre_cache_v1';
+function __salvarCache(){
+try{sessionStorage.setItem(__CACHE_KEY,JSON.stringify({
+ts:Date.now(),vendas:vendasData,rec:receitasDataReais,desp:despesasDataReais,
+extra:contasExtrasData,mov:movimentosExtraData,est:estruturaDRE}));}catch(e){}
+}
+function __lerCache(){
+try{const c=JSON.parse(sessionStorage.getItem(__CACHE_KEY)||'null');
+if(c&&Date.now()-c.ts<10*60*1000)return c;}catch(e){}
+return null;
+}
+carregarDados=async function(){
+window.__dreSpin(true,'Carregando dados…');
+try{
+/* cache: mostra a tela imediatamente enquanto atualiza por trás */
+const cache=__lerCache();
+if(cache){
+vendasData=cache.vendas;receitasDataReais=cache.rec;despesasDataReais=cache.desp;
+contasExtrasData=cache.extra;movimentosExtraData=cache.mov;estruturaDRE=cache.est;
+detectarAnos();STATE.carregado=true;renderTudo();
+atualizarLoading(90,'Atualizando em segundo plano…');
+}
+/* TUDO em paralelo — regras antes do mapeamento das despesas */
+const res=await Promise.all([
+carregarRegras(),
+cache?Promise.resolve():carregarPlano(),
+fetchAll('vendas_alf'),
+fetchAll('dados_m2'),
+fetchAll('movimentos_extra').catch(()=>[]),
+fetchAll('contas_extras').catch(()=>[])
+]);
+const vendasRaw=res[2],comprasRaw=res[3],movsRaw=res[4],extrasRaw=res[5];
+if(!cache&&!estruturaDRE.receitas.length)carregarPlanoFallback();
+atualizarLoading(70,'Processando…');
+vendasData=vendasRaw.map(v=>{
+const tn=(v['TOTAL NOTA']!==undefined&&v['TOTAL NOTA']!==null)?v['TOTAL NOTA']:v.total;
+return{id:v.id,data_nota:v.data||v['DATA']||'',
+cliente:v['CLIENTE/FORNECEDOR']||v.cliente||'NAO INFORMADO',
+total:Number(tn||0)||0,cond_pag:v['COND.PAG']||v.cond_pag||'-',
+tipo:v.tipo||v['TIPO VENDA']||v.tipo_venda||''};});
+/* plano fixo igual ao Módulo III — vínculo preservado */
+receitasDataReais=vendasData.map(v=>({id:v.id,data:v.data_nota,valor:v.total,
+cliente:v.cliente,cond_pag:v.cond_pag,plano:'RECEITA DE SERVICOS'}));
+despesasDataReais=comprasRaw.map(c=>{const op=c.operacao||c.documento||'DESPESA';
+return{id:c.id,data:c.vencimento||c.data||'',valor:Number(c.valor||0)||0,
+fornecedor:c.fornecedor||'NAO INFORMADO',operacao:op,documento:c.documento||'',
+plano:encontrarPlanoPorOperacao(op)};});
+movimentosExtraData=movsRaw.map(m=>({id:m.id,data:m.data||'',total_nota:Number(m.total_nota||0)||0,
+cliente_fornecedor:m.cliente_fornecedor||'NAO INFORMADO',tipo:(m.tipo||'OUTROS').toUpperCase(),
+plano:m.plano_contas||'4 - DESPESAS ADMINISTRATIVAS',plano_contas:m.plano_contas||'',
+operadora:m.operadora||'',nf_fiscal:m.nf_fiscal||''}));
+contasExtrasData=extrasRaw.map(x=>({id:x.id,dt_pagto:x.dt_pagto||'',
+fornecedor:x.fornecedor||'NAO INFORMADO',operacao:x.operacao||'',
+valor:Number(x.valor||0)||0,plano:obterPlanoParaSangria(x.operacao||'')}));
+__idx=null; /* invalida o índice para reconstruir com dados novos */
+detectarAnos();STATE.carregado=true;
+atualizarLoading(92,'Calculando demonstrativo…');
+renderTudo();__salvarCache();buscarUltimaAtualizacao();
+}catch(e){
+console.error('Carga:',e);
+el('corpoDRE').innerHTML='<tr><td colspan="14" class="empty-state" style="color:var(--accent-red)">Erro ao carregar dados: '+escapeHtml(e.message||e)+'</td></tr>';
+}finally{window.__dreSpin(false);}
+};
+
+/* ---------- 5) SPINNER NAS OPERAÇÕES PESADAS ---------- */
+const __origRenderTudo=renderTudo;
+renderTudo=function(){
+window.__dreSpin(true,'Atualizando DRE…');
+try{return __origRenderTudo.apply(this,arguments);}
+finally{setTimeout(()=>window.__dreSpin(false),50);}
+};
+const __origCopiar=copiarDREdoIframe;
+copiarDREdoIframe=function(){
+window.__dreSpin(true,'Sincronizando Módulo III…');
+try{return __origCopiar.apply(this,arguments);}
+finally{setTimeout(()=>window.__dreSpin(false),50);}
+};
+/* libera a tela imediatamente: overlay nunca intercepta cliques */
+document.addEventListener('DOMContentLoaded',()=>{
+const ov=document.getElementById('loadingOverlay');
+if(ov)ov.style.pointerEvents='none';
+});
+})();
 </script>
 </body>
 </html>
