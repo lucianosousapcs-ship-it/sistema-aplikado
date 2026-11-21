@@ -3887,6 +3887,353 @@ function recalcularIndicadoresExecutivosTrimestre() {
         setTimeout(() => aplicarFiltroTrimestreCompleto(), 1500);
     }
 })();
+
+// ============================================================
+// CORREÇÃO DO RELATÓRIO EXECUTIVO (PDF) — RESPEITAR TRIMESTRE
+// Incluir no FINAL do script, após todas as funções existentes
+// ============================================================
+
+/**
+ * Soma receitas brutas do período selecionado (trimestre).
+ * Usa as MESMAS fontes de dados que a tela (calcularValorPorPlano).
+ */
+function somarReceitasPeriodo() {
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+    let total = 0;
+
+    for (const r of receitasDataReais) {
+        if (mesesAtivos.includes(extrairMes(r.data))) {
+            total += Number(r.valor) || 0;
+        }
+    }
+    for (const m of movimentosExtraData) {
+        if ((m.tipo === 'RECEITA' || m.tipo === 'ENTRADA') &&
+            mesesAtivos.includes(extrairMes(m.data))) {
+            total += Math.abs(Number(m.total_nota) || 0);
+        }
+    }
+    return total;
+}
+
+/**
+ * Soma despesas brutas do período selecionado (trimestre).
+ */
+function somarDespesasPeriodo() {
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+    let total = 0;
+
+    for (const d of despesasDataReais) {
+        if (mesesAtivos.includes(extrairMes(d.data))) {
+            total += Math.abs(Number(d.valor) || 0);
+        }
+    }
+    for (const s of contasExtrasData) {
+        if (mesesAtivos.includes(extrairMes(s.dt_pagto))) {
+            total += Math.abs(Number(s.valor) || 0);
+        }
+    }
+    for (const m of movimentosExtraData) {
+        if ((m.tipo === 'DESPESA' || m.tipo === 'SAIDA') &&
+            mesesAtivos.includes(extrairMes(m.data))) {
+            total += Math.abs(Number(m.total_nota) || 0);
+        }
+    }
+    return total;
+}
+
+/**
+ * Soma despesas por tipo de operação (para o relatório).
+ * Recalcula do zero com base no trimestre — não usa tiposOperacaoResumo cacheado.
+ */
+function calcularTiposOperacaoPeriodo() {
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+    const tipos = {};
+
+    for (let i = 1; i <= 20; i++) {
+        tipos[i] = {
+            tipo: i,
+            grupo: ESTRUTURA_OPERACOES[i].nome,
+            total: 0,
+            qtd: 0
+        };
+    }
+
+    for (const d of despesasDataReais) {
+        if (!mesesAtivos.includes(extrairMes(d.data))) continue;
+        const info = identificarTipoOperacao(d.operacao || '');
+        if (!info.tipo || info.tipo < 1 || info.tipo > 20) continue;
+        tipos[info.tipo].total += Math.abs(Number(d.valor) || 0);
+        tipos[info.tipo].qtd++;
+    }
+    for (const s of contasExtrasData) {
+        if (!mesesAtivos.includes(extrairMes(s.dt_pagto))) continue;
+        const info = identificarTipoOperacao(s.operacao || 'Sangria');
+        if (!info.tipo || info.tipo < 1 || info.tipo > 20) continue;
+        tipos[info.tipo].total += Math.abs(Number(s.valor) || 0);
+        tipos[info.tipo].qtd++;
+    }
+    for (const m of movimentosExtraData) {
+        if (m.tipo === 'RECEITA' || m.tipo === 'ENTRADA') continue;
+        if (!mesesAtivos.includes(extrairMes(m.data))) continue;
+        const info = identificarTipoOperacao(m.plano_contas || m.operadora || 'Outros');
+        if (!info.tipo || info.tipo < 1 || info.tipo > 20) continue;
+        tipos[info.tipo].total += Math.abs(Number(m.total_nota) || 0);
+        tipos[info.tipo].qtd++;
+    }
+
+    return Object.values(tipos)
+        .filter(t => t.total > 0)
+        .sort((a, b) => b.total - a.total);
+}
+
+/**
+ * Calcula KPIs de vendas do período (para o relatório).
+ */
+function calcularVendasPeriodo() {
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+    const vendasFiltradas = vendasData.filter(v => {
+        const data = v.data || v.dt_venda || v.data_venda;
+        return mesesAtivos.includes(extrairMes(data));
+    });
+    const total = vendasFiltradas.reduce((s, v) => s + (Number(v.total) || 0), 0);
+    const qtd = vendasFiltradas.length;
+    return {
+        total,
+        qtd,
+        ticketMedio: qtd > 0 ? total / qtd : 0
+    };
+}
+
+/**
+ * Retorna o rótulo do período atual (já definido em aplicarFiltroTrimestreCompleto,
+ * mas repetido aqui para garantir disponibilidade).
+ */
+function getLabelPeriodoRelatorio() {
+    const labels = [
+        "Ano Completo (Jan-Dez)",
+        "1º Trimestre (Jan-Mar)",
+        "2º Trimestre (Abr-Jun)",
+        "3º Trimestre (Jul-Set)",
+        "4º Trimestre (Out-Dez)"
+    ];
+    return labels[trimestreSelecionado] || "Ano Completo (Jan-Dez)";
+}
+
+/**
+ * Versão corrigida do relatório executivo.
+ * Recalcula TODOS os valores com base no trimestre selecionado.
+ * NÃO usa tiposOperacaoResumo cacheado nem variáveis globais antigas.
+ */
+function abrirRelatorioExecutivoCorrigido() {
+    const mesesAtivos = obterMesesDoTrimestre(trimestreSelecionado);
+
+    // ---- Recalcula tudo do zero com base no trimestre ----
+    const totalReceita = somarReceitasPeriodo();
+    const totalDespesas = somarDespesasPeriodo();
+    const resultado = totalReceita - totalDespesas;
+    const margemLiq = totalReceita > 0 ? (resultado / totalReceita) * 100 : 0;
+    const eficiencia = totalDespesas > 0 ? (totalReceita / totalDespesas) * 100 : 0;
+    const pontoEq = totalReceita > 0 && totalDespesas > 0
+        ? totalDespesas / (1 - (0 / totalReceita))
+        : 0;
+    const roi = totalDespesas > 0 ? (resultado / totalDespesas) * 100 : 0;
+
+    const tiposPeriodo = calcularTiposOperacaoPeriodo();
+    const vendasPeriodo = calcularVendasPeriodo();
+
+    // ---- Monta o HTML do relatório ----
+    const labelPeriodo = getLabelPeriodoRelatorio();
+    const dataGeracao = new Date().toLocaleString('pt-BR');
+    const el = document.getElementById('relatorioConteudo');
+    if (!el) {
+        console.warn('Container do relatório não encontrado.');
+        return;
+    }
+
+    // Top 5 despesas por operação
+    const topDespesas = tiposPeriodo.slice(0, 5);
+
+    // Top 5 receitas por condição de pagamento (se houver dados)
+    const topReceitasCond = [];
+    if (typeof receitasDataReais !== 'undefined') {
+        const mapaCond = {};
+        for (const r of receitasDataReais) {
+            if (!mesesAtivos.includes(extrairMes(r.data))) continue;
+            const cond = r.condicao_pagamento || r.condicao || 'Não informada';
+            mapaCond[cond] = (mapaCond[cond] || 0) + (Number(r.valor) || 0);
+        }
+        Object.entries(mapaCond)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .forEach(([nome, valor]) => topReceitasCond.push({ nome, valor }));
+    }
+
+    // ---- Cabeçalho ----
+    let html = `
+        <div class="relatorio-header">
+            <div class="titulo-area">
+                <h1>Aplikado · Relatório Executivo</h1>
+                <div class="sub">Demonstrativo de Resultados — ${labelPeriodo}</div>
+            </div>
+            <div class="meta-info">
+                <div><strong>Período:</strong> ${labelPeriodo}</div>
+                <div><strong>Gerado em:</strong> ${dataGeracao}</div>
+                <div><strong>Meses considerados:</strong> ${mesesAtivos.map(m => mesesNomes[m]).join(', ')}</div>
+            </div>
+        </div>
+    `;
+
+    // ---- Sumário (quadrantes) ----
+    html += `
+        <div class="relatorio-section">
+            <h2>Sumário Executivo</h2>
+            <div class="relatorio-sumario-grid">
+                <div class="relatorio-quadrante">
+                    <div class="quad-label">Receita Total</div>
+                    <div class="quad-valor" style="color:#10B981;">${formatarMoeda(totalReceita)}</div>
+                    <div class="quad-sub">${vendasPeriodo.qtd} venda(s) no período</div>
+                    <div class="quad-detalhe">Ticket médio: ${formatarMoeda(vendasPeriodo.ticketMedio)}</div>
+                </div>
+                <div class="relatorio-quadrante">
+                    <div class="quad-label">Despesas Totais</div>
+                    <div class="quad-valor" style="color:#EF4444;">${formatarMoeda(totalDespesas)}</div>
+                    <div class="quad-sub">${totalReceita > 0 ? ((totalDespesas / totalReceita) * 100).toFixed(1) : '0,0'}% da receita</div>
+                    <div class="quad-detalhe">${tiposPeriodo.reduce((s, t) => s + t.qtd, 0)} lançamento(s)</div>
+                </div>
+                <div class="relatorio-quadrante">
+                    <div class="quad-label">Resultado Operacional</div>
+                    <div class="quad-valor" style="color:${resultado >= 0 ? '#10B981' : '#EF4444'};">
+                        ${formatarMoeda(resultado)}
+                    </div>
+                    <div class="quad-sub">Margem líquida: ${margemLiq.toFixed(1)}%</div>
+                    <div class="quad-detalhe">Eficiência: ${eficiencia.toFixed(1)}%</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // ---- Indicadores ----
+    html += `
+        <div class="relatorio-section">
+            <h2>Indicadores Estratégicos</h2>
+            <table class="relatorio-table">
+                <thead>
+                    <tr>
+                        <th style="width:40%;">Indicador</th>
+                        <th class="num" style="width:25%;">Valor</th>
+                        <th style="width:35%;">Interpretação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Receita Total</td><td class="num">${formatarMoeda(totalReceita)}</td><td>Faturamento do período</td></tr>
+                    <tr><td>Custos Totais</td><td class="num">${formatarMoeda(totalDespesas)}</td><td>${totalReceita > 0 ? ((totalDespesas / totalReceita) * 100).toFixed(1) : 0}% da receita</td></tr>
+                    <tr><td>Resultado Operacional</td><td class="num">${formatarMoeda(resultado)}</td><td>${resultado >= 0 ? 'Lucro' : 'Prejuízo'} no período</td></tr>
+                    <tr><td>Margem Líquida</td><td class="num">${margemLiq.toFixed(1)}%</td><td>${margemLiq > 15 ? 'Excelente' : margemLiq > 8 ? 'Boa' : margemLiq > 3 ? 'Abaixo do ideal' : 'Crítica'}</td></tr>
+                    <tr><td>Eficiência Operacional</td><td class="num">${eficiencia.toFixed(1)}%</td><td>${eficiencia > 150 ? 'Excelente' : eficiencia > 100 ? 'Boa' : 'Abaixo do ideal'}</td></tr>
+                    <tr><td>Ponto de Equilíbrio</td><td class="num">${formatarMoeda(pontoEq)}</td><td>Receita mínima para cobrir custos</td></tr>
+                    <tr><td>ROI Estimado</td><td class="num">${roi.toFixed(1)}%</td><td>${roi > 30 ? 'Excelente' : roi > 15 ? 'Bom' : roi > 0 ? 'Abaixo do ideal' : 'Negativo'}</td></tr>
+                    <tr><td>Ticket Médio</td><td class="num">${formatarMoeda(vendasPeriodo.ticketMedio)}</td><td>${vendasPeriodo.qtd} venda(s)</td></tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    // ---- Top despesas por operação ----
+    html += `
+        <div class="relatorio-section">
+            <h2>Top Despesas por Operação</h2>
+            <table class="relatorio-table">
+                <thead>
+                    <tr>
+                        <th style="width:10%;">Tipo</th>
+                        <th style="width:45%;">Grupo</th>
+                        <th class="num" style="width:20%;">Valor</th>
+                        <th class="num" style="width:25%;">% das Despesas</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    if (topDespesas.length === 0) {
+        html += `<tr><td colspan="4" style="text-align:center;">Nenhuma despesa no período</td></tr>`;
+    } else {
+        for (const t of topDespesas) {
+            const pct = totalDespesas > 0 ? (t.total / totalDespesas) * 100 : 0;
+            html += `<tr>
+                <td>${t.tipo}</td>
+                <td>${escapeHtml(t.grupo)}</td>
+                <td class="num">${formatarMoeda(t.total)}</td>
+                <td class="num">${pct.toFixed(1)}%</td>
+            </tr>`;
+        }
+    }
+    html += `</tbody></table></div>`;
+
+    // ---- Top receitas por condição ----
+    if (topReceitasCond.length > 0) {
+        html += `
+            <div class="relatorio-section">
+                <h2>Top Receitas por Condição de Pagamento</h2>
+                <table class="relatorio-table">
+                    <thead>
+                        <tr>
+                            <th style="width:60%;">Condição</th>
+                            <th class="num" style="width:20%;">Valor</th>
+                            <th class="num" style="width:20%;">% da Receita</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        for (const r of topReceitasCond) {
+            const pct = totalReceita > 0 ? (r.valor / totalReceita) * 100 : 0;
+            html += `<tr>
+                <td>${escapeHtml(r.nome)}</td>
+                <td class="num">${formatarMoeda(r.valor)}</td>
+                <td class="num">${pct.toFixed(1)}%</td>
+            </tr>`;
+        }
+        html += `</tbody></table></div>`;
+    }
+
+    // ---- Diagnóstico final ----
+    const diagFinal = resultado >= 0
+        ? `No <strong>${labelPeriodo}</strong>, a empresa apresentou <strong>lucro operacional de ${formatarMoeda(resultado)}</strong>, com margem líquida de <strong>${margemLiq.toFixed(1)}%</strong> sobre uma receita de <strong>${formatarMoeda(totalReceita)}</strong>. As despesas representaram <strong>${totalReceita > 0 ? ((totalDespesas / totalReceita) * 100).toFixed(1) : 0}%</strong> do faturamento.`
+        : `No <strong>${labelPeriodo}</strong>, a empresa apresentou <strong>prejuízo operacional de ${formatarMoeda(Math.abs(resultado))}</strong>, com margem líquida negativa de <strong>${margemLiq.toFixed(1)}%</strong> sobre uma receita de <strong>${formatarMoeda(totalReceita)}</strong>. As despesas superaram a receita em <strong>${((totalDespesas / Math.max(totalReceita, 1)) * 100).toFixed(1)}%</strong>.`;
+
+    html += `
+        <div class="relatorio-section">
+            <h2>Diagnóstico</h2>
+            <div class="relatorio-diagnostico">${diagFinal}</div>
+        </div>
+    `;
+
+    // ---- Rodapé ----
+    html += `
+        <div class="relatorio-footer">
+            <div class="footer-brand">Aplikado Soluções · Módulo III</div>
+            <div>Relatório gerado em ${dataGeracao}</div>
+        </div>
+    `;
+
+    el.innerHTML = html;
+
+    // Abre o overlay
+    const overlay = document.getElementById('relatorioExecutivo');
+    if (overlay) overlay.classList.add('active');
+}
+
+// ============================================================
+// REDIRECIONA O BOTÃO "RELATÓRIO" PARA A VERSÃO CORRIGIDA
+// ============================================================
+(function substituirHandlerRelatorio() {
+    // Sobrescreve a função global para que o onclick inline use a corrigida
+    window.abrirRelatorioExecutivo = abrirRelatorioExecutivoCorrigido;
+
+    // Garante que o botão do topbar aponte para a nova função
+    document.querySelectorAll('button[onclick*="abrirRelatorioExecutivo"]').forEach(btn => {
+        btn.removeAttribute('onclick');
+        btn.addEventListener('click', abrirRelatorioExecutivoCorrigido);
+    });
+})();
 </script>
 </body>
 </html>
