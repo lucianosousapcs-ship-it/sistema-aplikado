@@ -4549,7 +4549,268 @@ setTimeout(() => {
     }
   } catch (e) { console.warn('Patch init:', e); }
 }, 1200);
+// ============================================================
+// PATCH DRE — Renderização 100% local respeitando o trimestre
+// Sem fetch, sem reload, sem piscar a tela
+// ============================================================
 
+// ---------- 1) Cache do último render para evitar re-render desnecessário ----------
+window.__ultimoTrimestreRenderizado = -1;
+
+// ---------- 2) Constrói a matriz DRE filtrada a partir da memória ----------
+window.__construirMatrizDRE = function () {
+  const ativos = window.__mesesAtivos();
+
+  // Soma por plano (identificador) e mês
+  const somaPlano = {}; // identificador -> array[12]
+
+  const addValor = (identificador, mes, valor) => {
+    if (!ativos.includes(mes)) return;
+    if (!somaPlano[identificador]) somaPlano[identificador] = Array(12).fill(0);
+    somaPlano[identificador][mes] += Number(valor) || 0;
+  };
+
+  // Receitas reais
+  for (const r of receitasDataReais) {
+    const m = extrairMes(r.data);
+    if (!ativos.includes(m)) continue;
+    // encontra plano da estrutura que corresponde
+    for (const plano of estruturaDRE.receitas) {
+      if (planoCorresponde(r.plano, plano.nome)) {
+        addValor(plano.nome, m, r.valor);
+        break;
+      }
+    }
+  }
+  // Despesas reais
+  for (const d of despesasDataReais) {
+    const m = extrairMes(d.data);
+    if (!ativos.includes(m)) continue;
+    const todos = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
+    for (const plano of todos) {
+      if (planoCorresponde(d.plano, plano.nome)) {
+        addValor(plano.nome, m, d.valor);
+        break;
+      }
+    }
+  }
+  // Contas extras
+  for (const s of contasExtrasData) {
+    const m = extrairMes(s.dt_pagto);
+    if (!ativos.includes(m)) continue;
+    const todos = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
+    for (const plano of todos) {
+      if (planoCorresponde(s.plano, plano.nome)) {
+        addValor(plano.nome, m, s.valor);
+        break;
+      }
+    }
+  }
+  // Movimentos extra
+  for (const mv of movimentosExtraData) {
+    const m = extrairMes(mv.data);
+    if (!ativos.includes(m)) continue;
+    const val = Math.abs(Number(mv.total_nota) || 0);
+    if (mv.tipo === 'RECEITA' || mv.tipo === 'ENTRADA') {
+      for (const plano of estruturaDRE.receitas) {
+        if (planoCorresponde(mv.plano, plano.nome)) { addValor(plano.nome, m, val); break; }
+      }
+    } else {
+      const todos = [...estruturaDRE.custosVariaveis, ...estruturaDRE.custosFixos];
+      for (const plano of todos) {
+        if (planoCorresponde(mv.plano, plano.nome)) { addValor(plano.nome, m, -val); break; }
+      }
+    }
+  }
+
+  return somaPlano;
+};
+
+// ---------- 3) Renderiza a tabela DRE (substitui a original) ----------
+window.renderizarDREFiltrada = function () {
+  const tbody = document.getElementById('corpoDRE');
+  if (!tbody) return;
+
+  // Evita re-render idêntico (anti-travamento)
+  if (window.__ultimoTrimestreRenderizado === trimestreSelecionado &&
+      tbody.children.length > 0 &&
+      !window.__forceDRE) {
+    return;
+  }
+  window.__forceDRE = false;
+
+  const ativos = window.__mesesAtivos();
+  const soma = window.__construirMatrizDRE();
+
+  // Helpers
+  const valMes = (plano, m) => {
+    const arr = soma[plano];
+    return arr ? arr[m] : 0;
+  };
+  const linha = (planoArr, m) => {
+    const arr = Array(12).fill(0);
+    for (const p of planoArr) {
+      const s = soma[p.nome];
+      if (!s) continue;
+      for (let i = 0; i < 12; i++) if (ativos.includes(i)) arr[i] += s[i];
+    }
+    return arr;
+  };
+  const totalArr = arr => arr.reduce((a, b) => a + b, 0);
+  const fmt = v => formatarMoeda(v);
+  const cls = v => v < 0 ? 'valor-negativo' : '';
+
+  // Monta as linhas
+  const receitasArr = linha(estruturaDRE.receitas, 0);
+  const custosVarArr = linha(estruturaDRE.custosVariaveis, 0);
+  const custosFixArr = linha(estruturaDRE.custosFixos, 0);
+
+  const lucroBrutoArr = receitasArr.map((v, i) => v + custosVarArr[i]);
+  const resultadoOpArr = lucroBrutoArr.map((v, i) => v + custosFixArr[i]);
+  const margemArr = resultadoOpArr.map((v, i) => receitasArr[i] !== 0 ? (v / receitasArr[i]) * 100 : 0);
+
+  // Cabeçalho de mês (já está no thead, apenas células)
+  const celulaMeses = (arr, extraCls = '') => {
+    let html = '';
+    for (let i = 0; i < 12; i++) {
+      const inativo = !ativos.includes(i);
+      html += `<td class="${inativo ? 'mes-inativo' : ''} ${extraCls}">${fmt(arr[i])}</td>`;
+    }
+    html += `<td class="${extraCls}"><strong>${fmt(totalArr(arr))}</strong></td>`;
+    return html;
+  };
+
+  let html = '';
+
+  // Grupo RECEITAS
+  html += `<tr class="dre-group-title"><td colspan="14">RECEITAS</td></tr>`;
+  for (const p of estruturaDRE.receitas) {
+    const arr = soma[p.nome] || Array(12).fill(0);
+    if (totalArr(arr) === 0) continue;
+    html += `<tr><td>${escapeHtml(p.nome)}</td>${celulaMeses(arr)}</tr>`;
+  }
+  html += `<tr class="dre-total-row"><td>RECEITA TOTAL</td>${celulaMeses(receitasArr, 'valor-positivo')}</tr>`;
+
+  // Grupo CUSTOS VARIÁVEIS
+  html += `<tr class="dre-group-title"><td colspan="14">CUSTOS VARIÁVEIS</td></tr>`;
+  for (const p of estruturaDRE.custosVariaveis) {
+    const arr = soma[p.nome] || Array(12).fill(0);
+    if (totalArr(arr) === 0) continue;
+    html += `<tr><td>${escapeHtml(p.nome)}</td>${celulaMeses(arr)}</tr>`;
+  }
+  html += `<tr class="dre-total-row"><td>TOTAL CUSTOS VARIÁVEIS</td>${celulaMeses(custosVarArr, 'valor-negativo')}</tr>`;
+
+  // LUCRO BRUTO
+  html += `<tr class="dre-total-row"><td>LUCRO BRUTO</td>${celulaMeses(lucroBrutoArr, lucroBrutoArr.reduce((a,b)=>a+b,0) < 0 ? 'valor-negativo' : 'valor-positivo')}</tr>`;
+
+  // Grupo CUSTOS FIXOS
+  html += `<tr class="dre-group-title"><td colspan="14">CUSTOS FIXOS</td></tr>`;
+  for (const p of estruturaDRE.custosFixos) {
+    const arr = soma[p.nome] || Array(12).fill(0);
+    if (totalArr(arr) === 0) continue;
+    html += `<tr><td>${escapeHtml(p.nome)}</td>${celulaMeses(arr)}</tr>`;
+  }
+  html += `<tr class="dre-total-row"><td>TOTAL CUSTOS FIXOS</td>${celulaMeses(custosFixArr, 'valor-negativo')}</tr>`;
+
+  // RESULTADO OPERACIONAL
+  const resOpTotal = resultadoOpArr.reduce((a, b) => a + b, 0);
+  html += `<tr class="dre-total-row"><td>RESULTADO OPERACIONAL</td>${celulaMeses(resultadoOpArr, resOpTotal < 0 ? 'valor-negativo' : 'valor-positivo')}</tr>`;
+
+  // MARGEM %
+  let margemHtml = '';
+  for (let i = 0; i < 12; i++) {
+    const inativo = !ativos.includes(i);
+    margemHtml += `<td class="${inativo ? 'mes-inativo' : ''}">${margemArr[i].toFixed(1)}%</td>`;
+  }
+  const margemTotal = receitasArr.reduce((a,b)=>a+b,0) !== 0
+    ? (resOpTotal / receitasArr.reduce((a,b)=>a+b,0)) * 100
+    : 0;
+  margemHtml += `<td><strong>${margemTotal.toFixed(1)}%</strong></td>`;
+  html += `<tr class="dre-total-row"><td>MARGEM OPERACIONAL</td>${margemHtml}</tr>`;
+
+  tbody.innerHTML = html;
+  window.__ultimoTrimestreRenderizado = trimestreSelecionado;
+};
+
+// ---------- 4) Sobrescreve QUALQUER função de render antiga ----------
+// (garante que o patch vence, independente do nome original)
+['gerarDREComSupabase','gerarDRE','renderizarDRE','montarTabelaDRE','montarDRE','atualizarDRE']
+  .forEach(nome => { try { window[nome] = window.renderizarDREFiltrada; } catch(e){} });
+
+// ---------- 5) Re-render unificado (reescreve o do patch anterior) ----------
+window.__reRenderizarTudo = function () {
+  window.__forceDRE = true;
+  try { window.renderizarDREFiltrada(); } catch (e) { console.warn('DRE:', e); }
+
+  try { if (typeof atualizarIndicadoresExecutivos === 'function') atualizarIndicadoresExecutivos(); } catch(e){}
+  try { if (typeof atualizarExecutivos === 'function') atualizarExecutivos(); } catch(e){}
+  try { if (typeof atualizarTiposOperacao === 'function') atualizarTiposOperacao(); } catch(e){}
+  try { if (typeof atualizarAnaliseVendas === 'function') atualizarAnaliseVendas(); } catch(e){}
+  try { if (typeof atualizarTopContas === 'function') atualizarTopContas(); } catch(e){}
+  try { if (typeof atualizarTopReceitasDespesas === 'function') atualizarTopReceitasDespesas(); } catch(e){}
+  try { if (typeof window.atualizarGraficos === 'function') window.atualizarGraficos(); } catch(e){}
+
+  // Atualiza indicadores executivos a partir da matriz filtrada
+  try { window.__atualizarExecutivosLocal(); } catch(e){}
+};
+
+// ---------- 6) Indicadores executivos calculados da matriz filtrada ----------
+window.__atualizarExecutivosLocal = function () {
+  const ativos = window.__mesesAtivos();
+  const soma = window.__construirMatrizDRE();
+
+  const somarGrupo = (planos) => {
+    const arr = Array(12).fill(0);
+    for (const p of planos) {
+      const s = soma[p.nome];
+      if (!s) continue;
+      for (let i = 0; i < 12; i++) if (ativos.includes(i)) arr[i] += s[i];
+    }
+    return arr.reduce((a,b)=>a+b,0);
+  };
+
+  const totalRec = somarGrupo(estruturaDRE.receitas);
+  const totalVar = somarGrupo(estruturaDRE.custosVariaveis);
+  const totalFix = somarGrupo(estruturaDRE.custosFixos);
+  const totalCus = Math.abs(totalVar) + Math.abs(totalFix);
+  const lucro = totalRec + totalVar + totalFix;
+  const margem = totalRec > 0 ? (lucro/totalRec)*100 : 0;
+  const margemContrib = totalRec > 0 ? ((totalRec - Math.abs(totalVar))/totalRec)*100 : 0;
+  const eficiencia = totalCus > 0 ? (totalRec/totalCus)*100 : 0;
+  const pontoEq = totalRec > 0 && Math.abs(totalVar) < totalRec
+    ? Math.abs(totalFix)/(1 - Math.abs(totalVar)/totalRec) : 0;
+  const roi = totalCus > 0 ? (lucro/totalCus)*100 : 0;
+  const ebitda = lucro + Math.abs(totalFix)*0.05;
+
+  const vendasFiltradas = window.__filtrarPorMes(vendasData || [], 'data_nota');
+  const totalVendas = vendasFiltradas.reduce((s,v)=>s+v.total,0);
+  const ticketMedio = vendasFiltradas.length ? totalVendas/vendasFiltradas.length : 0;
+
+  const set = (id, val) => { const e = document.getElementById(id); if (e) e.innerText = val; };
+  set('execReceitaTotal', formatarMoeda(totalRec));
+  set('execCustosTotais', formatarMoeda(totalCus));
+  set('execLucroOperacional', formatarMoeda(lucro));
+  set('execMargemLiquida', margem.toFixed(1)+'%');
+  set('execEBITDA', formatarMoeda(ebitda));
+  set('execTicketMedio', formatarMoeda(ticketMedio));
+  set('execEficiencia', eficiencia.toFixed(1)+'%');
+  set('execPontoEquilibrio', formatarMoeda(pontoEq));
+  set('execROI', roi.toFixed(1)+'%');
+  set('execMargemContribuicao', margemContrib.toFixed(1)+'%');
+};
+
+// ---------- 7) Reaplica filtro assim que este patch carregar ----------
+setTimeout(() => {
+  try {
+    const sel = document.getElementById('filtroTrimestre');
+    if (sel) {
+      trimestreSelecionado = parseInt(sel.value, 10) || 0;
+      // força render único
+      window.__forceDRE = true;
+      window.aplicarFiltroTrimestre();
+    }
+  } catch (e) { console.warn('Patch DRE init:', e); }
+}, 1400);
 </script>
 </body>
 </html>
