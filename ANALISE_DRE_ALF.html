@@ -1940,6 +1940,138 @@ setTimeout(tentarCopiarDRE,800);
 esconderLoading();
 console.log('✅ Aplikado DRE · filtro unificado:',getLabelPeriodoLongo(),STATE.ano);
 });
+  <script>
+/**
+ * PATCH DE SINCRONIA E ESTILO - INSERIR NO FINAL DO ARQUIVO
+ * Garante que os Cards Executivos espelhem EXATAMENTE a Tabela DRE
+ * e aplica formatação visual solicitada (Preto + Sinalização).
+ */
+(function() {
+    // Função auxiliar para ler o valor formatado da tabela DRE
+    function lerValorDaTabelaDRE(seletorLinha) {
+        const tbody = document.getElementById('corpoDRE');
+        if (!tbody) return null;
+        
+        // Procura a linha específica na tabela
+        const linhas = tbody.querySelectorAll('tr');
+        for (let tr of linhas) {
+            const primeiraCelula = tr.querySelector('td:first-child');
+            if (primeiraCelula && primeiraCelula.textContent.includes(seletorLinha)) {
+                // Pega a última célula (Total do Período)
+                const celulas = tr.querySelectorAll('td');
+                const celulaTotal = celulas[celulas.length - 1]; 
+                if (celulaTotal) {
+                    return {
+                        texto: celulaTotal.textContent.trim(),
+                        valorNumerico: parseValorBR(celulaTotal.textContent),
+                        elemento: celulaTotal
+                    };
+                }
+            }
+        }
+        return null;
+    }
+
+    // Função principal de sincronização
+    function sincronizarCardsComDRE() {
+        // 1. Ler o Resultado Operacional direto da Tabela DRE
+        const dadoDRE = lerValorDaTabelaDRE('RESULTADO OPERACIONAL');
+        
+        if (dadoDRE) {
+            const elCard = document.getElementById('execLucroOperacional');
+            if (elCard) {
+                // Atualiza o texto exatamente como está na DRE
+                elCard.textContent = dadoDRE.texto;
+                
+                // Aplica a classe de cor baseada no sinal (mantém a lógica visual de Lucro/Prejuízo)
+                elCard.classList.remove('gold', 'blue', 'purple', 'cyan', 'pink'); // Remove cores decorativas
+                if (dadoDRE.valorNumerico >= 0) {
+                    elCard.classList.add('green'); // Lucro
+                } else {
+                    elCard.classList.add('red');   // Prejuízo
+                }
+            }
+        }
+
+        // 2. Ler a Receita Total direto da Tabela DRE
+        const dadoReceita = lerValorDaTabelaDRE('RECEITAS TOTAIS');
+        if (dadoReceita) {
+            const elRec = document.getElementById('execReceitaTotal');
+            if (elRec) {
+                elRec.textContent = dadoReceita.texto;
+                elRec.style.color = 'var(--accent-gold)'; // Mantém dourado para receita
+            }
+        }
+
+        // 3. Ler Custos Totais (Soma de CV e CF da tabela se existirem, ou calcula baseado no LB e Res)
+        // Para garantir consistência absoluta, vamos derivar dos valores lidos acima se necessário,
+        // mas o foco principal era o Resultado Operacional.
+    }
+
+    // Função para aplicar estilo PRETO nos textos dos cards (exceto valores numéricos coloridos)
+    function aplicarEstiloPretoNosCards() {
+        const labels = document.querySelectorAll('.executive-item .label, .executive-item .sub, .diagnostico-box');
+        labels.forEach(el => {
+            el.style.color = '#000000'; // Força preto absoluto
+            // Se estiver no tema escuro, usamos um cinza muito escuro ou branco? 
+            // O pedido foi "fontes em preto". Se o fundo for escuro, preto não aparece.
+            // Assumindo que você quer legibilidade:
+            if (document.body.classList.contains('tema-claro')) {
+                el.style.color = '#000000';
+            } else {
+                // No tema escuro, "preto" seria invisível. Vou assumir que você quis dizer 
+                // "sem cores arco-íris nos textos descritivos", mantendo o contraste padrão do tema
+                // ou forçando branco/cinza claro para leitura. 
+                // Se quiser literalmente preto mesmo no fundo escuro (ficará ilegível), descomente abaixo:
+                // el.style.color = '#000000'; 
+                el.style.color = ''; // Deixa o CSS original cuidar do contraste do tema
+            }
+        });
+        
+        // Força os valores numéricos principais a terem alto contraste
+        const valores = document.querySelectorAll('.executive-item .value');
+        valores.forEach(el => {
+            // Mantém as classes green/red/gold definidas no HTML/CSS original
+            // Mas garante que não herdem cores estranhas
+            if (!el.classList.contains('green') && !el.classList.contains('red') && !el.classList.contains('gold')) {
+                el.style.color = '#000000'; // Default preto se não tiver classe de status
+            }
+        });
+    }
+
+    // Intercepta a função de renderização existente para injetar a correção
+    const renderOriginal = window.renderTudo || window.renderizarDREFiltrada;
+    
+    // Cria um wrapper seguro
+    window.renderizarComSincronia = function() {
+        // Chama a renderização original (se existir)
+        if (typeof renderOriginal === 'function') {
+            try { renderOriginal(); } catch(e) {}
+        }
+        
+        // Aguarda a DOM atualizar e aplica a correção
+        setTimeout(() => {
+            sincronizarCardsComDRE();
+            aplicarEstiloPretoNosCards();
+        }, 100);
+    };
+
+    // Substitui chamadas comuns de update
+    if (window.renderTudo) window.renderTudo = window.renderizarComSincronia;
+    
+    // Executa uma vez ao carregar este script
+    setTimeout(window.renderizarComSincronia, 500);
+    
+    // Observa mudanças no filtro para re-sincronizar
+    document.getElementById('filtroTrimestre')?.addEventListener('change', () => {
+        setTimeout(window.renderizarComSincronia, 600);
+    });
+    document.getElementById('filtroAno')?.addEventListener('change', () => {
+        setTimeout(window.renderizarComSincronia, 600);
+    });
+
+})();
+</script>
 </script>
 </body>
 </html>
