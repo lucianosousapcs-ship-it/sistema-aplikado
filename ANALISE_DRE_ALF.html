@@ -2074,6 +2074,49 @@ try{sincronizarCardsComDRE();}catch(e){}
 return origAbrirRel.apply(this,arguments);
 };
 })();
+  /* ============================================================================
+PATCH BOOT — INICIAR COM "OCULTAR MESES FORA DO FILTRO" ATIVO
+1) Liga STATE.ocultarMesesInativos antes de qualquer render.
+2) Ajusta o rótulo do botão para "Exibir Todos os Meses".
+3) Reaplica a ocultação após cada cópia da DRE do Módulo III.
+============================================================================ */
+(function iniciarComMesesOcultos(){
+
+function aplicarEstadoOcultar(){
+STATE.ocultarMesesInativos = true;
+const btn = el('btnOcultarInativos');
+if(btn) btn.textContent = 'Exibir Todos os Meses';
+try{ aplicarFiltroNaTabela(); }catch(e){}
+}
+
+/* Estado inicial + persistência opcional */
+localStorage.setItem('dre_ocultar_inativos','1');
+aplicarEstadoOcultar();
+
+/* Garante novamente após o boot completo (dados/iframe podem demorar) */
+document.addEventListener('DOMContentLoaded', ()=> setTimeout(aplicarEstadoOcultar, 300));
+setTimeout(aplicarEstadoOcultar, 1500);
+setTimeout(aplicarEstadoOcultar, 4000);
+
+/* Toda vez que a DRE for copiada do Módulo III, mantém os meses ocultos */
+const origCopiar = copiarDREdoIframe;
+copiarDREdoIframe = function(){
+const ok = origCopiar.apply(this, arguments);
+if(ok && STATE.ocultarMesesInativos){
+try{ aplicarFiltroNaTabela(); }catch(e){}
+}
+return ok;
+};
+
+/* Se o usuário alternar o botão, salva a escolha para as próximas sessões */
+const btn = el('btnOcultarInativos');
+if(btn){
+btn.addEventListener('click', ()=>{
+localStorage.setItem('dre_ocultar_inativos', STATE.ocultarMesesInativos ? '1' : '0');
+});
+}
+
+})();
 </script>
 </body>
 </html>
