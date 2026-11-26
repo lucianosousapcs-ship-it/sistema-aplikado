@@ -2348,6 +2348,578 @@ const ov=document.getElementById('loadingOverlay');
 if(ov)ov.style.pointerEvents='none';
 });
 })();
+/* ============================================================================
+DETALHAMENTO COMPLETO — TIPOS DE OPERAÇÃO (VERSÃO FINAL)
+Lê a parcela nativa (se existir) ou infere por agrupamento (mesmo fornecedor + valor + mês)
+============================================================================ */
+
+let __tipoModalAtual = null;
+let __cacheParcelas = { chave: '', mapa: {} };
+
+/* ---------- Utilitário: formata data com segurança ---------- */
+function __fmtData(d) {
+  const dt = parseDataBr(d);
+  return dt ? dt.toLocaleDateString('pt-BR') : (d || '—');
+}
+
+/* ---------- Constrói o mapa de parcelas ---------- */
+function __construirMapaParcelas(itens) {
+  const chave = `${STATE.trimestre}|${STATE.ano}|${itens.length}|${itens[0]?.id || ''}|${itens[itens.length-1]?.id || ''}`;
+  if (__cacheParcelas.chave === chave) return __cacheParcelas.mapa;
+
+  const mapa = {}; 
+
+  // 1) Agrupa por assinatura (fornecedor + valor) para achar parcelamentos reais
+  const grupos = {};
+  itens.forEach(i => {
+    const fornecedor = String(i.fornecedor || i.cliente_fornecedor || '').trim().toUpperCase();
+    const valor = Math.round((Number(i.valor || i.total_nota) || 0) * 100) / 100;
+    if (!fornecedor || valor <= 0) return;
+    
+    const sig = `${fornecedor}||${valor}`;
+    if (!grupos[sig]) grupos[sig] = [];
+    grupos[sig].push(i);
+  });
+
+  // 2) Marca X/Y para grupos que têm itens em meses diferentes
+  Object.values(grupos).forEach(arr => {
+    if (arr.length < 2) return;
+    const ord = arr.slice().sort((a, b) => {
+      const da = parseDataBr(a.data), db = parseDataBr(b.data);
+      return (da || 0) - (db || 0);
+    });
+    
+    const meses = ord.map(x => { const d = parseDataBr(x.data); return d ? d.getFullYear() * 12 + d.getMonth() : -1; });
+    const mesesUnicos = new Set(meses.filter(m => m >= 0));
+    if (mesesUnicos.size < 2) return; // Mesmo mês não é parcelamento
+
+    ord.forEach((item, idx) => {
+      mapa[item.id || `${item.fornecedor}-${item.data}-${item.valor}`] = {
+        atual: idx + 1,
+        total: ord.length,
+        inferido: true
+      };
+    });
+  });
+
+  // 3) Procura padrão em textos ou lê da coluna 'parcela' (se existir)
+  itens.forEach(i => {
+    const id = i.id || `${i.fornecedor}-${i.data}-${i.valor}`;
+    
+    // Se tem o campo parcela original
+    if (i.parcela !== undefined && i.parcela !== null && String(i.parcela).trim() !== '' && String(i.parcela) !== '0') {
+      let num = String(i.parcela).trim().split('.')[0];
+      mapa[id] = { atual: num, total: null, inferido: false };
+      return;
+    }
+
+    // Tenta regex no texto
+    const textos = [i.documento, i.nf_fiscal, i.operacao, i.plano_contas, i.plano, i.descricao, i.observacao, i.cond_pag].filter(Boolean);
+    const blob = textos.join(' ');
+    
+    let m = blob.match(/(?:^|[^\d])(\d{1,2})\s*[\/xX×]\s*(\d{1,2})(?:[^\d]|$)/);
+    if (m && Number(m[1]) >= 1 && Number(m[1]) <= 24 && Number(m[2]) >= 1 && Number(m[2]) <= 60) {
+      mapa[id] = { atual: m[1], total: m[2], inferido: false };
+      return;
+    }
+    m = blob.match(/parc(?:ela)?\.?\s*(\d{1,2})\s*(?:de|\/)\s*(\d{1,2})/i);
+    if (m) { mapa[id] = { atual: m[1], total: m[2], inferido: false }; return; }
+  });
+
+  __cacheParcelas = { chave, mapa };
+  return mapa;
+}
+
+/* ---------- Função principal de extração da parcela ---------- */
+function __extrairParcela(item) {
+  // 1) Lê a coluna 'parcela' nativa (mesmo que venha como "4.000000")
+  let parcelaBruta = item.parcela ?? item.num_parcela ?? item.parcela_atual ?? item.nro_parcela ?? item.nr_parcela;
+  if (parcelaBruta !== undefined && parcelaBruta !== null && String(parcelaBruta).trim() !== '' && String(parcelaBruta) !== '0') {
+    let num = String(parcelaBruta).trim();
+    if (num.includes('.')) num = num.split('.')[0]; // "4.000000" -> "4"
+    
+    const total = item.total_parcelas ?? item.num_parcelas ?? item.qtd_parcelas ?? item.parcelas;
+    if (total !== undefined && total !== null && String(total).trim() !== '') {
+       let totLimpo = String(total).trim();
+       if (totLimpo.includes('.')) totLimpo = totLimpo.split('.')[0];
+       return `Parc. ${num}/${totLimpo}`;
+    }
+    return `Parc. ${num}`;
+  }
+
+  // 2) Usa o mapa inferido (agrupamento por fornecedor+valor)
+  const id = item.id || `${item.fornecedor}-${item.data}-${item.valor}`;
+  const info = __cacheParcelas.mapa[id];
+  if (info) {
+    return info.total ? `Parc. ${info.atual}/${info.total}` : `Parc. ${info.atual}`;
+  }
+
+  // 3) Fallback: Condição ou "Único"
+  const cond = item.cond_pag || item.condicao || item.forma_pagamento || item.plano_contas || item.plano || '';
+  if (cond && String(cond).trim() !== '' && String(cond).trim() !== '—') {
+    const c = String(cond).trim().replace(/^\d+\s*-\s*/, '');
+    return c.length <= 18 ? c : c.substring(0, 16) + '…';
+  }
+
+  return 'Único';
+}
+
+/* ---------- Coleta TODOS os itens preservando campos originais ---------- */
+function __coletarItensTipo(tipoNum) {
+  const itens = [];
+  
+  const push = (original, extras) => {
+    if (!registroNoPeriodo(extras.data)) return;
+    // O spread (...original) garante que a coluna 'parcela' e outras não se percam
+    itens.push({ ...original, ...extras }); 
+  };
+
+  despesasDataReais.forEach(d => {
+    const info = identificarTipoOperacao(d.operacao || '');
+    if (info.tipo === tipoNum) {
+      push(d, {
+        origem: 'Despesa', data: d.data, fornecedor: d.fornecedor || '—',
+        operacao: d.operacao || '—', plano: d.plano || '—',
+        descricao: d.descricao || d.historico || '—', cond_pag: d.cond_pag || '',
+        valor: Math.abs(Number(d.valor) || 0), sinal: -1,
+        conta: info.codigoConta || '—', contaNome: info.conta || '—',
+      });
+    }
+  });
+
+  contasExtrasData.forEach(s => {
+    const info = identificarTipoOperacao(s.operacao || 'Sangria');
+    if (info.tipo === tipoNum) {
+      push(s, {
+        origem: 'Sangria', data: s.dt_pagto, fornecedor: s.fornecedor || '—',
+        operacao: s.operacao || 'Sangria', plano: s.plano || '—',
+        descricao: s.descricao || s.historico || '—', cond_pag: s.cond_pag || '',
+        valor: Math.abs(Number(s.valor) || 0), sinal: -1,
+        conta: info.codigoConta || '—', contaNome: info.conta || '—',
+      });
+    }
+  });
+
+  movimentosExtraData.forEach(m => {
+    if (m.tipo === 'RECEITA' || m.tipo === 'ENTRADA') return;
+    const info = identificarTipoOperacao(m.plano_contas || m.operadora || 'Outros');
+    if (info.tipo === tipoNum) {
+      push(m, {
+        origem: 'Mov. Extra', data: m.data, fornecedor: m.cliente_fornecedor || '—',
+        operacao: m.plano_contas || m.operadora || '—', plano: m.plano || '—',
+        descricao: m.descricao || m.observacao || '—', cond_pag: m.cond_pag || '',
+        valor: Math.abs(Number(m.total_nota) || 0), sinal: -1,
+        conta: info.codigoConta || '—', contaNome: info.conta || '—',
+      });
+    }
+  });
+
+  return itens.sort((a, b) => {
+    const da = parseDataBr(a.data), db = parseDataBr(b.data);
+    return (db || 0) - (da || 0);
+  });
+}
+
+/* ---------- Renderiza o modal completo do tipo ---------- */
+function abrirModalTipoOperacao(tipoNum) {
+  __tipoModalAtual = tipoNum;
+  const info = ESTRUTURA_OPERACOES[tipoNum];
+  if (!info) return;
+
+  const itens = __coletarItensTipo(tipoNum);
+  
+  // ⚠️ OBRIGATÓRIO: constrói o mapa de parcelas ANTES de renderizar a tabela
+  __construirMapaParcelas(itens);
+
+  const total = itens.reduce((s, i) => s + i.valor, 0);
+  const qtd = itens.length;
+
+  setText('modalTipoTitulo', `Tipo ${tipoNum} · ${info.nome}`);
+
+  const contasAtivas = {};
+  itens.forEach(i => {
+    if (!contasAtivas[i.conta]) contasAtivas[i.conta] = { cod: i.conta, nome: i.contaNome, total: 0, qtd: 0, itens: [] };
+    contasAtivas[i.conta].total += i.valor;
+    contasAtivas[i.conta].qtd++;
+    contasAtivas[i.conta].itens.push(i);
+  });
+  const contasArr = Object.values(contasAtivas).sort((a, b) => b.total - a.total);
+
+  let html = `
+    <div class="tipo-detalhe-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="tipo-num-grande">${tipoNum}</div>
+          <div class="tipo-nome-grande">${escapeHtml(info.nome)}</div>
+          <div class="tipo-qtd-info">${qtd} lançamento${qtd === 1 ? '' : 's'} · ${contasArr.length} conta${contasArr.length === 1 ? '' : 's'} contábil${contasArr.length === 1 ? '' : 'eis'}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);font-weight:700">Total no Período</div>
+          <div class="tipo-total-grande">${formatarMoeda(total)}</div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-top:2px">${getLabelPeriodo()} · ${STATE.ano || '—'}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (contasArr.length) {
+    html += `<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text-muted);margin:14px 0 8px;letter-spacing:.05em">Detalhamento por Conta Contábil</div>`;
+    html += `<div class="contas-detalhe-grid">`;
+    const maxConta = contasArr[0].total || 1;
+    contasArr.forEach(c => {
+      const pct = total > 0 ? (c.total / total) * 100 : 0;
+      html += `
+        <div class="conta-detalhe-item" data-conta="${escapeHtml(c.cod)}">
+          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+            <span class="conta-cod">${escapeHtml(c.cod || '—')}</span>
+            <div style="flex:1;min-width:0">
+              <div class="conta-nome" title="${escapeHtml(c.nome)}">${escapeHtml(c.nome || '—')}</div>
+              <div style="height:3px;background:var(--bg-input);border-radius:2px;margin-top:4px;overflow:hidden">
+                <div style="height:100%;width:${(c.total / maxConta) * 100}%;background:var(--accent-gold);border-radius:2px"></div>
+              </div>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:10px">
+            <div class="conta-valor">${formatarMoeda(c.total)}</div>
+            <div style="font-size:10px;color:var(--text-muted)">${pct.toFixed(1)}% · ${c.qtd} reg.</div>
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text-muted);margin:18px 0 8px;letter-spacing:.05em">Todos os Lançamentos do Período (${qtd})</div>`;
+
+  if (!itens.length) {
+    html += `<div class="empty-state">Nenhum lançamento encontrado no período filtrado.</div>`;
+  } else {
+    html += `
+      <div class="data-table-wrap">
+        <table class="data-table" style="min-width:820px">
+          <thead>
+            <tr>
+              <th style="width:80px">Data</th>
+              <th style="width:80px">Parcela</th>
+              <th>Fornecedor / Descrição</th>
+              <th style="width:130px">Conta</th>
+              <th style="width:110px">Condição</th>
+              <th style="width:60px">Origem</th>
+              <th style="width:120px;text-align:right">Valor (R$)</th>
+            </tr>
+          </thead>
+          <tbody>`;
+    itens.forEach(i => {
+      const parcela = __extrairParcela(i);
+      const cond = i.cond_pag || i.operacao || '—';
+      html += `
+        <tr>
+          <td style="font-weight:600">${__fmtData(i.data)}</td>
+          <td style="font-size:10px;color:var(--text-muted)">${escapeHtml(parcela)}</td>
+          <td>
+            <div style="font-weight:600;color:var(--text-primary);font-size:11px">${escapeHtml(i.fornecedor)}</div>
+            <div style="font-size:10px;color:var(--text-muted);white-space:normal;max-width:320px">
+              ${escapeHtml(i.descricao && i.descricao !== '—' ? i.descricao : i.operacao)}
+            </div>
+          </td>
+          <td style="font-size:10px">
+            <span class="tipo-badge" style="margin-right:4px">${escapeHtml(i.conta || '—')}</span>
+            <span style="color:var(--text-secondary)">${escapeHtml((i.contaNome || '').substring(0, 22))}</span>
+          </td>
+          <td style="font-size:10px;color:var(--text-secondary)">${escapeHtml(cond)}</td>
+          <td style="font-size:10px;color:var(--text-muted)">${escapeHtml(i.origem)}</td>
+          <td style="text-align:right;font-weight:700;color:var(--accent-red);font-variant-numeric:tabular-nums">
+            ${formatarMoeda(i.valor)}
+          </td>
+        </tr>`;
+    });
+    html += `
+          </tbody>
+          <tfoot>
+            <tr style="background:rgba(245,158,11,.10);border-top:2px solid var(--accent-gold)">
+              <td colspan="6" style="font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.04em">Total do Tipo ${tipoNum}</td>
+              <td style="text-align:right;font-weight:800;font-size:13px;color:var(--accent-gold);font-variant-numeric:tabular-nums">${formatarMoeda(total)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>`;
+  }
+
+  const porMes = Array(12).fill(0);
+  const qtdMes = Array(12).fill(0);
+  itens.forEach(i => {
+    const dt = parseDataBr(i.data);
+    if (dt) { porMes[dt.getMonth()] += i.valor; qtdMes[dt.getMonth()]++; }
+  });
+  const mesesComDados = mesesAtivos().filter(m => porMes[m] > 0 || qtdMes[m] > 0);
+  if (mesesComDados.length) {
+    html += `<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text-muted);margin:18px 0 8px;letter-spacing:.05em">Distribuição Mensal</div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px">`;
+    mesesComDados.forEach(m => {
+      html += `
+        <div style="background:var(--bg-input);border:1px solid var(--border-color);border-radius:8px;padding:8px 10px">
+          <div style="font-size:9px;text-transform:uppercase;color:var(--text-muted);font-weight:700">${mesesNomes[m]}</div>
+          <div style="font-size:13px;font-weight:800;color:var(--accent-red);margin-top:2px">${formatarMoeda(porMes[m])}</div>
+          <div style="font-size:10px;color:var(--text-secondary)">${qtdMes[m]} reg.</div>
+        </div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:14px;border-top:1px solid var(--border-color);flex-wrap:wrap;gap:10px">
+      <button class="btn-voltar" id="btnVoltarContasTipo">← Voltar para Contas</button>
+      <button class="btn btn-primary btn-sm" id="btnDrilldownTipoCompleto">🔍 Drill-down linha a linha</button>
+    </div>`;
+
+  el('modalTipoConteudo').innerHTML = html;
+
+  el('modalTipoConteudo').querySelectorAll('.conta-detalhe-item').forEach(node => {
+    node.addEventListener('click', () => {
+      const conta = contasAtivas[node.dataset.conta];
+      if (conta) abrirDrilldownContaDoTipo(tipoNum, conta);
+    });
+  });
+
+  el('btnVoltarContasTipo')?.addEventListener('click', () => abrirModalTipoOperacao(tipoNum));
+  el('btnDrilldownTipoCompleto')?.addEventListener('click', () => abrirDrilldownTipoCompleto(tipoNum, itens));
+
+  el('modalTipoOperacao').classList.add('active');
+}
+
+/* ---------- Drill-down de UMA conta do tipo ---------- */
+function abrirDrilldownContaDoTipo(tipoNum, conta) {
+  __construirMapaParcelas(conta.itens); // ⚠️ OBRIGATÓRIO
+  const info = ESTRUTURA_OPERACOES[tipoNum];
+  const old = el('modalTipoConteudo').innerHTML;
+
+  let html = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <button class="btn-voltar" id="btnVoltarTipoDaConta">← Voltar ao Tipo ${tipoNum}</button>
+      <span style="font-size:11px;color:var(--text-muted)">${escapeHtml(info.nome)}</span>
+    </div>
+    <div class="tipo-detalhe-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Conta ${escapeHtml(conta.cod)}</div>
+          <div class="tipo-nome-grande">${escapeHtml(conta.nome)}</div>
+          <div class="tipo-qtd-info">${conta.qtd} lançamento${conta.qtd === 1 ? '' : 's'}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);font-weight:700">Total da Conta</div>
+          <div class="tipo-total-grande">${formatarMoeda(conta.total)}</div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text-muted);margin:16px 0 8px;letter-spacing:.05em">Lançamentos da Conta (${conta.itens.length})</div>
+    <div class="data-table-wrap">
+      <table class="data-table" style="min-width:720px">
+        <thead>
+          <tr>
+            <th style="width:80px">Data</th>
+            <th style="width:80px">Parcela</th>
+            <th>Fornecedor / Descrição</th>
+            <th style="width:130px">Condição</th>
+            <th style="width:120px;text-align:right">Valor (R$)</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+  conta.itens.forEach(i => {
+    html += `
+      <tr>
+        <td style="font-weight:600">${__fmtData(i.data)}</td>
+        <td style="font-size:10px;color:var(--text-muted)">${escapeHtml(__extrairParcela(i))}</td>
+        <td>
+          <div style="font-weight:600;color:var(--text-primary);font-size:11px">${escapeHtml(i.fornecedor)}</div>
+          <div style="font-size:10px;color:var(--text-muted);white-space:normal;max-width:340px">
+            ${escapeHtml(i.descricao && i.descricao !== '—' ? i.descricao : i.operacao)}
+          </div>
+        </td>
+        <td style="font-size:10px;color:var(--text-secondary)">${escapeHtml(i.cond_pag || i.operacao || '—')}</td>
+        <td style="text-align:right;font-weight:700;color:var(--accent-red);font-variant-numeric:tabular-nums">
+          ${formatarMoeda(i.valor)}
+        </td>
+      </tr>`;
+  });
+
+  html += `
+        </tbody>
+        <tfoot>
+          <tr style="background:rgba(245,158,11,.10);border-top:2px solid var(--accent-gold)">
+            <td colspan="4" style="font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.04em">Total da Conta ${escapeHtml(conta.cod)}</td>
+            <td style="text-align:right;font-weight:800;font-size:13px;color:var(--accent-gold);font-variant-numeric:tabular-nums">${formatarMoeda(conta.total)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>`;
+
+  el('modalTipoConteudo').innerHTML = html;
+
+  el('btnVoltarTipoDaConta')?.addEventListener('click', () => {
+    el('modalTipoConteudo').innerHTML = old;
+    el('btnVoltarContasTipo')?.addEventListener('click', () => abrirModalTipoOperacao(tipoNum));
+    el('btnDrilldownTipoCompleto')?.addEventListener('click', () => abrirDrilldownTipoCompleto(tipoNum, conta.itens));
+  });
+}
+
+/* ---------- Drill-down COMPLETO (linha a linha) com filtros ---------- */
+function abrirDrilldownTipoCompleto(tipoNum, itens) {
+  __construirMapaParcelas(itens); // ⚠️ OBRIGATÓRIO
+  const info = ESTRUTURA_OPERACOES[tipoNum];
+  const old = el('modalTipoConteudo').innerHTML;
+
+  let html = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn-voltar" id="btnVoltarTipoCompleto">← Voltar ao Tipo ${tipoNum}</button>
+      <span style="font-size:11px;color:var(--text-muted)">${escapeHtml(info.nome)} · ${itens.length} lançamentos</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <input id="filtroDrillTxt" type="text" placeholder="Filtrar por fornecedor/descrição..."
+             style="flex:1;min-width:200px;padding:8px 12px;border-radius:var(--radius-full);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-family:'Inter',sans-serif;font-size:12px;outline:none">
+      <select id="filtroDrillOrigem" class="select-filtro">
+        <option value="">Todas as origens</option>
+        <option value="Despesa">Despesa</option>
+        <option value="Sangria">Sangria</option>
+        <option value="Mov. Extra">Mov. Extra</option>
+      </select>
+      <select id="filtroDrillConta" class="select-filtro">
+        <option value="">Todas as contas</option>
+      </select>
+    </div>
+    <div id="drillTipoResumo" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px"></div>
+    <div class="data-table-wrap" style="max-height:52vh">
+      <table class="data-table" style="min-width:900px">
+        <thead>
+          <tr>
+            <th style="width:80px">Data</th>
+            <th style="width:80px">Parcela</th>
+            <th>Fornecedor</th>
+            <th>Descrição</th>
+            <th style="width:120px">Conta</th>
+            <th style="width:60px">Origem</th>
+            <th style="width:120px;text-align:right">Valor (R$)</th>
+          </tr>
+        </thead>
+        <tbody id="drillTipoTbody"></tbody>
+      </table>
+    </div>
+  `;
+
+  el('modalTipoConteudo').innerHTML = html;
+
+  const contasSet = new Set();
+  itens.forEach(i => contasSet.add(`${i.conta}|${i.contaNome}`));
+  const selConta = el('filtroDrillConta');
+  [...contasSet].sort().forEach(c => {
+    const [cod, nome] = c.split('|');
+    const opt = document.createElement('option');
+    opt.value = cod;
+    opt.textContent = `${cod} — ${nome}`;
+    selConta.appendChild(opt);
+  });
+
+  let filtrados = [...itens];
+  const TAM_PAG = 100;
+  let pagina = 0;
+
+  function aplicarFiltros() {
+    const txt = (el('filtroDrillTxt').value || '').toLowerCase().trim();
+    const origem = el('filtroDrillOrigem').value;
+    const conta = el('filtroDrillConta').value;
+
+    filtrados = itens.filter(i => {
+      if (origem && i.origem !== origem) return false;
+      if (conta && i.conta !== conta) return false;
+      if (txt) {
+        const blob = `${i.fornecedor} ${i.descricao} ${i.operacao}`.toLowerCase();
+        if (!blob.includes(txt)) return false;
+      }
+      return true;
+    });
+
+    pagina = 0;
+    renderTabela();
+    renderResumo();
+  }
+
+  function renderResumo() {
+    const total = filtrados.reduce((s, i) => s + i.valor, 0);
+    const qtd = filtrados.length;
+    const ticket = qtd > 0 ? total / qtd : 0;
+    el('drillTipoResumo').innerHTML = `
+      <div style="background:var(--bg-input);border:1px solid var(--border-color);border-radius:8px;padding:10px 12px">
+        <div style="font-size:9px;text-transform:uppercase;color:var(--text-muted);font-weight:700">Total Filtrado</div>
+        <div style="font-size:15px;font-weight:800;color:var(--accent-red);margin-top:2px">${formatarMoeda(total)}</div>
+      </div>
+      <div style="background:var(--bg-input);border:1px solid var(--border-color);border-radius:8px;padding:10px 12px">
+        <div style="font-size:9px;text-transform:uppercase;color:var(--text-muted);font-weight:700">Lançamentos</div>
+        <div style="font-size:15px;font-weight:800;color:var(--text-primary);margin-top:2px">${qtd.toLocaleString('pt-BR')}</div>
+      </div>
+      <div style="background:var(--bg-input);border:1px solid var(--border-color);border-radius:8px;padding:10px 12px">
+        <div style="font-size:9px;text-transform:uppercase;color:var(--text-muted);font-weight:700">Ticket Médio</div>
+        <div style="font-size:15px;font-weight:800;color:var(--accent-gold);margin-top:2px">${formatarMoeda(ticket)}</div>
+      </div>`;
+  }
+
+  function renderTabela() {
+    const tbody = el('drillTipoTbody');
+    if (!tbody) return;
+    if (!filtrados.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">Nenhum lançamento com os filtros atuais.</td></tr>`;
+      return;
+    }
+    const slice = filtrados.slice(pagina * TAM_PAG, (pagina + 1) * TAM_PAG);
+    tbody.innerHTML = slice.map(i => `
+      <tr>
+        <td style="font-weight:600">${__fmtData(i.data)}</td>
+        <td style="font-size:10px;color:var(--text-muted)">${escapeHtml(__extrairParcela(i))}</td>
+        <td style="font-size:11px;font-weight:600;color:var(--text-primary)">${escapeHtml(i.fornecedor)}</td>
+        <td style="font-size:10px;color:var(--text-secondary);white-space:normal;max-width:280px">${escapeHtml(i.descricao && i.descricao !== '—' ? i.descricao : i.operacao)}</td>
+        <td style="font-size:10px"><span class="tipo-badge">${escapeHtml(i.conta || '—')}</span></td>
+        <td style="font-size:10px;color:var(--text-muted)">${escapeHtml(i.origem)}</td>
+        <td style="text-align:right;font-weight:700;color:var(--accent-red);font-variant-numeric:tabular-nums">${formatarMoeda(i.valor)}</td>
+      </tr>`).join('');
+
+    const totalPag = Math.ceil(filtrados.length / TAM_PAG);
+    if (totalPag > 1) {
+      tbody.innerHTML += `
+        <tr><td colspan="7" style="text-align:center;padding:10px;background:var(--bg-card)">
+          <button class="btn btn-sm btn-outline" id="drillPrev" ${pagina === 0 ? 'disabled' : ''}>← Anterior</button>
+          <span style="margin:0 12px;font-size:11px;color:var(--text-secondary)">Página ${pagina + 1} de ${totalPag}</span>
+          <button class="btn btn-sm btn-outline" id="drillNext" ${pagina >= totalPag - 1 ? 'disabled' : ''}>Próxima →</button>
+        </td></tr>`;
+      el('drillPrev')?.addEventListener('click', () => { pagina--; renderTabela(); });
+      el('drillNext')?.addEventListener('click', () => { pagina++; renderTabela(); });
+    }
+  }
+
+  el('filtroDrillTxt').addEventListener('input', aplicarFiltros);
+  el('filtroDrillOrigem').addEventListener('change', aplicarFiltros);
+  el('filtroDrillConta').addEventListener('change', aplicarFiltros);
+
+  el('btnVoltarTipoCompleto')?.addEventListener('click', () => {
+    el('modalTipoConteudo').innerHTML = old;
+    el('btnVoltarContasTipo')?.addEventListener('click', () => abrirModalTipoOperacao(tipoNum));
+    el('btnDrilldownTipoCompleto')?.addEventListener('click', () => abrirDrilldownTipoCompleto(tipoNum, itens));
+    el('modalTipoConteudo').querySelectorAll('.conta-detalhe-item').forEach(node => {
+      node.addEventListener('click', () => {
+        const contasAtivas = {};
+        itens.forEach(i => {
+          if (!contasAtivas[i.conta]) contasAtivas[i.conta] = { cod: i.conta, nome: i.contaNome, total: 0, qtd: 0, itens: [] };
+          contasAtivas[i.conta].total += i.valor;
+          contasAtivas[i.conta].qtd++;
+          contasAtivas[i.conta].itens.push(i);
+        });
+        if (contasAtivas[node.dataset.conta]) abrirDrilldownContaDoTipo(tipoNum, contasAtivas[node.dataset.conta]);
+      });
+    });
+  });
+
+  aplicarFiltros();
+}
+/* ============================================================================
+FIM DO PATCH
+============================================================================ */
 </script>
 </body>
 </html>
